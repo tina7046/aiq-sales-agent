@@ -390,13 +390,23 @@
    Regenerate presses and indexes into the alternate versions parked
    as templates at the end of the article. #}
 {% macro sequenceStep(step, index, p) %}
+{#- Only the first touch opens; the rest render collapsed so the whole
+    sequence is scannable as a list of headers and the reviewer expands
+    the one they want. Rendered as the initial state rather than
+    collapsed by JS on mount, so there's no expand-then-collapse flash
+    and the pager's per-prospect re-render (renderSequence clones this
+    template fresh) starts each prospect the same way.
+
+    The `is-collapsed` class is the same one collapseStep() toggles,
+    so the first click on a pre-collapsed touch expands it. -#}
+{%- set _collapsed = index > 0 -%}
 <article
-  class="seller-home__conv-step seller-home__conv-step--{{ step.type }}"
+  class="seller-home__conv-step seller-home__conv-step--{{ step.type }}{% if _collapsed %} is-collapsed{% endif %}"
   data-sh-step
   data-sh-step-index="{{ index }}"
   data-sh-step-regen="0"
 >
-  {{ stepIconRail(step.type) }}
+  {{ stepIconRail(step.type, _collapsed) }}
 
   <div class="seller-home__conv-step-content">
     <h4 class="seller-home__conv-step-header" data-sh-step-header>
@@ -531,23 +541,29 @@
    `slds-current-color` flips the SVG fill to `currentColor`, without
    which SLDS paints the glyph white on a pastel chip. The chip's own
    colors come from `--{{ type }}` modifiers in the stylesheet. #}
-{% macro stepIconRail(type) %}
+{# `collapsed` renders the button's resting state to match an article
+   that starts collapsed. It matters that the verb here agrees with the
+   class on the article: collapseStep() flips the label by rewriting the
+   leading verb (`^Collapse` → `Expand` and back), so a button that
+   started on the wrong word would keep saying the wrong thing. #}
+{% macro stepIconRail(type, collapsed) %}
 {%- set _icon = { email: 'email', call: 'call', linkedin: 'share_post' } -%}
 {%- set _label = { email: 'Email', call: 'Call', linkedin: 'LinkedIn' } -%}
+{%- set _name = _label[type] | default(type) -%}
 <div class="seller-home__conv-step-rail seller-home__conv-step-rail--{{ type }}">
   <button
     type="button"
     class="seller-home__conv-step-toggle"
     data-sh-step-toggle
-    aria-expanded="true"
-    aria-label="Collapse {{ _label[type] | default(type) }} step"
-    title="Click to collapse"
+    aria-expanded="{{ 'false' if collapsed else 'true' }}"
+    aria-label="{{ 'Expand' if collapsed else 'Collapse' }} {{ _name }} step"
+    title="Click to {{ 'expand' if collapsed else 'collapse' }}"
   >
     <span class="slds-icon_container slds-icon_container_circle slds-current-color seller-home__conv-step-chip seller-home__conv-step-chip--type">
       <svg class="slds-icon slds-icon_x-small" aria-hidden="true">
         <use xlink:href="/assets/icons/action-sprite/svg/symbols.svg#{{ _icon[type] | default('email') }}"></use>
       </svg>
-      <span class="slds-assistive-text">{{ _label[type] | default(type) }}</span>
+      <span class="slds-assistive-text">{{ _name }}</span>
     </span>
     <span class="slds-icon_container slds-icon_container_circle slds-current-color seller-home__conv-step-chip seller-home__conv-step-chip--chevron" aria-hidden="true">
       <svg class="slds-icon slds-icon_x-small" aria-hidden="true">
