@@ -1,0 +1,157 @@
+{#
+  Home — Daily Briefing insight popover (reusable macro)
+  =====================================================================
+  Renders one insight popover anchored to a Daily Briefing sentence
+  link (e.g. "3 at-risk deals"). The popover exposes deeper context
+  about the topic and two footer actions.
+
+  Design source: Figma frame 8818:259732 ("📝 Popover/Default") in
+  HkxLNEwVoTjmTPQY2HbDja. Layout:
+
+    ┌─────────────────────────────────────────┐
+    │▲                                        │  ← nub (top-left)
+    ├─────────────────────────────────────────┤
+    │  <description>                       ✕  │  ← body row: text + close
+    │  • Name · detail                        │
+    │  • Name · detail                        │  ← items list
+    │  • Name · detail                        │
+    ├─────────────────────────────────────────┤  ← 1 px divider
+    │              Set up a workflow  [Review]│  ← footer actions (right)
+    └─────────────────────────────────────────┘
+
+  Reusability
+  -----------
+  ONE macro, N popover instances. Bind by data: each entry in
+  `briefing.popovers` in home.json ships a `topicId` that matches
+  the trigger link's `data-sh-briefing-topic`. home.js's
+  `briefingPopoverController` resolves the pair at boot, wires the
+  aria attributes on the trigger, and manages open/close.
+
+  Consumer contract (see home.json → briefing.popovers[]):
+    • topicId          — trigger id (data-sh-briefing-topic value)
+    • ariaLabel        — accessible name for role="dialog"
+    • description      — intro sentence above the list
+    • items[]          — { id, name, value?, detail? }
+      - name           — semibold prefix (deal / entity name)
+      - value          — optional muted metric ($, %, count)
+      - detail         — optional muted rest-of-line (reason / status)
+                         The macro joins present fields with " · " so
+                         raw data stays free of typographic dots. A row
+                         with only { name } renders as just the name; a
+                         row with { name, detail } renders "Name · detail".
+    • primaryAction    — { id, label } → brand button, rightmost
+    • secondaryAction  — { id, label } → text-link button, to its left
+                         Either action is optional; the macro renders
+                         only the ones present.
+
+  Additional briefing links (quota, re_engaged_buyers,
+  upcoming_meetings) get popovers by adding another entry to
+  `briefing.popovers`; no macro or JS changes required.
+
+  a11y
+  ----
+    • role="dialog" + aria-label (from ariaLabel)
+    • aria-modal="false" — the popover is a non-modal disclosure,
+      not a full-screen dialog; page-level focus trap would be wrong
+      for a hover-triggered surface.
+    • `hidden` attribute is the source of truth for closed state;
+      the JS controller flips it and mirrors the state onto the
+      trigger's aria-expanded.
+    • The close button carries a concrete `aria-label` derived from
+      the popover's `ariaLabel` ("Close at-risk deals preview") so
+      SR users hear which surface they're dismissing.
+    • Every focusable inside — close, secondary action, primary
+      action — is a real <button>, so tab order is native and
+      focus-visible rings come for free.
+#}
+{% macro briefingInsightPopover(pop) %}
+{% set popoverId = "seller-home-briefing-popover-" ~ pop.topicId %}
+{% set closeLabel = "Close " ~ (pop.ariaLabel | lower) ~ " preview" %}
+<div
+  class="seller-home__briefing-popover"
+  id="{{ popoverId }}"
+  role="dialog"
+  aria-modal="false"
+  aria-label="{{ pop.ariaLabel }}"
+  data-sh-briefing-popover
+  data-sh-briefing-popover-for="{{ pop.topicId }}"
+  hidden
+>
+  {# Directional nub. Purely decorative — the popover's accessible
+     name doesn't reference it. `left` is set inline by JS on open
+     so the tip always points at the trigger's horizontal center,
+     even after viewport-overflow shifting. #}
+  <span class="seller-home__briefing-popover-nub" aria-hidden="true"></span>
+
+  <div class="seller-home__briefing-popover-body">
+    {# Header row: description on the left (flex-1), close button on
+       the right. The description sits ABOVE the item list within
+       the same body region so the list and description share the
+       same left column and the close button aligns to the far right. #}
+    <div class="seller-home__briefing-popover-content">
+      <p class="seller-home__briefing-popover-description">{{ pop.description }}</p>
+
+      {% if pop.items and pop.items|length %}
+      <ul class="seller-home__briefing-popover-items">
+        {% for item in pop.items %}
+        <li class="seller-home__briefing-popover-item">
+          <strong class="seller-home__briefing-popover-item-name">{{ item.name }}</strong>
+          {#- Muted trailing run — "value" and "detail" are both
+              optional; the macro joins whatever's present with the
+              centered dot so JSON stays free of typographic dots and
+              rows with sparse data (e.g. name-only) still render
+              cleanly. Whitespace inside the <span> is intentional so
+              the dots hug their neighbors ("Ramp · $135K · No response
+              in 12 days"). -#}
+          {% if item.value or item.detail %}
+          <span class="seller-home__briefing-popover-item-detail">{% if item.value %} · {{ item.value }}{% endif %}{% if item.detail %} · {{ item.detail }}{% endif %}</span>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+
+    {# Close button — 32 px circular hit target per Figma. Uses the
+       SLDS bare-icon-button chrome (`slds-button_icon-bare`) so its
+       hover / focus visuals match the other icon buttons on the
+       page (ready-overflow trigger, per-row menu trigger, composer
+       toolbar). #}
+    <button
+      type="button"
+      class="slds-button slds-button_icon slds-button_icon-bare seller-home__briefing-popover-close"
+      data-sh-briefing-popover-close
+      aria-label="{{ closeLabel }}"
+      title="Close"
+    >
+      <svg class="slds-button__icon" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+      </svg>
+      <span class="slds-assistive-text">{{ closeLabel }}</span>
+    </button>
+  </div>
+
+  {# Footer — divider above (top border), right-aligned actions.
+     Both actions dispatch `sh:briefing-popover-action` with their
+     configured id so a future consumer wires real routing without
+     touching this template. #}
+  {% if pop.secondaryAction or pop.primaryAction %}
+  <div class="seller-home__briefing-popover-footer">
+    {% if pop.secondaryAction %}
+    <button
+      type="button"
+      class="seller-home__briefing-popover-action seller-home__briefing-popover-action--secondary"
+      data-sh-briefing-popover-action="{{ pop.secondaryAction.id }}"
+    >{{ pop.secondaryAction.label }}</button>
+    {% endif %}
+    {% if pop.primaryAction %}
+    <button
+      type="button"
+      class="seller-home__briefing-popover-action seller-home__briefing-popover-action--primary"
+      data-sh-briefing-popover-action="{{ pop.primaryAction.id }}"
+    >{{ pop.primaryAction.label }}</button>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}

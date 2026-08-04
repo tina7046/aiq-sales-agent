@@ -1,0 +1,2375 @@
+// ──────────────────────────────────────────────────────────────────────
+// Seller Home — Conversation drill-in page styles
+// ============================================================
+// Owned by /home_conversation.html (src/views/home_conversation.html).
+// Compiled to dist/styles/home_conversation.css by the top-level
+// `styles` gulp task and loaded on that page only.
+//
+// Layers on top of home.css. home.css owns:
+//   • `.seller-home` outer flex row + full-viewport height container.
+//   • `.seller-home__nav` (via `_home_left_nav.html`) — the 300 px
+//     left rail. Identical on both pages by design.
+// This file owns:
+//   • `.seller-home__conv` — the right column, sibling to
+//     `.seller-home__main`. Distinct class so the conversation-
+//     specific column layout (header / scrollable thread / composer)
+//     doesn't leak back into Seller Home's single-scroll main region.
+//   • The three conversation regions and their content columns.
+//
+// Design source: Figma frame 8283:14156 ("Convo") in
+// HkxLNEwVoTjmTPQY2HbDja. Measurements pulled from `get_design_context`
+// on the frame:
+//   • Header: 48 px tall, full width, white bg, centered content.
+//     Title 20 px semibold, on-surface-3 (#001e5b).
+//   • Thread: fills remaining height. Content column 800 px capped,
+//     centered. The only scrollable surface on the page.
+//   • Composer: floating strip at the bottom, 800 px wide, centered.
+//     White bg, 1 px neutral-60 border (#939393), 12 px radius. Sits
+//     over a bottom-anchored gradient that fades to white so long
+//     threads don't collide with the composer's top edge.
+//
+// Layout requirements from the task brief:
+//   • Conversation area fills viewport height.
+//   • ONLY the chat-message region scrolls.
+//   • Header stays visible while messages scroll.
+//   • Composer stays accessible at the bottom.
+//   • No page-level vertical/horizontal scroll (the outer container
+//     is `overflow: hidden` and the shell is `100vh`-height driven).
+// ──────────────────────────────────────────────────────────────────────
+
+// ──────────────────────────────────────────────────────────────────────
+// Root modifier
+// ──────────────────────────────────────────────────────────────────────
+// `.seller-home--conversation` scopes overrides to this page only.
+// Everything on Seller Home stays intact — no `.seller-home__main`
+// rules are touched.
+//
+// `overflow: hidden` on the root is what enforces "no page-level
+// scroll": the header + composer are flex-shrink 0 and the thread
+// takes the rest via flex-1 min-height-0. Any content that overflows
+// stays inside the thread and produces scroll only there.
+.seller-home--conversation {
+  overflow: hidden;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Right column — the conversation shell
+// ──────────────────────────────────────────────────────────────────────
+// Sibling to `.seller-home__main` used by home.html. Same slot in the
+// outer flex row (fills remaining width next to the 300px nav) but
+// laid out as a fixed / flex / fixed vertical stack instead of a
+// single scroll region.
+//
+// `min-height: 0` + `min-width: 0` prevent the child regions'
+// intrinsic sizes from forcing the flex parent to grow past its
+// container — the classic flexbox "min-content escape" that would
+// otherwise nuke `overflow` inside the thread.
+.seller-home__conv {
+  // `position: relative` is the containing block for the absolutely-
+  // positioned composer overlay (see `.seller-home__conv-composer`).
+  // Without it the composer would anchor to the viewport instead of
+  // the conversation column, which breaks the "composer sits at the
+  // bottom of the main area" requirement when the left nav collapses.
+  position: relative;
+
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+  // Figma frame 7999:292806 stacks the header (y=0..48) and the
+  // thread (y=52..) with a 4 px separator between them. Owning the
+  // spacing on the parent (not on either child) keeps a future
+  // "sticky-header shadow" tweak from having to manage margin
+  // collision.
+  gap: 0.25rem; // 4px
+
+  // Figma shows a plain white surface — no gradient, no image. This
+  // overrides the pastel aurora painted by `.seller-home`'s
+  // `background-image` stack, so the conversation reads as a
+  // focused, quiet reading surface. Keep as a solid token instead
+  // of `background: white` so a future dark-mode swap flows through.
+  background: var(--slds-g-color-surface-1, #ffffff);
+
+  // Focus outline for the `role="main"` region — hidden by default
+  // (tabindex=-1 focus target for skip-links, not a tab stop).
+  &:focus {
+    outline: none;
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Header — sticky top band, 48 px
+// ──────────────────────────────────────────────────────────────────────
+// Full-width horizontal band (Figma "title + feedback"). Sits above
+// the thread and never scrolls — the flex layout on `.seller-home__conv`
+// naturally pins it because the thread claims the remaining space.
+//
+// `min-height` (not `height`) keeps the band accessible if a future
+// title needs to wrap; Phase 1 titles are single-line so the visual
+// still lands on 48 px in practice.
+.seller-home__conv-header {
+  flex: 0 0 auto;
+  min-height: 3rem; // 48px
+  padding-inline: var(--slds-g-spacing-4, 1rem);
+  padding-block: var(--slds-g-spacing-2, 0.5rem);
+
+  background: var(--slds-g-color-surface-1, #ffffff);
+  // No border by default — Figma shows a plain surface joint. If we
+  // later want a hairline separator once the thread scrolls, that
+  // becomes a JS-driven `.is-scrolled` modifier rather than a
+  // permanent border.
+
+  display: flex;
+  align-items: center;
+  // Figma frame 7999:292806: the header's inner "Button container"
+  // sits at natural width, left-aligned via `flex-col items-start`
+  // on the outer Recommendations Button (screenshot shows the
+  // sparkle + title hugging the 16 px left padding, NOT centered
+  // across the 1136 px band). Use `flex-start` here so a wider
+  // viewport keeps the title anchored at the padding edge instead
+  // of drifting toward the middle.
+  justify-content: flex-start;
+}
+
+.seller-home__conv-header-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  min-width: 0; // enable ellipsis in the title below
+  // Cap at 100% so the ellipsis rule on `.__conv-header-title` has
+  // an actual constraint to bite on when the title runs long.
+  max-width: 100%;
+}
+
+.seller-home__conv-header-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  // Figma frame 8297:16921 sizes the sparkle at `--slds-g-sizing-5`
+  // (= 16 px). Matches the SLDS `size="xx-small"` icon slot used
+  // inline with body-scale titles — bigger looks like the earlier
+  // 20 px header icon, which was too dominant next to the 20 px
+  // title cap-height.
+  width: 1rem;    // 16px
+  height: 1rem;
+}
+
+.seller-home__conv-header-glyph {
+  width: 1rem;
+  height: 1rem;
+  // Figma uses on-surface-3 (#001e5b) — a deep navy, not pure black.
+  // `fill: currentColor` lets a single color rule cascade if a future
+  // theme flips light/dark.
+  fill: var(--slds-g-color-on-surface-3, #001e5b);
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+.seller-home__conv-header-title {
+  // Reset the browser default `<h1>` chrome — this is a visual title
+  // inside a page-wide band, not a document-level heading.
+  margin: 0;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  // Figma style token "Titles/font-scale-3/Semibold" — resolves to
+  // `--slds-g-font-scale-3` (= 20 px per Figma variable defs).
+  //
+  // Previously used `--slds-g-font-size-base` here, which SLDS 2
+  // globally redefines to a body-text size (~13 px in this project's
+  // slds2_agentic stylesheet). That override was winning over the
+  // 1.25rem fallback and shrinking the header title. Switching to
+  // `--slds-g-font-scale-3` — the token the Figma design actually
+  // references — locks the title to 20 px regardless of what base
+  // is set to.
+  font-size: var(--slds-g-font-scale-3, 1.25rem);        // 20px
+  font-weight: var(--slds-g-font-weight-6, 590);         // Semibold
+  line-height: 1.75rem;                                  // 28px per Figma
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+
+  // Long titles ellipsize instead of breaking the 48 px band. The
+  // `title` attribute on the element (added by JS on hydration) will
+  // expose the full string on hover for mouse users.
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Thread — the only scroll surface
+// ──────────────────────────────────────────────────────────────────────
+// Grows to fill the space between header and composer. `min-height: 0`
+// + `overflow-y: auto` together are what actually enable scrolling
+// inside a flex column — without the min-height escape the flex
+// child's intrinsic content height would push the sibling composer
+// off-screen.
+//
+// The 800 px content column is applied on the inner wrapper so the
+// scrollbar continues to attach to the outer viewport-wide element
+// (matches macOS's scrollbar convention and Figma's "Convo Thread"
+// layout: full-bleed scroll rail, capped content column).
+.seller-home__conv-thread {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+
+  // Vertical rhythm — 16 px top so the first message isn't flush
+  // against the header; matches Figma's spacing-4 gap between the
+  // header band and the first thread block.
+  padding-block: var(--slds-g-spacing-4, 1rem) 0;
+  padding-inline: var(--slds-g-spacing-4, 1rem);
+
+  // Reserve enough room at the bottom that the last message can
+  // scroll fully into view above the composer overlay. The composer
+  // is 147 px tall in Figma; 160 px here gives a small breathing
+  // gap between the last message and the composer's fade edge.
+  // Applied via `scroll-padding-bottom` so keyboard-driven scroll
+  // (Space, Page Down, focus-into-view) lands with the same visual
+  // gap as free-scroll.
+  scroll-padding-bottom: 10rem; // 160px
+}
+
+.seller-home__conv-thread-inner {
+  max-width: 50rem;   // 800px — Figma cap
+  width: 100%;
+  margin: 0 auto;
+
+  // Reset the browser default `<ol>` chrome — this is a semantic
+  // list of messages, not a numbered outline. The <li> children
+  // handle their own bullet-suppression too so a future switch
+  // from <ol> to another element requires touching only the parent.
+  list-style: none;
+  padding-inline-start: 0;
+
+  // Vertical stack. 8 px (spacing-2) between messages matches
+  // Figma frame 7999:292806's outer `gap-2` on the thread column
+  // — tight enough that user query + agent reply read as one
+  // conversational unit, loose enough that each message is
+  // distinguishable at a glance.
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+
+  // Match the composer's 147 px height + a small breathing gap so
+  // the last message never sits directly under the composer's
+  // opaque zone. Kept on the inner column (not the scroll parent)
+  // so the scrollbar tracks the full available height.
+  padding-bottom: 10rem; // 160px
+}
+
+// Each message renders inside an <li> so the thread is a semantic
+// list. The <li> owns list membership only; the macros inside own
+// visual layout. `display: flex` here lets the child article width
+// out to its own natural width (esp. important for the user-pill
+// max-width) without an extra wrapper.
+.seller-home__conv-thread-item {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  // Each message's alignment (right for user, left/full-width for
+  // agent + activity) is set on its OWN element via `align-self`
+  // — the <li> stays neutral so a mix of message types in a single
+  // stream all coexist.
+}
+
+// Empty-thread scaffolding — same visual as the previous phase's
+// placeholder, kept as a display-only <li> so the list structure
+// remains valid for AT users when there are no messages yet.
+.seller-home__conv-thread-empty {
+  list-style: none;
+}
+
+// Phase 1 placeholder copy — a tiny neutral prompt so the region
+// doesn't look like a rendering error before real messages land.
+// Small + on-surface-1 grey signals "scaffolding, not content".
+.seller-home__conv-thread-placeholder {
+  margin: 0;
+  padding-block: var(--slds-g-spacing-4, 1rem);
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 0.875rem);       // 14px
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  text-align: center;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Composer — bottom-anchored overlay
+// ──────────────────────────────────────────────────────────────────────
+// Figma "input-footer" (frame 7999:292847): 800 × 147, positioned
+// `bottom: 0` inside the outer Convo frame with a gradient that fades
+// from transparent at the top to white by ~16.8 % (≈ 25 px). The
+// effect: as the thread scrolls, the last visible messages dim into
+// white behind the composer instead of hard-cutting at its top edge.
+//
+// Structural translation:
+//   • `position: absolute; bottom: 0; left: 0; right: 0` on the
+//     composer so it sits over the bottom slice of the thread
+//     (which is `.seller-home__conv`'s containing block via its
+//     `position: relative`).
+//   • Fixed height 147 px matches Figma. The top ~26 px is empty
+//     fade zone; the editor + toolbar occupy the remaining ~121 px.
+//   • Inner 800 px cap centers the editor horizontally, matching
+//     the thread column so composer and messages share a gutter.
+//   • Thread gets `padding-bottom` equal to the composer's height
+//     so the last message can scroll fully into view above (see
+//     `.seller-home__conv-thread` above; `scroll-padding-bottom`
+//     tunes keyboard scroll target to the same anchor).
+//
+// Kill the browser's default form margin so the composer sits flush
+// against its container edges before the gradient math kicks in.
+.seller-home__conv-composer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+
+  margin: 0;
+  padding: 0;
+
+  // Bottom-anchored fade: solid white sits on the composer surface,
+  // the top ~17 % (Figma's 16.832 %) fades to transparent so any
+  // thread content directly behind dims out smoothly. Using
+  // `to bottom` with a stop at 16.832 % is the direct Figma
+  // translation of `bg-gradient-to-b from-[rgba(255,255,255,0)] to-[16.832%] to-white`.
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0) 0%,
+    var(--slds-g-color-surface-1, #ffffff) 16.832%
+  );
+
+  // Pointer events pass through the transparent top slice so mouse
+  // interactions with the last-visible message aren't hijacked by
+  // the composer wrapper. The inner editor re-enables pointer
+  // events on itself.
+  pointer-events: none;
+}
+
+.seller-home__conv-composer-inner {
+  max-width: 50rem;   // 800px — matches thread column
+  width: 100%;
+  margin: 0 auto;
+
+  // Re-enable pointer events INSIDE the 800 px column so the
+  // textarea, toolbar buttons, and Send target respond normally.
+  // Everything OUTSIDE the column (the wrapper's fade area to the
+  // left/right of the 800 px band) stays click-through.
+  pointer-events: auto;
+
+  // Figma "input-footer" reserves ~26 px of empty gradient zone at
+  // the top before the editor starts (y=26 within the 147 px
+  // wrapper), then 12 px of bottom padding after the toolbar. This
+  // padding gives the editor breathing room without adding a border.
+  padding-block: 1.625rem var(--slds-g-spacing-3, 0.75rem); // 26px top, 12px bottom
+  padding-inline: var(--slds-g-spacing-4, 1rem);
+}
+
+.seller-home__conv-composer-editor {
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  border: 1px solid var(--slds-g-color-neutral-base-60, #939393);
+  border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px per Figma
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.seller-home__conv-composer-content {
+  padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
+}
+
+.seller-home__conv-composer-textarea {
+  width: 100%;
+  min-height: 1.1875rem; // 19px — one line at the design's line-height
+  max-height: 12rem;     // ~10 lines before scroll
+  resize: none;
+  overflow-y: auto;
+  border: 0;
+  padding: 0;
+  background: transparent;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 0.875rem);       // 14px
+  line-height: 1.1875rem;                                // 19px
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+
+  &::placeholder {
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  }
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.seller-home__conv-composer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+
+  padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+}
+
+.seller-home__conv-composer-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.seller-home__conv-composer-btn {
+  // Icon-only bare button — inherits SLDS `slds-button_icon-bare`
+  // sizing + hover states from the base classes. Phase 1 disables
+  // the Send button until the input has content (handled by JS in a
+  // later phase); non-Send buttons are enabled placeholders that
+  // fire no action yet.
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  &[disabled] {
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+
+// ──────────────────────────────────────────────────────────────────────
+// Messages — user / agent / workflow_activity
+// ──────────────────────────────────────────────────────────────────────
+// Base <article> reset — the macros render each message inside its
+// own <article>, and both browsers' user-agent default styling and
+// tools like Nunjucks/gulp leave `margin` untouched. Killing that
+// margin here means the per-type spacing (parent `gap` on the
+// thread inner + `align-self` per message) fully owns the rhythm.
+.seller-home__conv-msg {
+  margin: 0;
+  min-width: 0;   // allow flex children to shrink for text truncation
+  max-width: 100%;
+}
+
+// ── User query pill (Figma "query title") ─────────────────────────
+// Right-aligned rounded pill. `align-self: flex-end` pushes the
+// article to the right of the 800 px column; `max-width` caps the
+// pill so a long question wraps within a readable measure instead
+// of stretching the full column.
+.seller-home__conv-msg--user {
+  align-self: flex-end;
+  max-width: min(80%, 40rem);   // 640px cap; 80% at narrow widths
+  // The pill's own padding + rounding gives it its shape — the
+  // wrapper only positions it. Deferring visuals to the <p> child
+  // lets a future "user avatar to the right of the pill" addition
+  // slot in cleanly (add a sibling to the pill, adjust flex-direction).
+  display: flex;
+  justify-content: flex-end;
+}
+
+.seller-home__conv-msg-user-pill {
+  margin: 0;
+
+  // Figma: background --slds-g-color-brand-base-95 (#edf4ff),
+  // radius 20 px (--slds-g-radius-border-4), padding 12 × 16.
+  background: var(--slds-g-color-brand-base-95, #edf4ff);
+  border-radius: var(--slds-g-radius-border-4, 1.25rem); // 20px
+  padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem); // 12 16
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);  // 13px per Figma
+  line-height: 1.125rem;                                 // 18px per Figma
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+
+  // Wrap long messages naturally — no fixed height, no `nowrap`.
+  // Handles both regular text wrapping and awkwardly long tokens
+  // (URLs, hashes) without pushing the pill past the max-width cap.
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+// ── Agent response block ──────────────────────────────────────────
+// Left-aligned. Uses the full 800 px column so the embedded table
+// has room to render at design widths. Figma indents the agent
+// content by 12 px (pl-3) from the column edge — keeps the response
+// visually grouped and distinct from the seller's right-aligned
+// pill without needing a background fill.
+.seller-home__conv-msg--agent {
+  align-self: stretch;
+  padding-inline-start: var(--slds-g-spacing-3, 0.75rem); // 12px indent
+
+  display: flex;
+  flex-direction: column;
+  // 8 px between the response text and any embedded structured
+  // content (currently: the prospect table). Reads as "one answer,
+  // with a supporting artifact" rather than two independent items.
+  gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.seller-home__conv-msg-agent-text {
+  margin: 0;
+
+  // Figma: 14 px SF Pro Regular, line-height 19 px,
+  // color --slds-g-color-on-surface-3 (#001e5b).
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 0.875rem);       // 14px
+  line-height: 1.1875rem;                                // 19px
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+// ── Workflow activity chip ────────────────────────────────────────
+// Compact "job's done" indicator. Small icon + two-line label
+// (primary + secondary status). Rendered as a plain flex row — no
+// background, no border — so it reads as a status footnote rather
+// than another message card. Left-aligned + same 12 px indent as
+// the agent response so a scan down the left edge stays clean.
+.seller-home__conv-msg--activity {
+  align-self: flex-start;
+  padding-inline-start: var(--slds-g-spacing-3, 0.75rem); // 12px indent
+  padding-block: var(--slds-g-spacing-1, 0.25rem);        // 4px vertical breathing room
+
+  display: inline-flex;
+  align-items: flex-start;   // top-align icon with the primary label
+  gap: var(--slds-g-spacing-2, 0.5rem); // 8px between icon and text
+
+  // Slightly cooler on-surface-2 gray so the row reads as
+  // supporting metadata, not a peer message.
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+.seller-home__conv-msg-activity-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;   // 16px per Figma tool-call chip
+  height: 1rem;
+  // Nudge down so the icon centerline aligns with the primary
+  // label's cap height instead of its baseline — matches Figma's
+  // optical alignment of the tool-call chip.
+  margin-top: 0.125rem; // 2px
+}
+
+.seller-home__conv-msg-activity-glyph {
+  width: 1rem;
+  height: 1rem;
+  fill: currentColor;
+}
+
+.seller-home__conv-msg-activity-body {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.125rem;   // 2px — tight two-line stack
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.seller-home__conv-msg-activity-label {
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-2, 0.75rem);    // 12px per Figma tool-call chip
+  line-height: 1rem;                                     // 16px
+  font-weight: var(--slds-g-font-weight-4, 400);         // Regular
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+.seller-home__conv-msg-activity-status {
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-2, 0.75rem);    // 12px
+  line-height: 1rem;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);      // muted — secondary status
+}
+
+// ── Suggested next steps ──────────────────────────────────────────
+// Closing nudge under a response: a bold heading over a few rows, each
+// a sentence that ends in an accent CTA and an arrow. Same 12 px indent
+// as the agent response so the left edge of the thread reads as one
+// column.
+.seller-home__conv-msg--suggestions {
+  align-self: stretch;
+  padding-inline-start: var(--slds-g-spacing-3, 0.75rem); // 12px indent
+  padding-block: var(--slds-g-spacing-1, 0.25rem);        // 4px
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-3, 0.75rem);                  // 12px
+}
+
+.seller-home__conv-suggestions-heading {
+  margin: 0;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 0.875rem);       // 14px
+  line-height: 1.1875rem;                                // 19px
+  font-weight: var(--slds-g-font-weight-7, 700);         // Bold
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+// The rows read as prose, so no markers — but they stay a <ul> so AT
+// users still hear how many options there are.
+.seller-home__conv-suggestions-list {
+  margin: 0;
+  padding-inline-start: 0;
+  list-style: none;
+
+  display: flex;
+  flex-direction: column;
+  // Roomier than a normal paragraph stack: each row is its own offer,
+  // and the gap is what makes the set scannable.
+  gap: var(--slds-g-spacing-3, 0.75rem);                 // 12px
+}
+
+.seller-home__conv-suggestions-item {
+  list-style: none;
+}
+
+// Sentence + CTA share one paragraph so the CTA wraps as part of the
+// prose instead of being pushed onto its own line while the sentence
+// still has room.
+.seller-home__conv-suggestion-line {
+  margin: 0;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 0.875rem);       // 14px
+  line-height: 1.1875rem;                                // 19px
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+
+  strong {
+    font-weight: var(--slds-g-font-weight-7, 700);
+  }
+}
+
+// A button that reads as bold accent prose. Undecorated at rest so the
+// row stays quiet; underlines on hover and keyboard focus to confirm
+// which part is interactive.
+.seller-home__conv-suggestion {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: start;
+
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: var(--slds-g-font-weight-6, 600);         // Semibold
+  // Foreground accent, NOT the `accent-container-*` family — those are
+  // container fills (SLDS wires container-1 to a background hook). This
+  // is the same token every other actionable phrase in the proto uses,
+  // including the Seller Home briefing link, so link-blue stays
+  // consistent across surfaces.
+  color: var(--slds-g-color-accent-2, #0250d9);
+
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+    text-underline-offset: 0.1875rem;   // 3px — clears the descenders
+  }
+}
+
+// Trailing arrowhead. Inside the button so it shares the hit target,
+// and out of the a11y tree — the CTA text already says what happens.
+.seller-home__conv-suggestion-arrow {
+  display: inline-block;
+  margin-inline-start: 0.375rem;      // 6px
+  // The glyph rides high in its em box; a 1px nudge lines its shaft up
+  // with the text's optical center.
+  transform: translateY(0.0625rem);   // 1px
+  text-decoration: none;
+}
+
+// ── Thinking indicator ────────────────────────────────────────────
+// Label followed by a cluster of three twinkling sparkles, matching
+// the platform's `typing-animation` component. That component ships
+// the SVGs and per-star classes but keeps its motion in a scoped
+// stylesheet, so the animation below is our own.
+//
+// Borrows the activity chip's 12 px indent so the thread's left edge
+// doesn't shift as the row appears and is swapped for the reply.
+.seller-home__conv-msg--thinking {
+  align-self: flex-start;
+  padding-inline-start: var(--slds-g-spacing-3, 0.75rem); // 12px indent
+  padding-block: var(--slds-g-spacing-1, 0.25rem);        // 4px
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);                  // 4px — xx-small,
+                                                          // as the platform
+                                                          // component spaces it
+
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+.seller-home__conv-thinking-label {
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-2, 0.75rem);    // 12px
+  line-height: 1rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// Horizontal row, centered on the label's midline. Each star keeps a
+// fixed layout box and only `transform` animates — transforms don't
+// reflow, so the row's width and height hold steady while the stars
+// pulse instead of nudging the composer on every beat.
+.seller-home__conv-thinking-stars {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.0625rem;   // 1px — the stars' own points supply the rest
+}
+
+// Descending sizes left to right, so the row reads as a sparkle with a
+// trailing tail rather than three identical dots.
+.seller-home__conv-thinking-star {
+  flex: 0 0 auto;
+  display: block;
+
+  // Presentation attributes lose to stylesheet rules, so this repaints
+  // the inline `fill="#0176d3"` from a token — one edit reskins all
+  // three stars with the surface's accent. Foreground accent rather
+  // than the `accent-container-*` family, which is for container fills.
+  fill: var(--slds-g-color-accent-1, #066afe);
+
+  // Scale from the middle so a star twinkles in place rather than
+  // drifting toward one corner.
+  transform-origin: center;
+  animation: sh-conv-sparkle-twinkle 1.5s ease-in-out infinite;
+}
+
+.seller-home__conv-thinking-star--1 {
+  width: 0.75rem;    // 12px
+  height: 0.75rem;
+}
+
+.seller-home__conv-thinking-star--2 {
+  width: 0.5rem;     // 8px
+  height: 0.5rem;
+  // Offset so the three peak in sequence — the row reads as one
+  // shimmer travelling across it instead of three separate blinks.
+  animation-delay: 0.35s;
+}
+
+.seller-home__conv-thinking-star--3 {
+  width: 0.375rem;   // 6px
+  height: 0.375rem;
+  animation-delay: 0.7s;
+}
+
+@keyframes sh-conv-sparkle-twinkle {
+  0%, 100% { transform: scale(0.55); opacity: 0.4; }
+  50%      { transform: scale(1);    opacity: 1; }
+}
+
+// Motion is the affordance here, not the message — with the animation
+// suppressed the cluster holds at full size and the label still says
+// what's happening.
+@media (prefers-reduced-motion: reduce) {
+  .seller-home__conv-thinking-star {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+}
+
+// While a turn is in flight the composer stays typeable (the seller
+// can line up their next message) but Send is held disabled by JS so
+// two turns can't overlap. This only dims the toolbar to match.
+.seller-home__conv-composer.is-busy {
+  .seller-home__conv-composer-toolbar {
+    opacity: 0.6;
+  }
+}
+
+
+// ──────────────────────────────────────────────────────────────────────
+// Prospect table — SLDS 2 uplift, embedded in the agent response
+// ──────────────────────────────────────────────────────────────────────
+// The table uses the SLDS 2 uplift classes (`slds-table
+// slds-table_bordered slds-table-uplift`) so density, borders, header
+// treatment, and hover states all come from the design system
+// stylesheet — no re-implementation of the visual grammar here.
+//
+// The column set is intentionally wider than the thread's 800 px
+// column: rows carry the same rich record data as the Prospecting
+// surface (avatar + contact details, company metadata, rationale,
+// source badges, feedback, actions). So this block owns:
+//   • Horizontal scroll INSIDE the wrapper, never on the page.
+//   • A pinned Prospect column so names stay readable while scanning
+//     sideways.
+//   • Per-column minimum widths, keyed off the header's
+//     `data-sh-conv-col` so the JSON `columns` order stays free.
+//   • The cell-layout utilities the ported hunter macros expect
+//     (`slds-td-formatter`, `cell_text_link`, …), scoped to this
+//     table so they can't leak onto other pages.
+//   • Row selection styling (SLDS uplift provides hover/focus, but
+//     not the "selected" background this prototype needs).
+// Height budget for the scroll viewport. A row is as tall as the
+// tallest cell layout: the Prospect cell's four stacked lines at 20 px
+// leading (80 px), the inner block's vertical padding (16 px), the
+// cell's own padding (8 px), and the row border. Showing a half row is
+// deliberate — a clipped row is the clearest possible "there's more
+// below" cue. Tune `-rows` to change how much is visible before it
+// scrolls; tune `-row-height` if the cell type scale changes.
+$sh-conv-table-row-height: 6.5rem;       // 104px
+$sh-conv-table-header-height: 2.25rem;   // 36px — 13px label + padding
+$sh-conv-table-rows: 5.5;
+
+.seller-home__conv-prospect-table {
+  // `min-width: 0` prevents the table's intrinsic content width
+  // from forcing the agent article to grow past the 800 px column
+  // — the "grid-item overflow escape" that would otherwise cause
+  // horizontal PAGE scroll instead of table scroll.
+  min-width: 0;
+  max-width: 100%;
+
+  // Both axes scroll INSIDE this wrapper: sideways because the rich
+  // column set is wider than the thread, vertically because 12 rows
+  // would otherwise push the outreach review far below the fold.
+  overflow: auto;
+  max-height: calc(
+    #{$sh-conv-table-header-height} + #{$sh-conv-table-row-height * $sh-conv-table-rows}
+  );
+
+  // Keep momentum scrolling on trackpads/touch inside the wrapper.
+  -webkit-overflow-scrolling: touch;
+
+  // Match the agent response's radius so the table reads as content
+  // owned by that response rather than a free-floating dashboard
+  // card. A full 1 px hairline on all four sides forms a closed
+  // frame around the table so the wrapper — not the inner table's
+  // drop shadow — defines the visible edge and corner radius clip.
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);   // 8px
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+}
+
+.seller-home__conv-prospect-table-el {
+  // `max-content` lets the per-column minimums below add up past the
+  // wrapper, which is what produces the horizontal scroll;
+  // `min-width: 100%` keeps the table filling the wrapper when the
+  // column set happens to be narrow enough to fit.
+  width: max-content;
+  min-width: 100%;
+
+  // Drop the SLDS `slds-table_bordered` outer border so the drop
+  // shadow reads as the sole edge treatment of the table.
+  border-width: 0;
+
+  // Lifted card shadow — replaces the wrapper's border/radius frame
+  // as the primary edge treatment so the table reads as a first-class
+  // content card inside the agent response.
+  box-shadow: 0px 4px 12px 0px rgba(0, 0, 0, 0.15);
+
+  // Per-column minimums, keyed off the header cell's column id so
+  // reordering `columns` in the JSON doesn't require touching CSS.
+  // Rationale gets the most room (it's a sentence); the rest are
+  // sized to their content shape.
+  th[data-sh-conv-col="prospect"]    { min-width: 15rem; }    // 240px — avatar + 4 lines
+  th[data-sh-conv-col="company"]     { min-width: 14rem; }    // 224px — logo + 4 lines
+  // Fixed, not just minimum: the rationale is a sentence, so its column
+  // is sized to the line length we want it to wrap at (~2–3 lines)
+  // rather than to its content, which would run the column very wide.
+  th[data-sh-conv-col="whyProspect"] {
+    width: 22rem;                                             // 352px
+    min-width: 22rem;
+  }
+  th[data-sh-conv-col="signal"]      { min-width: 12rem; }    // 192px
+  th[data-sh-conv-col="lastTouch"]   { min-width: 8.5rem; }   // 136px
+  th[data-sh-conv-col="source"]      { min-width: 9.5rem; }   // 152px — badge + optional badges
+  th[data-sh-conv-col="owner"]       { min-width: 9rem; }     // 144px
+  th[data-sh-conv-col="actions"]     { min-width: 7.5rem; }   // 120px — two icon buttons
+
+  // Header row — same 13 px base size hunter's prospect tables use.
+  // Weight and text color come from the SLDS table-header tokens; only
+  // the background is restated, because a frozen header needs to be
+  // opaque and can't rely on inheriting the surface behind it.
+  thead th {
+    font-size: var(--slds-g-font-size-base, 0.8125rem);   // 13px
+    background: var(--slds-g-color-surface-container-2, #f3f3f3);
+  }
+
+  // Body cells — 13 px base, top-aligned because the rich cells stack
+  // up to four lines. The `height: 1px` is the standard trick that lets
+  // a cell's inner flex container resolve `height: 100%` against the
+  // row's real height (hunter's prospect tables do the same).
+  tbody td {
+    height: 1px;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    font-size: var(--slds-g-font-size-base, 0.8125rem);   // 13px
+    line-height: 1.25rem;                                 // 20px
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+    vertical-align: top;
+  }
+
+  // An opaque row background is what makes the pinned first column
+  // readable: the sticky cell inherits it, so scrolled content passes
+  // behind rather than through it.
+  tbody tr {
+    background-color: var(--slds-g-color-surface-container-1, #ffffff);
+  }
+
+  // ── Frozen header and first column ──────────────────────────────
+  // The wrapper scrolls on both axes, so both the header row and the
+  // leading column stay put. The first column is pinned by position
+  // rather than by name (`:first-child`, not the prospect id), so
+  // reordering `columns` pins the new leading column instead of
+  // stranding a sticky cell mid-table.
+  //
+  // Layering, innermost last: body first column (1) < header row (2)
+  // < the header's own first cell, which is stuck on both axes (3).
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  thead th:first-child,
+  tbody td:first-child {
+    position: sticky;
+    left: 0;
+    // Hairline separator that reads as the boundary of the frozen
+    // region once the rest of the row scrolls under it.
+    border-right: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  }
+
+  tbody td:first-child {
+    // Follows the row's background, including the hover and selected
+    // states set on the <tr> below.
+    background-color: inherit;
+    z-index: 1;
+  }
+
+  thead th:first-child {
+    z-index: 3;
+  }
+
+  // ── Cell layout utilities (ported from hunter) ───────────────────
+  // The cell macros in _home_conversation_prospect_cells.html use
+  // hunter's class names; these are the matching rules, scoped here.
+  .slds-td-formatter {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    height: 100%;
+  }
+
+  .slds-actions-formatter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+  }
+
+  // Without this, a flex child's min-content width defeats the
+  // `slds-truncate` ellipsis inside stacked cells.
+  td .slds-td-formatter > div {
+    min-width: 0;
+  }
+
+  // Record name / company name — the link-styled first line of the
+  // stacked cells. Rendered as text, not an <a>: there's nothing to
+  // navigate to in the prototype, and a real link would promise one.
+  .cell_text_link {
+    font-weight: var(--slds-g-font-weight-6, 590);
+    font-size: var(--slds-g-font-size-base, 0.8125rem);
+    color: var(--slds-g-color-accent-2, #0250d9);
+  }
+
+  // Title / email / phone under a name, and the company metadata, are
+  // left at SLDS's `.slds-text-body_regular` size — the same 13 px base
+  // hunter renders them at. They read as secondary through color
+  // (`slds-text-color_weak`) and weight, not by shrinking.
+
+  // Clamp the multi-line rationale to three lines so every row keeps
+  // the same height regardless of copy length. Full text remains
+  // available through the cell's `title`.
+  //
+  // `white-space` is the load-bearing line: SLDS sets `nowrap` on every
+  // table cell, which is right for single-value columns and wrong for a
+  // sentence — without opting back in, prose renders as one long line
+  // and stretches its column instead of wrapping inside it.
+  .slds-line-clamp_medium {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    white-space: pre-line;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Avatar images (company logos) — SLDS sizes the container, but the
+  // image itself needs to fill it.
+  .slds-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .slds-accept-fill-color { fill: var(--slds-g-color-success-base-60, #2e844a); }
+  .slds-reject-fill-color { fill: var(--slds-g-color-error-base-40, #ba0517); }
+}
+
+// ── Row states: hover, focus, selected ────────────────────────────
+// SLDS uplift already ships hover-row + focus-cell rules. These
+// rules re-assert the desired hover color (a light neutral tint
+// rather than the SLDS default blue-tint, which would fight the
+// user pill's brand-95 backdrop above) and add the missing
+// "selected" background. `.slds-hint-parent` on each row is what
+// enables the SLDS row-level hover class match.
+//
+// Reviewed-status modifier — `[data-sh-review-status]` on the row
+// carries the current review state (approved / changes_requested).
+// A leading vertical accent stripe on the row communicates that
+// this prospect has already been reviewed, without changing the
+// row's density or column layout. See binder in home_conversation.js
+// for the DOM update path.
+.seller-home__conv-prospect-row {
+  cursor: pointer;
+
+  // Hover: light neutral — subtle "you can click this" without
+  // stealing attention from the user pill. Uses SLDS neutral-95
+  // (#f3f3f3) so it flows with the header background and doesn't
+  // clash with any theme.
+  &:hover {
+    background: var(--slds-g-color-neutral-base-95, #f3f3f3);
+  }
+
+  // Keyboard focus — SLDS renders an outline on the focused cell
+  // by default, but for row-level focus (roving tabindex) we want
+  // the whole row to signal focus. `outline` on the <tr> renders
+  // correctly across browsers thanks to `border-collapse: collapse`
+  // on the SLDS table.
+  &:focus,
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-border-brand-1, #0176d3);
+    outline-offset: -2px;
+  }
+
+  // Selected: brand-tinted background. Kept lighter than the user
+  // pill (brand-95 vs. brand-90) so a selected row doesn't compete
+  // with the pill for visual weight. The `is-selected` class is
+  // toggled by home_conversation.js on single-select interactions.
+  &.is-selected {
+    background: var(--slds-g-color-brand-base-95, #edf4ff);
+  }
+
+  &.is-selected:hover {
+    // Slightly darker on hover-of-selected so the affordance stays
+    // legible even when the row is already selected.
+    background: var(--slds-g-color-brand-base-90, #dbe7fb);
+  }
+
+  // Reviewed-status accent — a 3 px leading stripe using the
+  // first-cell background painter. Applied via
+  // `[data-sh-review-status="approved|changes_requested"]` toggled
+  // by JS on each review-state change. Kept as `inset` box-shadow
+  // so a future column resize doesn't fight `border-left`.
+  &[data-sh-review-status="approved"] td:first-child {
+    box-shadow: inset 3px 0 0 0 var(--slds-g-color-success-base-70, #2e844a);
+  }
+  &[data-sh-review-status="changes_requested"] td:first-child {
+    box-shadow: inset 3px 0 0 0 var(--slds-g-color-warning-base-60, #c68a00);
+  }
+
+  // Once a decision exists, the opposite action recedes — the row
+  // still allows changing its mind, but the current state is legible
+  // at a glance while scanning the Actions column.
+  &[data-sh-review-status="approved"] [data-sh-conv-reject],
+  &[data-sh-review-status="changes_requested"] [data-sh-conv-accept] {
+    opacity: 0.4;
+  }
+
+  // The chosen action reads as held down.
+  [data-sh-conv-accept][aria-pressed="true"],
+  [data-sh-conv-reject][aria-pressed="true"] {
+    background-color: var(--slds-g-color-neutral-base-95, #f3f3f3);
+    border-color: var(--slds-g-color-border-2, #aeaeae);
+  }
+}
+
+
+// ──────────────────────────────────────────────────────────────────────
+// Outreach Review — one-at-a-time draft review, below the table
+// ──────────────────────────────────────────────────────────────────────
+// PARKED, PARTLY. The cadence card further down replaced the
+// single-draft review, so `_home_outreach_review.html` no longer
+// renders and the layout rules for its body — container, header,
+// prospect line, signal, draft card, inline feedback, actions, batch
+// — are dormant. Kept in place, unmodified, so reviving the component
+// is a one-line import (see the parked note at the top of that file).
+//
+// STILL LIVE, borrowed by the cadence card rather than duplicated:
+//   .seller-home__conv-review-pager-btn / -pager-icon / -progress*
+//   .seller-home__conv-review-status + its three modifiers
+//   .seller-home__conv-review-btn / --batch
+//   .seller-home__conv-review-completed*
+//   .seller-home__conv-review-dialog / -backdrop
+// Edit those with both surfaces in mind.
+//
+// Rendered by `_home_outreach_review.html`, slotted inside an
+// agent message beneath the prospect table. Shares the agent
+// column's 12 px left indent + 800 px content cap so the review
+// reads as an EXTENSION of the response, not a floating dashboard.
+//
+// Visual hierarchy (top → bottom):
+//   1. Header row: title on the left, progress on the right.
+//   2. Body: prospect metadata, signal, draft card, inline
+//      feedback form (hidden by default).
+//   3. Actions: Prev/Next on the left, Request changes / Approve
+//      on the right.
+//   4. Batch action: Approve all N drafts, right-aligned below
+//      its own divider.
+//
+// Container styling (SLDS neutral border + 8 px radius) matches
+// the prospect table wrapper above, so the two read as a paired
+// list + detail surface.
+.seller-home__conv-review {
+  // `min-width: 0` prevents the draft body's intrinsic width from
+  // pushing the agent article past the 800 px column at narrow
+  // viewports. Table already has this escape; the review needs
+  // its own so wrapping stays inside the section.
+  min-width: 0;
+  max-width: 100%;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-3, 0.75rem);   // 12 px between header / body / actions
+
+  padding: var(--slds-g-spacing-4, 1rem);
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);   // 8 px, same as table
+
+  // Same body-text color/typography as the agent response text so
+  // the review reads as a continuation of the agent's voice.
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+// ── Empty state ─────────────────────────────────────────────────
+// If the review roster is empty (edge case for reuses), render a
+// low-key placeholder rather than an empty shell. Same container
+// styling but with a single centered paragraph.
+.seller-home__conv-review--empty {
+  align-items: center;
+  text-align: center;
+}
+
+.seller-home__conv-review-empty-body {
+  margin: 0;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  line-height: 1.1875rem;
+}
+
+// ── Header row ──────────────────────────────────────────────────
+.seller-home__conv-review-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+
+  // At narrow widths, drop the progress row below the title
+  // instead of squeezing both onto one line and ellipsizing.
+  flex-wrap: wrap;
+}
+
+.seller-home__conv-review-heading {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-2, 1rem);         // 16 px
+  font-weight: var(--slds-g-font-weight-6, 590);       // Semibold
+  line-height: 1.5rem;                                 // 24 px
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+.seller-home__conv-review-meta {
+  display: inline-flex;
+  // Was `baseline` when the meta contained only text spans; now
+  // that a pager button sits alongside the progress text, switch
+  // to `center` so the chevron glyphs align optically with the
+  // "1 of 12" x-height instead of hanging off the baseline.
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);  // 13 px
+  line-height: 1.125rem;
+}
+
+// ── Inline pager (chevron ⟨  1 of 12  ⟩ chevron) ────────────────
+// Replaces the old bottom-row Previous/Next buttons. Compact enough
+// to sit inline with the reviewed-progress text; large-enough tap
+// target for coarse pointers (WCAG 2.5.5 target size = 24×24 min
+// for AA compact controls, hit here at exactly 24 px).
+.seller-home__conv-review-pager {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);   // 4 px between icon and text
+}
+
+.seller-home__conv-review-pager-btn {
+  // Reset native <button> chrome — the icon does the whole job.
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;    // 24 px
+  height: 1.5rem;
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  transition: background-color 120ms ease, color 120ms ease;
+
+  &:hover {
+    background: var(--slds-g-color-neutral-base-95, #f3f3f3);
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+  }
+
+  // SLDS-style focus ring — a 2 px brand outline offset outside the
+  // button so it stays visible against the neutral hover fill.
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-border-brand-1, #0176d3);
+    outline-offset: 2px;
+  }
+
+  // Disabled state (used when the seller reaches an end of the
+  // roster if wrapping is ever disabled — currently the pager
+  // wraps, so this state doesn't apply in practice yet).
+  &[disabled] {
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+    opacity: 0.5;
+    cursor: not-allowed;
+    &:hover {
+      background: transparent;
+      color: var(--slds-g-color-on-surface-1, #5c5c5c);
+    }
+  }
+}
+
+.seller-home__conv-review-pager-icon {
+  // Sized to sit alongside the 13 px progress text without
+  // overpowering it. 12 px chevrons inside a 24 px button give a
+  // clear tap target with a small, quiet glyph.
+  width: 0.75rem;   // 12 px
+  height: 0.75rem;
+  fill: currentColor;
+}
+
+.seller-home__conv-review-progress-current,
+.seller-home__conv-review-progress-total {
+  font-weight: var(--slds-g-font-weight-6, 590);
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+.seller-home__conv-review-progress-dot {
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+// ── Prospect metadata ───────────────────────────────────────────
+.seller-home__conv-review-prospect {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+  flex-wrap: wrap;   // stack at narrow widths
+}
+
+.seller-home__conv-review-prospect-headline {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-1, 0.875rem);    // 14 px
+  line-height: 1.1875rem;
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+
+  // Long name/role/company combinations flow naturally; single
+  // overlong tokens (URLs, hashes) still break.
+  overflow-wrap: anywhere;
+}
+
+.seller-home__conv-review-prospect-name {
+  font-weight: var(--slds-g-font-weight-6, 590);      // Semibold
+}
+
+.seller-home__conv-review-prospect-role,
+.seller-home__conv-review-prospect-company {
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+.seller-home__conv-review-prospect-sep,
+.seller-home__conv-review-prospect-at {
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+// ── Status pill ─────────────────────────────────────────────────
+// Base pill treatment; per-status color comes from the BEM
+// modifier below (JS swaps `--<status>` on state change).
+.seller-home__conv-review-status {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem var(--slds-g-spacing-2, 0.5rem);   // 2 px vertical, 8 px horizontal
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  font-size: var(--slds-g-font-scale-neg-2, 0.75rem); // 12 px
+  line-height: 1rem;
+  font-weight: var(--slds-g-font-weight-6, 590);
+  white-space: nowrap;
+}
+
+.seller-home__conv-review-status--not-reviewed {
+  background: var(--slds-g-color-neutral-base-95, #f3f3f3);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+.seller-home__conv-review-status--approved {
+  // Success family — the seller has locally approved; the copy is
+  // "Approved", not "Sent". A companion sent-state (future) would
+  // use a stronger fill or a different token family so the two
+  // don't collapse into "same green".
+  background: var(--slds-g-color-success-base-95, #d5f2dc);
+  color: var(--slds-g-color-success-base-30, #164a24);
+}
+
+.seller-home__conv-review-status--changes-requested {
+  background: var(--slds-g-color-warning-base-95, #fff3d4);
+  color: var(--slds-g-color-warning-base-30, #58390a);
+}
+
+// ── Signal line ─────────────────────────────────────────────────
+.seller-home__conv-review-signal {
+  // `margin-block-end` — 12 px breathing room between the signal
+  // line and the draft card that follows. Applied on the signal
+  // (not the draft's top) so hiding the signal (empty-signal case)
+  // also collapses the gap, avoiding an orphan margin above the
+  // draft. Matches the parent section's spacing-3 rhythm.
+  margin: 0 0 var(--slds-g-spacing-3, 0.75rem) 0;
+
+  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);   // 13 px
+  line-height: 1.125rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+.seller-home__conv-review-signal-label {
+  font-weight: var(--slds-g-font-weight-6, 590);
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+// ── Draft card ──────────────────────────────────────────────────
+// A quiet inset frame — lighter background, subtle border — so it
+// reads as "the content of this draft" without competing with the
+// action bar below it.
+.seller-home__conv-review-draft {
+  margin: 0;
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  background: var(--slds-g-color-surface-1, #ffffff);
+}
+
+.seller-home__conv-review-draft-header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+
+  padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-3, 0.75rem);   // 12 12
+  border-bottom: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  line-height: 1.1875rem;
+}
+
+.seller-home__conv-review-draft-channel {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  background: var(--slds-g-color-neutral-base-95, #f3f3f3);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  font-size: var(--slds-g-font-scale-neg-2, 0.75rem);
+  line-height: 1rem;
+  font-weight: var(--slds-g-font-weight-6, 590);
+  white-space: nowrap;
+}
+
+.seller-home__conv-review-draft-subject-label {
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-weight: var(--slds-g-font-weight-6, 590);
+}
+
+.seller-home__conv-review-draft-subject {
+  font-weight: var(--slds-g-font-weight-6, 590);
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+  // Allow subject to wrap on multiple lines — no truncation. The
+  // seller needs to read the whole thing before approving.
+  overflow-wrap: anywhere;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.seller-home__conv-review-draft-body {
+  padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-3, 0.75rem);
+  // `white-space: pre-wrap` preserves paragraph breaks encoded as
+  // `\n` in the JSON body while still wrapping long lines. Keeps
+  // the JSON source readable and avoids injecting <br>/<p> markup
+  // per line.
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  line-height: 1.375rem;                                // 22 px — comfortable read
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// ── Inline feedback form ────────────────────────────────────────
+.seller-home__conv-review-feedback {
+  // `display: flex` on this rule wins the specificity war against
+  // the browser's default `[hidden] { display: none }` UA rule, so
+  // an explicit `[hidden]` override is needed to actually hide the
+  // panel when JS sets the attribute. Same pattern applied to
+  // `.seller-home__conv-review-completed` below.
+  &[hidden] {
+    display: none;
+  }
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  background: var(--slds-g-color-warning-base-95, #fff3d4);
+}
+
+.seller-home__conv-review-feedback-label {
+  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+.seller-home__conv-review-feedback-input {
+  width: 100%;
+  min-height: 4rem;
+  resize: vertical;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  line-height: 1.1875rem;
+}
+
+.seller-home__conv-review-feedback-actions {
+  display: flex;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  justify-content: flex-end;
+}
+
+// ── Actions row ─────────────────────────────────────────────────
+// Right-aligns the per-prospect decisions (Request changes,
+// Approve). Prev/Next moved to the header pager, so this row no
+// longer needs the "space-between" split.
+//
+// Wraps at narrow widths so the decision buttons don't drop off
+// the right edge.
+//
+// `[hidden]` override: JS hides this row when `state.completed`
+// flips, and the `display: flex` here would otherwise defeat the
+// browser's default `[hidden]` treatment.
+.seller-home__conv-review-actions {
+  &[hidden] {
+    display: none;
+  }
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  flex-wrap: wrap;
+}
+
+.seller-home__conv-review-actions-decisions {
+  display: inline-flex;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  flex-wrap: wrap;
+}
+
+.seller-home__conv-review-btn {
+  // SLDS `slds-button_neutral` + `_brand` own colour + hover +
+  // disabled treatments. This class exists only so a page-level
+  // rule can target review buttons if needed later (e.g. tighter
+  // padding at narrow widths).
+  min-height: 2rem;
+}
+
+// ── Batch action ────────────────────────────────────────────────
+// `[hidden]` override: JS hides this row in the completed state
+// alongside the actions row above.
+.seller-home__conv-review-batch {
+  &[hidden] {
+    display: none;
+  }
+
+  display: flex;
+  justify-content: flex-end;
+
+  padding-top: var(--slds-g-spacing-3, 0.75rem);
+  border-top: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+}
+
+// ── Completed state ─────────────────────────────────────────────
+// Replaces the review body / actions / batch when the seller
+// confirms "Approve all". Same container padding + border, but
+// centred content + a success glyph so the transition reads
+// clearly.
+//
+// Explicit `[hidden]` override — `display: flex` here would
+// otherwise overpower the browser UA's default hidden treatment,
+// leaving the completed block visible at first paint before the
+// seller has approved anything. JS `render()` sets `hidden` on
+// initial render + toggles it when `state.completed` flips.
+.seller-home__conv-review-completed {
+  &[hidden] {
+    display: none;
+  }
+
+  display: flex;
+  align-items: flex-start;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  border: 1px solid var(--slds-g-color-success-base-70, #2e844a);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  background: var(--slds-g-color-success-base-95, #d5f2dc);
+}
+
+.seller-home__conv-review-completed-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.125rem;
+  color: var(--slds-g-color-success-base-30, #164a24);
+}
+
+.seller-home__conv-review-completed-glyph {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: currentColor;
+}
+
+.seller-home__conv-review-completed-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.seller-home__conv-review-completed-heading {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  line-height: 1.1875rem;
+  font-weight: var(--slds-g-font-weight-6, 590);
+  color: var(--slds-g-color-success-base-30, #164a24);
+}
+
+.seller-home__conv-review-completed-copy {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);
+  line-height: 1.125rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+
+// ──────────────────────────────────────────────────────────────────────
+// Approve-all confirmation dialog
+// ──────────────────────────────────────────────────────────────────────
+// SLDS 2 modal reused with page-scoped positioning. The dialog +
+// backdrop live at the end of the review section (outside the
+// `role="region"` so the aria-modal context is a peer, not a
+// nested role). Toggled with `hidden` + the SLDS `_open` classes
+// by JS.
+.seller-home__conv-review-dialog {
+  // Base SLDS styles already set `position: fixed; inset: 0`;
+  // no additional positioning needed. Kept flexible for a future
+  // "smaller confirm modal" variant that might centre a narrower
+  // container.
+  &[hidden] {
+    display: none;
+  }
+
+  // JS adds `is-open` (mirrors SLDS's `slds-fade-in-open` semantic)
+  // so we can hook transitions without depending on SLDS' animation
+  // classes being present in the compiled sheet.
+  &.is-open {
+    display: block;
+  }
+}
+
+.seller-home__conv-review-backdrop {
+  &[hidden] {
+    display: none;
+  }
+  &.is-open {
+    display: block;
+  }
+}
+
+
+// ──────────────────────────────────────────────────────────────────────
+// Cadence sequence — one prospect's touches, below the table
+// ──────────────────────────────────────────────────────────────────────
+// Rendered by `_home_conversation_cadence.html`. Ported from hunter's
+// Write Messaging step (`cadence-sequence.scss` + the icon-swap block
+// in `step_04.scss`) and re-scoped under `seller-home__conv-` so none
+// of it can reach the prospect table or the parked review.
+//
+// Fitting hunter's design into the thread's 800 px column:
+//   788 px inside the agent message's 12 px indent
+//   −24 px card padding, −30 px rail, −12 px rail gap
+//   = 722 px for the message card, split 7/5 → ~421 / ~301
+// which is why the paddings below run 12 px where hunter used 16 px.
+// If the Details column ever feels too narrow to read, the fix is to
+// drop `.seller-home__conv-step-card` from `slds-grid` to a column
+// stack at a breakpoint — every other rule here is width-agnostic.
+.seller-home__conv-cadence {
+  // Same escape the table and review need: without it a long draft
+  // line sets the intrinsic width and pushes the agent article past
+  // the 800 px column instead of wrapping inside it.
+  min-width: 0;
+  max-width: 100%;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);   // 8 px, same as table
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+.seller-home__conv-cadence--empty {
+  align-items: center;
+  text-align: center;
+}
+
+.seller-home__conv-cadence-empty-body {
+  margin: 0;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  line-height: 1.1875rem;
+}
+
+// ── Header: cadence identity + prospect pager ───────────────────
+.seller-home__conv-cadence-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+  flex-wrap: wrap;
+}
+
+.seller-home__conv-cadence-meta {
+  min-width: 0;
+}
+
+.seller-home__conv-cadence-name {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-2, 1rem);         // 16 px
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.5rem;
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+// Touch count, channel mix, and the cadence's own one-liner, run
+// together on one line. Both counts are derived from the steps, so
+// they restate the sequence rather than describing it separately.
+.seller-home__conv-cadence-summary {
+  margin: 0;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);  // 13 px
+  line-height: 1.125rem;
+}
+
+.seller-home__conv-cadence-dot {
+  margin-inline: 0.25rem;
+}
+
+.seller-home__conv-cadence-pager {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);
+  line-height: 1.125rem;
+}
+
+// ── Whose sequence ──────────────────────────────────────────────
+.seller-home__conv-cadence-prospect {
+  // `display: flex` outranks the UA's `[hidden] { display: none }`,
+  // so the completed state needs this to actually hide the row.
+  // Same override on the actions and batch rows below.
+  &[hidden] {
+    display: none;
+  }
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  flex-wrap: wrap;
+}
+
+.seller-home__conv-cadence-prospect-headline {
+  margin: 0;
+  min-width: 0;
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  line-height: 1.1875rem;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+.seller-home__conv-cadence-prospect-name {
+  font-weight: var(--slds-g-font-weight-6, 590);
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+.seller-home__conv-cadence-prospect-sep {
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+// ── Step list ───────────────────────────────────────────────────
+// An <ol>: the order is the cadence. Markers off — the numbering is
+// already in each header ("Email 1:"), and the rail carries the
+// sequence visually.
+.seller-home__conv-step-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.seller-home__conv-step-item {
+  list-style: none;
+}
+
+// ── One touch ───────────────────────────────────────────────────
+// Rail column, then content. The bottom margin is what the rail's
+// connector bleeds across to reach the next touch, so changing it
+// means changing `--rail-bleed` below with it.
+.seller-home__conv-step {
+  display: flex;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+  margin-bottom: 1.5rem;
+}
+
+.seller-home__conv-step-item:last-child .seller-home__conv-step {
+  margin-bottom: 0;
+}
+
+.seller-home__conv-step-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.seller-home__conv-step-header {
+  margin: 0.375rem 0 0.5rem;
+
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  // The label and value are separate spans with no whitespace
+  // between them, so the gap is what keeps it from reading as
+  // "Email 1:First touch".
+  gap: 0.25em;
+
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.1875rem;
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+
+  // The header is a collapse trigger alongside the rail button.
+  cursor: pointer;
+}
+
+// ── Channel rail ────────────────────────────────────────────────
+// The vertical line is a `::after` on the rail, not an element:
+// it starts below the chip and bleeds past the row's bottom edge,
+// so consecutive touches join into one continuous line with no
+// per-step bridging markup.
+.seller-home__conv-step-rail {
+  position: relative;
+  flex: 0 0 auto;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 1.875rem;      // clears the 30 px chip
+    bottom: -1.5rem;    // reaches the next touch across the row's margin
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    background-color: var(--slds-g-color-surface-container-3, #e5e5e5);
+  }
+}
+
+// The last touch has nothing to connect to, so its line would hang
+// below the sequence.
+.seller-home__conv-step-item:last-child .seller-home__conv-step-rail::after {
+  display: none;
+}
+
+.seller-home__conv-step-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.875rem;    // 30 px
+  height: 1.875rem;
+  flex-shrink: 0;
+
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
+    outline-offset: 2px;
+    border-radius: 50%;
+  }
+}
+
+// Two chips stacked at the same spot, cross-fading on opacity so
+// the swap costs no layout. Pointer events stay off them: hover
+// detection belongs to the rail, which is a bigger target.
+.seller-home__conv-step-chip {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  transition:
+    opacity 150ms cubic-bezier(0.65, 0, 0.35, 1),
+    transform 200ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.seller-home__conv-step-chip--type {
+  opacity: 1;
+}
+
+// Points down while expanded ("click to collapse"), right when
+// collapsed — the accordion convention.
+.seller-home__conv-step-chip--chevron {
+  opacity: 0;
+  transform: rotate(90deg);
+}
+
+.seller-home__conv-step-rail:hover .seller-home__conv-step-chip--type,
+.seller-home__conv-step-toggle:focus-visible .seller-home__conv-step-chip--type {
+  opacity: 0;
+}
+
+.seller-home__conv-step-rail:hover .seller-home__conv-step-chip--chevron,
+.seller-home__conv-step-toggle:focus-visible .seller-home__conv-step-chip--chevron {
+  opacity: 1;
+}
+
+// ── Channel colors ──────────────────────────────────────────────
+// Chip fill + glyph, and the connector line under it, per channel.
+// `slds-current-color` (in the markup) is what makes the glyph
+// inherit `color` here; without it SLDS paints it white on the
+// pastel chip.
+//
+// LinkedIn is indigo rather than blue on purpose: SLDS's
+// palette-blue-90 resolves to the same #d8e6fe as info-container-1,
+// which would make the email and LinkedIn chips identical.
+.seller-home__conv-step--email {
+  .seller-home__conv-step-chip {
+    background-color: var(--slds-g-color-info-container-1, #d8e6fe);
+    color: var(--slds-g-color-accent-1, #066afe);
+  }
+  .seller-home__conv-step-rail::after {
+    background-color: var(--slds-g-color-info-container-1, #d8e6fe);
+  }
+}
+
+.seller-home__conv-step--call {
+  .seller-home__conv-step-chip {
+    background-color: var(--slds-g-color-warning-base-90, #f9e3b6);
+    color: var(--slds-g-color-warning-base-65, #d79304);
+  }
+  .seller-home__conv-step-rail::after {
+    background-color: var(--slds-g-color-warning-base-90, #f9e3b6);
+  }
+}
+
+.seller-home__conv-step--linkedin {
+  .seller-home__conv-step-chip {
+    background-color: var(--slds-g-color-palette-indigo-90, #e0e5f8);
+    color: var(--slds-g-color-palette-indigo-30, #2f2cb7);
+  }
+  .seller-home__conv-step-rail::after {
+    background-color: var(--slds-g-color-palette-indigo-90, #e0e5f8);
+  }
+}
+
+// ── Collapsed ───────────────────────────────────────────────────
+// Only the card hides. The chip stays put at the top of the rail so
+// it doesn't jump between states, and the header centres against it.
+.seller-home__conv-step.is-collapsed {
+  .seller-home__conv-step-card {
+    display: none;
+  }
+
+  .seller-home__conv-step-content {
+    display: flex;
+    align-items: center;
+  }
+
+  .seller-home__conv-step-header {
+    margin-block: 0;
+  }
+
+  .seller-home__conv-step-chip--chevron {
+    transform: rotate(0deg);
+  }
+}
+
+// ── The card ────────────────────────────────────────────────────
+// Message on the left, meta on the right, sharing one border with a
+// seam down the middle.
+.seller-home__conv-step-card {
+  border: 1px solid var(--slds-g-color-surface-container-3, #e5e5e5);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  overflow: hidden;   // clips the two panels' corners to the radius
+}
+
+.seller-home__conv-step-message {
+  min-width: 0;
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+  border-right: 1px solid var(--slds-g-color-surface-container-3, #e5e5e5);
+}
+
+// The draft itself: a white sheet floating on the panel's grey, so
+// it reads as the artifact under review rather than another panel.
+.seller-home__conv-step-draft {
+  position: relative;
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  background-color: var(--slds-g-color-surface-container-1, #ffffff);
+  border: 1px solid var(--slds-g-color-surface-container-3, #e5e5e5);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+}
+
+.seller-home__conv-step-subject {
+  margin: 0 0 0.5rem;
+  font-size: var(--slds-g-font-size-base, 0.8125rem);   // 13 px
+  line-height: 1.125rem;
+  font-weight: var(--slds-g-font-weight-6, 590);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  .seller-home__conv-step-subject-value {
+    font-weight: var(--slds-g-font-weight-4, 400);
+  }
+}
+
+.seller-home__conv-step-body {
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  line-height: 1.25rem;
+  font-weight: var(--slds-g-font-weight-4, 400);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  // Authored bodies use <br><br> for paragraph breaks and <strong>
+  // for a call script's beats.
+  strong {
+    font-weight: var(--slds-g-font-weight-6, 590);
+  }
+
+  // ── Inline citation ───────────────────────────────────────────
+  // The one hover state in the card. A dashed purple underline at
+  // rest that fills on hover, so the claim reads as sourced without
+  // shouting; the hover card behind it carries the evidence.
+  //
+  // Class name comes from the data (bodies are authored with
+  // `class="email-highlight"`, same as hunter's) — scoped here so
+  // it can't leak out of a draft body.
+  .email-highlight {
+    color: var(--slds-g-color-palette-purple-40, #7526e3);
+    border-bottom: 0.8px dashed var(--slds-g-color-palette-purple-40, #7526e3);
+    border-radius: 3px;
+    // Negative margin cancels the padding so the highlight's fill
+    // extends past the text without moving it.
+    padding: 0 2px;
+    margin: 0 -2px;
+    cursor: pointer;
+    transition: background-color 150ms ease-out;
+  }
+
+  .email-highlight:hover {
+    background-color: var(--slds-g-color-palette-purple-90, #ece1f9);
+    border-bottom-color: transparent;
+  }
+}
+
+// First time the pointer enters a card, pulse every citation once so
+// the seller learns they're there. JS adds the class per card and
+// removes it when the animation ends.
+.seller-home__conv-step-card.is-flashing .email-highlight {
+  animation: sh-conv-cite-pulse 800ms ease-out both;
+}
+
+@keyframes sh-conv-cite-pulse {
+  0%   { background-color: transparent; }
+  25%  { background-color: var(--slds-g-color-palette-purple-90, #ece1f9); }
+  100% { background-color: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seller-home__conv-step-card.is-flashing .email-highlight {
+    animation: none;
+  }
+}
+
+// While a hover card is open, fade the Details column so attention
+// stays on the sentence being explained. Opacity is on the children,
+// so the panel's own background stays solid.
+.seller-home__conv-step-side > * {
+  transition: opacity 200ms ease-out;
+}
+
+.seller-home__conv-step-card.is-citing .seller-home__conv-step-side > * {
+  opacity: 0.25;
+}
+
+// ── Details / Feedback panel ────────────────────────────────────
+.seller-home__conv-step-side {
+  min-width: 0;
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  background-color: var(--slds-g-color-surface-container-1, #ffffff);
+
+  display: flex;
+  flex-direction: column;
+
+  .slds-tabs_default {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  // SLDS ships these tabs at 14 px, which crowds a 300 px column.
+  .slds-tabs_default__link {
+    font-size: var(--slds-g-font-size-base, 0.8125rem);
+    line-height: 1.125rem;
+    height: auto;
+    padding: 0.375rem 0.5rem;
+  }
+
+  .slds-tabs_default__content {
+    padding-top: 0.75rem;
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+.seller-home__conv-step-detail {
+  & + & {
+    margin-top: 0.75rem;
+  }
+}
+
+.seller-home__conv-step-detail-title {
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  line-height: 1.0625rem;
+  font-weight: var(--slds-g-font-weight-6, 590);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  margin-bottom: 0.125rem;
+}
+
+.seller-home__conv-step-detail-value {
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  line-height: 1.0625rem;
+  font-weight: var(--slds-g-font-weight-4, 400);
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+// ── Source pills ────────────────────────────────────────────────
+.seller-home__conv-step-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 0.25rem;
+}
+
+.seller-home__conv-step-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 4px;
+  border-radius: 999px;
+  background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  font-size: 0.625rem;   // 10 px — a provenance marker, not prose
+  white-space: nowrap;
+}
+
+.seller-home__conv-step-source-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+// ── Per-touch feedback ──────────────────────────────────────────
+// Regenerate is gated on the textarea having content: without
+// feedback there's nothing to regenerate FROM, and an empty press
+// would just shuffle drafts.
+.seller-home__conv-step-feedback {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.seller-home__conv-step-feedback-label {
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  line-height: 1.0625rem;
+  font-weight: var(--slds-g-font-weight-6, 590);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  margin-bottom: 0.25rem;
+}
+
+.seller-home__conv-step-feedback-input {
+  flex: 1;
+  min-height: 4.5rem;
+  // Sized by the column, not by the seller — a resize handle here
+  // would break the two panels' shared height.
+  resize: none;
+  width: 100%;
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  line-height: 1.125rem;
+}
+
+.seller-home__conv-step-feedback-actions {
+  margin-top: 0.5rem;
+  text-align: end;
+}
+
+// ── Regenerate banner ───────────────────────────────────────────
+// Breaks out of the draft sheet's padding to touch its top edge, so
+// it reads as a status bar on the draft rather than content inside
+// it. Visibility is JS-owned via `hidden`, which is what lets the
+// success state outlive the swap that produced it.
+.seller-home__conv-step-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  margin: -0.75rem -0.75rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+
+  background-color: var(--slds-g-color-success-base-95, #def9f3);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem) var(--slds-g-radius-border-2, 0.5rem) 0 0;
+
+  color: var(--slds-g-color-on-success-1, #056764);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  line-height: 1.125rem;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+// Spinner while generating, dismiss once the new draft has landed —
+// never both.
+.seller-home__conv-step-banner-dismiss {
+  display: none;
+  margin-inline-start: auto;
+  flex: 0 0 auto;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+
+  .slds-button__icon {
+    fill: var(--slds-g-color-on-success-1, #056764);
+  }
+
+  &:hover,
+  &:focus {
+    background: rgba(0, 0, 0, 0.05);
+  }
+}
+
+.seller-home__conv-step-banner--success {
+  .seller-home__conv-step-banner-spinner {
+    display: none;
+  }
+
+  .seller-home__conv-step-banner-dismiss {
+    display: inline-flex;
+  }
+}
+
+// SLDS's inline spinner drops the base spinner's centring transform,
+// which leaves the dot cluster riding high against the label.
+.seller-home__conv-step-banner .slds-spinner_inline {
+  position: relative;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  transform: translateY(7.5px);
+}
+
+// ── Regenerating stencil ────────────────────────────────────────
+.seller-home__conv-step-stencil {
+  display: none;   // revealed by `.is-regenerating` below
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.seller-home__conv-step-stencil-bar {
+  height: 0.75rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--slds-g-color-surface-container-2, #f3f3f3) 0%,
+    var(--slds-g-color-surface-container-3, #e5e5e5) 50%,
+    var(--slds-g-color-surface-container-2, #f3f3f3) 100%
+  );
+  background-size: 200% 100%;
+  animation: sh-conv-stencil-shimmer 1.4s ease-in-out infinite;
+}
+
+// Blank line in the silhouette, standing in for a paragraph break.
+.seller-home__conv-step-stencil-break {
+  height: 0.5rem;
+}
+
+@keyframes sh-conv-stencil-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seller-home__conv-step-stencil-bar {
+    animation: none;
+  }
+}
+
+// JS pins the draft sheet's height before adding this, so swapping
+// real copy for the stencil doesn't collapse the card and bounce the
+// thread's scroll position.
+.seller-home__conv-step-draft.is-regenerating {
+  overflow: hidden;
+
+  .seller-home__conv-step-subject,
+  .seller-home__conv-step-body {
+    display: none;
+  }
+
+  .seller-home__conv-step-stencil {
+    display: flex;
+  }
+}
+
+// ── Citation hover card ─────────────────────────────────────────
+// Fixed-position so it can escape the thread's `overflow: auto`
+// without being clipped. JS keeps its coordinates current while the
+// thread scrolls and clamps it inside the viewport.
+.seller-home__conv-cite {
+  position: fixed;
+  z-index: 9000;
+  min-width: 12rem;
+  max-width: 20rem;
+  padding: 0.75rem;
+
+  background-color: var(--slds-g-color-surface-container-1, #ffffff);
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  line-height: 1.125rem;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.seller-home__conv-cite-title {
+  font-weight: var(--slds-g-font-weight-6, 590);
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+  margin-bottom: 0.25rem;
+}
+
+.seller-home__conv-cite-body {
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+.seller-home__conv-cite-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 0.5rem;
+  padding: 3px 8px 3px 4px;
+  border-radius: 999px;
+  background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  font-size: 0.625rem;
+  white-space: nowrap;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.seller-home__conv-cite-source-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+// ── Actions ─────────────────────────────────────────────────────
+// Approve covers the whole sequence for this prospect — the batch
+// button below the divider covers all of them, and the separation is
+// what keeps the two from being mistaken for each other.
+.seller-home__conv-cadence-actions {
+  &[hidden] {
+    display: none;
+  }
+
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  flex-wrap: wrap;
+}
+
+.seller-home__conv-cadence-batch {
+  &[hidden] {
+    display: none;
+  }
+
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--slds-g-spacing-3, 0.75rem);
+  border-top: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+}
+

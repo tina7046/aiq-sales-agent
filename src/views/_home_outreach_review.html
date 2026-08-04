@@ -1,0 +1,476 @@
+{#
+  Outreach Review — reusable component  [PARKED]
+  =====================================================================
+  Not rendered today. The cadence card
+  (_home_conversation_cadence.html) replaced it: same roster, same
+  approval events, but a full multi-touch sequence per prospect
+  instead of one email. Kept whole and unmodified so the simpler
+  one-draft flow can come back.
+
+  To restore:
+    1. index.json — rename `_reviewParked` back to `review` and move
+       it onto the turn-01 reply, alongside or instead of `cadence`.
+    2. _home_conversation_messages.html — re-add
+       `{% import "_home_outreach_review.html" as outreach %}` and the
+       `{% if msg.review … %}` branch in `agentMessage`. It already
+       receives the resolved roster as `rows`.
+  Its controller in home_conversation.js and its styles in
+  home_conversation.scss were left in place, so nothing else changes.
+
+  Slot: rendered INSIDE an agent message, immediately after the
+  prospect table. Consumed by _home_conversation_messages.html when a
+  message carries a `review` object.
+
+  Design intent
+  -------------
+  A one-at-a-time review surface for personalized outreach drafts.
+  The prospect table (rendered above) is the "list view"; this
+  component is the "detail view" for whichever prospect the seller
+  has selected. Both share the SAME prospect records — extended in
+  home.json with `role`, `subject`, `body`, `channel`.
+
+  Selection sync
+  --------------
+  Selection lives in a shared, client-side SelectionManager
+  (home_conversation.js). The Nunjucks template renders only the
+  SHELL (heading, action bar, dialog, one visible detail panel). JS
+  populates the panel from the conversations map already inlined
+  on the page root (`data-sh-conversations`) whenever selection
+  changes, and updates the table row's `.is-selected` + aria-selected
+  to match.
+
+  Reusability
+  -----------
+  The macro takes TWO structured arguments:
+    • `review`    — meta about this review flow (heading, dialog copy,
+                    completed copy). Never contains prospect-specific
+                    content.
+    • `prospects` — the SAME row array from the sibling prospect
+                    table. Each entry MUST carry a stable `id`.
+  Adding a new channel (LinkedIn, InMail, phone) means extending the
+  prospect record + adding a channel-specific renderer in JS — no
+  macro-signature change.
+
+  What lives HERE (SSR):
+    • Shell markup: heading, progress placeholders, one visible
+      prospect-detail panel (rendered empty; JS fills), action bar,
+      batch action, completed-state block, confirmation dialog.
+    • Stable ids on every dynamic node so the JS binder has no
+      selectors to guess.
+  What lives in JS (home_conversation.js):
+    • Populating the detail panel per selection.
+    • Cycling status pill + hiding/showing action buttons.
+    • Toggling completed state.
+    • Focus-trapping the dialog + restoring focus on close.
+#}
+
+
+{#
+  ── Status pill map ──────────────────────────────────────────────
+  Central mapping so the JS binder + this template share the same
+  labels + BEM modifiers. If a new status is added later, add both
+  its label + its modifier suffix here and JS will pick it up.
+  Kept as a Nunjucks constant so it lands in the compiled HTML
+  (as a JSON blob on the root) without a duplicate ES-module.
+#}
+{% set _reviewStatuses = {
+  "not_reviewed":    { "label": "Not reviewed",     "modifier": "not-reviewed" },
+  "approved":        { "label": "Approved",         "modifier": "approved" },
+  "changes_requested": { "label": "Changes requested", "modifier": "changes-requested" }
+} %}
+
+
+{% macro outreachReview(review, prospects) %}
+{#
+  Precompute the comma-joined list of prospect ids in table order.
+  Uses the `{% set var %}...{% endset %}` block form so the value
+  captures across the for-loop scope — a plain `{% set %}` inside
+  a `{% for %}` doesn't leak the outer variable in Nunjucks. Kept
+  as a template loop (rather than the `map` filter) because this
+  project's Nunjucks build doesn't ship `map`. Consumed by
+  home_conversation.js's binder to walk the Prev/Next order
+  without re-deriving it from the DOM.
+#}
+{% set _reviewProspectIds %}{% for p in prospects %}{{ p.id }}{% if not loop.last %},{% endif %}{% endfor %}{% endset %}
+
+{#
+  Guard against an empty roster. Renders a low-key "nothing to review"
+  block instead of a broken shell so the surface still degrades
+  gracefully in downstream reuses (a future conversation whose agent
+  found zero prospects can still ship this component).
+#}
+{% if not prospects or prospects | length == 0 %}
+<section
+  class="seller-home__conv-review seller-home__conv-review--empty"
+  aria-label="{{ review.heading | default('Outreach review') }}"
+>
+  <h3 class="seller-home__conv-review-heading">{{ review.heading | default('Outreach review') }}</h3>
+  <p class="seller-home__conv-review-empty-body">No drafts to review yet.</p>
+</section>
+{% else %}
+
+<section
+  class="seller-home__conv-review"
+  role="region"
+  aria-labelledby="{{ review.id }}-heading"
+  data-sh-review-root
+  data-sh-review-id="{{ review.id }}"
+  data-sh-review-total="{{ prospects | length }}"
+  {#
+    Static list of prospect ids in table order so JS's Prev/Next
+    navigation and progress counter don't have to re-derive the
+    order from the DOM. Also lets JS validate incoming selection ids
+    are actually in this review's roster.
+  #}
+  data-sh-review-prospect-ids="{{ _reviewProspectIds | trim }}"
+  data-sh-review-channel="{{ review.channel | default('email') }}"
+>
+  {#
+    ── Header row ────────────────────────────────────────────────
+    "Outreach review" title on the left; on the right, TWO status
+    indicators stacked (or wrapped at narrow widths):
+      • "1 of 12"          — the currently selected position (JS updates)
+      • "0 of 12 reviewed" — reviewed count (JS updates on approve /
+                             request-changes)
+    Both are dynamic; the SSR shell primes them with placeholders
+    so screen readers see coherent copy even before JS runs.
+  #}
+  <header class="seller-home__conv-review-header">
+    <h3 id="{{ review.id }}-heading" class="seller-home__conv-review-heading">
+      {{ review.heading | default('Outreach review') }}
+    </h3>
+
+    <div class="seller-home__conv-review-meta" role="group" aria-label="Review progress">
+      {#
+        Inline pager: chevron-left, "1 of 12" progress text,
+        chevron-right. Replaces the old bottom-row Prev/Next buttons
+        so the seller can navigate prospects from the header
+        without moving focus to the actions row.
+
+        `data-sh-review-prev` / `data-sh-review-next` are the same
+        JS hooks the old buttons used, so the binder in
+        home_conversation.js doesn't need to know they moved.
+
+        The progress <span> keeps `aria-live="polite"` so AT users
+        hear "3 of 12" when navigating. The buttons live OUTSIDE
+        that live region so their labels aren't re-announced with
+        each progress change — just the "N of M" text.
+      #}
+      <div class="seller-home__conv-review-pager">
+        <button
+          type="button"
+          class="seller-home__conv-review-pager-btn"
+          data-sh-review-prev
+          aria-label="Previous prospect"
+        >
+          <svg class="seller-home__conv-review-pager-icon" aria-hidden="true">
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronleft"></use>
+          </svg>
+        </button>
+
+        <span
+          class="seller-home__conv-review-progress"
+          data-sh-review-progress
+          aria-live="polite"
+        >
+          <span class="seller-home__conv-review-progress-current" data-sh-review-current>1</span>
+          <span class="seller-home__conv-review-progress-sep"> of </span>
+          <span class="seller-home__conv-review-progress-total">{{ prospects | length }}</span>
+        </span>
+
+        <button
+          type="button"
+          class="seller-home__conv-review-pager-btn"
+          data-sh-review-next
+          aria-label="Next prospect"
+        >
+          <svg class="seller-home__conv-review-pager-icon" aria-hidden="true">
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
+          </svg>
+        </button>
+      </div>
+
+      <span class="seller-home__conv-review-progress-dot" aria-hidden="true">&middot;</span>
+
+      <span
+        class="seller-home__conv-review-reviewed"
+        data-sh-review-reviewed-progress
+      >
+        <span data-sh-review-reviewed-count>0</span> of {{ prospects | length }} reviewed
+      </span>
+    </div>
+  </header>
+
+  {#
+    ── Active-review body ─────────────────────────────────────────
+    Renders ONE prospect at a time. SSR emits the first prospect
+    (`prospects[0]`) so the shell reads correctly with JS disabled;
+    JS re-populates on every selection change.
+
+    Every dynamic node carries a `data-sh-review-*` hook so JS has
+    a single-selector API into the shell. No querySelector guessing.
+  #}
+  {% set first = prospects[0] %}
+  <div class="seller-home__conv-review-body" data-sh-review-body>
+    <div class="seller-home__conv-review-prospect">
+      <p class="seller-home__conv-review-prospect-headline">
+        {#
+          Name is the visible anchor; role + company are secondary
+          metadata. Kept together on one line at wide widths and
+          allowed to wrap naturally at narrow widths (see SCSS).
+        #}
+        <span class="seller-home__conv-review-prospect-name" data-sh-review-name>{{ first.prospect }}</span>
+        <span class="seller-home__conv-review-prospect-sep"> &middot; </span>
+        <span class="seller-home__conv-review-prospect-role" data-sh-review-role>{{ first.role | default('') }}</span>
+        <span class="seller-home__conv-review-prospect-at"> at </span>
+        <span class="seller-home__conv-review-prospect-company" data-sh-review-company>{{ first.company }}</span>
+      </p>
+
+      {#
+        Status pill — `aria-live="polite"` so status changes are
+        announced when the seller approves / requests changes. The
+        BEM modifier suffix is set by JS on every render so the
+        color treatment always matches the label.
+      #}
+      <span
+        class="seller-home__conv-review-status seller-home__conv-review-status--not-reviewed"
+        data-sh-review-status
+        aria-live="polite"
+      >
+        <span data-sh-review-status-label>{{ _reviewStatuses.not_reviewed.label }}</span>
+      </span>
+    </div>
+
+    {#
+      Signal / rationale — one line of "why this prospect", pulled
+      from the same field the table shows. Not gated on presence:
+      every seeded record has a signal. If a future record omits
+      it, JS hides this line (see binder).
+    #}
+    <p class="seller-home__conv-review-signal" data-sh-review-signal-row>
+      <span class="seller-home__conv-review-signal-label">Signal:</span>
+      <span class="seller-home__conv-review-signal-value" data-sh-review-signal>{{ first.signal }}</span>
+    </p>
+
+    {#
+      ── Draft card ────────────────────────────────────────────
+      The email draft. Rendered as an <article> with role="group"
+      so AT users can jump to the draft as a unit. Subject +
+      channel indicator sit at the top; body flows below with
+      preserved whitespace so paragraph breaks in the JSON body
+      read correctly.
+    #}
+    <article class="seller-home__conv-review-draft" data-sh-review-draft aria-label="Email draft">
+      <header class="seller-home__conv-review-draft-header">
+        <span class="seller-home__conv-review-draft-channel" data-sh-review-channel-label>Email</span>
+        <span class="seller-home__conv-review-draft-subject-label">Subject:</span>
+        <span class="seller-home__conv-review-draft-subject" data-sh-review-subject>{{ first.subject }}</span>
+      </header>
+      <div
+        class="seller-home__conv-review-draft-body"
+        data-sh-review-body-text
+      >{{ first.body }}</div>
+    </article>
+
+    {#
+      ── Change-request form (inline, collapsed by default) ────
+      Toggled visible when the seller clicks "Request changes".
+      Kept inline (vs. a separate modal) because the feedback is
+      contextual to the draft the seller is looking at. Feedback
+      is stored in local state keyed by prospect id, so switching
+      prospects and coming back preserves what was typed.
+    #}
+    <div
+      class="seller-home__conv-review-feedback"
+      data-sh-review-feedback
+      hidden
+    >
+      {#
+        Label kept in the DOM as `slds-assistive-text` so the
+        textarea keeps its accessible name for screen readers,
+        but the label is hidden visually per the current design.
+        Restore visibility by dropping the assistive-text class
+        (see `.seller-home__conv-review-feedback-label` in SCSS
+        for the original visible-label treatment).
+      #}
+      <label
+        for="{{ review.id }}-feedback-input"
+        class="seller-home__conv-review-feedback-label slds-assistive-text"
+      >What should change?</label>
+      <textarea
+        id="{{ review.id }}-feedback-input"
+        class="slds-textarea seller-home__conv-review-feedback-input"
+        data-sh-review-feedback-input
+        rows="3"
+        placeholder="Share what should change in this draft."
+      ></textarea>
+      <div class="seller-home__conv-review-feedback-actions">
+        <button
+          type="button"
+          class="slds-button slds-button_neutral seller-home__conv-review-btn"
+          data-sh-review-feedback-cancel
+        >Cancel</button>
+        <button
+          type="button"
+          class="slds-button slds-button_brand seller-home__conv-review-btn"
+          data-sh-review-feedback-save
+        >Save feedback</button>
+      </div>
+    </div>
+  </div>
+
+  {#
+    ── Actions row ────────────────────────────────────────────────
+    Per-prospect actions grouped left/right:
+      Left  — Prev / Next navigation
+      Right — Request changes, Approve
+
+    Bottom-below — Approve all (batch).
+
+    All buttons use SLDS 2 primitives (`slds-button`, `_neutral`,
+    `_brand`) so hover/focus/disabled states come from the design
+    system, not custom rules.
+  #}
+  {#
+    Actions row — decisions only. Prev/Next moved to the header
+    pager, so this row right-aligns its content (Request changes +
+    Approve). Kept the same `.seller-home__conv-review-actions`
+    class so the JS `els.actionsRow` cache + the completed-state
+    hide toggle still work without changes.
+  #}
+  <div class="seller-home__conv-review-actions" role="group" aria-label="Draft actions">
+    <div class="seller-home__conv-review-actions-decisions">
+      <button
+        type="button"
+        class="slds-button slds-button_neutral seller-home__conv-review-btn"
+        data-sh-review-request-changes
+      >Edit</button>
+      <button
+        type="button"
+        class="slds-button slds-button_brand seller-home__conv-review-btn"
+        data-sh-review-approve
+      >Approve</button>
+    </div>
+  </div>
+
+  {#
+    ── Batch action ───────────────────────────────────────────────
+    Visually separated from per-prospect actions so the seller
+    doesn't confuse "Approve" (this one draft) with "Approve all"
+    (all 12). Sits behind its own divider + right-aligns to match
+    the primary-decision visual weight.
+  #}
+  <div class="seller-home__conv-review-batch">
+    <button
+      type="button"
+      class="slds-button slds-button_brand seller-home__conv-review-btn seller-home__conv-review-btn--batch"
+      data-sh-review-approve-all
+    >Approve all {{ prospects | length }} drafts</button>
+  </div>
+
+  {#
+    ── Completed state ────────────────────────────────────────────
+    Hidden by default. JS unhides + hides `.__conv-review-body /
+    -actions / -batch` when the seller confirms "Approve all". Kept
+    inside the same <section> so screen readers stay in the same
+    landmark; the AT-visible role transitions from "review this
+    draft" to "review complete" without a landmark change.
+  #}
+  <div
+    class="seller-home__conv-review-completed"
+    data-sh-review-completed
+    hidden
+  >
+    <span class="seller-home__conv-review-completed-icon" aria-hidden="true">
+      <svg class="seller-home__conv-review-completed-glyph" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#success"></use>
+      </svg>
+    </span>
+    <div class="seller-home__conv-review-completed-body">
+      <p class="seller-home__conv-review-completed-heading" data-sh-review-completed-heading>
+        {{ review.completed.heading | default('All drafts approved') }}
+      </p>
+      <p class="seller-home__conv-review-completed-copy">
+        {{ review.completed.body | default('The approved drafts will be released to the configured outreach workflow.') }}
+      </p>
+    </div>
+  </div>
+</section>
+
+{#
+  ── Confirmation dialog for "Approve all" ────────────────────────
+  Standard SLDS 2 modal + backdrop. Hidden by default (no
+  `slds-fade-in-open` class, backdrop has no `slds-backdrop_open`);
+  JS toggles both when the seller clicks "Approve all". The
+  dialog stays OUTSIDE the review section so its `aria-modal`
+  focus context doesn't clash with the section's `role="region"`.
+
+  Focus management (owned by JS):
+    • On open: focus lands on the confirm button (default action).
+    • Tab loops between confirm + cancel + close.
+    • Escape / Cancel closes.
+    • On close: focus restores to the "Approve all" trigger.
+#}
+<section
+  class="slds-modal seller-home__conv-review-dialog"
+  role="dialog"
+  tabindex="-1"
+  aria-modal="true"
+  aria-labelledby="{{ review.id }}-dialog-title"
+  aria-describedby="{{ review.id }}-dialog-body"
+  data-sh-review-dialog
+  hidden
+>
+  <div class="slds-modal__container">
+    <button
+      type="button"
+      class="slds-button slds-button_icon slds-modal__close"
+      data-sh-review-dialog-close
+      aria-label="Cancel and close"
+    >
+      <svg class="slds-button__icon slds-button__icon_large" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+      </svg>
+    </button>
+    <div class="slds-modal__header">
+      <h2
+        id="{{ review.id }}-dialog-title"
+        class="slds-modal__title slds-hyphenate"
+      >{{ review.confirmDialog.title }}</h2>
+    </div>
+    <div class="slds-modal__content slds-p-around_medium">
+      <p id="{{ review.id }}-dialog-body">{{ review.confirmDialog.body }}</p>
+    </div>
+    <div class="slds-modal__footer">
+      <button
+        type="button"
+        class="slds-button slds-button_neutral"
+        data-sh-review-dialog-cancel
+      >{{ review.confirmDialog.secondary }}</button>
+      <button
+        type="button"
+        class="slds-button slds-button_brand"
+        data-sh-review-dialog-confirm
+      >{{ review.confirmDialog.primary }}</button>
+    </div>
+  </div>
+</section>
+<div
+  class="slds-backdrop seller-home__conv-review-backdrop"
+  role="presentation"
+  data-sh-review-dialog-backdrop
+  hidden
+></div>
+
+{#
+  ── Status-label lookup embedded for JS ──────────────────────────
+  Serialize the `_reviewStatuses` map defined at the top of this
+  file into a data-attribute on the review root. Mirrors the
+  `data-sh-conversations` pattern used on the page root — JS
+  reads it via `getAttribute` without a fetch, and adding a new
+  status only requires editing the Nunjucks map above.
+#}
+<script type="application/json" data-sh-review-statuses="{{ review.id }}">{{ _reviewStatuses | tojson | safe }}</script>
+
+{% endif %}
+{% endmacro %}

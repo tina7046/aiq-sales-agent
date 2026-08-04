@@ -1,0 +1,155 @@
+// Copyright (c) 2017-present, Salesforce.com, Inc. All rights reserved
+// Licensed under BSD 3-Clause - see LICENSE.txt or git.io/sfdc-license
+
+'use strict'
+
+// This gulpfile makes use of new JavaScript features.
+// Babel handles this without us having to do anything. It just works.
+// You can read more about the new JavaScript features here:
+// https://babeljs.io/docs/learn-es2015/
+
+const path = require('path')
+const fs = require('fs')
+const gulp = require('gulp')
+const del = require('del')
+const browserSync = require('browser-sync')
+const JSON5 = require('json5')
+const nunjucks = require('nunjucks')
+
+const $ = require('gulp-load-plugins')({
+  postRequireTransforms: {
+    sass: (sass) => {
+      return sass(require('sass'))
+    }
+  }
+})
+
+gulp.task('assets', () =>
+  gulp
+    .src([
+      'node_modules/@salesforce-ux/design-system/assets/**/*.{woff,woff2,txt,jpg,png,gif,svg}',
+      'src/assets/**/*.{woff,woff2,txt,jpg,png,gif,svg}'
+    ])
+    .pipe(gulp.dest('dist/assets'))
+)
+
+gulp.task('favicon', () =>
+  gulp
+    .src([
+      'src/favicon*.*'
+    ], { base: 'src' })
+    .pipe(gulp.dest('dist'))
+)
+
+const getSharedData = () => JSON5.parse(fs.readFileSync('./src/views/data/shared.json', 'utf8'))
+
+// Get data from the corresponding filename
+// e.g. inject data/foo.json into foo.html
+const getData = (file) => {
+  const dataPath = path.resolve('./src/views/data/' + path.basename(file.path, '.html') + '.json')
+  let data = { shared: getSharedData() }
+
+  try {
+    data = Object.assign(data, JSON5.parse(fs.readFileSync(dataPath, 'utf8')))
+  } catch (e) {
+    // Don't fail if the JSON is badly formed or the file doesn't exist
+  } finally {
+    /* eslint-disable no-unsafe-finally */
+    return data
+  }
+}
+
+// Custom Nunjucks environment, needed because the default one has no
+// loader configured for `{% include %}` / `{% import %}` of the `_*.html`
+// partials, and no project filters. Ported alongside the Seller Home
+// components from the `hunter-main-main` prototype:
+//   • `tojson` — JSON.stringify, used by `_home_composer.html` to embed
+//     the suggestion list in a `data-*` attribute.
+//   • `readData` — read another page's JSON at build time.
+// `noCache` matters for the dev watcher: the loader otherwise caches compiled
+// partials in memory, so editing `_template.html` or any `_*.html` include
+// silently rebuilt pages from the stale copy until the server was restarted.
+const nunjucksEnv = new nunjucks.Environment(
+  new nunjucks.FileSystemLoader(path.join(__dirname, 'src/views'), { noCache: true })
+)
+nunjucksEnv.addFilter('tojson', (obj) => JSON.stringify(obj))
+// `readData("<name>")` — read src/views/data/<name>.json at build time so a
+// template can reach another page's data without copying keys into
+// shared.json (which loads on every page). Used by home_conversation.html to
+// pull the `conversations` registry out of index.json, keeping Seller Home
+// and the conversation drill-in on one source of truth. Returns null on any
+// error so callers can fall back with `{% if %}` instead of failing the build.
+nunjucksEnv.addGlobal('readData', (name) => {
+  try {
+    return JSON5.parse(fs.readFileSync(path.resolve('./src/views/data/' + name + '.json'), 'utf8'))
+  } catch (e) {
+    return null
+  }
+})
+
+gulp.task('views', () =>
+  gulp
+    .src([
+      'src/views/**/*.html',
+      '!src/views/**/_*.html'
+    ], { base: 'src/views' })
+    .pipe($.plumber())
+    .pipe($.data(getData))
+    .pipe($.nunjucks.compile(null, { env: nunjucksEnv }))
+    .pipe(gulp.dest('dist'))
+)
+
+gulp.task('scripts', () =>
+  gulp
+    .src([
+      'src/scripts/**/*.js'
+    ], { base: 'src' })
+    .pipe(gulp.dest('dist/'))
+)
+
+gulp.task('styles', () =>
+  gulp
+    .src('src/styles/**/*.scss')
+    .pipe($.plumber())
+    .pipe($.sourcemaps.init())
+    .pipe($.sass.sync({
+      precision: 10
+    }).on('error', $.sass.logError))
+    .pipe($.autoprefixer({ browsers: ['last 2 versions'], remove: false }))
+    .pipe($.sourcemaps.write('.'))
+    .pipe(gulp.dest('dist/styles'))
+    .pipe(browserSync.stream({ match: '**/*.css' }))
+)
+
+gulp.task('clean', () => del(['dist'], { dot: true }))
+
+// Static Server (development)
+gulp.task('default',
+  gulp.series('clean', gulp.parallel('assets', 'views', 'styles', 'scripts', 'favicon'),
+  function () {
+    browserSync({
+      // The starter kit opens itself up in a new browser tab every time the app starts.
+      // Uncomment the next line to prevent this behavior:
+      // open: false,
+      notify: false,
+      server: 'dist'
+    })
+    gulp.watch('src/styles/**/*.scss', gulp.series('styles'))
+    gulp.watch([
+      'src/views/**/*.html',
+      'src/views/data/*.json'
+    ], gulp.series('views'))
+    gulp.watch('src/assets/**/*.{woff,woff2,txt,jpg,png,gif,svg}', gulp.series('assets'))
+    gulp.watch('src/scripts/**/*.js', gulp.series('scripts'))
+    gulp.watch([
+      'dist/**/*.html',
+      'dist/scripts/**/*.js',
+
+      // Note: we're not watching icons and fonts changes,
+      // as they're slowing down the task
+      'dist/assets/*.{woff,woff2,txt,jpg,png,gif,svg}',
+      'dist/assets/styles/*.css'
+    ]).on('change', browserSync.reload)
+  }))
+
+gulp.task('build', gulp.series('clean', 'assets', 'views', 'styles', 'scripts', 'favicon'))

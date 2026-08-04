@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>God rays background — tunable</title>
+<style>
+  html, body { margin: 0; min-height: 100%; background: #fff; }
+
+  /* Overscanned past the viewport so blurred edges fall off-screen instead of
+     fading to transparent. Keep inset at roughly -1.5x your max blur radius. */
+  #bg { position: fixed; inset: -90px; z-index: 0; pointer-events: none;
+        filter: blur(0px); will-change: filter; }
+  #bg canvas { display: block; width: 100%; height: 100%; }
+
+  main { position: relative; z-index: 1; min-height: 100vh; display: grid; place-items: center;
+         padding: 24px; box-sizing: border-box; }
+  .card { width: min(440px, 100%); min-height: 300px; box-sizing: border-box; padding: 32px;
+          background: rgba(255,255,255,0.72);
+          backdrop-filter: blur(20px) saturate(1.4);
+          -webkit-backdrop-filter: blur(20px) saturate(1.4);
+          border-radius: 18px; border: 1px solid rgba(255,255,255,0.55);
+          box-shadow: 0 1px 2px rgba(13,27,42,0.04), 0 20px 55px -14px rgba(13,27,42,0.20);
+          font-family: ui-sans-serif, system-ui, sans-serif; color: #0d1b2a; }
+
+  #panel { position: fixed; right: 16px; bottom: 16px; z-index: 3; width: 268px;
+           max-height: calc(100vh - 32px); overflow-y: auto;
+           background: rgba(255,255,255,0.78); backdrop-filter: blur(14px);
+           border: 1px solid rgba(13,27,42,0.10); border-radius: 14px; padding: 13px 15px 15px;
+           font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: #0d1b2a;
+           box-shadow: 0 8px 30px rgba(13,27,42,0.10); }
+  #panel.closed { width: auto; padding: 10px 14px; }
+  #panel.closed .body { display: none; }
+  .head { display: flex; justify-content: space-between; gap: 10px; }
+  #panel button { all: unset; cursor: pointer; font: 500 11px/1 ui-monospace, Menlo, monospace;
+                  letter-spacing: 0.1em; text-transform: uppercase; color: #4a5b6b; }
+  #panel button.act { color: #148eff; }
+
+  .sect { margin-top: 13px; padding-top: 11px; border-top: 1px solid rgba(13,27,42,0.09); }
+  .sect:first-child { margin-top: 12px; padding-top: 0; border-top: 0; }
+  .sect h2 { font: 500 10px/1 ui-monospace, Menlo, monospace; letter-spacing: 0.12em;
+             text-transform: uppercase; color: #8493a3; margin: 0 0 9px; }
+
+  .crow { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: center;
+          margin-bottom: 7px; }
+  .crow.off { opacity: 0.32; }
+  .crow input[type=color] { width: 22px; height: 22px; padding: 0; border: 1px solid rgba(13,27,42,0.18);
+                            border-radius: 6px; background: none; cursor: pointer; }
+  .crow .stack { display: grid; gap: 1px; }
+  .crow .hex { display: flex; justify-content: space-between; color: #33455a; font-size: 11px; }
+
+  #cones { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 4px; }
+  #panel .tog { display: block; text-align: center; padding: 6px 0; border-radius: 7px;
+                border: 1px solid rgba(13,27,42,0.14); background: rgba(255,255,255,0.5);
+                color: #8493a3; font-size: 9.5px; letter-spacing: 0.05em; }
+  #panel .tog.on { background: #148eff; border-color: #148eff; color: #fff; }
+
+  .row { display: grid; gap: 2px; margin-bottom: 8px; }
+  .row .lbl { display: flex; justify-content: space-between; color: #33455a; }
+  .val { font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: #148eff; }
+
+  #err { position: fixed; left: 16px; bottom: 16px; z-index: 4; max-width: 520px; padding: 12px 14px;
+         border-radius: 10px; background: #fff5f5; border: 1px solid #f3c2c2; color: #a02525;
+         font: 400 13px/1.5 ui-monospace, Menlo, monospace; display: none; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+
+<div id="bg"></div>
+
+<main>
+  <div class="card">
+    <!-- your content goes here -->
+  </div>
+</main>
+
+<div id="panel" class="closed">
+  <div class="head">
+    <button id="toggle">Controls</button>
+    <button id="copy" class="act" hidden>Copy</button>
+    <button id="reset" class="act" hidden>Reset</button>
+  </div>
+  <div class="body">
+    <div class="sect"><h2>Ray colors</h2><div id="rayColors"></div>
+      <div class="row" id="countRow"></div>
+    </div>
+    <div class="sect"><h2>Background &amp; bloom</h2><div id="otherColors"></div></div>
+    <div class="sect"><h2>Clear cones (no rays)</h2><div id="cones"></div></div>
+    <div class="sect"><h2>Shape</h2><div id="rows"></div></div>
+  </div>
+</div>
+
+<pre id="err"></pre>
+
+<script type="module">
+import {
+  ShaderMount,
+  godRaysFragmentShader,
+  getShaderColorFromString as toVec4,
+  getShaderNoiseTexture,
+  ShaderFitOptions,
+} from 'https://cdn.jsdelivr.net/npm/@paper-design/shaders@0.0.77/+esm';
+
+// ---- defaults -------------------------------------------------------------
+const DEFAULTS = {
+  colors:      ['#148effa6', '#c3defebf', '#c380d1', '#33fff5', '#7ad8fa'],
+  colorsCount: 5,          // godRaysMeta.maxColorCount is 5
+  colorBack:   '#ffffff',
+  colorBloom:  '#ffa8f3',
+  bloom: 0, intensity: 0.65, density: 0.06, spotty: 0.98,
+  midSize: 0.35, midIntensity: 0.24,
+  scale: 0.71, rotation: 152, offsetX: 0, offsetY: 0,
+  speed: 1.09, blur: 5,
+  wedge: 56, feather: 22,   // angular mask, degrees — CSS, not a shader uniform
+  hole: 0, holeFeather: 0,  // radial mask hole, vmin — hides the convergence point
+  north: true, east: false, south: false, west: false,  // cones cleared of rays
+};
+
+// key, uniform (null = not a shader uniform), min, max, step
+const SLIDERS = [
+  ['intensity',    'u_intensity',    0,   1,   0.01],
+  ['density',      'u_density',      0,   1,   0.005],
+  ['spotty',       'u_spotty',       0,   1,   0.01],
+  ['midSize',      'u_midSize',      0,   1,   0.01],
+  ['midIntensity', 'u_midIntensity', 0,   1,   0.01],
+  ['bloom',        'u_bloom',        0,   1,   0.01],
+  ['scale',        'u_scale',        0.1, 4,   0.01],
+  ['rotation',     'u_rotation',     0,   360, 1],
+  ['offsetX',      'u_offsetX',      -1,  1,   0.01],
+  ['offsetY',      'u_offsetY',      -1,  1,   0.01],
+  ['speed',        null,             0,   3,   0.01],
+  ['blur',         null,             0,   60,  1],
+  ['wedge',        null,             5,   180, 1],
+  ['feather',      null,             0,   60,  1],
+  ['hole',         null,             0,   45,  1],
+  ['holeFeather',  null,             0,   45,  1],
+];
+
+const state = structuredClone(DEFAULTS);
+const bg = document.getElementById('bg');
+
+// 8-digit hex <-> swatch + alpha, since <input type=color> has no alpha channel
+const splitHex = (h) => {
+  let s = String(h).replace('#', '');
+  if (s.length === 3) s = [...s].map((c) => c + c).join('');
+  if (s.length === 6) s += 'ff';
+  return { rgb: '#' + s.slice(0, 6), a: parseInt(s.slice(6, 8), 16) / 255 };
+};
+const joinHex = (rgb, a) =>
+  rgb + Math.round(Math.min(1, Math.max(0, a)) * 255).toString(16).padStart(2, '0');
+
+try {
+  // ShaderMount rejects a texture that hasn't decoded, so wait for it.
+  let noise;
+  try { noise = getShaderNoiseTexture(document); } catch { noise = getShaderNoiseTexture(); }
+  if (!(noise.complete && noise.naturalWidth)) {
+    if (typeof noise.decode === 'function') await noise.decode();
+    else await new Promise((ok, no) => {
+      noise.addEventListener('load', ok, { once: true });
+      noise.addEventListener('error', no, { once: true });
+    });
+  }
+
+  const uniformsFor = () => {
+    const u = {
+      u_noiseTexture: noise,
+      // Always send all 5 slots (the shader declares vec4 u_colors[5]);
+      // u_colorsCount is what decides how many get used.
+      u_colors:       state.colors.map(toVec4),
+      u_colorsCount:  state.colorsCount,
+      u_colorBack:    toVec4(state.colorBack),
+      u_colorBloom:   toVec4(state.colorBloom),
+      u_fit:          ShaderFitOptions.cover,
+      u_originX: 0.5, u_originY: 0.5,
+      u_worldWidth: 0, u_worldHeight: 0,
+    };
+    for (const [k, uni] of SLIDERS) if (uni) u[uni] = state[k];
+    return u;
+  };
+
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+
+  const mount = new ShaderMount(
+    bg, godRaysFragmentShader, uniformsFor(), undefined,
+    reduce.matches ? 0 : state.speed, 0,
+    state.blur > 0 ? 1 : 2   // minPixelRatio
+  );
+  window.godRays = mount;
+
+  let lastBlur = state.blur;
+
+  // Cone centres, in conic-gradient degrees (0 = 12 o'clock, clockwise).
+  const CONES = [['north', 0], ['east', 90], ['south', 180], ['west', 270]];
+
+  // Two mask layers, intersected. The conic one CLEARS the enabled cones —
+  // each becomes a clean wedge with no rays, +/- `wedge` degrees wide — while
+  // rays fill everything else. The radial one punches a soft hole at the centre
+  // so the rays never resolve into a visible point. Masking beats overlaying
+  // white shapes: it stays transparent, so this works over any background, and
+  // it doesn't add a layer for the compositor to blur.
+  const applyMask = () => {
+    const layers = [];
+    const on = CONES.filter(([k]) => state[k]);
+
+    // Nothing cleared means the full circle of rays — no conic layer needed.
+    if (on.length) {
+      const centers = on.map(([, deg]) => deg).sort((a, b) => a - b);
+
+      const gapAfter = (i) => {
+        const next = centers[(i + 1) % centers.length];
+        return ((next - centers[i]) % 360 + 360) % 360 || 360;
+      };
+
+      // Cleared cones must not merge into each other, so cap the half-extent at
+      // half the tightest gap between neighbours.
+      let minGap = 360, seam = 0, widest = -1;
+      for (let i = 0; i < centers.length; i++) {
+        const g = gapAfter(i);
+        minGap = Math.min(minGap, g);
+        if (g > widest) { widest = g; seam = centers[i] + g / 2; }
+      }
+      const limit = centers.length === 1 ? 179 : minGap / 2 - 0.5;
+      const w = Math.min(state.wedge, limit);
+      const f = Math.min(state.feather, limit - w);
+
+      // Anchoring the gradient's seam in the widest gap means no cone straddles
+      // the 0/360 boundary, so the stops stay monotonic without special cases.
+      const stops = [[0, '#000']];
+      for (const p of centers.map((c) => ((c - seam) % 360 + 360) % 360).sort((a, b) => a - b)) {
+        stops.push([p - w - f, '#000'], [p - w, 'transparent'],
+                   [p + w, 'transparent'], [p + w + f, '#000']);
+      }
+      stops.push([360, '#000']);
+
+      layers.push(`conic-gradient(from ${seam}deg at 50% 50%, ` +
+        stops.map(([d, c]) => `${c} ${d}deg`).join(', ') + ')');
+    }
+
+    if (state.hole > 0) {
+      const r = state.hole;
+      const hf = Math.max(state.holeFeather, 0.1);
+      layers.push(`radial-gradient(circle at 50% 50%, transparent 0, transparent ${r}vmin, #000 ${r + hf}vmin)`);
+    }
+
+    const img = layers.length ? layers.join(', ') : 'none';
+    bg.style.maskImage = img;
+    bg.style.webkitMaskImage = img;
+    // Two layers must intersect, not stack. Safari wants the legacy keyword.
+    bg.style.maskComposite = layers.length > 1 ? 'intersect' : 'add';
+    bg.style.webkitMaskComposite = layers.length > 1 ? 'source-in' : 'source-over';
+  };
+
+  const push = () => {
+    mount.setUniforms(uniformsFor());
+    mount.setSpeed(reduce.matches ? 0 : state.speed);
+    bg.style.filter = `blur(${state.blur}px)`;
+    applyMask();
+
+    // Blur discards detail, so shade fewer pixels while it's on. Fires only on
+    // the 0 <-> non-zero crossing, since it triggers a resize.
+    if ((lastBlur > 0) !== (state.blur > 0)) mount.setMinPixelRatio(state.blur > 0 ? 1 : 2);
+    lastBlur = state.blur;
+
+    // At speed 0 the render loop is stopped, so uniform changes need a nudge.
+    if (state.speed === 0 || reduce.matches) { try { mount.requestRender(); } catch {} }
+  };
+
+  reduce.addEventListener('change', push);
+
+  // ---- panel --------------------------------------------------------------
+  const sync = [];   // functions that pull UI back from state
+
+  function colorRow(host, label, read, write) {
+    const row = document.createElement('div');
+    row.className = 'crow';
+    row.innerHTML =
+      `<input type="color">` +
+      `<div class="stack">` +
+        `<span class="hex"><span>${label}</span><span class="v"></span></span>` +
+        `<input type="range" min="0" max="1" step="0.01">` +
+      `</div>`;
+    const [swatch, alpha] = row.querySelectorAll('input');
+    const out = row.querySelector('.v');
+
+    const refresh = () => {
+      const { rgb, a } = splitHex(read());
+      swatch.value = rgb; alpha.value = a; out.textContent = read();
+    };
+    const change = () => { write(joinHex(swatch.value, parseFloat(alpha.value))); refresh(); push(); };
+
+    swatch.addEventListener('input', change);
+    alpha.addEventListener('input', change);
+    refresh();
+    sync.push(refresh);
+    host.appendChild(row);
+    return row;
+  }
+
+  const rayRows = [];
+  const rayHost = document.getElementById('rayColors');
+  for (let i = 0; i < 5; i++) {
+    rayRows.push(colorRow(rayHost, `color ${i + 1}`,
+      () => state.colors[i], (v) => (state.colors[i] = v)));
+  }
+  const otherHost = document.getElementById('otherColors');
+  colorRow(otherHost, 'colorBack',  () => state.colorBack,  (v) => (state.colorBack = v));
+  colorRow(otherHost, 'colorBloom', () => state.colorBloom, (v) => (state.colorBloom = v));
+
+  const dimUnused = () => rayRows.forEach((r, i) =>
+    r.classList.toggle('off', i >= state.colorsCount));
+
+  function slider(host, key, min, max, step, after) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML =
+      `<span class="lbl"><span>${key}</span><span class="val"></span></span>` +
+      `<input type="range" min="${min}" max="${max}" step="${step}">`;
+    const input = row.querySelector('input');
+    const out = row.querySelector('.val');
+    const refresh = () => { input.value = state[key]; out.textContent = state[key]; };
+    input.addEventListener('input', () => {
+      state[key] = parseFloat(input.value);
+      refresh(); after?.(); push();
+    });
+    refresh();
+    sync.push(refresh);
+    host.appendChild(row);
+  }
+
+  slider(document.getElementById('countRow').parentElement, 'colorsCount', 1, 5, 1, dimUnused);
+  document.getElementById('countRow').remove();
+  dimUnused();
+
+  const coneHost = document.getElementById('cones');
+  const coneBtns = {};
+  for (const [k] of CONES) {
+    const b = document.createElement('button');
+    b.className = 'tog';
+    b.textContent = k;
+    b.addEventListener('click', () => { state[k] = !state[k]; refreshCones(); push(); });
+    coneBtns[k] = b;
+    coneHost.appendChild(b);
+  }
+  const refreshCones = () => {
+    for (const [k] of CONES) coneBtns[k].classList.toggle('on', state[k]);
+  };
+  refreshCones();
+  sync.push(refreshCones);
+
+  const rows = document.getElementById('rows');
+  for (const [k, , min, max, step] of SLIDERS) slider(rows, k, min, max, step);
+
+  document.getElementById('toggle').addEventListener('click', () => {
+    const closed = document.getElementById('panel').classList.toggle('closed');
+    for (const id of ['copy', 'reset']) document.getElementById(id).hidden = closed;
+  });
+
+  document.getElementById('reset').addEventListener('click', () => {
+    Object.assign(state, structuredClone(DEFAULTS));
+    sync.forEach((f) => f()); dimUnused(); push();
+  });
+
+  document.getElementById('copy').addEventListener('click', async (e) => {
+    const q = (v) => (typeof v === 'string' ? `'${v}'` : v);
+    const body = Object.keys(DEFAULTS).map((k) => Array.isArray(state[k])
+      ? `  ${k}: [${state[k].map(q).join(', ')}],`
+      : `  ${k}: ${q(state[k])},`).join('\n');
+    await navigator.clipboard.writeText(`const params = {\n${body}\n};`);
+    e.target.textContent = 'Copied';
+    setTimeout(() => (e.target.textContent = 'Copy'), 1500);
+  });
+
+  push();
+} catch (e) {
+  const el = document.getElementById('err');
+  el.style.display = 'block';
+  el.textContent = 'Shader failed to start:\n' + (e?.stack || e);
+}
+</script>
+
+</body>
+</html>

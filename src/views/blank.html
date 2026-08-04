@@ -1,0 +1,1062 @@
+
+{% extends "_template.html" %}
+
+
+{% block content %}
+
+<link rel="stylesheet"
+	href="https://cdnjs.cloudflare.com/ajax/libs/design-system/2.28.0/styles/salesforce-lightning-design-system.min.css"
+	integrity="sha512-yGlcH7165+gHMWfLapErhAgPK+gSZSQBtGgcO2zsJj8ASkfPh/z8k+4SZ2h+VBZLUIjzur8kktBrGbW3gcWUDQ=="
+	crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="/styles/slds2_agentic.css" />
+
+<svg aria-hidden="true" focusable="false"
+	style="position: absolute; width: 0; height: 0; overflow: hidden;">
+	<symbol viewBox="0 0 520 520" id="threads-icon-search"><path d="M496 453L362 320a189 189 0 10-340-92 190 190 0 00298 135l133 133a14 14 0 0021 0l21-21a17 17 0 001-22zM210 338a129 129 0 11130-130 129 129 0 01-130 130z"/></symbol>
+	<symbol viewBox="0 0 520 520" id="threads-icon-add"><path d="M300 290h165c8 0 15-7 15-15v-30c0-8-7-15-15-15H300c-6 0-10-4-10-10V55c0-8-7-15-15-15h-30c-8 0-15 7-15 15v165c0 6-4 10-10 10H55c-8 0-15 7-15 15v30c0 8 7 15 15 15h165c6 0 10 4 10 10v165c0 8 7 15 15 15h30c8 0 15-7 15-15V300c0-6 4-10 10-10z"/></symbol>
+	<symbol viewBox="0 0 52 52" id="threads-icon-inbox"><path d="M50 8a4 4 0 00-4-4H6a4 4 0 00-4 4v36a4 4 0 004 4h40a4 4 0 004-4zM19 35c0 .6-.4 1-1 1H9c-.6 0-1-.4-1-1v-4c0-.6.4-1 1-1h9c.6 0 1 .4 1 1zm0-10c0 .6-.4 1-1 1H9c-.6 0-1-.4-1-1v-4c0-.6.4-1 1-1h9c.6 0 1 .4 1 1zm0-10c0 .6-.4 1-1 1H9c-.6 0-1-.4-1-1v-4c0-.6.4-1 1-1h9c.6 0 1 .4 1 1zm25 26c0 .6-.4 1-1 1H24c-.6 0-1-.4-1-1V11c0-.6.4-1 1-1h19c.6 0 1 .4 1 1z"/></symbol>
+	<symbol viewBox="0 0 520 520" id="threads-icon-sparkles"><path d="M349 272l-69 34a105 105 0 00-47 47l-33 67c-5 10-19 10-24 0l-34-68a105 105 0 00-47-47l-68-34a13 13 0 010-24l68-34a105 105 0 0047-47l34-68a13 13 0 0124 0l34 68a105 105 0 0047 47l68 34c10 5 10 19 0 24zm148 150l-30-14a45 45 0 01-20-20l-14-30a6 6 0 00-10 0l-15 30a45 45 0 01-20 20l-30 15c-3 2-3 8 0 10l30 15a45 45 0 0120 20l15 29c2 4 8 4 10 0l14-30a45 45 0 0120-20l30-14c4-2 4-8 0-10zm0-335l-30-15a45 45 0 01-20-20l-14-29a6 6 0 00-10 0l-15 30a45 45 0 01-20 20l-30 14c-3 2-3 8 0 10l30 15a45 45 0 0120 20l15 29c2 4 8 4 10 0l15-30a45 45 0 0120-20l29-14c4-2 4-8 0-10z"/></symbol>
+	<symbol viewBox="0 0 52 52" id="threads-icon-description"><path d="M44 4H8a4 4 0 00-4 4v36a4 4 0 004 4h36a4 4 0 004-4V8a4 4 0 00-4-4zM12 14c0-.6.4-1 1-1h10c.6 0 1 .4 1 1v10c0 .6-.4 1-1 1H13c-.6 0-1-.4-1-1V14zm24 26c0 .6-.4 1-1 1H13c-.6 0-1-.4-1-1v-2c0-.6.4-1 1-1h22c.6 0 1 .4 1 1v2zm4-8c0 .6-.4 1-1 1H13c-.6 0-1-.4-1-1v-2c0-.6.4-1 1-1h26c.6 0 1 .4 1 1v2zm0-8c0 .6-.4 1-1 1H29c-.6 0-1-.4-1-1v-2c0-.6.4-1 1-1h10c.6 0 1 .4 1 1v2zm0-8c0 .6-.4 1-1 1H29c-.6 0-1-.4-1-1v-2c0-.6.4-1 1-1h10c.6 0 1 .4 1 1v2z"/></symbol>
+</svg>
+
+<aside id="threads-panel" class="threads-panel slds-theme_default slds-border_right" aria-label="Chat threads"
+	style="width: 240px; flex-shrink: 0;">
+	<div class="slds-grid slds-grid_vertical" style="height: 100%;">
+
+		<div class="threads-header slds-grid slds-grid_vertical-align-center slds-gutters_xx-small slds-p-around_x-small slds-shrink-none">
+			<div class="slds-col slds-grow slds-input-has-icon slds-input-has-icon_left">
+				<span class="slds-icon_container slds-icon-utility-search slds-input__icon slds-input__icon_left slds-line-height_reset" title="Search">
+					<svg class="slds-icon slds-icon-text-default slds-icon_x-small" aria-hidden="true">
+						<use xlink:href="#threads-icon-search"></use>
+					</svg>
+					<span class="slds-assistive-text">Search</span>
+				</span>
+				<input class="slds-input" placeholder="Search…" type="text" value="">
+			</div>
+			<button class="slds-button slds-button_icon slds-button_icon-border-filled slds-shrink-none" title="New chat">
+				<svg class="slds-button__icon" aria-hidden="true">
+					<use xlink:href="#threads-icon-add"></use>
+				</svg>
+				<span class="slds-assistive-text">New chat</span>
+			</button>
+		</div>
+
+		<nav class="slds-nav-vertical slds-nav-vertical_compact slds-nav-vertical_shade slds-shrink-none"
+			aria-label="Configuration">
+			<div class="slds-nav-vertical__title slds-text-body_small">Configuration</div>
+			<ul>
+				<li class="slds-nav-vertical__item slds-is-active">
+					<a class="slds-nav-vertical__action" href="/configuration/inbox" data-discover="true" aria-current="page">
+						<span class="slds-icon_container slds-icon-utility-inbox slds-line-height_reset" title="Approvals">
+							<svg class="slds-icon slds-icon-text-default slds-icon_x-small slds-m-right_x-small" aria-hidden="true">
+								<use xlink:href="#threads-icon-inbox"></use>
+							</svg>
+							<span class="slds-assistive-text">Approvals</span>
+						</span>Approvals
+						<span class="slds-badge slds-theme_error slds-col_bump-left" aria-label="7 pending approvals">7</span>
+					</a>
+				</li>
+				<li class="slds-nav-vertical__item">
+					<a class="slds-nav-vertical__action" href="/configuration/skills" data-discover="true">
+						<span class="slds-icon_container slds-icon-utility-sparkles slds-line-height_reset" title="Skills">
+							<svg class="slds-icon slds-icon-text-default slds-icon_x-small slds-m-right_x-small" aria-hidden="true">
+								<use xlink:href="#threads-icon-sparkles"></use>
+							</svg>
+							<span class="slds-assistive-text">Skills</span>
+						</span>Skills
+					</a>
+				</li>
+				<li class="slds-nav-vertical__item">
+					<a class="slds-nav-vertical__action" href="/configuration/workflows" data-discover="true">
+						<span class="slds-icon_container slds-icon-utility-description slds-line-height_reset" title="Workflows">
+							<svg class="slds-icon slds-icon-text-default slds-icon_x-small slds-m-right_x-small" aria-hidden="true">
+								<use xlink:href="#threads-icon-description"></use>
+							</svg>
+							<span class="slds-assistive-text">Workflows</span>
+						</span>Workflows
+					</a>
+				</li>
+			</ul>
+		</nav>
+
+		<div class="threads-list slds-nav-vertical slds-nav-vertical_compact slds-nav-vertical_shade slds-grow slds-scrollable_y slds-p-bottom_x-small">
+			<div class="slds-nav-vertical__title slds-text-body_small">Recent chats</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="can you use my &quot;find new prospects&quot; workflow to find 5 prospects">
+					<div class="slds-truncate" title="can you use my &quot;find new prospects&quot; workflow to find 5 prospects">can you use my "find new prospects" workflow to find 5 prospects</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="show me my workflows">
+					<div class="slds-truncate" title="show me my workflows">show me my workflows</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Untitled">
+					<div class="slds-truncate" title="Untitled">Untitled</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Untitled">
+					<div class="slds-truncate" title="Untitled">Untitled</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Untitled">
+					<div class="slds-truncate" title="Untitled">Untitled</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="show me my playbooks">
+					<div class="slds-truncate" title="show me my playbooks">show me my playbooks</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Let's edit my &quot;Daily Pipeline Snapshot&quot; workflow. Show me its current plan and s">
+					<div class="slds-truncate" title="Let's edit my &quot;Daily Pipeline Snapshot&quot; workflow. Show me its current plan and s">Let's edit my "Daily Pipeline Snapshot" workflow. Show me its current plan and s</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="show me f*ind_prospects skill as markdown in this chat*">
+					<div class="slds-truncate" title="show me f*ind_prospects skill as markdown in this chat*">show me f*ind_prospects skill as markdown in this chat*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="&lt;https://slackfarm-84.enterprise.slack.com/salesforce/00DWt00000HDAJ7MAP/records">
+					<div class="slds-truncate" title="&lt;https://slackfarm-84.enterprise.slack.com/salesforce/00DWt00000HDAJ7MAP/records">&lt;https://slackfarm-84.enterprise.slack.com/salesforce/00DWt00000HDAJ7MAP/records</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="research Notion and &lt;http://Attention.com|Attention.com&gt;">
+					<div class="slds-truncate" title="research Notion and &lt;http://Attention.com|Attention.com&gt;">research Notion and &lt;http://Attention.com|Attention.com&gt;</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="i just ran a playbook called &quot;meeting prep&quot;. The last step is to post it to a sl">
+					<div class="slds-truncate" title="i just ran a playbook called &quot;meeting prep&quot;. The last step is to post it to a sl">i just ran a playbook called "meeting prep". The last step is to post it to a sl</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Edit the plan &quot;Meeting Prep&quot;. If the last run produced any plan-revision proposa">
+					<div class="slds-truncate" title="Edit the plan &quot;Meeting Prep&quot;. If the last run produced any plan-revision proposa">Edit the plan "Meeting Prep". If the last run produced any plan-revision proposa</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Create a playbook that sends me a slack message me a summary of every deal each">
+					<div class="slds-truncate" title="Create a playbook that sends me a slack message me a summary of every deal each">Create a playbook that sends me a slack message me a summary of every deal each</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="can you check the status of my running playbook">
+					<div class="slds-truncate" title="can you check the status of my running playbook">can you check the status of my running playbook</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Edit the plan &quot;Daily Pipeline Snapshot&quot;. If the last run produced any plan-revis">
+					<div class="slds-truncate" title="Edit the plan &quot;Daily Pipeline Snapshot&quot;. If the last run produced any plan-revis">Edit the plan "Daily Pipeline Snapshot". If the last run produced any plan-revis</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Show me the details of my &quot;Daily ICP Prospecting — Artisan&quot; workflow — its lates">
+					<div class="slds-truncate" title="Show me the details of my &quot;Daily ICP Prospecting — Artisan&quot; workflow — its lates">Show me the details of my "Daily ICP Prospecting — Artisan" workflow — its lates</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Run the playbook: *Daily ICP Prospecting — Artisan*">
+					<div class="slds-truncate" title="Run the playbook: *Daily ICP Prospecting — Artisan*">Run the playbook: *Daily ICP Prospecting — Artisan*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="can you run this playbook: *Daily ICP Prospecting — Artisan*">
+					<div class="slds-truncate" title="can you run this playbook: *Daily ICP Prospecting — Artisan*">can you run this playbook: *Daily ICP Prospecting — Artisan*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Show me the details of my &quot;Daily ICP Prospecting — Artisan&quot; workflow — its lates">
+					<div class="slds-truncate" title="Show me the details of my &quot;Daily ICP Prospecting — Artisan&quot; workflow — its lates">Show me the details of my "Daily ICP Prospecting — Artisan" workflow — its lates</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Edit the plan &quot;Daily ICP Prospecting — Artisan&quot;. I like to add another things to">
+					<div class="slds-truncate" title="Edit the plan &quot;Daily ICP Prospecting — Artisan&quot;. I like to add another things to">Edit the plan "Daily ICP Prospecting — Artisan". I like to add another things to</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="what's the status of my playbook, any running">
+					<div class="slds-truncate" title="what's the status of my playbook, any running">what's the status of my playbook, any running</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="status">
+					<div class="slds-truncate" title="status">status</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="I want to update my playbook called: &quot;Daily ICP Prospecting - Artisan&quot;. I want t">
+					<div class="slds-truncate" title="I want to update my playbook called: &quot;Daily ICP Prospecting - Artisan&quot;. I want t">I want to update my playbook called: "Daily ICP Prospecting - Artisan". I want t</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="any updates">
+					<div class="slds-truncate" title="any updates">any updates</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Show me the details of my &quot;Daily ICP Prospecting — Artisan&quot; workflow — its lates">
+					<div class="slds-truncate" title="Show me the details of my &quot;Daily ICP Prospecting — Artisan&quot; workflow — its lates">Show me the details of my "Daily ICP Prospecting — Artisan" workflow — its lates</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="for my playbook on ICP Accounts, what are the &quot;inputs&quot; needed to start the playb">
+					<div class="slds-truncate" title="for my playbook on ICP Accounts, what are the &quot;inputs&quot; needed to start the playb">for my playbook on ICP Accounts, what are the "inputs" needed to start the playb</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="how can i connect my google">
+					<div class="slds-truncate" title="how can i connect my google">how can i connect my google</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="can you update the playbook :Playbook: Daily ICP Prospecting — Artisan so that i">
+					<div class="slds-truncate" title="can you update the playbook :Playbook: Daily ICP Prospecting — Artisan so that i">can you update the playbook :Playbook: Daily ICP Prospecting — Artisan so that i</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Convert &quot;Daily ICP Prospecting — Artisan&quot; into a Playbook">
+					<div class="slds-truncate" title="Convert &quot;Daily ICP Prospecting — Artisan&quot; into a Playbook">Convert "Daily ICP Prospecting — Artisan" into a Playbook</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Scheduled: 2b125734-0544-49d0-82fe-84c593a13719">
+					<div class="slds-truncate" title="Scheduled: 2b125734-0544-49d0-82fe-84c593a13719">Scheduled: 2b125734-0544-49d0-82fe-84c593a13719</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Scheduled: e2d106a0-4ad3-4113-a5e9-fc3af3399b96">
+					<div class="slds-truncate" title="Scheduled: e2d106a0-4ad3-4113-a5e9-fc3af3399b96">Scheduled: e2d106a0-4ad3-4113-a5e9-fc3af3399b96</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Can you create a new workflow that does this: - Research and find 10 new account">
+					<div class="slds-truncate" title="Can you create a new workflow that does this: - Research and find 10 new account">Can you create a new workflow that does this: - Research and find 10 new account</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Can you research Notion, Dialpad, and Ramp">
+					<div class="slds-truncate" title="Can you research Notion, Dialpad, and Ramp">Can you research Notion, Dialpad, and Ramp</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="can you research these accounts: DataDog, New Relic, and Dynatrace">
+					<div class="slds-truncate" title="can you research these accounts: DataDog, New Relic, and Dynatrace">can you research these accounts: DataDog, New Relic, and Dynatrace</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="create a new contact Simon Fraser at Acme Corp">
+					<div class="slds-truncate" title="create a new contact Simon Fraser at Acme Corp">create a new contact Simon Fraser at Acme Corp</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="can you create a new lead for me called Simon Fraser for Acme Corp">
+					<div class="slds-truncate" title="can you create a new lead for me called Simon Fraser for Acme Corp">can you create a new lead for me called Simon Fraser for Acme Corp</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="create a new lead called Simon Fraser">
+					<div class="slds-truncate" title="create a new lead called Simon Fraser">create a new lead called Simon Fraser</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Create a task &quot;Task for Nima&quot; in Salesforce">
+					<div class="slds-truncate" title="Create a task &quot;Task for Nima&quot; in Salesforce">Create a task "Task for Nima" in Salesforce</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="can you show me my open opportunities">
+					<div class="slds-truncate" title="can you show me my open opportunities">can you show me my open opportunities</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Research DataDog, Splunk, New Relic and Dynatrace and rank them against my ICP">
+					<div class="slds-truncate" title="Research DataDog, Splunk, New Relic and Dynatrace and rank them against my ICP">Research DataDog, Splunk, New Relic and Dynatrace and rank them against my ICP</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Research DataDog, Splunk, New Relic and Dynatrace">
+					<div class="slds-truncate" title="Research DataDog, Splunk, New Relic and Dynatrace">Research DataDog, Splunk, New Relic and Dynatrace</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Summarize campaign signals and propose next-best marketing actions">
+					<div class="slds-truncate" title="Summarize campaign signals and propose next-best marketing actions">Summarize campaign signals and propose next-best marketing actions</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Can you summarize my opportunities: &lt;https://dwt00000hdaj7map.lightning.force.co">
+					<div class="slds-truncate" title="Can you summarize my opportunities: &lt;https://dwt00000hdaj7map.lightning.force.co">Can you summarize my opportunities: &lt;https://dwt00000hdaj7map.lightning.force.co</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="&lt;https://dwt00000hdaj7map.lightning.force.com/lightning/r/Opportunity/006Wt00000">
+					<div class="slds-truncate" title="&lt;https://dwt00000hdaj7map.lightning.force.com/lightning/r/Opportunity/006Wt00000">&lt;https://dwt00000hdaj7map.lightning.force.com/lightning/r/Opportunity/006Wt00000</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Review stale commitments and schedule follow-up tasks">
+					<div class="slds-truncate" title="Review stale commitments and schedule follow-up tasks">Review stale commitments and schedule follow-up tasks</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Make a playbook that nudges me about prospects going cold">
+					<div class="slds-truncate" title="Make a playbook that nudges me about prospects going cold">Make a playbook that nudges me about prospects going cold</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Can you test each of these prompts and see if it triggers a Playbook, Skill, Aut">
+					<div class="slds-truncate" title="Can you test each of these prompts and see if it triggers a Playbook, Skill, Aut">Can you test each of these prompts and see if it triggers a Playbook, Skill, Aut</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Set up a recurring task that pulls my top 10 stalled opportunities and posts the">
+					<div class="slds-truncate" title="Set up a recurring task that pulls my top 10 stalled opportunities and posts the">Set up a recurring task that pulls my top 10 stalled opportunities and posts the</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="I want to send a friendly &quot;stay in touch&quot; email to contacts I haven't contacted">
+					<div class="slds-truncate" title="I want to send a friendly &quot;stay in touch&quot; email to contacts I haven't contacted">I want to send a friendly "stay in touch" email to contacts I haven't contacted</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="What's the difference between a Skill and a PLaybook to you">
+					<div class="slds-truncate" title="What's the difference between a Skill and a PLaybook to you">What's the difference between a Skill and a PLaybook to you</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Help me prep for my weekly 1:1 with my manager">
+					<div class="slds-truncate" title="Help me prep for my weekly 1:1 with my manager">Help me prep for my weekly 1:1 with my manager</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Create something that finds new buying signals at my named accounts every week">
+					<div class="slds-truncate" title="Create something that finds new buying signals at my named accounts every week">Create something that finds new buying signals at my named accounts every week</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Build me a playbook for territory planning">
+					<div class="slds-truncate" title="Build me a playbook for territory planning">Build me a playbook for territory planning</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Every Monday, find me 5 prospects at my top account and draft outreach">
+					<div class="slds-truncate" title="Every Monday, find me 5 prospects at my top account and draft outreach">Every Monday, find me 5 prospects at my top account and draft outreach</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Set up a recurring task that pulls my top 10 stalled opportunities and posts the">
+					<div class="slds-truncate" title="Set up a recurring task that pulls my top 10 stalled opportunities and posts the">Set up a recurring task that pulls my top 10 stalled opportunities and posts the</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Create a playbook that emails me a summary of every deal that closed yesterday">
+					<div class="slds-truncate" title="Create a playbook that emails me a summary of every deal that closed yesterday">Create a playbook that emails me a summary of every deal that closed yesterday</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Set up a recurring task that pulls my top 10 stalled opportunities and posts the">
+					<div class="slds-truncate" title="Set up a recurring task that pulls my top 10 stalled opportunities and posts the">Set up a recurring task that pulls my top 10 stalled opportunities and posts the</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Create a workflow that emails me a summary of every deal that closed yesterday">
+					<div class="slds-truncate" title="Create a workflow that emails me a summary of every deal that closed yesterday">Create a workflow that emails me a summary of every deal that closed yesterday</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Every month, find contacts I haven't talked to in 90 days and draft a friendly c">
+					<div class="slds-truncate" title="Every month, find contacts I haven't talked to in 90 days and draft a friendly c">Every month, find contacts I haven't talked to in 90 days and draft a friendly c</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Every Friday at 4 PM, pull all opportunities in my pipeline that haven't moved i">
+					<div class="slds-truncate" title="Every Friday at 4 PM, pull all opportunities in my pipeline that haven't moved i">Every Friday at 4 PM, pull all opportunities in my pipeline that haven't moved i</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="I want a short list of new accounts every Monday. Can you do this for me">
+					<div class="slds-truncate" title="I want a short list of new accounts every Monday. Can you do this for me">I want a short list of new accounts every Monday. Can you do this for me</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="can you help me make a playbook">
+					<div class="slds-truncate" title="can you help me make a playbook">can you help me make a playbook</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="hi, can you research Dialpad, Notion and Grafana">
+					<div class="slds-truncate" title="hi, can you research Dialpad, Notion and Grafana">hi, can you research Dialpad, Notion and Grafana</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Scheduled: 76a99d41-f431-42f3-9aa6-f18a2ad8ed06">
+					<div class="slds-truncate" title="Scheduled: 76a99d41-f431-42f3-9aa6-f18a2ad8ed06">Scheduled: 76a99d41-f431-42f3-9aa6-f18a2ad8ed06</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="research Notion and Dialpad">
+					<div class="slds-truncate" title="research Notion and Dialpad">research Notion and Dialpad</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Research Notion, Dialpad, and Gong">
+					<div class="slds-truncate" title="Research Notion, Dialpad, and Gong">Research Notion, Dialpad, and Gong</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Research Notion, Dialpad, and Gong">
+					<div class="slds-truncate" title="Research Notion, Dialpad, and Gong">Research Notion, Dialpad, and Gong</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="research Datadog, Splunk and Dynatrace">
+					<div class="slds-truncate" title="research Datadog, Splunk and Dynatrace">research Datadog, Splunk and Dynatrace</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Research DataDog, Dynatrace, and Splunk">
+					<div class="slds-truncate" title="Research DataDog, Dynatrace, and Splunk">Research DataDog, Dynatrace, and Splunk</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="research Notion and Dialpad">
+					<div class="slds-truncate" title="research Notion and Dialpad">research Notion and Dialpad</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Research notion and dialpad">
+					<div class="slds-truncate" title="Research notion and dialpad">Research notion and dialpad</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Show me World Cup winners grouped by country">
+					<div class="slds-truncate" title="Show me World Cup winners grouped by country">Show me World Cup winners grouped by country</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="show me my top accounts for this week (make it up)">
+					<div class="slds-truncate" title="show me my top accounts for this week (make it up)">show me my top accounts for this week (make it up)</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="show me three profile cards for fake prospects: Simon Fraser, Sarah Chen and Ama">
+					<div class="slds-truncate" title="show me three profile cards for fake prospects: Simon Fraser, Sarah Chen and Ama">show me three profile cards for fake prospects: Simon Fraser, Sarah Chen and Ama</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="show me my automations">
+					<div class="slds-truncate" title="show me my automations">show me my automations</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="&quot;Show me Sarah Chen's profile with an Edit Contact button&quot;">
+					<div class="slds-truncate" title="&quot;Show me Sarah Chen's profile with an Edit Contact button&quot;">"Show me Sarah Chen's profile with an Edit Contact button"</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="show me a table of world cup winners">
+					<div class="slds-truncate" title="show me a table of world cup winners">show me a table of world cup winners</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Scheduled: 76a99d41-f431-42f3-9aa6-f18a2ad8ed06">
+					<div class="slds-truncate" title="Scheduled: 76a99d41-f431-42f3-9aa6-f18a2ad8ed06">Scheduled: 76a99d41-f431-42f3-9aa6-f18a2ad8ed06</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="show me my automations">
+					<div class="slds-truncate" title="show me my automations">show me my automations</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Draft an email to the VP of Sales at Dialpad">
+					<div class="slds-truncate" title="Draft an email to the VP of Sales at Dialpad">Draft an email to the VP of Sales at Dialpad</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="show me my automations">
+					<div class="slds-truncate" title="show me my automations">show me my automations</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="draft an email to the VP of Engineering of Stripe">
+					<div class="slds-truncate" title="draft an email to the VP of Engineering of Stripe">draft an email to the VP of Engineering of Stripe</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="draft an email to the VP of Stripe">
+					<div class="slds-truncate" title="draft an email to the VP of Stripe">draft an email to the VP of Stripe</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="research account Stripe">
+					<div class="slds-truncate" title="research account Stripe">research account Stripe</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="research account Stripe">
+					<div class="slds-truncate" title="research account Stripe">research account Stripe</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the card_carousel component*">
+					<div class="slds-truncate" title="*test the card_carousel component*">*test the card_carousel component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the card_carousel component*">
+					<div class="slds-truncate" title="*test the card_carousel component*">*test the card_carousel component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the info_explainer component*">
+					<div class="slds-truncate" title="*test the info_explainer component*">*test the info_explainer component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the receipt_card component*">
+					<div class="slds-truncate" title="*test the receipt_card component*">*test the receipt_card component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the receipt_card component*">
+					<div class="slds-truncate" title="*test the receipt_card component*">*test the receipt_card component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the receipt_card component*">
+					<div class="slds-truncate" title="*test the receipt_card component*">*test the receipt_card component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the decision_confirm component*">
+					<div class="slds-truncate" title="*test the decision_confirm component*">*test the decision_confirm component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the next_steps component*">
+					<div class="slds-truncate" title="*test the next_steps component*">*test the next_steps component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the next_steps component*">
+					<div class="slds-truncate" title="*test the next_steps component*">*test the next_steps component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the next_steps component*">
+					<div class="slds-truncate" title="*test the next_steps component*">*test the next_steps component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the plan_block component*">
+					<div class="slds-truncate" title="*test the plan_block component*">*test the plan_block component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the plan_block component*">
+					<div class="slds-truncate" title="*test the plan_block component*">*test the plan_block component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the plan_block component*">
+					<div class="slds-truncate" title="*test the plan_block component*">*test the plan_block component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the plan_block component*">
+					<div class="slds-truncate" title="*test the plan_block component*">*test the plan_block component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the task_card component*">
+					<div class="slds-truncate" title="*test the task_card component*">*test the task_card component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the email_preview component*">
+					<div class="slds-truncate" title="*test the email_preview component*">*test the email_preview component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the email_preview component*">
+					<div class="slds-truncate" title="*test the email_preview component*">*test the email_preview component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the narrative_summary component*">
+					<div class="slds-truncate" title="*test the narrative_summary component*">*test the narrative_summary component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the filterable_table component*">
+					<div class="slds-truncate" title="*test the filterable_table component*">*test the filterable_table component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the evidence_list component*">
+					<div class="slds-truncate" title="*test the evidence_list component*">*test the evidence_list component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the detail_card component*">
+					<div class="slds-truncate" title="*test the detail_card component*">*test the detail_card component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the data_table component*">
+					<div class="slds-truncate" title="*test the data_table component*">*test the data_table component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*test the data_table component*">
+					<div class="slds-truncate" title="*test the data_table component*">*test the data_table component*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="show me world cup winners">
+					<div class="slds-truncate" title="show me world cup winners">show me world cup winners</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="show me world cup winners">
+					<div class="slds-truncate" title="show me world cup winners">show me world cup winners</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="show me world cup winners">
+					<div class="slds-truncate" title="show me world cup winners">show me world cup winners</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*show me world cup winners*">
+					<div class="slds-truncate" title="*show me world cup winners*">*show me world cup winners*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="*show me world cup winners*">
+					<div class="slds-truncate" title="*show me world cup winners*">*show me world cup winners*</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Hi">
+					<div class="slds-truncate" title="Hi">Hi</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="show me a list of world cup winners, grouped by county">
+					<div class="slds-truncate" title="show me a list of world cup winners, grouped by county">show me a list of world cup winners, grouped by county</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="make a table of world cup winners, group by country">
+					<div class="slds-truncate" title="make a table of world cup winners, group by country">make a table of world cup winners, group by country</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="What do you know about me , my role and sales process">
+					<div class="slds-truncate" title="What do you know about me , my role and sales process">What do you know about me , my role and sales process</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Can you research Dialpad, Notion, Datadog, New Relic, and Databricks">
+					<div class="slds-truncate" title="Can you research Dialpad, Notion, Datadog, New Relic, and Databricks">Can you research Dialpad, Notion, Datadog, New Relic, and Databricks</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="I'm an AE at Dialpad I want to draft personalized outreach emails to a list of p">
+					<div class="slds-truncate" title="I'm an AE at Dialpad I want to draft personalized outreach emails to a list of p">I'm an AE at Dialpad I want to draft personalized outreach emails to a list of p</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="I'm an AE at elevenlabs.io I want to draft personalized outreach emails to a lis">
+					<div class="slds-truncate" title="I'm an AE at elevenlabs.io I want to draft personalized outreach emails to a lis">I'm an AE at elevenlabs.io I want to draft personalized outreach emails to a lis</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Search the web for: {{query}}">
+					<div class="slds-truncate" title="Search the web for: {{query}}">Search the web for: {{query}}</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="can you show me all your skills">
+					<div class="slds-truncate" title="can you show me all your skills">can you show me all your skills</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="I'm an AE at &lt;http://elevenlabs.io|elevenlabs.io&gt; I want to draft personalized o">
+					<div class="slds-truncate" title="I'm an AE at &lt;http://elevenlabs.io|elevenlabs.io&gt; I want to draft personalized o">I'm an AE at &lt;http://elevenlabs.io|elevenlabs.io&gt; I want to draft personalized o</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Run a pipeline risk review and prioritize top at-risk opportunities">
+					<div class="slds-truncate" title="Run a pipeline risk review and prioritize top at-risk opportunities">Run a pipeline risk review and prioritize top at-risk opportunities</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Run a pipeline risk review and prioritize top at-risk opportunities">
+					<div class="slds-truncate" title="Run a pipeline risk review and prioritize top at-risk opportunities">Run a pipeline risk review and prioritize top at-risk opportunities</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="give me a list of prospects that i can contact">
+					<div class="slds-truncate" title="give me a list of prospects that i can contact">give me a list of prospects that i can contact</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Research New Relic, Dynatrace and 2 similar companies">
+					<div class="slds-truncate" title="Research New Relic, Dynatrace and 2 similar companies">Research New Relic, Dynatrace and 2 similar companies</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Research Splunk, Dynatrace and New Relic. Then fine 1 top prospect per account t">
+					<div class="slds-truncate" title="Research Splunk, Dynatrace and New Relic. Then fine 1 top prospect per account t">Research Splunk, Dynatrace and New Relic. Then fine 1 top prospect per account t</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Can you research Datadog, New Relic and 2 similar companies">
+					<div class="slds-truncate" title="Can you research Datadog, New Relic and 2 similar companies">Can you research Datadog, New Relic and 2 similar companies</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="What can you help me with">
+					<div class="slds-truncate" title="What can you help me with">What can you help me with</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="I'm an AE at Topify.ai Find me 5 accounts that match my ICP">
+					<div class="slds-truncate" title="I'm an AE at Topify.ai Find me 5 accounts that match my ICP">I'm an AE at Topify.ai Find me 5 accounts that match my ICP</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="What can you help me with">
+					<div class="slds-truncate" title="What can you help me with">What can you help me with</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="&lt;@U0B11RCAQL9&gt; I'm an AE at &lt;https://stripe.com/&gt; can you research these account">
+					<div class="slds-truncate" title="&lt;@U0B11RCAQL9&gt; I'm an AE at &lt;https://stripe.com/&gt; can you research these account">&lt;@U0B11RCAQL9&gt; I'm an AE at &lt;https://stripe.com/&gt; can you research these account</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Run a pipeline risk review and prioritize top at-risk opportunities">
+					<div class="slds-truncate" title="Run a pipeline risk review and prioritize top at-risk opportunities">Run a pipeline risk review and prioritize top at-risk opportunities</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="Run a pipeline risk review and prioritize top at-risk opportunities">
+					<div class="slds-truncate" title="Run a pipeline risk review and prioritize top at-risk opportunities">Run a pipeline risk review and prioritize top at-risk opportunities</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="&lt;@U0B11RCAQL9&gt; | I'm a BDR at &lt;https://topify.ai/&gt; Here's a list of new companie">
+					<div class="slds-truncate" title="&lt;@U0B11RCAQL9&gt; | I'm a BDR at &lt;https://topify.ai/&gt; Here's a list of new companie">&lt;@U0B11RCAQL9&gt; | I'm a BDR at &lt;https://topify.ai/&gt; Here's a list of new companie</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="I selected: Daniel Fishkov (Roblox), Karun Channa (Roblox), Matt Wyndowe (OpenAI">
+					<div class="slds-truncate" title="I selected: Daniel Fishkov (Roblox), Karun Channa (Roblox), Matt Wyndowe (OpenAI">I selected: Daniel Fishkov (Roblox), Karun Channa (Roblox), Matt Wyndowe (OpenAI</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="I selected: Daniel Fishkov (Roblox), Karun Channa (Roblox)">
+					<div class="slds-truncate" title="I selected: Daniel Fishkov (Roblox), Karun Channa (Roblox)">I selected: Daniel Fishkov (Roblox), Karun Channa (Roblox)</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+			<div class="threads-item slds-nav-vertical__item slds-grid slds-grid_vertical-align-center">
+				<button type="button" class="slds-button slds-nav-vertical__action slds-has-flexi-truncate"
+					aria-label="I selected: Daniel Fishkov (Roblox)">
+					<div class="slds-truncate" title="I selected: Daniel Fishkov (Roblox)">I selected: Daniel Fishkov (Roblox)</div>
+				</button>
+				<div class="slds-p-right_x-small slds-grid slds-grid_vertical-align-center slds-is-relative"></div>
+			</div>
+		</div>
+
+	</div>
+</aside>
+
+{% endblock %}

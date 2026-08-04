@@ -1,0 +1,83 @@
+//
+// Prototype styles (using the Sass CSS preprocessor)
+//
+
+//
+// First, we're importing the design system from the npm package
+//
+$static-font-path: '/assets/fonts/webfonts';
+
+@import 'node_modules/@salesforce-ux/design-system/scss/index';
+
+//
+// Then, we're importing some styles via Sass partials (filenames starting with a "_")
+//
+@import 'footer';
+
+//
+// We can also add styles directly in this file, like so:
+//
+
+.landing {
+  background-color: #fff;
+}
+
+// Push down the global navigation below the header using a placeholder element
+.app-header-placeholder {
+  // A note on Design Tokens in Sass:
+  //
+  // $height-header is a Sass variable pointing to a Design Token
+  // Design tokens are listed at:
+  // https://www.lightningdesignsystem.com/design-tokens/
+  //
+  // This is how you leverage Design Tokens in Sass:
+  height: $height-header;
+}
+
+// Pin the global navigation directly under the fixed header, so it stays put no
+// matter what the page does. Needs to out-specify `.slds-context-bar`, which
+// sets `position: relative` from a later stylesheet.
+.slds-context-bar.app-nav {
+  position: fixed;
+  top: $height-header;
+  right: 0;
+  left: 0;
+  z-index: 99; // below the global header, which sits at 100
+
+  // Each item's ::after is a 3px bar sitting exactly on the context bar's
+  // blue accent border. The SLDS 2 agentic theme colors it with the accent,
+  // but legacy SLDS loads first with a `:hover:after` rule that is one class
+  // more specific than the theme's `.slds-is-active:after` — so on hover it
+  // wins and repaints the segment with a soft-light black, greying out the
+  // blue under the cursor. Hand the color decision back to the theme.
+  .slds-context-bar__item:hover::after {
+    mix-blend-mode: normal;
+    background: var(
+      --_slds-c-globalnavigation-item-color-border-hover,
+      color-mix(in oklab, var(--slds-g-color-accent-2) 80%, black)
+    );
+  }
+
+  // The active tab keeps the undimmed accent while hovered, so its indicator
+  // reads as continuous with the bar's border instead of shifting shade.
+  .slds-context-bar__item.slds-is-active:hover::after {
+    background: var(
+      --_slds-c-globalnavigation-item-color-border-active,
+      var(--slds-g-color-accent-2)
+    );
+  }
+}
+
+// Wrap the prototype in a scrollable container
+.app-wrapper {
+  overflow: auto;
+  position: absolute;
+  -webkit-overflow-scrolling: touch;
+  // The 3px is the context bar's accent bottom border, which sits outside
+  // $height-context-bar; without it the top of the content hides behind it.
+  top: calc(#{$height-context-bar + $height-header} + 3px);
+  bottom: 0;
+  right: 0;
+  left: 0;
+}
+

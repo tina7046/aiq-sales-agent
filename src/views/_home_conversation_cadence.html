@@ -1,0 +1,621 @@
+{#
+  Cadence sequence — reusable component
+  =====================================================================
+  Slot: rendered INSIDE an agent message, in place of the single-draft
+  outreach review. Consumed by _home_conversation_messages.html when a
+  message carries a `cadence` object.
+
+  Design source: hunter-main-main's Write Messaging step
+  (`_write_messaging_body.html` + `cadence-sequence.scss`), adapted to
+  the conversation feed. What came across: the vertical channel rail,
+  the collapsible steps, the message card with its Details / Feedback
+  tabs, the inline citations and their hover card, and the
+  feedback-driven Regenerate. What did not: hunter's Prospect and
+  Cadence comboboxes — the thread already has a prospect switcher (the
+  table above, plus this card's own pager), and the agent has already
+  chosen the cadence, so it reads as header info rather than a picker.
+
+  Anatomy
+  -------
+    ┌─ cadence header ────────────────────────────────────┐
+    │ High Touch Prospects · 5 touches · Email, LinkedIn  │
+    │ Alex Bristor · VP, Sales at Rippling    ‹ 1 of 12 › │
+    └─────────────────────────────────────────────────────┘
+     ●  Email 1: First touch                    [collapse]
+     │  ┌─ message ───────────┬─ Details │ Feedback ────┐
+     │  │ Subject: …          │ Email Type: …          │
+     │  │ Hi Alex, …citation… │ Reasoning: …           │
+     │  └─────────────────────┴─ Sources: ZoomInfo ────┘
+     ●  LinkedIn 1: Connection request
+     ●  Email 2: Nudge  ·  ● Call 1  ·  ● Email 3: Exit
+
+     Approve sequence  ·  Edit          Approve all 12
+
+  One prospect at a time
+  ----------------------
+  The card shows one prospect's sequence. Every OTHER sequence is
+  rendered into an inert `<template>` keyed by prospect id, and
+  home_conversation_cadence.js swaps the visible one when selection
+  changes — from a table row click, or this card's pager. Sequences are
+  keyed by prospect id with a `default` fallback, so twelve prospects
+  cost three templates rather than twelve.
+
+  Tokens
+  ------
+  `{firstName}`, `{prospect}`, `{company}` and `{signal}` inside a
+  step's body / subject / goal are filled per prospect. That's what
+  lets one `default` sequence read as written-for-them copy for the ten
+  prospects with no authored sequence of their own.
+
+  Substitution happens TWICE, deliberately: the `fill` macro below
+  handles the server-rendered sequence (so the card is correct before
+  any script runs), and `fillTokens` in home_conversation_cadence.js
+  handles a sequence cloned out of a template. Both replace the same
+  four tokens; if you add a fifth, add it in both places.
+
+  Approval
+  --------
+  Per prospect: approving covers the whole sequence, not a single
+  touch. That keeps this card on the same event contract the prospect
+  table already speaks (`sh:review-decision` / `sh:conv-row-decision`),
+  so the row stripe, the reviewed count, and Approve all keep working
+  unchanged. Per-touch interaction is feedback and Regenerate.
+
+  Data contract (see src/views/data/index.json → the `cadence` object
+  on an agent message):
+    {
+      id: String, name: String, summary: String,
+      confirmDialog: { title, body, primary, secondary },
+      completed:     { heading, body },
+      sequences: { default: { steps: [] }, <prospectId>: { steps: [] } }
+    }
+  Step fields are documented alongside the data.
+#}
+
+
+{#
+  ── Status pill map ──────────────────────────────────────────────
+  Shared with home_conversation_cadence.js via a JSON blob on the card
+  root. Same three statuses (and the same BEM modifier suffixes) the
+  outreach review used, so a prospect's state means the same thing
+  whichever surface set it and the pill styling is already in place.
+#}
+{% set _cadenceStatuses = {
+  "not_reviewed":      { "label": "Not reviewed",       "modifier": "not-reviewed" },
+  "approved":          { "label": "Approved",           "modifier": "approved" },
+  "changes_requested": { "label": "Changes requested",  "modifier": "changes-requested" }
+} %}
+
+
+{# ── Token fill ───────────────────────────────────────────────────
+   Substitute a prospect's details into authored copy. Marked `safe`
+   because a step body IS markup — the citation spans are authored
+   alongside the template and carry no user input. With no prospect
+   (the `<template>` path) the tokens are left intact for JS to fill
+   after cloning.
+
+   Nunjucks' `replace` is global, so a token can appear more than once
+   in a body. #}
+{% macro fill(text, p) %}
+{%- if not text -%}
+{%- elif p -%}
+{{ text
+   | replace('{firstName}', p.firstName)
+   | replace('{prospect}',  p.prospect)
+   | replace('{company}',   p.company)
+   | replace('{signal}',    p.signal)
+   | safe }}
+{%- else -%}
+{{ text | safe }}
+{%- endif -%}
+{% endmacro %}
+
+
+{# ── Channel summary ──────────────────────────────────────────────
+   "Email, LinkedIn, Call" — the channels a sequence actually uses, in
+   a fixed reading order rather than order of appearance.
+
+   Derived rather than authored so it can't drift from the steps. The
+   three collector arrays are a workaround, not a preference: a
+   `{% set %}` inside a `{% for %}` is scoped to the iteration, so a
+   flag set in the loop wouldn't survive it — but a push into an array
+   declared outside does. #}
+{% macro channelSummary(steps) %}
+{%- set _email = [] -%}
+{%- set _linkedin = [] -%}
+{%- set _call = [] -%}
+{%- for s in steps -%}
+  {%- if s.type == 'email' -%}{%- set _ = _email.push(1) -%}{%- endif -%}
+  {%- if s.type == 'linkedin' -%}{%- set _ = _linkedin.push(1) -%}{%- endif -%}
+  {%- if s.type == 'call' -%}{%- set _ = _call.push(1) -%}{%- endif -%}
+{%- endfor -%}
+{%- set _channels = [] -%}
+{%- if _email | length -%}{%- set _ = _channels.push('Email') -%}{%- endif -%}
+{%- if _linkedin | length -%}{%- set _ = _channels.push('LinkedIn') -%}{%- endif -%}
+{%- if _call | length -%}{%- set _ = _channels.push('Call') -%}{%- endif -%}
+{{- _channels | join(', ') -}}
+{% endmacro %}
+
+
+{# ── Cadence card ─────────────────────────────────────────────────
+   `prospects` is the SAME row array the sibling prospect table
+   renders, so the two can never disagree about who exists or in what
+   order. Each entry needs a stable `id`. #}
+{% macro cadenceMessage(cadence, prospects) %}
+
+{#
+  An empty roster means there is nothing to sequence. Render the
+  low-key placeholder rather than a header with an empty body — the
+  same degradation the outreach review used.
+#}
+{% if not prospects or prospects | length == 0 %}
+<section class="seller-home__conv-cadence seller-home__conv-cadence--empty" aria-label="{{ cadence.name | default('Outreach sequences') }}">
+  <h3 class="seller-home__conv-cadence-name">{{ cadence.name | default('Outreach sequences') }}</h3>
+  <p class="seller-home__conv-cadence-empty-body">No sequences to review yet.</p>
+</section>
+{% else %}
+
+{# Ordered ids for the pager, and the per-prospect details the token
+   fill needs after a template clone. Both are read by JS off the root
+   rather than re-derived from the DOM. #}
+{% set _prospectIds %}{% for p in prospects %}{{ p.id }}{% if not loop.last %},{% endif %}{% endfor %}{% endset %}
+{%- set _meta = [] -%}
+{%- for p in prospects -%}
+  {%- set _ = _meta.push({
+    id:        p.id,
+    prospect:  p.prospect,
+    firstName: p.prospect.split(' ') | first,
+    role:      p.role,
+    company:   p.company,
+    signal:    p.signal
+  }) -%}
+{%- endfor -%}
+
+{# The prospect the server commits to. JS re-renders on mount if the
+   table already has a different row selected. #}
+{% set _first = prospects[0] %}
+{% set _firstMeta = _meta[0] %}
+{% set _firstSeq = cadence.sequences[_first.id] or cadence.sequences.default or { steps: [] } %}
+
+<section
+  class="seller-home__conv-cadence"
+  role="region"
+  aria-labelledby="{{ cadence.id }}-heading"
+  data-sh-cadence-root
+  data-sh-cadence-id="{{ cadence.id }}"
+  data-sh-cadence-total="{{ prospects | length }}"
+  data-sh-cadence-prospect-ids="{{ _prospectIds | trim }}"
+  data-sh-cadence-prospects="{{ _meta | tojson | escape }}"
+>
+  {# ── Header: which cadence, and which prospect ───────────────── #}
+  <header class="seller-home__conv-cadence-header">
+    <div class="seller-home__conv-cadence-meta">
+      <h3 id="{{ cadence.id }}-heading" class="seller-home__conv-cadence-name">{{ cadence.name }}</h3>
+      <p class="seller-home__conv-cadence-summary">
+        <span data-sh-cadence-touches>{{ _firstSeq.steps | length }} touches</span>
+        <span class="seller-home__conv-cadence-dot" aria-hidden="true">&middot;</span>
+        <span data-sh-cadence-channels>{{ channelSummary(_firstSeq.steps) }}</span>
+        {% if cadence.summary %}
+        <span class="seller-home__conv-cadence-dot" aria-hidden="true">&middot;</span>
+        <span>{{ cadence.summary }}</span>
+        {% endif %}
+      </p>
+    </div>
+
+    {#
+      Pager. Same shape (and the same behavior) as the outreach
+      review's: chevrons either side of a live "N of M". The buttons
+      sit outside the live region so only the position is re-announced
+      as the seller steps through prospects.
+    #}
+    <div class="seller-home__conv-cadence-pager" role="group" aria-label="Prospect navigation">
+      <button
+        type="button"
+        class="seller-home__conv-review-pager-btn"
+        data-sh-cadence-prev
+        aria-label="Previous prospect"
+      >
+        <svg class="seller-home__conv-review-pager-icon" aria-hidden="true">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronleft"></use>
+        </svg>
+      </button>
+
+      <span class="seller-home__conv-review-progress" aria-live="polite">
+        <span data-sh-cadence-current>1</span>
+        <span class="seller-home__conv-review-progress-sep"> of </span>
+        <span>{{ prospects | length }}</span>
+      </span>
+
+      <button
+        type="button"
+        class="seller-home__conv-review-pager-btn"
+        data-sh-cadence-next
+        aria-label="Next prospect"
+      >
+        <svg class="seller-home__conv-review-pager-icon" aria-hidden="true">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  {# ── Whose sequence this is ──────────────────────────────────── #}
+  <div class="seller-home__conv-cadence-prospect">
+    <p class="seller-home__conv-cadence-prospect-headline">
+      <span class="seller-home__conv-cadence-prospect-name" data-sh-cadence-name>{{ _first.prospect }}</span>
+      <span class="seller-home__conv-cadence-prospect-sep"> &middot; </span>
+      <span data-sh-cadence-role>{{ _first.role | default('') }}</span>
+      <span> at </span>
+      <span data-sh-cadence-company>{{ _first.company }}</span>
+    </p>
+
+    <span
+      class="seller-home__conv-review-status seller-home__conv-review-status--not-reviewed"
+      data-sh-cadence-status
+      aria-live="polite"
+    >
+      <span data-sh-cadence-status-label>{{ _cadenceStatuses.not_reviewed.label }}</span>
+    </span>
+  </div>
+
+  {# ── The sequence ────────────────────────────────────────────── #}
+  <div class="seller-home__conv-cadence-steps" data-sh-cadence-steps>
+    {{ sequenceSteps(_firstSeq.steps, _firstMeta) }}
+  </div>
+
+  {#
+    Every sequence, inert, keyed by prospect id (plus `default`). JS
+    clones the one it needs, fills the tokens, and swaps it into the
+    steps host above. Kept INSIDE the card root so a second cadence
+    card on the page can't clone this one's sequences.
+  #}
+  {% for key, seq in cadence.sequences %}
+  <template data-sh-cadence-seq="{{ key }}" data-sh-cadence-seq-touches="{{ seq.steps | length }}" data-sh-cadence-seq-channels="{{ channelSummary(seq.steps) }}">
+    {{ sequenceSteps(seq.steps, null) }}
+  </template>
+  {% endfor %}
+
+  {# ── Actions ─────────────────────────────────────────────────── #}
+  <div class="seller-home__conv-cadence-actions" role="group" aria-label="Sequence actions">
+    <button
+      type="button"
+      class="slds-button slds-button_neutral seller-home__conv-review-btn"
+      data-sh-cadence-request-changes
+    >Request changes</button>
+    <button
+      type="button"
+      class="slds-button slds-button_brand seller-home__conv-review-btn"
+      data-sh-cadence-approve
+    >Approve sequence</button>
+  </div>
+
+  <div class="seller-home__conv-cadence-batch">
+    <button
+      type="button"
+      class="slds-button slds-button_brand seller-home__conv-review-btn seller-home__conv-review-btn--batch"
+      data-sh-cadence-approve-all
+    >Approve all {{ prospects | length }} sequences</button>
+  </div>
+
+  {# Replaces the body / actions / batch once every sequence is
+     approved. Same landmark, so AT users aren't moved. #}
+  <div class="seller-home__conv-review-completed" data-sh-cadence-completed hidden>
+    <span class="seller-home__conv-review-completed-icon" aria-hidden="true">
+      <svg class="seller-home__conv-review-completed-glyph" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#success"></use>
+      </svg>
+    </span>
+    <div class="seller-home__conv-review-completed-body">
+      <p class="seller-home__conv-review-completed-heading">
+        {{ cadence.completed.heading | default('All sequences approved') }}
+      </p>
+      <p class="seller-home__conv-review-completed-copy">
+        {{ cadence.completed.body | default('The approved sequences will be released to the configured outreach workflow.') }}
+      </p>
+    </div>
+  </div>
+
+  {{ citationPopover() }}
+
+  {# Status labels + modifiers for JS, same pattern the review used. #}
+  <script type="application/json" data-sh-cadence-statuses="{{ cadence.id }}">{{ _cadenceStatuses | tojson | safe }}</script>
+</section>
+
+{#
+  Approve-all confirmation. Outside the card's `role="region"` so the
+  modal's focus context doesn't nest inside it — JS finds it by
+  searching the shared parent first, so a second cadence card drives
+  its own dialog.
+#}
+<section
+  class="slds-modal seller-home__conv-review-dialog"
+  role="dialog"
+  tabindex="-1"
+  aria-modal="true"
+  aria-labelledby="{{ cadence.id }}-dialog-title"
+  aria-describedby="{{ cadence.id }}-dialog-body"
+  data-sh-cadence-dialog
+  hidden
+>
+  <div class="slds-modal__container">
+    <button
+      type="button"
+      class="slds-button slds-button_icon slds-modal__close"
+      data-sh-cadence-dialog-close
+      aria-label="Cancel and close"
+    >
+      <svg class="slds-button__icon slds-button__icon_large" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+      </svg>
+    </button>
+    <div class="slds-modal__header">
+      <h2 id="{{ cadence.id }}-dialog-title" class="slds-modal__title slds-hyphenate">{{ cadence.confirmDialog.title }}</h2>
+    </div>
+    <div class="slds-modal__content slds-p-around_medium">
+      <p id="{{ cadence.id }}-dialog-body">{{ cadence.confirmDialog.body }}</p>
+    </div>
+    <div class="slds-modal__footer">
+      <button type="button" class="slds-button slds-button_neutral" data-sh-cadence-dialog-cancel>{{ cadence.confirmDialog.secondary }}</button>
+      <button type="button" class="slds-button slds-button_brand" data-sh-cadence-dialog-confirm>{{ cadence.confirmDialog.primary }}</button>
+    </div>
+  </div>
+</section>
+<div class="slds-backdrop seller-home__conv-review-backdrop" role="presentation" data-sh-cadence-dialog-backdrop hidden></div>
+
+{% endif %}
+{% endmacro %}
+
+
+{# ── Steps ────────────────────────────────────────────────────────
+   The list of touches. An <ol> because the order IS the cadence —
+   "Email 1" before "Email 2" is the content, not a layout choice. #}
+{% macro sequenceSteps(steps, p) %}
+<ol class="seller-home__conv-step-list">
+  {% for step in steps %}
+  <li class="seller-home__conv-step-item">{{ sequenceStep(step, loop.index0, p) }}</li>
+  {% endfor %}
+</ol>
+{% endmacro %}
+
+
+{# ── One touch ────────────────────────────────────────────────────
+   Channel rail on the left, content on the right. The rail's vertical
+   line is drawn by a `::after` on the rail rather than an element, so
+   consecutive touches bleed into one continuous line (see
+   home_conversation.scss).
+
+   The whole card collapses: clicking the rail's icon button OR the
+   header hides the card and leaves the header row, which is how a
+   five-touch sequence stays scannable. `data-sh-step-regen` counts
+   Regenerate presses and indexes into the alternate versions parked
+   as templates at the end of the article. #}
+{% macro sequenceStep(step, index, p) %}
+<article
+  class="seller-home__conv-step seller-home__conv-step--{{ step.type }}"
+  data-sh-step
+  data-sh-step-index="{{ index }}"
+  data-sh-step-regen="0"
+>
+  {{ stepIconRail(step.type) }}
+
+  <div class="seller-home__conv-step-content">
+    <h4 class="seller-home__conv-step-header" data-sh-step-header>
+      <span class="seller-home__conv-step-header-label">{{ step.headerLabel }}</span>
+      <span class="seller-home__conv-step-header-value">{{ step.headerValue }}</span>
+    </h4>
+
+    {{ stepCard(step, p) }}
+  </div>
+
+  {#
+    Alternate versions of this touch, one per entry in
+    `regenerations`. Rendered here rather than built in JS so a
+    regenerated draft goes through the same macros as the original.
+    JS caches the version it replaces, so repeated presses cycle
+    between the original and the alternates instead of dead-ending.
+  #}
+  {% for alt in step.regenerations %}
+  <template data-sh-step-alt="{{ loop.index }}">{{ stepCard(alt, p) }}</template>
+  {% endfor %}
+</article>
+{% endmacro %}
+
+
+{# ── The card: message on the left, meta on the right ─────────────
+   Split 7/5 with SLDS's grid. Inside the thread's 800 px column
+   that's a snug two-up, which is the trade for keeping hunter's
+   side-by-side reading of "here's the draft, here's why". #}
+{% macro stepCard(step, p) %}
+<div class="seller-home__conv-step-card slds-grid" data-sh-step-card>
+  <div class="seller-home__conv-step-message slds-col slds-size_7-of-12">
+    <div class="seller-home__conv-step-draft" data-sh-step-draft>
+      {{ regenBanner() }}
+
+      {% if step.type == 'email' and step.subject %}
+      <p class="seller-home__conv-step-subject">
+        <strong>Subject:</strong>
+        <span class="seller-home__conv-step-subject-value">{{ fill(step.subject, p) }}</span>
+      </p>
+      {% elif step.type == 'call' and step.goal %}
+      <p class="seller-home__conv-step-subject">
+        <strong>Goal:</strong>
+        <span class="seller-home__conv-step-subject-value">{{ fill(step.goal, p) }}</span>
+      </p>
+      {% endif %}
+
+      {#
+        Trusted authored markup: `<br>` for paragraph breaks and
+        `<span class="email-highlight">` for citations, each carrying
+        the copy for its hover card in `data-popover-*`. Never user
+        input — same trust model as every other body string in this
+        data file.
+      #}
+      <div class="seller-home__conv-step-body">{{ fill(step.body, p) }}</div>
+
+      {{ stencilBars() }}
+    </div>
+  </div>
+
+  <div class="seller-home__conv-step-side slds-col slds-size_5-of-12" data-sh-step-tabs>
+    <div class="slds-tabs_default">
+      {#
+        Tab ids are minted per card by JS: this markup is cloned for
+        every touch and every regenerated version, so a hardcoded id
+        would repeat across the page and break the
+        aria-controls / aria-labelledby pairing.
+      #}
+      <ul class="slds-tabs_default__nav" role="tablist">
+        <li class="slds-tabs_default__item slds-is-active" data-sh-tab-item="details" role="presentation">
+          <a class="slds-tabs_default__link" href="javascript:void(0);" role="tab" data-sh-tab-link="details" aria-selected="true" tabindex="0">Details</a>
+        </li>
+        <li class="slds-tabs_default__item" data-sh-tab-item="feedback" role="presentation">
+          <a class="slds-tabs_default__link" href="javascript:void(0);" role="tab" data-sh-tab-link="feedback" aria-selected="false" tabindex="-1">Feedback</a>
+        </li>
+      </ul>
+
+      <div class="slds-tabs_default__content slds-show" role="tabpanel" data-sh-tab-panel="details">
+        {% for detail in step.details %}
+        <div class="seller-home__conv-step-detail">
+          <div class="seller-home__conv-step-detail-title">{{ detail.title }}</div>
+          <div class="seller-home__conv-step-detail-value">{{ fill(detail.value, p) }}</div>
+        </div>
+        {% endfor %}
+
+        {% if step.sources and step.sources | length > 0 %}
+        <div class="seller-home__conv-step-detail">
+          <div class="seller-home__conv-step-detail-title">Sources</div>
+          <div class="seller-home__conv-step-sources">
+            {% for source in step.sources %}
+            {# Sources are raster/vector files on disk, not sprite
+               symbols, so <img> rather than <use>. Decorative: the
+               label beside it carries the meaning. #}
+            <span class="seller-home__conv-step-source">
+              <img class="seller-home__conv-step-source-icon" src="{{ source.icon }}" alt="" aria-hidden="true" />
+              <span>{{ source.label }}</span>
+            </span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="slds-tabs_default__content slds-hide" role="tabpanel" data-sh-tab-panel="feedback">
+        <div class="seller-home__conv-step-feedback">
+          {# Regenerate stays disabled until there's feedback to
+             regenerate FROM — an empty press would just shuffle
+             drafts. JS mints the label's `for` when it wires up. #}
+          <label class="seller-home__conv-step-feedback-label" data-sh-step-feedback-label>What should change?</label>
+          <textarea
+            class="slds-textarea seller-home__conv-step-feedback-input"
+            placeholder="Tell the agent what to fix in this message."
+            data-sh-step-feedback-input
+          ></textarea>
+          <div class="seller-home__conv-step-feedback-actions">
+            <button type="button" class="slds-button slds-button_brand seller-home__conv-review-btn" data-sh-step-regenerate disabled>Regenerate</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+
+{# ── Channel rail ─────────────────────────────────────────────────
+   The circular channel chip doubles as the collapse toggle. Two
+   layered chips cross-fade on hover: the channel glyph at rest, a
+   chevron under the cursor — so the affordance appears where the
+   pointer already is instead of adding a second control.
+
+   `slds-icon_container_circle` supplies the circular chip and
+   `slds-current-color` flips the SVG fill to `currentColor`, without
+   which SLDS paints the glyph white on a pastel chip. The chip's own
+   colors come from `--{{ type }}` modifiers in the stylesheet. #}
+{% macro stepIconRail(type) %}
+{%- set _icon = { email: 'email', call: 'call', linkedin: 'share_post' } -%}
+{%- set _label = { email: 'Email', call: 'Call', linkedin: 'LinkedIn' } -%}
+<div class="seller-home__conv-step-rail seller-home__conv-step-rail--{{ type }}">
+  <button
+    type="button"
+    class="seller-home__conv-step-toggle"
+    data-sh-step-toggle
+    aria-expanded="true"
+    aria-label="Collapse {{ _label[type] | default(type) }} step"
+    title="Click to collapse"
+  >
+    <span class="slds-icon_container slds-icon_container_circle slds-current-color seller-home__conv-step-chip seller-home__conv-step-chip--type">
+      <svg class="slds-icon slds-icon_x-small" aria-hidden="true">
+        <use xlink:href="/assets/icons/action-sprite/svg/symbols.svg#{{ _icon[type] | default('email') }}"></use>
+      </svg>
+      <span class="slds-assistive-text">{{ _label[type] | default(type) }}</span>
+    </span>
+    <span class="slds-icon_container slds-icon_container_circle slds-current-color seller-home__conv-step-chip seller-home__conv-step-chip--chevron" aria-hidden="true">
+      <svg class="slds-icon slds-icon_x-small" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
+      </svg>
+    </span>
+  </button>
+</div>
+{% endmacro %}
+
+
+{# ── Regenerate banner ────────────────────────────────────────────
+   Sits at the top of the draft card, hidden until a Regenerate press.
+   Two states, swapped by JS: spinner + "Generating…" while the new
+   draft is coming, then a dismissible "Here's the updated message"
+   that persists past the swap so the change is acknowledged. #}
+{% macro regenBanner() %}
+<div class="seller-home__conv-step-banner" data-sh-step-banner hidden>
+  <span class="seller-home__conv-step-banner-spinner" aria-hidden="true">
+    <div class="slds-spinner slds-spinner_inline slds-spinner_xx-small" role="status">
+      <span class="slds-assistive-text">Loading</span>
+      <div class="slds-spinner__dot-a"></div>
+      <div class="slds-spinner__dot-b"></div>
+    </div>
+  </span>
+  <span class="seller-home__conv-step-banner-label" data-sh-step-banner-label>Generating based on your feedback&hellip;</span>
+  <button type="button" class="slds-button slds-button_icon seller-home__conv-step-banner-dismiss" data-sh-step-banner-dismiss aria-label="Dismiss">
+    <svg class="slds-button__icon" aria-hidden="true">
+      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+    </svg>
+  </button>
+</div>
+{% endmacro %}
+
+
+{# ── Stencil ──────────────────────────────────────────────────────
+   Shimmering silhouette shown in place of the draft while it
+   regenerates. Bar widths are markup, so the silhouette can be
+   reshaped without touching CSS. #}
+{% macro stencilBars() %}
+<div class="seller-home__conv-step-stencil" aria-hidden="true">
+  <div class="seller-home__conv-step-stencil-bar" style="width: 60%"></div>
+  <div class="seller-home__conv-step-stencil-break"></div>
+  <div class="seller-home__conv-step-stencil-bar" style="width: 100%"></div>
+  <div class="seller-home__conv-step-stencil-bar" style="width: 95%"></div>
+  <div class="seller-home__conv-step-stencil-bar" style="width: 90%"></div>
+  <div class="seller-home__conv-step-stencil-break"></div>
+  <div class="seller-home__conv-step-stencil-bar" style="width: 80%"></div>
+  <div class="seller-home__conv-step-stencil-bar" style="width: 70%"></div>
+</div>
+{% endmacro %}
+
+
+{# ── Citation hover card ──────────────────────────────────────────
+   One per cadence card, reused by every citation in it. Anchored to
+   the hovered span by JS.
+
+   Departure from hunter's version: it repositions on scroll and
+   clamps to the viewport. Hunter's page never scrolled under an open
+   popover; the thread does, and without this the card would detach
+   and float mid-thread. #}
+{% macro citationPopover() %}
+<aside class="seller-home__conv-cite" data-sh-cite-popover role="tooltip" aria-live="polite" hidden>
+  <div class="seller-home__conv-cite-title" data-sh-cite-title></div>
+  <div class="seller-home__conv-cite-body" data-sh-cite-body></div>
+  <div class="seller-home__conv-cite-source" data-sh-cite-source hidden>
+    <img class="seller-home__conv-cite-source-icon" data-sh-cite-source-icon src="" alt="" aria-hidden="true" />
+    <span data-sh-cite-source-label></span>
+  </div>
+</aside>
+{% endmacro %}

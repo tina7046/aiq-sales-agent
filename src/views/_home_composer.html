@@ -1,0 +1,129 @@
+{#
+  Seller Home — Chat composer (shared partial)
+  =====================================================================
+  Reusable chat composer extracted from home.html so multiple Seller
+  Home surfaces (Home landing, Scheduled, etc.) render the same
+  composer without duplicating markup. All copy + behavior comes from
+  a `composer` context variable with the same shape home.json already
+  defines under `composer`:
+
+      composer:
+        placeholder    — resting <textarea> placeholder text.
+        ariaLabel      — accessible name for the region + textarea.
+        samplePrompts  — Array<string> cycled by home.js's typewriter.
+                          Pass an empty array to disable animation
+                          (surfaces like Scheduled where the placeholder
+                          should stay static).
+        actions:
+          start        — Array<{ id, label, icon }> left-anchored icons.
+          end          — Array<{ id, label, icon }> right-anchored icons
+                          (Voice sits here; Send is emitted separately).
+
+  Consumers pass their `composer` config through as a template variable
+  (Nunjucks includes inherit the caller's context by default, so no
+  explicit `with` is needed).
+
+  Wiring: home.js's `bindComposer()` walks any DOM subtree containing
+  `[data-sh-composer-root]` — no per-page JS needed. Submit fires the
+  `sh:composer-submit` CustomEvent that a future consumer can listen
+  for; the prototype no-ops.
+
+  Design source: Figma node 8574:374830 ("✨ Agentic Text Input Field")
+  inside the "Welcome" frame. All measurements and states inherited
+  unchanged from the previous inline copy in home.html.
+#}
+<section
+  class="seller-home__composer"
+  aria-label="{{ composer.ariaLabel }}"
+  data-sh-composer-root
+>
+  <form class="seller-home__composer-form" data-sh-composer-form novalidate>
+    <div class="seller-home__composer-editor">
+      <div class="seller-home__composer-content">
+        <label for="seller-home-composer-input" class="slds-assistive-text">{{ composer.ariaLabel }}</label>
+        {# The static `placeholder` attribute is what SSR paints
+           and what reduced-motion users see forever.
+           `data-sh-composer-prompts` carries the animation cycle
+           as an HTML-encoded JSON array; home.js's placeholder
+           typewriter reads it via `.dataset` and starts cycling
+           on load, halting the moment the user types real
+           content. When the attribute is missing / empty /
+           invalid JSON, the typewriter is a no-op and the
+           static placeholder above is what stays visible. #}
+        <textarea
+          id="seller-home-composer-input"
+          class="seller-home__composer-textarea"
+          data-sh-composer-textarea
+          data-sh-composer-prompts="{{ composer.samplePrompts | tojson | escape }}"
+          placeholder="{{ composer.placeholder }}"
+          rows="3"
+          aria-label="{{ composer.ariaLabel }}"
+          aria-describedby="seller-home-composer-hint"
+        ></textarea>
+        {# Visually hidden but announced by screen readers on
+           focus. Explains the Enter/Shift+Enter contract so
+           keyboard users know how to insert a newline. #}
+        <span id="seller-home-composer-hint" class="slds-assistive-text">
+          Press Enter to send. Press Shift plus Enter to insert a new line.
+        </span>
+      </div>
+
+      <div class="seller-home__composer-toolbar" role="toolbar" aria-label="Composer actions">
+        <div class="seller-home__composer-slot seller-home__composer-slot--start" role="group" aria-label="Attach and augment">
+          {% for action in composer.actions.start %}
+            <button
+              type="button"
+              class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn"
+              data-sh-composer-action="{{ action.id }}"
+              title="{{ action.label }}"
+              aria-label="{{ action.label }}"
+            >
+              <svg class="slds-button__icon" aria-hidden="true">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
+              </svg>
+              <span class="slds-assistive-text">{{ action.label }}</span>
+            </button>
+          {% endfor %}
+        </div>
+
+        <div class="seller-home__composer-slot seller-home__composer-slot--end" role="group" aria-label="Voice and send">
+          {% for action in composer.actions.end %}
+            <button
+              type="button"
+              class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn"
+              data-sh-composer-action="{{ action.id }}"
+              title="{{ action.label }}"
+              aria-label="{{ action.label }}"
+            >
+              <svg class="slds-button__icon" aria-hidden="true">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
+              </svg>
+              <span class="slds-assistive-text">{{ action.label }}</span>
+            </button>
+          {% endfor %}
+
+          {# Send — the form's submit control. Starts disabled
+             because the textarea is empty on load; home.js
+             toggles the attribute as the user types. Kept as
+             a separate button (not part of `composer.actions`
+             data) because it's structurally different: it's
+             the form's primary action, semantically distinct
+             from the peripheral icon actions. #}
+          <button
+            type="submit"
+            class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn seller-home__composer-send"
+            data-sh-composer-send
+            title="Send message"
+            aria-label="Send message"
+            disabled
+          >
+            <svg class="slds-button__icon" aria-hidden="true">
+              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#send"></use>
+            </svg>
+            <span class="slds-assistive-text">Send message</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </form>
+</section>

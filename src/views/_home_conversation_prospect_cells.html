@@ -1,0 +1,258 @@
+{#
+  Conversation prospect table — cell macros
+  =====================================================================
+  One macro per column of the rich prospect table rendered inside an
+  agent response (see `prospectTable` in
+  _home_conversation_messages.html, which dispatches on `col.id`).
+
+  Ported from the Approval Required table in the hunter prototype
+  (`src/views/_prospect_list/_macros.html`) so density, avatars, badge
+  treatment, and the inline-edit affordance match the Prospecting
+  surface a seller sees elsewhere in the app. Differences from hunter,
+  all deliberate:
+
+    • No row-number gutter, no select-all checkbox column, no sort
+      controls, no column-resize handles. The conversation table is a
+      read-and-decide surface, not a list view to be managed.
+    • No inline feedback column. Feedback on a specific draft belongs
+      to the outreach review below the table, which already has a
+      per-prospect feedback field.
+    • No `Review` button. In hunter it opens a side panel; this page
+      has no side panel — the inline outreach-review component below
+      the table plays that role.
+    • No `More Options` chevrons next to Accept / Reject. They were
+      decorative in hunter (tooltip only) and would read as broken
+      here.
+
+  Every macro takes the conversation's own row object (see
+  data/index.json → conversations[id].messages[].table.rows), so field
+  names follow this page's flat convention (`prospect`, `role`,
+  `company`) rather than hunter's (`prospectName`, `prospectTitle`,
+  `companyName`).
+
+  Utility class names (`slds-td-formatter`, `cell_text_link`, the
+  `*-fill-color` helpers) are kept as hunter spells them, and
+  home_conversation.scss defines them scoped INSIDE the table wrapper.
+  Keeping the names aligned makes a future re-sync a diff rather than a
+  translation; scoping them keeps them from leaking onto other pages.
+#}
+
+
+{# ── Prospect ─────────────────────────────────────────────────────
+   Avatar + name / title / email / phone. The standard sprite icon
+   picks its background from `row.icon` ("contact" or "lead"), matching
+   the two entity colors hunter uses.
+
+   Email and phone are real `mailto:` / `tel:` links; they sit inside a
+   row that also handles click-to-select, so the JS row handler ignores
+   clicks that land on an anchor.
+#}
+{% macro cellProspect(row) %}
+<td class="slds-cell_action-mode" scope="row">
+  <div class="slds-grid slds-td-formatter slds-p-vertical_x-small">
+    <span class="slds-no-flex slds-m-right_small slds-avatar slds-avatar_small slds-avatar_circle">
+      <div class="slds-icon-standard-{{ row.icon | default('contact') }} slds-icon_container">
+        <span style="--sds-c-icon-color-background: var(--slds-c-icon-color-background, {% if row.icon == 'lead' %}rgb(27, 150, 255){% else %}#9050E9{% endif %})">
+          <svg class="slds-icon" aria-hidden="true">
+            <use xlink:href="/assets/icons/standard-sprite/svg/symbols.svg#{{ row.icon | default('contact') }}"></use>
+          </svg>
+        </span>
+      </div>
+    </span>
+    <div>
+      <div class="cell_text_link slds-truncate" title="{{ row.prospect }}">{{ row.prospect }}</div>
+      <div class="slds-text-body_regular slds-text-color_weak slds-truncate" title="{{ row.role }}">{{ row.role }}</div>
+      {% if row.email %}
+      <div class="slds-text-body_regular slds-truncate">
+        <a href="mailto:{{ row.email }}" class="slds-text-link">{{ row.email }}</a>
+      </div>
+      {% endif %}
+      {% if row.phone %}
+      <div class="slds-text-body_regular slds-truncate">
+        <a href="tel:{{ row.phone }}" class="slds-text-link">{{ row.phone }}</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</td>
+{% endmacro %}
+
+
+{# ── Company ──────────────────────────────────────────────────────
+   Logo + name / headcount / industry / location. `companyLogoUrl` is
+   a path under /assets/images/company-logos/; a row without one still
+   renders (the avatar collapses to empty) rather than showing a broken
+   image frame.
+#}
+{% macro cellCompany(row) %}
+<td class="slds-cell_action-mode" role="gridcell">
+  <div class="slds-grid slds-td-formatter slds-p-vertical_x-small">
+    {% if row.companyLogoUrl %}
+    <span class="slds-no-flex slds-m-right_small slds-avatar slds-avatar_small slds-avatar_circle">
+      <img alt="" src="{{ row.companyLogoUrl }}" title="{{ row.company }}">
+    </span>
+    {% endif %}
+    <div>
+      <div class="cell_text_link slds-truncate" title="{{ row.company }}">{{ row.company }}</div>
+      {% if row.employees %}
+      <div class="slds-text-body_regular slds-text-color_weak slds-truncate">{{ row.employees }}</div>
+      {% endif %}
+      {% if row.industry %}
+      <div class="slds-text-body_regular slds-text-color_weak slds-truncate">{{ row.industry }}</div>
+      {% endif %}
+      {% if row.location %}
+      <div class="slds-text-body_regular slds-text-color_weak slds-truncate">{{ row.location }}</div>
+      {% endif %}
+    </div>
+  </div>
+</td>
+{% endmacro %}
+
+
+{# ── Why this prospect ────────────────────────────────────────────
+   Multi-line rationale, clamped to a fixed number of lines so every
+   row keeps the same height however long the copy runs. The full text
+   stays available via `title`.
+#}
+{% macro cellWhyProspect(row) %}
+<td class="slds-cell_action-mode" role="gridcell">
+  <div class="slds-td-formatter slds-p-vertical_x-small">
+    <div class="slds-line-clamp_medium" title="{{ row.whyProspect }}">{{ row.whyProspect }}</div>
+  </div>
+</td>
+{% endmacro %}
+
+
+{# ── Source ───────────────────────────────────────────────────────
+   Where the prospect came from, plus optional "new record" badges.
+   `row.source` is matched against the known integrations; anything
+   unrecognized falls through to ZoomInfo, mirroring hunter's mapping
+   so the same data renders identically on both surfaces.
+#}
+{% macro cellSource(row) %}
+<td class="slds-cell_action-mode" role="gridcell">
+  <div class="slds-td-formatter slds-p-vertical_x-small" style="flex-direction: column">
+    {% if row.source == 'Salesforce' %}
+    <span class="slds-badge slds-badge_lightest slds-truncate">
+      <span class="slds-badge__icon slds-badge__icon_left" style="color:#0176D3">
+        <span class="slds-icon_container slds-current-color" title="Salesforce">
+          <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#salesforce1"></use>
+          </svg>
+        </span>
+      </span>Salesforce</span>
+    {% elif row.source == 'Report' %}
+    <span class="slds-badge slds-badge_lightest slds-truncate">
+      <span class="slds-badge__icon slds-badge__icon_left">
+        <span class="slds-icon_container slds-icon-standard-report" title="Report">
+          <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
+            <use xlink:href="/assets/icons/standard-sprite/svg/symbols.svg#report"></use>
+          </svg>
+        </span>
+      </span>Report</span>
+    {% elif row.source == 'Gong' %}
+    <span class="slds-badge slds-badge_lightest slds-truncate">
+      <span class="slds-badge__icon slds-badge__icon_left">
+        <span class="slds-icon_container slds-current-color" title="Gong">
+          <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
+            <use xlink:href="/assets/images/source_icons/source_gong.svg"></use>
+          </svg>
+        </span>
+      </span>Gong</span>
+    {% elif row.source == 'TechCrunch' %}
+    <span class="slds-badge slds-badge_lightest slds-truncate">
+      <span class="slds-badge__icon slds-badge__icon_left">
+        <span class="slds-icon_container slds-current-color" title="TechCrunch">
+          <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
+            <use xlink:href="/assets/images/source_icons/source_web.svg"></use>
+          </svg>
+        </span>
+      </span>TechCrunch</span>
+    {% else %}
+    <span class="slds-badge slds-badge_lightest slds-truncate">
+      <span class="slds-badge__icon slds-badge__icon_left" style="color:#EA1B15">
+        <span class="slds-icon_container slds-current-color" title="ZoomInfo">
+          <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
+            <use xlink:href="/assets/images/source_icons/source_zoominfo.svg"></use>
+          </svg>
+        </span>
+      </span>ZoomInfo</span>
+    {% endif %}
+    {% if row.isNewContact %}
+    <span class="slds-badge slds-badge_lightest slds-m-left_none slds-m-top_x-small slds-truncate">
+      <span class="slds-badge__icon slds-badge__icon_left">
+        <span class="slds-icon_container slds-icon-standard-contact" title="New Contact">
+          <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
+            <use xlink:href="/assets/icons/standard-sprite/svg/symbols.svg#contact"></use>
+          </svg>
+        </span>
+      </span>New Contact</span>
+    {% endif %}
+    {% if row.isNewAccount %}
+    <span class="slds-badge slds-badge_lightest slds-m-left_none slds-m-top_x-small slds-truncate">
+      <span class="slds-badge__icon slds-badge__icon_left">
+        <span class="slds-icon_container slds-icon-standard-account" title="New Account">
+          <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
+            <use xlink:href="/assets/icons/standard-sprite/svg/symbols.svg#account"></use>
+          </svg>
+        </span>
+      </span>New Account</span>
+    {% endif %}
+  </div>
+</td>
+{% endmacro %}
+
+
+{# ── Plain text cell ──────────────────────────────────────────────
+   Fallback for simple columns (Owner, Last touch, Signal, or any
+   column added to `columns` without a dedicated macro). `isoDate`
+   carries a machine-readable value for the Last-touch column so a
+   future formatter can re-render the cell without re-parsing prose.
+#}
+{% macro cellText(row, colId, isoDate) %}
+<td
+  class="slds-cell_action-mode"
+  role="gridcell"
+  {% if isoDate %}data-sh-conv-lasttouch-iso="{{ isoDate }}"{% endif %}
+>
+  <div class="slds-truncate slds-td-formatter slds-p-vertical_x-small" title="{{ row[colId] }}">{{ row[colId] }}</div>
+</td>
+{% endmacro %}
+
+
+{# ── Actions ──────────────────────────────────────────────────────
+   Accept / Reject. Both drive the same per-prospect decision model the
+   inline outreach review uses, so a decision made here shows up in the
+   review's progress count and status pill (and vice versa) — see
+   `bindProspectTable` in home_conversation.js.
+#}
+{% macro cellActions(row) %}
+<td class="slds-cell_action-mode" role="gridcell">
+  <div class="slds-grid slds-actions-formatter">
+    <div class="slds-button-group" role="group">
+      <button
+        type="button"
+        class="slds-button slds-button_icon slds-button_icon-border-filled"
+        data-sh-conv-accept
+        title="Accept"
+      >
+        <svg class="slds-button__icon slds-accept-fill-color" aria-hidden="true">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+        </svg>
+        <span class="slds-assistive-text">Accept outreach to {{ row.prospect }}</span>
+      </button>
+      <button
+        type="button"
+        class="slds-button slds-button_icon slds-button_icon-border-filled"
+        data-sh-conv-reject
+        title="Reject"
+      >
+        <svg class="slds-button__icon slds-reject-fill-color" aria-hidden="true">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+        </svg>
+        <span class="slds-assistive-text">Reject outreach to {{ row.prospect }}</span>
+      </button>
+    </div>
+  </div>
+</td>
+{% endmacro %}

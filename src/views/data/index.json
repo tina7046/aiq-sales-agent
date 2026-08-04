@@ -1,0 +1,1337 @@
+// Seller Home mock data
+// =====================================================================
+// Consumed by src/views/home.html (which composes _home_left_nav.html).
+// gulpfile.js's getData() auto-merges this file into the template's
+// local scope by filename → template lookup.
+//
+// Fields:
+//   • navPrimary  — the five top-level nav items above "Recents":
+//                   New chat, Schedules, Skills, Knowledge, Tools.
+//                   Each is { id, label, icon | iconImage, href? }.
+//                   `icon` is the SLDS utility-sprite symbol id,
+//                   resolved by _home_left_nav.html's renderNavItem
+//                   macro to
+//                   /assets/icons/utility-sprite/svg/symbols.svg#<icon>.
+//                   `iconImage` is a raster asset used when no
+//                   suitable sprite exists (see per-item comments
+//                   inline where the array is defined).
+//   • navActive   — id of the currently-active nav item. Default is
+//                   "new_chat" since /home.html IS the new-chat landing.
+//                   Pages that render a different Home sub-view (e.g. a
+//                   future /home/workflows.html) should override this.
+//   • recents     — the "Recents" scrollable list. Order = display
+//                   order. Each { id, label }; no href yet — this is
+//                   Phase 1, and clicking a recent doesn't route
+//                   anywhere until the chat surface exists in Phase 2.
+//                   The last few items intentionally trail past the
+//                   scroll fade so the scroll affordance is visible
+//                   without cheating.
+//   • navFooter   — Feedback + Settings, pinned to the nav bottom by
+//                   the .seller-home__nav-footer flex rule.
+//   • briefing    — Phase 2 "Daily Briefing" content, consumed by the
+//                   `.seller-home__briefing` block in home.html. The
+//                   greeting is one editable string; every value in the
+//                   sentence below it stays a discrete field so the
+//                   block can later be re-hydrated from a live API
+//                   without touching the template.
+//                   Fields:
+//                     - heading                (string) the full greeting
+//                                              line, rendered as-is
+//                     - text                   (string) the briefing
+//                                              sentence, rendered as-is
+//                     - linkPhrase             (string) substring of
+//                                              `text` styled as a link
+//                   The numeric fields below are dormant: the sentence
+//                   used to interpolate them through popover-trigger
+//                   buttons, and now states the numbers directly. They
+//                   (and `popovers`) are kept so the linked version can
+//                   be restored without re-authoring the data.
+//                     - quotaPercent           (number, 0-100)
+//                     - quarterDaysRemaining   (number, integer)
+//                     - atRiskDeals.count      (number, integer)
+//                     - atRiskDeals.valueUsd   (number, raw dollars)
+//                     - atRiskDeals.valueLabel (string, display-ready)
+//                     - reEngagedBuyers.count  (number, integer)
+//                     - upcomingMeetings.count (number, integer)
+//   • composer    — Phase 3 chat composer configuration. Everything
+//                   the template needs to render icon buttons + the
+//                   textarea placeholder lives here so labels can be
+//                   localized and the icon set can be swapped without
+//                   editing home.html. Fields:
+//                     - placeholder            (string) fallback / reduced-
+//                                              motion placeholder. Rendered
+//                                              statically in the HTML so
+//                                              users who prefer reduced
+//                                              motion always see one clean
+//                                              prompt without animation.
+//                     - samplePrompts          (array<string>) full-string
+//                                              placeholder cycle. home.js
+//                                              types each prompt out
+//                                              character-by-character on
+//                                              the textarea's `placeholder`
+//                                              attribute, holds, deletes,
+//                                              and moves to the next.
+//                                              Loops forever; halts the
+//                                              moment the user actually
+//                                              types real content into
+//                                              the textarea. Bypassed
+//                                              entirely when
+//                                              `prefers-reduced-motion:
+//                                              reduce` is set — the static
+//                                              `placeholder` above is
+//                                              shown instead.
+//                     - ariaLabel              (string) main input label
+//                     - actions.start[]        (array) left toolbar
+//                     - actions.end[]          (array) right toolbar
+//                                              (excludes Send — that's
+//                                              the form's submit button,
+//                                              not a peripheral action)
+//                     Each action: { id, label, icon }.
+//                     `icon` is an SLDS utility-sprite symbol id.
+//
+//   • review     — Phase 4 "Ready to Review" surface. Two independent
+//                  row collections (`reviewItems` and `tasks`) live
+//                  side-by-side so they can bind to different APIs
+//                  later without renaming anything. Fields:
+//                    - defaultTabId       (string)  initially-selected tab id
+//                    - tabs[]             (array)   { id, label, dataKey }
+//                                                   dataKey names the sibling
+//                                                   array on `review` that
+//                                                   supplies rows for the tab
+//                    - overflowActions[]  (array)   { id, label } kebab menu
+//                    - reviewItems[]      (array)   rows for Ready to Review
+//                    - tasks[]            (array)   rows for Tasks
+//                    - outputTypes        (object)  { <icon> →
+//                                                     { sprite, spriteFamily?, iconImage? } }
+//                                                   central registry mapping
+//                                                   each SEMANTIC output
+//                                                   category to its icon
+//                                                   source. Categories are:
+//                                                     • table    — lists /
+//                                                                  records
+//                                                     • message  — drafts
+//                                                     • document — in-flight
+//                                                                  artifacts
+//                                                                  (briefs,
+//                                                                  next steps)
+//                                                     • pdf      — polished
+//                                                                  reports
+//                                                   Each entry supplies either
+//                                                   an SLDS sprite id (with
+//                                                   `spriteFamily` picking the
+//                                                   sprite file — defaults to
+//                                                   `utility`) or an
+//                                                   `iconImage` raster path
+//                                                   for bespoke glyphs. The
+//                                                   template reads whichever
+//                                                   is set and renders an
+//                                                   <svg> or <img> accordingly.
+//                                                   Design updates that reskin
+//                                                   a category are a one-line
+//                                                   edit here.
+//                  Each row: { id, title, description,
+//                              icon: { sprite },              ← SLDS 2 sprite name
+//                              outputs?: [                    ← agentic output pills
+//                                { icon, label } … ],        ← rendered under desc
+//                              workflow?: { id, label } }     ← hover-reveal badge
+//                  `outputs` (array) and `workflow` are both optional. If a
+//                  row has no `outputs`, the third row inside the card is
+//                  simply not emitted, and the card falls back to a compact
+//                  two-row (title + description) layout at 56 px min-height.
+//                  On each output entry:
+//                    - `icon`  (string)  semantic category — one of the
+//                                        keys defined in `outputTypes`
+//                                        ("table" | "message" | "document"
+//                                        | "pdf").
+//                    - `label` (string)  full display text, count included
+//                                        ("12 prospects", "3 meeting briefs").
+//                                        Count is baked into the string so
+//                                        the template stays a plain render
+//                                        with no singularization logic.
+//                  Icon COLOR is deliberately not in data — the SLDS 2
+//                  standard-icon class (`slds-icon-standard-{sprite}`)
+//                  supplies the canonical Salesforce object color via
+//                  `--slds-c-icon-color-background`. Adding a color
+//                  here would silently drift from SLDS 2 whenever the
+//                  design system updates its palette. Output pills carry
+//                  no per-type color at all (see Figma 8797:228978) —
+//                  every pill is the same neutral chip in home.scss.
+{
+  "pageTitle": "Seller Home",
+  "navActive": "new_chat",
+  "briefing": {
+    // Full greeting line, rendered verbatim — edit the whole sentence
+    // here (including the time of day and the name).
+    "heading": "You're almost there, Nima.",
+    // The briefing sentence, also rendered verbatim. Numbers are baked into
+    // the copy rather than interpolated from the fields below, so reword
+    // freely without touching the template.
+    "text": "You’re 76% to quota with 30 days left in the quarter. Here’s what to do to hit your goal of President’s Club.",
+    // Substring of `text` to render with the interactive link treatment
+    // (accent color, dotted underline that thickens on hover, pointer
+    // cursor). Appearance only — clicking is a no-op until a topic is
+    // wired up. Must match the sentence above exactly; a phrase that
+    // isn't found just renders as plain prose.
+    "linkPhrase": "76% to quota",
+    "quotaPercent": 76,
+    "quarterDaysRemaining": 30,
+    "atRiskDeals": {
+      "count": 3,
+      "valueUsd": 420000,
+      "valueLabel": "$420K"
+    },
+    "reEngagedBuyers": { "count": 2 },
+    "upcomingMeetings": { "count": 3 },
+    // Insight popovers for briefing links. One entry per topic that
+    // opens a hover / focus / tap popover with more context. The
+    // topicId MUST match the trigger link's `data-sh-briefing-topic`
+    // attribute in home.html — that's how the JS controller binds
+    // the popover to its trigger. Additional briefing links (quota,
+    // re_engaged_buyers, upcoming_meetings) get popovers by adding
+    // an entry here — no template or JS changes needed.
+    //
+    // Shape (contract for the `briefingInsightPopover` macro):
+    //   • topicId          — trigger id (data-sh-briefing-topic value)
+    //   • ariaLabel        — accessible name for the dialog (short)
+    //   • description      — one-line intro sentence above the list
+    //   • items[]          — { id, name, value, detail } rows in the body
+    //     • name           — semibold left label (deal / entity name)
+    //     • value          — optional muted metric ($, %, count) shown
+    //                        between name and detail
+    //     • detail         — muted rest-of-line (e.g. reason / status)
+    //     The macro joins present fields with " · " so raw data stays
+    //     free of typographic dots. A row with only { name } renders as
+    //     just the semibold name; a row with { name, detail } renders
+    //     "Name · detail".
+    //   • primaryAction    — { id, label } → brand button (rightmost)
+    //   • secondaryAction  — { id, label } → text-link button (left)
+    //
+    // Actions dispatch a `sh:briefing-popover-action` CustomEvent
+    // with `{ topicId, action }` so a future consumer can hook up
+    // real routing without touching this file.
+    "popovers": [
+      {
+        "topicId": "at_risk_deals",
+        "ariaLabel": "At-risk deals",
+        "description": "These deals have slipped past their expected close dates but continue to show engagement.",
+        "items": [
+          { "id": "ramp",   "name": "Ramp",   "value": "$135K", "detail": "No response in 12 days" },
+          { "id": "deel",   "name": "Deel",   "value": "$180K", "detail": "Legal review stalled" },
+          { "id": "podium", "name": "Podium", "value": "$105K", "detail": "Pricing concern" }
+        ],
+        "secondaryAction": { "id": "setup_workflow", "label": "Set up a workflow" },
+        "primaryAction":   { "id": "review_deals",   "label": "Review Deals" }
+      }
+    ]
+  },
+  "composer": {
+    "placeholder": "Try \u201cWho should I follow up with?\u201d",
+    "ariaLabel": "Ask Agentforce",
+    "samplePrompts": [
+      "Try \u201cWho should I follow up with?\u201d",
+      "Try \u201cDraft an outreach for Acme.\u201d",
+      "Try \u201cSummarize this week\u2019s pipeline.\u201d",
+      "Try \u201cWhich deals are at risk?\u201d",
+      "Try \u201cFind prospects like Northwind.\u201d"
+    ],
+    "actions": {
+      "start": [
+        { "id": "add",          "label": "Add",              "icon": "add" },
+        { "id": "quick_action", "label": "Quick action",     "icon": "fallback" },
+        { "id": "skills",       "label": "Skills and tools", "icon": "apps" }
+      ],
+      "end": [
+        { "id": "voice",        "label": "Voice input",      "icon": "unmuted" }
+      ]
+    }
+  },
+  // Left-nav primary group (rendered by _home_left_nav.html).
+  // Order = display order. Rows below "Knowledge" render as the same
+  // primary items; "Recents" is a separate section rendered inside
+  // the scroll region (see .seller-home__nav-section in home.scss)
+  // with extra top padding to give it the vertical separation the
+  // new design calls for between "Tools" and "Recents".
+  //
+  // Icon sourcing rules — same contract renderNavItem enforces:
+  //   • `icon`      → SLDS utility-sprite symbol id
+  //                   (/assets/icons/utility-sprite/svg/symbols.svg#…)
+  //   • `iconImage` → bespoke raster (used when no suitable sprite
+  //                   exists). Skips the currentColor tint so hover/
+  //                   active states don't re-color the glyph.
+  //
+  // Item-by-item notes:
+  //   • new_chat — untouched from the previous nav. Sprite `add`.
+  //   • schedules — standalone row that opens /scheduled.html. Uses
+  //                 the `date_time` sprite explicitly (not `clock`,
+  //                 which is reserved for the Recents section
+  //                 header). The Scheduled page reuses the shared
+  //                 `.seller-home` shell + this exact nav via
+  //                 `_home_left_nav.html`; `_template.html` keeps
+  //                 the Home context-bar tab lit on `currentPage ==
+  //                 'scheduled'` so drilling in from Home doesn't
+  //                 lose the top-level tab.
+  //   • skills   — same "Skills" label the previous nav shipped, but
+  //                 the icon is the raster that used to sit on the
+  //                 combined "Workflows/Scheduled" row. Per spec the
+  //                 Skills row must keep that exact icon; the earlier
+  //                 utility-sprite `education` glyph is dropped.
+  //   • knowledge — untouched. Real route to /knowledge.html; the
+  //                 detail page and _template.html's Home-tab rule
+  //                 both key off `id: "knowledge"`.
+  //   • tools    — new standalone row. Uses the utility sprite
+  //                 `custom_apps`, which — despite its misleading
+  //                 name — is the SLDS 2 wrench glyph (a diagonal
+  //                 wrench with a C-shaped jaw). Salesforce reuses
+  //                 this sprite anywhere a "customize / tools"
+  //                 affordance is needed. Verified against
+  //                 src/assets/icons/utility-sprite/svg/symbols.svg
+  //                 by rendering the path directly; the plain-name
+  //                 candidates (`type_tool` = letter-A typography
+  //                 tool, `settings`/`setup` = gears, `builder` =
+  //                 layout columns) all miss the target shape.
+  //                 No `href` yet; placeholder behavior via
+  //                 `data-sh-nav-noroute`, same pattern used for
+  //                 other unrouted items.
+  "navPrimary": [
+    { "id": "new_chat",  "label": "New chat",  "icon": "add" },
+    { "id": "schedules", "label": "Scheduled", "icon": "date_time", "href": "/scheduled.html" },
+    { "id": "skills",    "label": "Skills",    "iconImage": "/assets/images/nav-icons/workflows.png" },
+    { "id": "knowledge", "label": "Knowledge", "icon": "knowledge_base", "href": "/knowledge.html" },
+    { "id": "tools",     "label": "Tools",     "icon": "custom_apps" }
+  ],
+  "recents": [
+    {
+      "id": "rec-conv-001",
+      "label": "Prospect outreach review",
+      "conversationId": "conv-001"
+    },
+    { "id": "rec-01", "label": "Acme Inc Prospecting" },
+    { "id": "rec-02", "label": "Top Account Resolutions Chart" },
+    { "id": "rec-03", "label": "Q3 Pipeline Health Report" },
+    { "id": "rec-04", "label": "Enterprise Renewal Opportunity Status" },
+    { "id": "rec-05", "label": "Sales performance Q1" },
+    { "id": "rec-06", "label": "New product launch strategy" },
+    { "id": "rec-07", "label": "Marketing campaign overview" },
+    { "id": "rec-08", "label": "Target audience analysis" },
+    { "id": "rec-09", "label": "Budget allocation strategy" },
+    { "id": "rec-10", "label": "Key performance indicators" },
+    { "id": "rec-11", "label": "Competitive analysis" },
+    { "id": "rec-12", "label": "Channel selection and planning" },
+    { "id": "rec-13", "label": "Timeline and milestones" }
+  ],
+  "navFooter": [
+    { "id": "feedback", "label": "Feedback", "icon": "share" },
+    { "id": "settings", "label": "Settings", "icon": "settings" }
+  ],
+  // ── Conversations ────────────────────────────────────────────────
+  // Registry for the drill-in surface (`home_conversation.html`).
+  // Keyed by a STABLE, mock conversation id (NOT derived from the
+  // review row's title) so the URL survives title/description edits.
+  // Each entry owns everything the conversation page renders. Rows
+  // reference this map via `conversationId` on the source of the
+  // drill-in (e.g. review.reviewItems[].conversationId).
+  //
+  // A row inside an agent message's `table` is one prospect record,
+  // and it feeds BOTH the table and the outreach review below it, so
+  // the two can never disagree about who exists. Fields:
+  //   • Identity   — id, prospect, role, email, phone, icon
+  //                  ("contact" | "lead", picks the avatar color)
+  //   • Account    — company, companyLogoUrl, employees, industry,
+  //                  location
+  //   • Rationale  — whyProspect (clamped to 4 lines), signal,
+  //                  lastTouch + lastTouchIso (machine-readable)
+  //   • Provenance — source ("Salesforce" | "Report" | "Gong" |
+  //                  "TechCrunch" | anything else → ZoomInfo),
+  //                  isNewContact, isNewAccount (badges)
+  //   • Review     — owner, channel, subject, body. The single drafted
+  //                  email per prospect, read by the parked outreach
+  //                  review (see `_reviewParked`). The cadence card
+  //                  that replaced it carries its own multi-touch
+  //                  drafts and reads only identity fields from here.
+  "conversations": {
+    "conv-001": {
+      "id": "conv-001",
+      "title": "Prospect outreach review",
+      "subtitle": "Buyer Engage",
+      "workflow": { "id": "buyer_engage", "label": "Buyer Engage" },
+      "status":   "in_progress",
+      "recentLabel": "Prospect outreach review",
+      // Thread content, in display order. Which of these paint
+      // immediately and which arrive on a timer is decided by
+      // `opening` below — a message named there is held back and
+      // revealed after its stage's thinking indicator.
+      "messages": [
+        {
+          "id":   "msg-response",
+          "type": "agent",
+          "text": "I found 12 strong-fit prospects across 8 priority accounts and prepared personalized outreach for each one. They\u2019re ready for your review before sending."
+        },
+        {
+          "id":   "msg-prospects",
+          "type": "agent",
+          "table": {
+            "id": "conv-001-prospects",
+            "ariaLabel": "Prospects prepared for outreach",
+            // Column order drives the rendered table left-to-right, and
+            // the FIRST column is the one pinned while scrolling
+            // sideways (see home_conversation.scss). Each id maps to a
+            // cell macro in _home_conversation_prospect_cells.html;
+            // an id with no macro falls back to plain truncated text,
+            // so a new column only needs a matching field on the rows.
+            "columns": [
+              { "id": "prospect",    "label": "Prospect"           },
+              { "id": "company",     "label": "Company"            },
+              { "id": "whyProspect", "label": "Why this prospect?"  },
+              { "id": "signal",      "label": "Signal"             },
+              { "id": "lastTouch",   "label": "Last touch"         },
+              { "id": "source",      "label": "Source"             },
+              { "id": "owner",       "label": "Owner"              },
+              { "id": "actions",     "label": "Actions"            }
+            ],
+            "rows": [
+              {
+                "id": "p-001", "prospect": "Alex Bristor", "role": "VP, Sales", "company": "Rippling",
+                "icon": "contact",
+                "email": "a.bristor@rippling.com", "phone": "(415) 555-0142",
+                "companyLogoUrl": "/assets/images/company-logos/rippling.png",
+                "employees": "3,000 Employees", "industry": "Software Development", "location": "San Francisco, CA",
+                "whyProspect": "Owns the outbound motion at Rippling and has been evaluating enrichment tooling since the Series G, so the budget cycle is open right now.",
+                "source": "TechCrunch", "owner": "Carmen Ortiz",
+                "isNewContact": false, "isNewAccount": false,
+                "lastTouch": "Yesterday", "lastTouchIso": "2026-04-29",
+                "signal": "$450M Series G funding",
+                "channel": "email",
+                "subject": "8 tools, one list build",
+                "body": "Hi Alex,\n\nRippling\u2019s outbound stack runs through ZoomInfo, Apollo, Clay, Outreach, Demandbase, and Lusha \u2014 at minimum. Your cross-sell SDRs are toggling between all of them just to build a single target list.\n\nThat\u2019s the #1 productivity drain we hear from SDR managers at this scale \u2014 reps spend more time sourcing across fragmented tools than actually selling.\n\nBluebirds consolidates enrichment across 15 data vendors into one platform. 30-min Salesforce setup, no new UI for reps to learn.\n\nCan I share a 2-min walkthrough of the platform running a cross-sell list build?\n\n\u2014 Bluebirds Team"
+              },
+              {
+                "id": "p-002", "prospect": "Jordan Lee", "role": "Director of Sales Operations", "company": "Globex",
+                "icon": "contact",
+                "email": "j.lee@globex.com", "phone": "(312) 555-0198",
+                "companyLogoUrl": "/assets/images/company-logos/globex.png",
+                "employees": "8,400 Employees", "industry": "Manufacturing", "location": "Chicago, IL",
+                "whyProspect": "Named owner of the sales-automation evaluation at Globex and replied to the last sequence, so the account is warm and the shortlist is not set.",
+                "source": "Gong", "owner": "Carmen Ortiz",
+                "isNewContact": false, "isNewAccount": false,
+                "lastTouch": "6 weeks ago", "lastTouchIso": "2026-06-17",
+                "signal": "Evaluating sales automation",
+                "channel": "email",
+                "subject": "A shortlist question on sales automation at Globex",
+                "body": "Hi Jordan,\n\nI heard you\u2019re looking at options for sales automation across the Globex team. Not sure where you are in the evaluation, but I wanted to reach out before you commit to a shortlist.\n\nA few teams like yours ended up spending months on tools that solved 60% of the workflow and left the rest to spreadsheets. Would a 20-minute look at how we approach the messier parts \u2014 pipeline hygiene, forecast drift, follow-through \u2014 be useful?\n\nAppreciate your time either way.\n\nBest,\nCarmen"
+              },
+              {
+                "id": "p-003", "prospect": "Priya Shah", "role": "VP of Sales", "company": "Initech",
+                "icon": "lead",
+                "email": "p.shah@initech.com", "phone": "(206) 555-0173",
+                "companyLogoUrl": "/assets/images/company-logos/initech.png",
+                "employees": "1,250 Employees", "industry": "Information Technology", "location": "Seattle, WA",
+                "whyProspect": "Six weeks into the VP of Sales role with no prior touch, so first-90-days outreach lands before the tooling stack gets locked in.",
+                "source": "ZoomInfo", "owner": "Dana Whitfield",
+                "isNewContact": true, "isNewAccount": false,
+                "lastTouch": "No prior touch", "lastTouchIso": null,
+                "signal": "New VP of Sales hired",
+                "channel": "email",
+                "subject": "First 90 days at Initech \u2014 a quick offer",
+                "body": "Hi Priya,\n\nWelcome to Initech. First 90 days as VP of Sales is usually equal parts diagnosing the pipeline and setting the operating rhythm for the team \u2014 both of which are hard when the data isn\u2019t on your side yet.\n\nI\u2019ve worked with a handful of new sales leaders through that exact window. Happy to share what the first-90 playbook has looked like for teams that hit their number quickly \u2014 no pitch, just useful reference material.\n\nBest,\nCarmen"
+              },
+              {
+                "id": "p-004", "prospect": "Marcus Johnson", "role": "Chief Revenue Officer", "company": "Umbrella",
+                "icon": "contact",
+                "email": "m.johnson@umbrella.com", "phone": "(617) 555-0121",
+                "companyLogoUrl": "/assets/images/company-logos/umbrella.png",
+                "employees": "5,600 Employees", "industry": "Biotechnology", "location": "Boston, MA",
+                "whyProspect": "Umbrella has posted 12 go-to-market roles this quarter. Ramp cost is the CRO problem, and the last conversation stalled on headcount rather than fit.",
+                "source": "Report", "owner": "Carmen Ortiz",
+                "isNewContact": false, "isNewAccount": false,
+                "lastTouch": "4 months ago", "lastTouchIso": "2026-03-29",
+                "signal": "Increased hiring activity",
+                "channel": "email",
+                "subject": "Hiring 12 reps at Umbrella \u2014 ramp is where it slips",
+                "body": "Hi Marcus,\n\nSaw Umbrella has been hiring aggressively on the go-to-market side this quarter. Nice signal on the growth trajectory.\n\nThe part that usually catches CROs off-guard isn\u2019t the hiring \u2014 it\u2019s the ramp. Especially when you\u2019re bringing on more than a handful at once and the enablement team is still catching up on last quarter\u2019s changes.\n\nIf it would help, I can share how a few peer teams shortened ramp by 30\u201340% without adding headcount to enablement. Open to a short conversation?\n\nBest,\nCarmen"
+              },
+              {
+                "id": "p-005", "prospect": "Emily Park", "role": "Head of Customer Success", "company": "Massive Dynamic",
+                "icon": "contact",
+                "email": "e.park@massivedynamic.com", "phone": "(646) 555-0187",
+                "companyLogoUrl": "/assets/images/company-logos/massive-dynamic.png",
+                "employees": "2,100 Employees", "industry": "Media and Entertainment", "location": "New York, NY",
+                "whyProspect": "Renewal lands in 30 days and the workflows running in production have drifted from the original scope, so the packaging is worth reframing before the formal review.",
+                "source": "Salesforce", "owner": "Dana Whitfield",
+                "isNewContact": false, "isNewAccount": false,
+                "lastTouch": "2 weeks ago", "lastTouchIso": "2026-07-15",
+                "signal": "Renewal in 30 days",
+                "channel": "email",
+                "subject": "Massive Dynamic renewal \u2014 quick thought before the review",
+                "body": "Hi Emily,\n\nWith your renewal ~30 days out, I wanted to reach out before we get into the formal review cycle.\n\nA few of the workflows we\u2019ve been running with your team have shifted since kickoff, and I think there\u2019s an opportunity to package the renewal in a way that reflects where the team actually is now (not where the original scope assumed).\n\nWould 15 minutes this week make sense? Happy to bring a draft of what that could look like.\n\nBest,\nCarmen"
+              },
+              {
+                "id": "p-006", "prospect": "Diego Ramirez", "role": "Director of Sales Enablement", "company": "Wayne Industries",
+                "icon": "contact",
+                "email": "d.ramirez@wayneindustries.com", "phone": "(214) 555-0155",
+                "companyLogoUrl": "/assets/images/company-logos/wayne-industries.png",
+                "employees": "14,000 Employees", "industry": "Aerospace and Defense", "location": "Dallas, TX",
+                "whyProspect": "Attended the pipeline-review webinar and downloaded the follow-up deck. Manager-led pipeline reviews sit squarely inside his enablement charter.",
+                "source": "Gong", "owner": "Carmen Ortiz",
+                "isNewContact": false, "isNewAccount": false,
+                "lastTouch": "5 months ago", "lastTouchIso": "2026-02-27",
+                "signal": "Attended pipeline webinar",
+                "channel": "email",
+                "subject": "Following up on the pipeline webinar",
+                "body": "Hi Diego,\n\nThanks again for joining the pipeline session last quarter. Since then a few of the tactics we walked through have played out in production with other enablement teams \u2014 particularly the piece on manager-led pipeline reviews.\n\nCurious whether any of that translated to Wayne\u2019s team. Happy to compare notes if it\u2019s useful, or send over the updated version of the deck we\u2019ve been iterating on since then.\n\nBest,\nCarmen"
+              },
+              {
+                "id": "p-007", "prospect": "Aisha Patel", "role": "Sales Operations Manager", "company": "Stark Industries",
+                "icon": "lead",
+                "email": "a.patel@starkindustries.com", "phone": "(408) 555-0164",
+                "companyLogoUrl": "/assets/images/company-logos/stark-industries.png",
+                "employees": "9,800 Employees", "industry": "Industrial Manufacturing", "location": "San Jose, CA",
+                "whyProspect": "Pulled the pricing sheet three weeks ago and has not booked time since, so a scoped configuration walkthrough answers what the PDF cannot.",
+                "source": "ZoomInfo", "owner": "Dana Whitfield",
+                "isNewContact": true, "isNewAccount": false,
+                "lastTouch": "3 weeks ago", "lastTouchIso": "2026-07-08",
+                "signal": "Downloaded pricing sheet",
+                "channel": "email",
+                "subject": "Pricing questions from Stark \u2014 anything I can answer?",
+                "body": "Hi Aisha,\n\nSaw the pricing sheet download come through a few weeks back. Wanted to reach out in case there are questions I can save you from having to dig through the fine print for.\n\nThe pricing on paper doesn\u2019t always match what teams actually end up paying \u2014 it depends a lot on how you scope users, workflows, and add-ons. Happy to walk you through what a realistic Stark configuration would look like if that would help your evaluation.\n\nBest,\nCarmen"
+              },
+              {
+                "id": "p-008", "prospect": "Liam O\u2019Connor", "role": "VP of Sales Strategy", "company": "Cyberdyne Systems",
+                "icon": "contact",
+                "email": "l.oconnor@cyberdyne.com", "phone": "(512) 555-0139",
+                "companyLogoUrl": "/assets/images/company-logos/cyberdyne.png",
+                "employees": "6,300 Employees", "industry": "Software Development", "location": "Austin, TX",
+                "whyProspect": "Cyberdyne announced a CRM rollout, and the six months after go-live are where the business case usually slips: adoption, data hygiene, and reporting finance trusts.",
+                "source": "TechCrunch", "owner": "Carmen Ortiz",
+                "isNewContact": false, "isNewAccount": true,
+                "lastTouch": "1 month ago", "lastTouchIso": "2026-06-29",
+                "signal": "New CRM implementation announced",
+                "channel": "email",
+                "subject": "Cyberdyne\u2019s new CRM \u2014 the piece nobody talks about",
+                "body": "Hi Liam,\n\nSaw the announcement that Cyberdyne is rolling out a new CRM. Congrats on getting the project greenlit \u2014 that\u2019s hard.\n\nThe part that\u2019s usually underestimated is the six months after go-live: rep adoption, data hygiene, and the reporting layer that finance actually trusts. That\u2019s where most CRM projects quietly under-deliver against the business case.\n\nHappy to share what a few peer teams did to close that gap. No pitch \u2014 just what worked and what didn\u2019t.\n\nBest,\nCarmen"
+              },
+              {
+                "id": "p-009", "prospect": "Sofia Nakamura", "role": "Director of Revenue Strategy", "company": "Acme",
+                "icon": "contact",
+                "email": "s.nakamura@acme.com", "phone": "(503) 555-0118",
+                "companyLogoUrl": "/assets/images/company-logos/acme.png",
+                "employees": "4,400 Employees", "industry": "Consumer Goods", "location": "Portland, OR",
+                "whyProspect": "A long-time champion who now holds the decision-making seat on revenue strategy, so last spring's stalled scope can be reset on her terms.",
+                "source": "Salesforce", "owner": "Dana Whitfield",
+                "isNewContact": false, "isNewAccount": false,
+                "lastTouch": "8 weeks ago", "lastTouchIso": "2026-06-03",
+                "signal": "Champion promoted to decision-maker",
+                "channel": "email",
+                "subject": "Congrats on the new role at Acme",
+                "body": "Hi Sofia,\n\nCongrats on the move into Director of Revenue Strategy \u2014 well-earned from what I\u2019ve seen you working on the last couple years.\n\nNow that you\u2019ve got the decision-making seat on the strategy side, I imagine the conversation about the tooling stack is going to look a little different from where we left it last spring. Happy to reset that conversation on your terms \u2014 there\u2019s no assumption we pick up where the old scope was.\n\nBest,\nCarmen"
+              },
+              {
+                "id": "p-010", "prospect": "Tyler Brooks", "role": "VP of Sales", "company": "Wayne Industries",
+                "icon": "lead",
+                "email": "t.brooks@wayneindustries.com", "phone": "(214) 555-0192",
+                "companyLogoUrl": "/assets/images/company-logos/wayne-industries.png",
+                "employees": "14,000 Employees", "industry": "Aerospace and Defense", "location": "Dallas, TX",
+                "whyProspect": "Promoted to VP of Sales last month. The first two quarters go into seeing pipeline the way finance does, which is where peer notes earn a meeting.",
+                "source": "ZoomInfo", "owner": "Carmen Ortiz",
+                "isNewContact": true, "isNewAccount": false,
+                "lastTouch": "6 months ago", "lastTouchIso": "2026-01-29",
+                "signal": "Recently promoted to VP of Sales",
+                "channel": "email",
+                "subject": "Quick note on the VP role at Wayne",
+                "body": "Hi Tyler,\n\nCongrats on the VP of Sales role at Wayne \u2014 that\u2019s a big step, and a really good sign for how the team is doing.\n\nMost of the VPs I talk to in the first two quarters spend a disproportionate amount of energy trying to see the pipeline the way finance does. Happy to compare notes on how a few peer teams got past that friction \u2014 it usually comes up faster than expected.\n\nBest,\nCarmen"
+              },
+              {
+                "id": "p-011", "prospect": "Nora Al-Sayed", "role": "VP of Procurement", "company": "Globex",
+                "icon": "lead",
+                "email": "n.alsayed@globex.com", "phone": "(312) 555-0147",
+                "companyLogoUrl": "/assets/images/company-logos/globex.png",
+                "employees": "8,400 Employees", "industry": "Manufacturing", "location": "Chicago, IL",
+                "whyProspect": "Named on the active sales-tooling RFP with no prior touch, so reaching out ahead of the formal Q and A window beats waiting for it.",
+                "source": "Report", "owner": "Dana Whitfield",
+                "isNewContact": true, "isNewAccount": false,
+                "lastTouch": "No prior touch", "lastTouchIso": null,
+                "signal": "Named on active RFP",
+                "channel": "email",
+                "subject": "Globex RFP \u2014 anything we can clarify?",
+                "body": "Hi Nora,\n\nI saw you\u2019re named on the current sales-tooling RFP at Globex. Wanted to reach out proactively rather than waiting for the formal Q&A window.\n\nHappy to get you clean, direct answers on scope, pricing, or integration questions \u2014 whichever is most useful before the vendor short-list gets decided. I know these processes move quickly and cleaner information usually helps everyone move faster.\n\nBest,\nCarmen"
+              },
+              {
+                "id": "p-012", "prospect": "Rafael Costa", "role": "Head of Sales Development", "company": "Cyberdyne Systems",
+                "icon": "contact",
+                "email": "r.costa@cyberdyne.com", "phone": "(512) 555-0176",
+                "companyLogoUrl": "/assets/images/company-logos/cyberdyne.png",
+                "employees": "6,300 Employees", "industry": "Software Development", "location": "Austin, TX",
+                "whyProspect": "Attended the competitor's user conference last month, so a working comparison of what actually lands with SDR teams is a low-friction opener.",
+                "source": "Gong", "owner": "Carmen Ortiz",
+                "isNewContact": false, "isNewAccount": false,
+                "lastTouch": "2 months ago", "lastTouchIso": "2026-05-29",
+                "signal": "Attended competitor conference",
+                "channel": "email",
+                "subject": "Notes from the competitor conference \u2014 worth comparing?",
+                "body": "Hi Rafael,\n\nNoticed you were at the competitor\u2019s user conference last month \u2014 always interesting to hear how the roadmap sits with SDR leaders who\u2019ve seen a few tools deployed.\n\nIf you\u2019re open to it, I\u2019d love to compare what you saw against what we\u2019ve been shipping. There\u2019s no need to switch anything \u2014 more of a working conversation about what\u2019s actually landing with SDR teams right now.\n\nBest,\nCarmen"
+              }
+            ]
+          }
+        },
+        {
+          "id":   "msg-activity",
+          "type": "workflow_activity",
+          "workflowLabel": "Prospecting workflow completed",
+          "workflowIcon":  "apps",
+          "statusText":    "12 prospects \u00b7 8 accounts \u00b7 12 drafts"
+        },
+        // Closing nudge under the list. `text` is the bold heading; each
+        // item is a sentence that ends in a clickable CTA. Clicking the
+        // CTA drops its `prompt` into the composer and focuses it, so
+        // the seller can send or edit. Optional fields per item:
+        //   boldPhrase — substring of `text` to embolden inline.
+        //   prompt     — text to send when it differs from `cta`.
+        {
+          "id":   "msg-next-steps",
+          "type": "suggestions",
+          "text": "What do you want me to do next?",
+          "items": [
+            {
+              "id":     "draft-emails",
+              "text":   "Draft personalized outreach for every prospect on this list.",
+              "cta":    "Draft the emails",
+              "prompt": "Draft the outreach emails for these prospects"
+            },
+            {
+              "id":     "more-prospects",
+              "text":   "Find more prospects like these at the accounts you already cover.",
+              "cta":    "Find more prospects",
+              "prompt": "Find more prospects like these"
+            },
+            {
+              "id":         "create-workflow",
+              "text":       "I can also turn this account prospecting into a reusable workflow for future use.",
+              "boldPhrase": "account prospecting",
+              "cta":        "Create this workflow",
+              "prompt":     "Turn this account prospecting into a reusable workflow"
+            }
+          ]
+        }
+      ],
+      // ── Opening sequence ──────────────────────────────────────────
+      // The thread doesn't arrive fully written: it plays itself out
+      // on load, so the drill-in reads as the agent working rather
+      // than as a page that was already finished.
+      //
+      // Each stage shows the thinking indicator for `thinkingMs`, then
+      // reveals the messages it names. Stages run back to back, so the
+      // seller sees: thinking → the agent's answer → thinking again →
+      // the list and what to do with it.
+      //
+      //   thinkingMs    — how long this stage's indicator shows, in ms.
+      //   thinkingLabel — copy inside it. Falls back to `thinkingLabel`
+      //                   in home_conversation.json.
+      //   messageIds    — ids from `messages` above, revealed together
+      //                   when the stage ends.
+      //
+      // A message no stage names renders at first paint, above
+      // everything the stages bring in — that's the escape hatch for
+      // content that shouldn't wait. Remove `opening` entirely and the
+      // whole thread paints at once, as it did before.
+      "opening": {
+        "stages": [
+          {
+            "id": "open-01",
+            "thinkingMs": 2000,
+            "thinkingLabel": "Searching your accounts for prospects\u2026",
+            "messageIds": ["msg-response"]
+          },
+          {
+            "id": "open-02",
+            "thinkingMs": 2800,
+            "thinkingLabel": "Preparing personalized outreach\u2026",
+            "messageIds": ["msg-prospects", "msg-activity", "msg-next-steps"]
+          }
+        ]
+      },
+      // ── Scripted follow-up turns ──────────────────────────────────
+      // The demo reply queue. Each send in the composer consumes the
+      // NEXT entry: the thinking indicator shows for `thinkingMs`, then
+      // `reply` is appended to the thread. Once the queue runs out,
+      // later sends still echo the seller's message but no reply comes
+      // back, so the demo ends cleanly instead of looping.
+      //
+      // `reply` entries use the exact same shape as `messages` above
+      // and render through the same macros — so a turn can answer with
+      // an `agent` message carrying a full prospect `table` or a
+      // cadence of drafted touches, not just prose. Ids must be unique
+      // across the whole thread (they become `data-sh-conv-msg` hooks).
+      //
+      //   thinkingMs    — how long the indicator shows, in ms.
+      //   thinkingLabel — copy inside the indicator. Falls back to
+      //                   `thinkingLabel` in home_conversation.json.
+      //   rowsFrom      — on a reply whose component needs a prospect
+      //                   roster (the cadence card, or the parked
+      //                   outreach review): the id of the message whose
+      //                   `table.rows` it should page through. Lets the
+      //                   component arrive later than the list it acts
+      //                   on without a second copy of the records.
+      //
+      // The seeded flow: the thread opens on the prospect list, and the
+      // seller's first message — whatever they type — brings back the
+      // drafted cadence for those same twelve prospects.
+      "scriptedTurns": [
+        {
+          "id": "turn-01",
+          "thinkingMs": 2400,
+          "thinkingLabel": "Drafting your sequences\u2026",
+          "reply": [
+            {
+              "id":   "turn-01-cadence",
+              "type": "agent",
+              "text": "Here are the drafted sequences, one per prospect across email, LinkedIn, and call. Step through a prospect's touches below, or approve all 12 at once.",
+              "rowsFrom": "msg-prospects",
+              // ── Cadence ───────────────────────────────────────────
+              // One drafted sequence of touches per prospect, shown one
+              // prospect at a time. Selecting a row in the table above
+              // (or the card's own pager) switches which sequence shows.
+              //
+              //   name / summary   — the cadence header. The touch count
+              //                      and channel mix are derived from the
+              //                      steps, so they can't drift.
+              //   sequences        — keyed by PROSPECT ID, with a
+              //                      `default` fallback for every
+              //                      prospect that has no authored
+              //                      sequence of their own.
+              //
+              // Step fields (same names hunter's Write Messaging uses,
+              // so copy moves between the two without translation):
+              //   type            — "email" | "linkedin" | "call".
+              //                     Picks the template, the rail's
+              //                     channel color, and the icon.
+              //   headerLabel     — "Email 1:" — the ordinal.
+              //   headerValue     — "First touch" — the intent.
+              //   subject         — email only. goal — call only.
+              //   body            — trusted HTML. `<span
+              //                     class='email-highlight'>` marks a
+              //                     citation; its data-popover-* and
+              //                     data-source-* attributes fill the
+              //                     hover card.
+              //   details[]       — { title, value } pairs in the
+              //                     Details tab. "Reasoning" is the one
+              //                     that explains the draft.
+              //   sources[]       — { label, icon } pills.
+              //   regenerations[] — alternate versions of the SAME step.
+              //                     Each Regenerate click advances one
+              //                     and wraps at the end.
+              //
+              // Tokens in `body`, `subject`, and `goal` are filled per
+              // prospect at render time: {firstName}, {prospect},
+              // {company}, {signal}. That's what lets one `default`
+              // sequence read correctly for ten different people.
+              "cadence": {
+                "id": "conv-001-cadence",
+                "name": "High Touch Prospects",
+                "summary": "Multi-channel sequence, paced over three weeks.",
+                "confirmDialog": {
+                  "title": "Approve all 12 sequences?",
+                  "body": "Every touch in all 12 sequences will be released to the configured outreach workflow.",
+                  "primary": "Approve 12 sequences",
+                  "secondary": "Cancel"
+                },
+                "completed": {
+                  "heading": "All 12 sequences approved",
+                  "body": "The approved sequences will be released to the configured outreach workflow."
+                },
+                "sequences": {
+                  // ── Fallback sequence ─────────────────────────────
+                  // Used by every prospect without an authored sequence
+                  // below. Fully tokenized, so it reads as written-for-
+                  // them copy for any of them.
+                  "default": {
+                    "steps": [
+                      {
+                        "type": "email",
+                        "headerLabel": "Email 1:",
+                        "headerValue": "First touch",
+                        "subject": "A faster path for the {company} team",
+                        "body": "Hi {firstName},<br><br>I've been tracking <span class='email-highlight' data-link='context' data-popover-title='Opening Line' data-popover-question='Is this a good opening line?' data-popover-body='Account signal on file: {signal}.' data-source-label='ZoomInfo' data-source-icon='/assets/images/source_icons/source_zoominfo.svg'>what's shifting at {company} this quarter</span>, and the timing looked worth a note.<br><br>Teams at your stage usually lose <span class='email-highlight' data-link='pain' data-popover-title='Pain Statement' data-popover-question='Is this a good pain statement?' data-popover-body='Median rep spends 11.4 hours a week on list building and research spread across fragmented tools.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>eleven hours a week per rep to list building</span> before a single conversation starts.<br><br>We got that under two for a peer team by <span class='email-highlight' data-link='solution' data-popover-title='Value Prop' data-popover-question='Is this a good value prop?' data-popover-body='Enrichment consolidated across 15 vendors into one workflow, inside the CRM the reps already use.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>consolidating enrichment into one workflow</span>.<br><br>Worth fifteen minutes to see whether the same math holds at {company}?",
+                        "details": [
+                          { "title": "Email Type", "value": "Cold outbound" },
+                          { "title": "Reasoning",  "value": "Opens on the account signal rather than a generic introduction, quantifies what the current workflow costs, and closes with an ask sized to a first touch." }
+                        ],
+                        "sources": [
+                          { "label": "ZoomInfo",   "icon": "/assets/images/source_icons/source_zoominfo.svg" },
+                          { "label": "G2",         "icon": "/assets/images/source_icons/source_g2.svg" },
+                          { "label": "Salesforce", "icon": "/assets/images/source_icons/source_salesforce.svg" }
+                        ],
+                        "regenerations": [
+                          {
+                            "type": "email",
+                            "headerLabel": "Email 1:",
+                            "headerValue": "First touch",
+                            "subject": "Two hours instead of eleven",
+                            "body": "Hi {firstName},<br><br>Reps at companies your size spend <span class='email-highlight' data-link='pain' data-popover-title='Pain Statement' data-popover-question='Is this a sharper hook?' data-popover-body='Median rep spends 11.4 hours a week on list building and research.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>eleven hours a week building lists</span>. For the team we worked with last quarter, it's now under two.<br><br>The change was one workflow instead of six tools — same CRM, no new interface for the reps.<br><br>Fifteen minutes to walk you through how it would land at {company}?",
+                            "details": [
+                              { "title": "Email Type", "value": "Cold outbound (revised)" },
+                              { "title": "Reasoning",  "value": "Leads with the number instead of the account signal — a sharper hook when the signal is a few weeks old. Same ask, two sentences shorter." }
+                            ],
+                            "sources": [
+                              { "label": "G2", "icon": "/assets/images/source_icons/source_g2.svg" }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "linkedin",
+                        "headerLabel": "LinkedIn 1:",
+                        "headerValue": "Connection request",
+                        "body": "Hi {firstName} — saw <span class='email-highlight' data-link='context' data-popover-title='Trigger' data-popover-question='Is this a good opening line?' data-popover-body='Account signal on file: {signal}.' data-source-label='ZoomInfo' data-source-icon='/assets/images/source_icons/source_zoominfo.svg'>what's happening at {company}</span> and thought it was worth connecting. We've helped teams in the same spot <span class='email-highlight' data-link='solution' data-popover-title='Social Proof' data-popover-question='Is this good social proof?' data-popover-body='Peer team cut list-building time from 11 hours a week to under 2.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>cut list-building time by 80%</span>. Open to swapping notes?",
+                        "details": [
+                          { "title": "Message Type", "value": "Connection request" },
+                          { "title": "Reasoning",    "value": "Stays under LinkedIn's 300-character limit, leads with the signal, and asks for a conversation rather than a meeting." }
+                        ],
+                        "sources": [
+                          { "label": "ZoomInfo", "icon": "/assets/images/source_icons/source_zoominfo.svg" },
+                          { "label": "Web",      "icon": "/assets/images/source_icons/source_web.svg" }
+                        ],
+                        "regenerations": [
+                          {
+                            "type": "linkedin",
+                            "headerLabel": "LinkedIn 1:",
+                            "headerValue": "Connection request",
+                            "body": "Hi {firstName} — curious how you're handling <span class='email-highlight' data-link='pain' data-popover-title='Question' data-popover-question='Is this a better hook?' data-popover-body='Opens with a question rather than a claim; higher accept rate in our 2025 sample.' data-source-label='Web' data-source-icon='/assets/images/source_icons/source_web.svg'>list building across your team right now</span>. Happy to share what's working at peer revenue orgs if it's useful.",
+                            "details": [
+                              { "title": "Message Type", "value": "Connection request (revised)" },
+                              { "title": "Reasoning",    "value": "Swaps the proof point for a question — reads as curiosity rather than a pitch, which accepts at a higher rate on a cold connection." }
+                            ],
+                            "sources": [
+                              { "label": "Web", "icon": "/assets/images/source_icons/source_web.svg" }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "email",
+                        "headerLabel": "Email 2:",
+                        "headerValue": "Nudge",
+                        "subject": "Re: A faster path for the {company} team",
+                        "body": "Hi {firstName},<br><br>Following up with a different angle than last week. Teams that fixed the research bottleneck before scaling headcount hit <span class='email-highlight' data-link='solution' data-popover-title='Value Prop' data-popover-question='Is this a good value prop?' data-popover-body='2025 Demandbase revenue benchmark, n=42 cohorts.' data-source-label='Demandbase' data-source-icon='/assets/images/source_icons/source_demandbase.svg'>18% higher first-quarter attainment</span> than the ones that waited a cycle.<br><br>Want me to send the breakdown?",
+                        "details": [
+                          { "title": "Email Type", "value": "Nudge" },
+                          { "title": "Reasoning",  "value": "Introduces a new data point instead of repeating the first touch, and keeps the ask to a single line so replying costs nothing." }
+                        ],
+                        "sources": [
+                          { "label": "Demandbase", "icon": "/assets/images/source_icons/source_demandbase.svg" }
+                        ],
+                        "regenerations": [
+                          {
+                            "type": "email",
+                            "headerLabel": "Email 2:",
+                            "headerValue": "Nudge",
+                            "subject": "One number for the {company} team",
+                            "body": "Hi {firstName},<br><br>One number worth your time: peer teams that consolidated first saw <span class='email-highlight' data-link='solution' data-popover-title='Value Prop' data-popover-question='Is this still a strong value prop?' data-popover-body='2025 Demandbase revenue benchmark, n=42 cohorts.' data-source-label='Demandbase' data-source-icon='/assets/images/source_icons/source_demandbase.svg'>win rates climb 12 points within two quarters</span>.<br><br>Reply with a yes and I'll send the breakdown.",
+                            "details": [
+                              { "title": "Email Type", "value": "Nudge (revised)" },
+                              { "title": "Reasoning",  "value": "Tightened to three lines and swapped the attainment stat for a win-rate one, which lands better with a revenue owner than an enablement lead." }
+                            ],
+                            "sources": [
+                              { "label": "Demandbase", "icon": "/assets/images/source_icons/source_demandbase.svg" }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "email",
+                        "headerLabel": "Email 3:",
+                        "headerValue": "Exit",
+                        "subject": "Closing the loop",
+                        "body": "Hi {firstName},<br><br>Haven't heard back, which usually means <span class='email-highlight' data-link='pain' data-popover-title='Pain Statement' data-popover-question='Is this a fair read?' data-popover-body='52% of unanswered prospects in our 2025 sample later cited timing, not fit.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>this isn't a priority this quarter</span>, you've solved it another way, or my timing was off.<br><br>If it's the last one I'll close the loop here and circle back next quarter.<br><br>P.S. If this sits with someone else at {company} now, point me their way?",
+                        "details": [
+                          { "title": "Email Type", "value": "Exit" },
+                          { "title": "Reasoning",  "value": "Permission-to-leave with three named outs, each easy to answer in one word, plus a referral postscript that recovers the thread when the owner has changed." }
+                        ],
+                        "sources": [
+                          { "label": "Salesforce", "icon": "/assets/images/source_icons/source_salesforce.svg" },
+                          { "label": "G2",         "icon": "/assets/images/source_icons/source_g2.svg" }
+                        ],
+                        "regenerations": [
+                          {
+                            "type": "email",
+                            "headerLabel": "Email 3:",
+                            "headerValue": "Exit",
+                            "subject": "Should I close this out?",
+                            "body": "Hi {firstName},<br><br>Short one: should I close this out, or is there a window worth re-opening <span class='email-highlight' data-link='context' data-popover-title='Future Trigger' data-popover-question='Is this a good re-engagement trigger?' data-popover-body='Planning cycles at companies this size typically reopen 60-90 days out.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>once next quarter's planning starts</span>?<br><br>Either reply works for me.",
+                            "details": [
+                              { "title": "Email Type", "value": "Exit (revised)" },
+                              { "title": "Reasoning",  "value": "Cut to two sentences. A one-word reply closes it either way, which is the whole point of a breakup note." }
+                            ],
+                            "sources": [
+                              { "label": "G2", "icon": "/assets/images/source_icons/source_g2.svg" }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  // ── Alex Bristor · Rippling ───────────────────────
+                  // Story: six overlapping enrichment tools, and a
+                  // Series G that just opened the budget cycle.
+                  "p-001": {
+                    "steps": [
+                      {
+                        "type": "email",
+                        "headerLabel": "Email 1:",
+                        "headerValue": "First touch",
+                        "subject": "8 tools, one list build",
+                        "body": "Hi Alex,<br><br>Rippling's outbound stack runs through <span class='email-highlight' data-link='context' data-popover-title='Opening Line' data-popover-question='Is this a good opening line?' data-popover-body='ZoomInfo, Apollo, Clay, Outreach, Demandbase, and Lusha all show as active in the account tech profile.' data-source-label='ZoomInfo' data-source-icon='/assets/images/source_icons/source_zoominfo.svg'>six enrichment tools at last count</span>, and your cross-sell SDRs are toggling between all of them to build a single list.<br><br>At your scale that fragmentation is <span class='email-highlight' data-link='pain' data-popover-title='Pain Statement' data-popover-question='Is this a good pain statement?' data-popover-body='Top-cited productivity drain among SDR managers at companies over 1,000 employees.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>the productivity drain SDR managers name first</span> — more time sourcing across tools than selling.<br><br>With the <span class='email-highlight' data-link='context' data-popover-title='Trigger' data-popover-question='Is this trigger worth naming?' data-popover-body='$450M Series G announced this quarter.' data-source-label='Web' data-source-icon='/assets/images/source_icons/source_web.svg'>Series G capital going to work</span>, consolidating now is cheaper than consolidating after the next hiring wave.<br><br>Can I send a two-minute walkthrough of a cross-sell list build running end to end?",
+                        "details": [
+                          { "title": "Email Type", "value": "Warm outbound" },
+                          { "title": "Reasoning",  "value": "Names the exact stack rather than gesturing at tool sprawl, ties the cost to the SDR managers Alex owns, and uses the funding round as a timing argument instead of a congratulations line." }
+                        ],
+                        "sources": [
+                          { "label": "ZoomInfo", "icon": "/assets/images/source_icons/source_zoominfo.svg" },
+                          { "label": "G2",       "icon": "/assets/images/source_icons/source_g2.svg" },
+                          { "label": "Web",      "icon": "/assets/images/source_icons/source_web.svg" }
+                        ],
+                        "regenerations": [
+                          {
+                            "type": "email",
+                            "headerLabel": "Email 1:",
+                            "headerValue": "First touch",
+                            "subject": "Six tools, one list",
+                            "body": "Hi Alex,<br><br>Congrats on the <span class='email-highlight' data-link='context' data-popover-title='Trigger' data-popover-question='Is this a stronger opener?' data-popover-body='$450M Series G announced this quarter.' data-source-label='Web' data-source-icon='/assets/images/source_icons/source_web.svg'>Series G</span>. The usual next move is more SDRs, and the usual next problem is that each one inherits <span class='email-highlight' data-link='pain' data-popover-title='Pain Statement' data-popover-question='Is this a good pain statement?' data-popover-body='Six enrichment vendors active in the account tech profile.' data-source-label='ZoomInfo' data-source-icon='/assets/images/source_icons/source_zoominfo.svg'>six enrichment tools to learn</span>.<br><br>Worth a look at what one workflow instead of six does to ramp time?",
+                            "details": [
+                              { "title": "Email Type", "value": "Warm outbound (revised)" },
+                              { "title": "Reasoning",  "value": "Opens on the funding round instead of the stack, then frames tool sprawl as a ramp problem for the reps Alex is about to hire." }
+                            ],
+                            "sources": [
+                              { "label": "Web",      "icon": "/assets/images/source_icons/source_web.svg" },
+                              { "label": "ZoomInfo", "icon": "/assets/images/source_icons/source_zoominfo.svg" }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "linkedin",
+                        "headerLabel": "LinkedIn 1:",
+                        "headerValue": "Connection request",
+                        "body": "Hi Alex — noticed Rippling is <span class='email-highlight' data-link='context' data-popover-title='Trigger' data-popover-question='Is this a good opening line?' data-popover-body='$450M Series G announced this quarter.' data-source-label='Web' data-source-icon='/assets/images/source_icons/source_web.svg'>putting the Series G to work on the outbound team</span>. We helped a peer org <span class='email-highlight' data-link='solution' data-popover-title='Social Proof' data-popover-question='Is this good social proof?' data-popover-body='Cross-sell list build time reduced from 11 hours a week to under 2.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>collapse six enrichment tools into one</span>. Open to swapping notes?",
+                        "details": [
+                          { "title": "Message Type", "value": "Connection request" },
+                          { "title": "Reasoning",    "value": "Mirrors the first email's angle in one sentence so the two touches reinforce rather than repeat, and stays under the 300-character limit." }
+                        ],
+                        "sources": [
+                          { "label": "Web", "icon": "/assets/images/source_icons/source_web.svg" },
+                          { "label": "G2",  "icon": "/assets/images/source_icons/source_g2.svg" }
+                        ],
+                        "regenerations": [
+                          {
+                            "type": "linkedin",
+                            "headerLabel": "LinkedIn 1:",
+                            "headerValue": "Connection request",
+                            "body": "Hi Alex — curious what the cross-sell motion looks like at Rippling post-<span class='email-highlight' data-link='context' data-popover-title='Trigger' data-popover-question='Is this a better hook?' data-popover-body='$450M Series G announced this quarter.' data-source-label='Web' data-source-icon='/assets/images/source_icons/source_web.svg'>Series G</span>. Happy to share what's working for teams running the same play.",
+                            "details": [
+                              { "title": "Message Type", "value": "Connection request (revised)" },
+                              { "title": "Reasoning",    "value": "Drops the proof point for a question — a VP is likelier to accept a peer conversation than a vendor claim." }
+                            ],
+                            "sources": [
+                              { "label": "Web", "icon": "/assets/images/source_icons/source_web.svg" }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "email",
+                        "headerLabel": "Email 2:",
+                        "headerValue": "Nudge",
+                        "subject": "Re: 8 tools, one list build",
+                        "body": "Hi Alex,<br><br>Different angle than last week. The teams that consolidated enrichment before scaling SDR headcount hit <span class='email-highlight' data-link='solution' data-popover-title='Value Prop' data-popover-question='Is this a good value prop?' data-popover-body='2025 Demandbase revenue benchmark, n=42 cohorts.' data-source-label='Demandbase' data-source-icon='/assets/images/source_icons/source_demandbase.svg'>18% higher first-quarter attainment</span> from the new class than the ones that scaled first and cleaned up later.<br><br>Want the underlying study?",
+                        "details": [
+                          { "title": "Email Type", "value": "Nudge" },
+                          { "title": "Reasoning",  "value": "Reframes consolidation as a sequencing decision ahead of the post-funding hiring wave, which is the decision Alex is actually making this quarter." }
+                        ],
+                        "sources": [
+                          { "label": "Demandbase", "icon": "/assets/images/source_icons/source_demandbase.svg" }
+                        ],
+                        "regenerations": [
+                          {
+                            "type": "email",
+                            "headerLabel": "Email 2:",
+                            "headerValue": "Nudge",
+                            "subject": "Before the next SDR class",
+                            "body": "Hi Alex,<br><br>One thought before the next SDR class starts: every tool in the stack is another week of ramp. Teams that cut the stack first saw <span class='email-highlight' data-link='solution' data-popover-title='Value Prop' data-popover-question='Is this still a strong value prop?' data-popover-body='2025 Demandbase revenue benchmark, n=42 cohorts.' data-source-label='Demandbase' data-source-icon='/assets/images/source_icons/source_demandbase.svg'>new reps reach quota a full quarter sooner</span>.<br><br>Worth a look before the offers go out?",
+                            "details": [
+                              { "title": "Email Type", "value": "Nudge (revised)" },
+                              { "title": "Reasoning",  "value": "Anchors on a date Alex controls — the next class start — so the note carries its own deadline instead of relying on a generic stat." }
+                            ],
+                            "sources": [
+                              { "label": "Demandbase", "icon": "/assets/images/source_icons/source_demandbase.svg" }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "call",
+                        "headerLabel": "Call 1:",
+                        "headerValue": "Discovery",
+                        "goal": "Confirm who owns the enrichment budget post-Series G.",
+                        "body": "<strong>Open:</strong> Congrats on the <span class='email-highlight' data-link='context' data-popover-title='Opening Line' data-popover-question='Is this a good opening line?' data-popover-body='$450M Series G announced this quarter.' data-source-label='Web' data-source-icon='/assets/images/source_icons/source_web.svg'>Series G</span> — guessing the outbound team is the first place it lands.<br><br><strong>Discover:</strong> How many tools does an SDR touch to build one cross-sell list today? Who owns those renewals?<br><br><strong>Position:</strong> A peer team replaced <span class='email-highlight' data-link='solution' data-popover-title='Social Proof' data-popover-question='Is this good social proof?' data-popover-body='Six enrichment vendors consolidated into one workflow; 30-minute CRM setup.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>six vendors with one workflow</span> in a 30-minute setup.<br><br><strong>CTA:</strong> Worth a working session with whoever owns the stack?",
+                        "details": [
+                          { "title": "Call Type", "value": "Discovery" },
+                          { "title": "Reasoning", "value": "Two questions before any pitch, both aimed at the thing we can't see from outside: who owns the renewals. The CTA asks for the stack owner rather than a decision." }
+                        ],
+                        "sources": [
+                          { "label": "Web", "icon": "/assets/images/source_icons/source_web.svg" },
+                          { "label": "G2",  "icon": "/assets/images/source_icons/source_g2.svg" }
+                        ],
+                        "regenerations": [
+                          {
+                            "type": "call",
+                            "headerLabel": "Call 1:",
+                            "headerValue": "Discovery",
+                            "goal": "Confirm who owns the enrichment budget post-Series G.",
+                            "body": "<strong>Open:</strong> Thanks for the time — I'll keep it to ten minutes.<br><br><strong>Discover:</strong> Walk me through a cross-sell list build. Where does it stall?<br><br><strong>Position:</strong> The stall we usually find is <span class='email-highlight' data-link='pain' data-popover-title='Pain Statement' data-popover-question='Is this the right pain?' data-popover-body='Reps reconcile duplicate records across vendors before a list is usable.' data-source-label='ZoomInfo' data-source-icon='/assets/images/source_icons/source_zoominfo.svg'>reconciling duplicates across vendors</span>.<br><br><strong>CTA:</strong> Want me to map it against your stack on a shared screen?",
+                            "details": [
+                              { "title": "Call Type", "value": "Discovery (revised)" },
+                              { "title": "Reasoning", "value": "Drops the congratulations opener — it's the fourth touch, so a time-boxed start respects that Alex already knows who we are." }
+                            ],
+                            "sources": [
+                              { "label": "ZoomInfo", "icon": "/assets/images/source_icons/source_zoominfo.svg" }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "email",
+                        "headerLabel": "Email 3:",
+                        "headerValue": "Exit",
+                        "subject": "Closing the loop on Rippling",
+                        "body": "Hi Alex,<br><br>Haven't heard back, which usually means <span class='email-highlight' data-link='pain' data-popover-title='Pain Statement' data-popover-question='Is this a fair read?' data-popover-body='52% of unanswered prospects in our 2025 sample later cited timing, not fit.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>the stack isn't the priority this quarter</span>, you've already picked a direction, or my timing is off.<br><br>If it's the last one, I'll close the loop and come back when <span class='email-highlight' data-link='context' data-popover-title='Future Trigger' data-popover-question='Is this a good re-engagement trigger?' data-popover-body='Post-funding hiring waves typically begin 60-90 days after close.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>the next SDR class is seated</span>.<br><br>P.S. If enrichment sits with RevOps now, happy to be pointed their way.",
+                        "details": [
+                          { "title": "Email Type", "value": "Exit" },
+                          { "title": "Reasoning",  "value": "Names a specific re-engagement trigger rather than a vague 'later', so the close reads as a scheduling decision instead of a goodbye." }
+                        ],
+                        "sources": [
+                          { "label": "Salesforce", "icon": "/assets/images/source_icons/source_salesforce.svg" },
+                          { "label": "G2",         "icon": "/assets/images/source_icons/source_g2.svg" }
+                        ],
+                        "regenerations": [
+                          {
+                            "type": "email",
+                            "headerLabel": "Email 3:",
+                            "headerValue": "Exit",
+                            "subject": "Should I close this out?",
+                            "body": "Hi Alex,<br><br>Should I close this out, or is it worth a note <span class='email-highlight' data-link='context' data-popover-title='Future Trigger' data-popover-question='Is this a sharper trigger?' data-popover-body='Post-funding hiring waves typically begin 60-90 days after close.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>once the new SDRs start</span>?<br><br>Either answer is a useful one.",
+                            "details": [
+                              { "title": "Email Type", "value": "Exit (revised)" },
+                              { "title": "Reasoning",  "value": "Two lines. At the fifth touch, brevity is the courtesy." }
+                            ],
+                            "sources": [
+                              { "label": "G2", "icon": "/assets/images/source_icons/source_g2.svg" }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  // ── Marcus Johnson · Umbrella ─────────────────────
+                  // Story: 12 go-to-market roles posted this quarter,
+                  // and a prior conversation that stalled on headcount.
+                  "p-004": {
+                    "steps": [
+                      {
+                        "type": "email",
+                        "headerLabel": "Email 1:",
+                        "headerValue": "First touch",
+                        "subject": "Hiring 12 reps at Umbrella — ramp is where it slips",
+                        "body": "Hi Marcus,<br><br>Umbrella has posted <span class='email-highlight' data-link='hiring' data-popover-title='Opening Line' data-popover-question='Is this a good opening line?' data-popover-body='12 go-to-market roles posted this quarter across sales and enablement.' data-source-label='ZoomInfo' data-source-icon='/assets/images/source_icons/source_zoominfo.svg'>twelve go-to-market roles this quarter</span>. Good signal on the trajectory.<br><br>The part that catches CROs off guard isn't the hiring — it's the ramp. Bringing on a dozen at once, new reps lose <span class='email-highlight' data-link='pain' data-popover-title='Pain Statement' data-popover-question='Is this a good pain statement?' data-popover-body='Salesforce study of 200+ new hires across 2024-2025.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>fifteen hours a week to manual research</span> while enablement is still catching up on last quarter's changes.<br><br>We helped a peer revenue org <span class='email-highlight' data-link='solution' data-popover-title='Social Proof' data-popover-question='Is this good social proof?' data-popover-body='Ramp-to-first-deal cut from 5.2 to 3.6 months across 38 reps.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>shorten ramp by 30% without adding enablement headcount</span>.<br><br>Open to a short conversation before the class starts?",
+                        "details": [
+                          { "title": "Email Type", "value": "Warm outbound" },
+                          { "title": "Reasoning",  "value": "Leads with the hiring signal, then reframes it as a ramp-cost problem — the version of this the CRO owns. Closes against the class start date rather than asking for general interest." }
+                        ],
+                        "sources": [
+                          { "label": "ZoomInfo",   "icon": "/assets/images/source_icons/source_zoominfo.svg" },
+                          { "label": "Salesforce", "icon": "/assets/images/source_icons/source_salesforce.svg" },
+                          { "label": "G2",         "icon": "/assets/images/source_icons/source_g2.svg" }
+                        ],
+                        "regenerations": [
+                          {
+                            "type": "email",
+                            "headerLabel": "Email 1:",
+                            "headerValue": "First touch",
+                            "subject": "12 open GTM reqs at Umbrella",
+                            "body": "Hi Marcus,<br><br>Twelve open go-to-market reqs is a real quarter. The math that usually bites: each new rep costs <span class='email-highlight' data-link='pain' data-popover-title='Pain Statement' data-popover-question='Is this a sharper framing?' data-popover-body='Salesforce study of 200+ new hires across 2024-2025.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>a full quarter of below-quota ramp</span>, and twelve at once means enablement can't absorb it.<br><br>A peer org cut that to <span class='email-highlight' data-link='solution' data-popover-title='Social Proof' data-popover-question='Is this good social proof?' data-popover-body='Ramp-to-first-deal cut from 5.2 to 3.6 months across 38 reps.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>3.6 months across 38 reps</span>.<br><br>Fifteen minutes before your class starts?",
+                            "details": [
+                              { "title": "Email Type", "value": "Warm outbound (revised)" },
+                              { "title": "Reasoning",  "value": "Runs the cost math explicitly rather than describing the problem — a CRO reading twelve reqs already knows the pain, so lead with the number." }
+                            ],
+                            "sources": [
+                              { "label": "Salesforce", "icon": "/assets/images/source_icons/source_salesforce.svg" },
+                              { "label": "G2",         "icon": "/assets/images/source_icons/source_g2.svg" }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "linkedin",
+                        "headerLabel": "LinkedIn 1:",
+                        "headerValue": "Connection request",
+                        "body": "Hi Marcus — saw Umbrella is <span class='email-highlight' data-link='hiring' data-popover-title='Trigger' data-popover-question='Is this a good opening line?' data-popover-body='12 go-to-market roles posted this quarter.' data-source-label='ZoomInfo' data-source-icon='/assets/images/source_icons/source_zoominfo.svg'>hiring across go-to-market this quarter</span>. Curious what the ramp plan looks like for a class that size. Happy to share what's worked at peer revenue orgs.",
+                        "details": [
+                          { "title": "Message Type", "value": "Connection request" },
+                          { "title": "Reasoning",    "value": "Asks about the plan rather than pitching against it — a CRO will answer a question about their own operating model faster than a vendor claim." }
+                        ],
+                        "sources": [
+                          { "label": "ZoomInfo", "icon": "/assets/images/source_icons/source_zoominfo.svg" }
+                        ],
+                        "regenerations": [
+                          {
+                            "type": "linkedin",
+                            "headerLabel": "LinkedIn 1:",
+                            "headerValue": "Connection request",
+                            "body": "Hi Marcus — twelve GTM reqs at Umbrella caught my eye. We've helped revenue teams <span class='email-highlight' data-link='solution' data-popover-title='Social Proof' data-popover-question='Is this good social proof?' data-popover-body='Ramp-to-first-deal cut from 5.2 to 3.6 months across 38 reps.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>cut ramp by 30%</span> through a class that size. Worth connecting?",
+                            "details": [
+                              { "title": "Message Type", "value": "Connection request (revised)" },
+                              { "title": "Reasoning",    "value": "Swaps the question for the proof point, which suits a prospect who already knows us from a prior stalled conversation." }
+                            ],
+                            "sources": [
+                              { "label": "G2", "icon": "/assets/images/source_icons/source_g2.svg" }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "email",
+                        "headerLabel": "Email 2:",
+                        "headerValue": "Nudge",
+                        "subject": "Re: Hiring 12 reps at Umbrella",
+                        "body": "Hi Marcus,<br><br>Following up with the number I should have led with. Classes that ship a coaching layer at kickoff hit <span class='email-highlight' data-link='solution' data-popover-title='Value Prop' data-popover-question='Is this a good value prop?' data-popover-body='2025 Demandbase enterprise attainment benchmark, n=42 cohorts.' data-source-label='Demandbase' data-source-icon='/assets/images/source_icons/source_demandbase.svg'>18% higher first-quarter attainment</span> than classes that add one later.<br><br>Across twelve reps, that's the difference between one strong quarter and two rebuilding ones. Want the study?",
+                        "details": [
+                          { "title": "Email Type", "value": "Nudge" },
+                          { "title": "Reasoning",  "value": "Scales the stat to Umbrella's actual class size so the number reads as their forecast rather than an industry average. Our last conversation stalled on headcount, so this one avoids asking for any." }
+                        ],
+                        "sources": [
+                          { "label": "Demandbase", "icon": "/assets/images/source_icons/source_demandbase.svg" }
+                        ],
+                        "regenerations": [
+                          {
+                            "type": "email",
+                            "headerLabel": "Email 2:",
+                            "headerValue": "Nudge",
+                            "subject": "The twelve-rep version of that number",
+                            "body": "Hi Marcus,<br><br>Ran the math on a class of twelve: at <span class='email-highlight' data-link='solution' data-popover-title='Value Prop' data-popover-question='Is this still a strong value prop?' data-popover-body='2025 Demandbase enterprise attainment benchmark, n=42 cohorts.' data-source-label='Demandbase' data-source-icon='/assets/images/source_icons/source_demandbase.svg'>18% attainment lift</span>, coaching at kickoff pays for itself inside the first quarter.<br><br>Happy to send the model rather than the marketing version.",
+                            "details": [
+                              { "title": "Email Type", "value": "Nudge (revised)" },
+                              { "title": "Reasoning",  "value": "Offers the model instead of a study — a CRO who stalled on headcount will engage with a payback calculation faster than a benchmark report." }
+                            ],
+                            "sources": [
+                              { "label": "Demandbase", "icon": "/assets/images/source_icons/source_demandbase.svg" }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "call",
+                        "headerLabel": "Call 1:",
+                        "headerValue": "Discovery",
+                        "goal": "Confirm the class start date and who owns ramp.",
+                        "body": "<strong>Open:</strong> Saw the <span class='email-highlight' data-link='hiring' data-popover-title='Opening Line' data-popover-question='Is this a good opening line?' data-popover-body='12 go-to-market roles posted this quarter.' data-source-label='ZoomInfo' data-source-icon='/assets/images/source_icons/source_zoominfo.svg'>twelve open GTM roles</span> — when does the class start?<br><br><strong>Discover:</strong> What does week one look like for them, and where does ramp usually slip?<br><br><strong>Position:</strong> The pattern we see is <span class='email-highlight' data-link='pain' data-popover-title='Pain Statement' data-popover-question='Is this the right pain?' data-popover-body='Salesforce study of 200+ new hires across 2024-2025.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>fifteen hours a week lost to research</span> before a rep is productive.<br><br><strong>CTA:</strong> Worth mapping this with your enablement lead?",
+                        "details": [
+                          { "title": "Call Type", "value": "Discovery" },
+                          { "title": "Reasoning", "value": "Opens with a date question, which is easy to answer and tells us the real timeline. Ends by inviting enablement in, since that's the seat that stalled the last conversation." }
+                        ],
+                        "sources": [
+                          { "label": "ZoomInfo",   "icon": "/assets/images/source_icons/source_zoominfo.svg" },
+                          { "label": "Salesforce", "icon": "/assets/images/source_icons/source_salesforce.svg" }
+                        ],
+                        "regenerations": [
+                          {
+                            "type": "call",
+                            "headerLabel": "Call 1:",
+                            "headerValue": "Discovery",
+                            "goal": "Confirm the class start date and who owns ramp.",
+                            "body": "<strong>Open:</strong> Picking up where we left off last quarter — headcount was the blocker then.<br><br><strong>Discover:</strong> Has that changed with the twelve reqs open? Who owns ramp now?<br><br><strong>Position:</strong> Nothing here needs new headcount; it replaces the manual research step.<br><br><strong>CTA:</strong> Thirty minutes with you and enablement?",
+                            "details": [
+                              { "title": "Call Type", "value": "Discovery (revised)" },
+                              { "title": "Reasoning", "value": "Names the prior objection in the opener. Marcus stalled on headcount, so the call should address it before he has to raise it again." }
+                            ],
+                            "sources": [
+                              { "label": "Salesforce", "icon": "/assets/images/source_icons/source_salesforce.svg" }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "email",
+                        "headerLabel": "Email 3:",
+                        "headerValue": "Exit",
+                        "subject": "Closing the loop",
+                        "body": "Hi Marcus,<br><br>No reply, which usually means ramp is someone else's problem this quarter, you've already solved it, or the timing is wrong again.<br><br>I'll close the loop here and circle back when <span class='email-highlight' data-link='hiring' data-popover-title='Future Trigger' data-popover-question='Is this a good re-engagement trigger?' data-popover-body='New-hire ramp pressure typically peaks 60-90 days after start.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>the new class hits day 60</span> — that's when the ramp math usually shows up in the forecast.<br><br>Thanks for the time either way.",
+                        "details": [
+                          { "title": "Email Type", "value": "Exit" },
+                          { "title": "Reasoning",  "value": "Sets the re-engagement trigger on the day the problem becomes visible in Marcus's own forecast, which is a better reason to reply later than a calendar reminder." }
+                        ],
+                        "sources": [
+                          { "label": "G2", "icon": "/assets/images/source_icons/source_g2.svg" }
+                        ],
+                        "regenerations": [
+                          {
+                            "type": "email",
+                            "headerLabel": "Email 3:",
+                            "headerValue": "Exit",
+                            "subject": "Day 60?",
+                            "body": "Hi Marcus,<br><br>Closing this out. Worth a note <span class='email-highlight' data-link='hiring' data-popover-title='Future Trigger' data-popover-question='Is this a sharper trigger?' data-popover-body='New-hire ramp pressure typically peaks 60-90 days after start.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>when the class hits day 60</span>, or should I leave it?",
+                            "details": [
+                              { "title": "Email Type", "value": "Exit (revised)" },
+                              { "title": "Reasoning",  "value": "One question, one word to answer. The trigger does the persuading, so the copy doesn't have to." }
+                            ],
+                            "sources": [
+                              { "label": "G2", "icon": "/assets/images/source_icons/source_g2.svg" }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      // ── Parked: single-draft outreach review ──────────────────────
+      // The review card the cadence above replaced. Kept whole so the
+      // one-draft-at-a-time flow can be brought back: rename this key
+      // to `review`, move it onto the turn-01 reply, and restore the
+      // `{% import %}` in _home_conversation_messages.html (see the
+      // parked note at the top of _home_outreach_review.html).
+      "_reviewParked": {
+        "id": "conv-001-review",
+        "channel": "email",
+        "heading": "Outreach review",
+        "confirmDialog": {
+          "title": "Approve outreach to 12 prospects?",
+          "body": "The approved drafts will be released to the configured outreach workflow.",
+          "primary": "Approve 12 drafts",
+          "secondary": "Cancel"
+        },
+        "completed": {
+          "heading": "All 12 drafts approved",
+          "body": "The approved drafts will be released to the configured outreach workflow."
+        }
+      }
+    }
+  },
+  "review": {
+    "heading": "Ready to Review",
+    "date": "Mon July 13",
+    "defaultTabId": "ready",
+    "tabs": [
+      { "id": "ready", "label": "Ready to Review", "dataKey": "reviewItems" }
+    ],
+    "overflowActions": [
+      { "id": "view_all",        "label": "View all" },
+      { "id": "review_settings", "label": "Review settings" }
+    ],
+    // Per-row overflow-menu actions rendered by the `reviewRow` macro.
+    // Same { id, label, icon? } shape as `overflowActions` above so a
+    // future consumer can share renderers between the section-level and
+    // row-level menus. `icon` (optional) is an SLDS utility-sprite id.
+    // Kept as one shared list rather than per-row overrides so every
+    // card exposes the same action set — matches the Salesforce list-
+    // interaction pattern where every row has an identical kebab menu.
+    // Additional actions (Snooze, Assign, etc.) drop in as new entries
+    // here without any template or JS changes.
+    "rowActions": [
+      { "id": "dismiss", "label": "Dismiss", "icon": "close" }
+    ],
+    // Semantic-category → SLDS utility-sprite map (Figma node
+    // 8797:228978). Row outputs pick an `icon` from this map's
+    // keys — the mapping to a concrete SLDS sprite lives here so
+    // a design change that reskins "message" from `comments` to
+    // `email` (or any other utility icon) is a single-line edit
+    // that re-skins every message pill on the page. Categories:
+    //   • table    — structured records / lists (prospects, buyers,
+    //                accounts as list output)
+    //   • message  — drafted outreach or replies
+    //   • document — generated artifacts (briefs, next steps)
+    //   • pdf      — polished, distributable reports
+    //
+    // Icon sourcing rules — same shape the nav item macro uses:
+    //   • `sprite`        — SVG symbol id inside a `spriteFamily`
+    //                        sprite. `spriteFamily` picks which
+    //                        `assets/icons/<family>-sprite/svg/symbols.svg`
+    //                        file to load from. Defaults to `utility`
+    //                        for back-compat.
+    //   • `iconImage`     — raster asset path used when no suitable
+    //                        sprite exists (per-icon fallback). Wins
+    //                        over `sprite` if both are set.
+    //
+    // Doctype sprites (`gsheet`, `txt`, `pdf`) are pre-colored — the
+    // pill glyph CSS deliberately does NOT force a `currentColor`
+    // fill on the SVG so these sprites paint themselves.
+    "outputTypes": {
+      "table":    { "sprite": "gsheet", "spriteFamily": "doctype" },
+      "message":  { "sprite": "txt",    "spriteFamily": "doctype" },
+      "document": { "iconImage": "/assets/images/output-icons/doc.png" },
+      "pdf":      { "sprite": "pdf",    "spriteFamily": "doctype" }
+    },
+    "reviewItems": [
+      {
+        "id": "ri-01",
+        "conversationId": "conv-001",
+        "title": "Found new leads",
+        "description": "Building Pipeline · Ran today at 6:00 AM.",
+        "icon":     { "sprite": "lead" },
+        // Accounts pill removed — accounts are supporting context
+        // for the prospecting run, not a distinct review artifact.
+        "outputs":  [
+          { "icon": "table",   "label": "7 accounts imported" },
+          { "icon": "message", "label": "37 prospects"    }
+        ],
+        "workflow": { "id":     "",         "label": "" }
+      },
+      {
+        "id": "ri-02",
+        "title": "Drafted proposals to send",
+        "description": "Advancing Deals · Ran today at 6:00 AM",
+        "icon":     { "sprite": "event" },
+        // Stakeholders pill removed — the stakeholder list lives
+        // inside each brief and is not a standalone deliverable.
+        "outputs":  [
+          { "icon": "pdf", "label": "10 proposals" }
+        ],
+        "workflow": { "id":     "", "label": "" }
+      },
+      {
+        "id": "ri-03",
+        "title": "Prepared your weekly exec brief",
+        "description": "Executive Brief · Ran today at 6:00 AM",
+        "icon":     { "sprite": "partners" },
+        // Both outputs kept — the agent produced a recommended
+        // action AND a corresponding outreach draft.
+        "outputs":  [
+          { "icon": "table", "label": "July 29 Quarterly Deal Pulse" }
+        ],
+        "workflow": { "id":     "", "label": "" }
+      }
+    ],
+    "tasks": [
+      {
+        "id": "tk-01",
+        "title": "Confirm demo agenda with Northwind",
+        "description": "Demo is Thursday at 10am; agenda still lists last quarter\u2019s topics.",
+        "icon":     { "sprite": "task" },
+        "workflow": { "id":     "prepare_for_meetings", "label": "Prepare for Meetings" }
+      },
+      {
+        "id": "tk-02",
+        "title": "Send updated pricing sheet to Globex",
+        "description": "Legal cleared the enterprise tier yesterday; Globex asked for revised numbers on the 12th.",
+        "icon":     { "sprite": "opportunity" },
+        "workflow": { "id":     "manage_opportunities", "label": "Manage Opportunities" }
+      },
+      {
+        "id": "tk-03",
+        "title": "Log call notes for Initech intro",
+        "description": "45-minute discovery call closed Tuesday; notes still in your scratchpad.",
+        "icon":     { "sprite": "contact" }
+      }
+    ]
+  }
+}

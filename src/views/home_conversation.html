@@ -1,0 +1,441 @@
+{% extends "_template.html" %}
+
+{#
+  Conversation Drill-In
+  =====================================================================
+  Route: /home_conversation.html?id=<conversationId>
+
+  Reached from Seller Home (index.html) when a review-item card with a
+  `conversationId` is clicked (see _home_ready_to_review.html — the
+  title `<a>` anchors here + the stretched-link ::after covers the
+  whole card so a click anywhere navigates). Non-linked cards keep
+  their `href="#"` — the click delegate in home.js preventDefaults
+  those but leaves real URLs alone so native navigation + the
+  browser's back-button + scroll-restoration behavior all Just Work.
+
+  Layout
+  ------
+  Reuses `.seller-home` as the outer flex row (the same class Seller
+  Home uses) so the shared `home.css` layout applies without a
+  duplicate stylesheet. This proto has no left nav, so the column
+  spans the full width of the app shell:
+
+    ┌────────────────────────────────────────────────┐
+    │  Header (48px, full width, sticky-top)         │
+    │  ────────────────────────────────────────────  │
+    │  Chat thread                                   │
+    │  (flex:1, only scroll surface, 800px inner)    │
+    │                                                │
+    │  ────────────────────────────────────────────  │
+    │  Composer (sticky-bottom, 800px inner)         │
+    └────────────────────────────────────────────────┘
+
+  Wrapper class is `.seller-home__conv` — a sibling to
+  `.seller-home__main` used by index.html. Kept distinct so the
+  conversation-specific column layout (three fixed/flex/fixed rows
+  with the middle owning overflow) doesn't leak back into Seller
+  Home's single-scroll main region.
+
+  Conversation data
+  -----------------
+  The `conversations` registry lives in index.json alongside the
+  Seller Home review cards that link into it. Pulled here via the
+  `readData("index")` global (defined in gulpfile.js) rather than
+  being duplicated into home_conversation.json, so a card and the
+  thread it opens can never drift apart.
+
+  Conversation id
+  ---------------
+  Resolved client-side from `location.search` in home_conversation.js
+  (Phase 1 shell renders placeholders; a later phase hydrates content
+  from `home.conversations[id]`). Root carries `data-sh-conv-root` so
+  the boot script has a stable hook, and — when the query param is
+  present — `data-sh-conversation-id` so JS can read it without
+  re-parsing the URL.
+#}
+
+{# ── Conversation registry (shared with Seller Home) ────────────────
+   Fetched at build time from the page data that also drives the
+   review cards linking here. If index.json is ever moved or renamed,
+   `readData("index")` returns null and the lookup below yields an
+   empty map — the shell still renders its empty-thread fallback. #}
+{% set _home = readData("index") or {} %}
+{% set conversations = _home.conversations or {} %}
+
+{# ── Server-side default conversation ────────────────────────────────
+   The runtime `?id=` param picks the conversation client-side, but the
+   static build has to commit to ONE thread at SSR time so the first
+   paint isn't blank. Pick the entry matching `defaultConversationId`
+   (from home_conversation.json). If that id isn't in the registry
+   (unseeded), fall back to an empty object — the macros no-op on
+   missing fields, so the shell still renders without messages.
+
+   When a future phase adds multiple conversations, this lookup will
+   need to move client-side (render all conversations hidden + toggle
+   visibility, or fetch on demand). Kept static for now — only one
+   conversation is seeded. #}
+{% set _initialConv = conversations[defaultConversationId] or {} %}
+{% set _initialMessages = _initialConv.messages or [] %}
+
+{# ── Scripted follow-up turns ────────────────────────────────────────
+   Pre-rendered reply payloads for the send interaction, one per send.
+   Rendered into inert <template> elements further down and cloned in
+   by home_conversation.js. An unseeded conversation yields an empty
+   list, in which case sending only echoes the seller's message. #}
+{% set _scriptedTurns = _initialConv.scriptedTurns or [] %}
+
+{# ── Opening sequence ────────────────────────────────────────────────
+   The thread plays itself out on load rather than arriving complete
+   (see `opening` in index.json). A stage names the messages it
+   reveals; those are held back into <template>s below and cloned in
+   after the stage's thinking indicator, so the drill-in reads as the
+   agent working.
+
+   `_stagedIds` is every id any stage claims, and `_inlineMessages` is
+   the remainder — what paints immediately. Both are built by pushing
+   into an array because a `{% set %}` inside a `{% for %}` dies with
+   the iteration, and neither Nunjucks `selectattr` nor `reject` can
+   express "id is in this list" here.
+
+   With no `opening`, `_stagedIds` is empty, every message is inline,
+   and the page renders exactly as it did before the sequence existed. #}
+{% set _openingStages = (_initialConv.opening and _initialConv.opening.stages) or [] %}
+
+{% set _stagedIds = [] %}
+{% for _stage in _openingStages %}
+  {%- for _mid in _stage.messageIds or [] -%}
+    {%- set _ = _stagedIds.push(_mid) -%}
+  {%- endfor -%}
+{% endfor %}
+
+{% set _inlineMessages = [] %}
+{% for _m in _initialMessages %}
+  {%- if _m.id not in _stagedIds -%}
+    {%- set _ = _inlineMessages.push(_m) -%}
+  {%- endif -%}
+{% endfor %}
+
+{% import "_home_conversation_messages.html" as convo %}
+
+{% block styles %}
+  {# home.css owns the left-nav + shared `.seller-home` layout. This
+     page adds a small conversation-specific stylesheet on top. Order
+     matters: home.css first so its `.seller-home__main` gradient
+     rules are overridden cleanly by the plainer `.seller-home__conv`
+     background in home_conversation.css. #}
+  <link rel="stylesheet" href="/styles/home.css" />
+  <link rel="stylesheet" href="/styles/home_conversation.css" />
+{% endblock %}
+
+{% block content %}
+  {# Conversations registry — inlined as a `data-*` attribute so
+     home_conversation.js can resolve `?id=<id>` client-side without
+     a fetch. Attribute values ARE entity-decoded by the parser, so
+     `| tojson | escape` produces a payload that reads out via
+     `getAttribute` as valid JSON. Mirrors the pattern in home.html
+     (`data-sh-composer-prompts`) so the two pages stay consistent. #}
+  <div
+    class="seller-home seller-home--conversation"
+    data-sh-root
+    data-sh-conv-root
+    data-sh-conversations="{{ conversations | tojson | escape }}"
+  >
+    <div
+      class="seller-home__conv"
+      role="main"
+      aria-label="{{ pageTitle }}"
+      tabindex="-1"
+    >
+      {# ── Header ─────────────────────────────────────────────────
+         Fixed 48px band, always visible while the thread scrolls
+         below. Title is a placeholder for Phase 1 — home_conversation.js
+         swaps in the resolved conversation's title once the URL is
+         parsed (or the fallback stays if no id was in the URL).
+
+         `data-sh-conv-title` is the hydration target; keeping the
+         initial text as the fallback title means the shell renders
+         a sensible placeholder even before JS runs (SSR-friendly).
+
+         Sparkle glyph on the left uses `utility:einstein` to signal
+         the agentic surface — matches the design intent of the Figma
+         frame (an agent-driven conversation). Kept aria-hidden;
+         the visible title carries the accessible label. #}
+      <header class="seller-home__conv-header" data-sh-conv-header>
+        <div class="seller-home__conv-header-inner">
+          <span
+            class="seller-home__conv-header-icon"
+            aria-hidden="true"
+          >
+            {# `sparkle` (singular, utility) — the design-system
+               "genai / dirtystate / einstein / ai" marker per Figma
+               frame 8297:16921 ("Utility Icons/S/sparkle"). Single
+               4-point star matches the header design; the multi-
+               sparkle "sparkles" glyph is reserved for the loading
+               state further down the thread. #}
+            <svg class="seller-home__conv-header-glyph" aria-hidden="true">
+              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#sparkle"></use>
+            </svg>
+          </span>
+          <h1
+            class="seller-home__conv-header-title"
+            data-sh-conv-title
+          >{{ fallbackTitle }}</h1>
+        </div>
+      </header>
+
+      {# ── Thread ─────────────────────────────────────────────────
+         The ONLY scrollable region on the page (`overflow-y: auto`)
+         so the header and composer stay pinned. `min-height: 0` is
+         essential — without it, the flex-1 track ignores overflow
+         and pushes the composer out of view.
+
+         Content column is capped at 800px and centered per Figma,
+         same math as `.seller-home__briefing` on Seller Home. #}
+      <section
+        class="seller-home__conv-thread"
+        aria-label="Conversation messages"
+        data-sh-conv-thread
+      >
+        {# `role="log"` + `aria-live="polite"` announces new messages
+           to AT users without interrupting them mid-utterance — the
+           standard pattern for chat threads. `aria-relevant="additions"`
+           narrows announcements to newly appended messages (not
+           attribute changes on existing rows like row-select). #}
+        <ol
+          class="seller-home__conv-thread-inner"
+          data-sh-conv-thread-inner
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions"
+        >
+          {% if _inlineMessages | length == 0 %}
+          {# Empty-thread fallback — same low-key placeholder the
+             previous phase shipped, so the shell still communicates
+             "this is a chat thread" if the conversation is empty.
+
+             It also covers the every-message-is-staged case: without
+             JS the opening never plays, and this keeps the thread from
+             rendering as a blank rectangle. The first stage clears it
+             on the way in. #}
+          <li class="seller-home__conv-thread-empty">
+            <p class="seller-home__conv-thread-placeholder">
+              Messages will appear here.
+            </p>
+          </li>
+          {% else %}
+          {% for msg in _inlineMessages %}
+          {# `messageItem` owns the <li> + the per-type dispatch, and
+             it's the same macro the live-send templates below use —
+             so a scripted reply appended at runtime is structurally
+             identical to a message rendered here at build time. #}
+          {{ convo.messageItem(msg) }}
+          {% endfor %}
+          {% endif %}
+        </ol>
+      </section>
+
+      {# ── Opening-sequence stages ─────────────────────────────────
+         One template per stage, in play order, holding the messages
+         that stage reveals. `data-sh-conv-thinking-*` is the same
+         pair the turn templates carry below — one beat player in the
+         script reads both, so an opening stage and a scripted reply
+         behave identically once the indicator clears.
+
+         The nested loop over `_initialMessages` (rather than over the
+         stage's ids) keeps the messages in authored order even if a
+         stage lists them out of order, and silently skips an id that
+         no longer exists — a typo drops one message instead of
+         breaking the sequence. #}
+      {% for stage in _openingStages %}
+      <template
+        data-sh-conv-stage="{{ stage.id or loop.index0 }}"
+        data-sh-conv-thinking-ms="{{ stage.thinkingMs }}"
+        data-sh-conv-thinking-label="{{ stage.thinkingLabel or thinkingLabel }}"
+      >
+        {% for msg in _initialMessages %}
+          {%- if msg.id in (stage.messageIds or []) -%}
+            {{ convo.messageItem(msg) }}
+          {%- endif -%}
+        {% endfor %}
+      </template>
+      {% endfor %}
+
+      {# ── Scripted send/reply templates ───────────────────────────
+         The demo interaction (type → send → agent thinks → reply)
+         is driven entirely from markup rendered HERE, then cloned
+         into the thread by home_conversation.js.
+
+         Why <template> rather than building HTML in JS: the reply
+         goes through the same macros as the SSR thread, so it can be
+         anything a message can be — prose, a workflow chip, a full
+         prospect table with its outreach review — and none of that
+         grammar gets re-implemented (and then drifts) in a JS string
+         literal. Template content is inert: not rendered, not in the
+         a11y tree, not announced, until it's cloned.
+
+         Three kinds:
+           • user    — the echo pill. Its text node is the write
+                       target; JS sets `textContent` from the input.
+           • thinking — the transient working row, shared by the
+                       opening stages above and the turns below. JS
+                       rewrites its label before each use, so one
+                       template serves every beat.
+           • turn N  — one per entry in `scriptedTurns`, consumed in
+                       DOM order, one per send. `thinkingMs` rides
+                       along on the element so timing is data, not
+                       a constant in the script. #}
+      <template data-sh-conv-user-template>
+        {{ convo.messageItem({ id: "msg-live-user", type: "user", text: "" }) }}
+      </template>
+
+      <template data-sh-conv-thinking-template>
+        {{ convo.thinkingIndicator(thinkingLabel) }}
+      </template>
+
+      {% for turn in _scriptedTurns %}
+      <template
+        data-sh-conv-turn="{{ turn.id }}"
+        data-sh-conv-thinking-ms="{{ turn.thinkingMs }}"
+        data-sh-conv-thinking-label="{{ turn.thinkingLabel or thinkingLabel }}"
+      >
+        {% for msg in turn.reply %}
+          {#- A reply carrying a cadence needs a prospect roster. When
+              those prospects are a table the thread already rendered,
+              `rowsFrom` names that message and the rows are passed
+              through — so the drill-in can show the list on first
+              paint and the drafted sequences only after a send, with
+              one copy of the prospect data.
+
+              The lookup pushes into an array rather than assigning a
+              variable because a `{% set %}` inside a `{% for %}` is
+              scoped to the iteration and wouldn't survive the loop.
+              (`selectattr` is not an option: Nunjucks 3.2 accepts the
+              test name and argument but ignores them, so it silently
+              returns the first entry with a truthy attribute.) -#}
+          {%- if msg.rowsFrom -%}
+            {%- set _rows = [] -%}
+            {%- for _m in _initialMessages -%}
+              {%- if _m.id == msg.rowsFrom and _m.table and _m.table.rows -%}
+                {%- set _ = _rows.push(_m.table.rows) -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {{ convo.messageItem(msg, _rows[0] or []) }}
+          {%- else -%}
+            {{ convo.messageItem(msg) }}
+          {%- endif -%}
+        {% endfor %}
+      </template>
+      {% endfor %}
+
+      {# ── Composer ───────────────────────────────────────────────
+         Sticky at the bottom of the main column. Structure mirrors
+         the Seller Home composer (border, radius, toolbar row) but
+         is a distinct component so the two can evolve independently
+         — the conversation composer is a follow-up input; the
+         Seller Home composer is a first-utterance surface.
+
+         Wiring lives in home_conversation.js (`bindConvComposer`),
+         NOT in home.js's `bindComposer` — that one is bound to
+         `[data-sh-composer-root]` and owns the Seller Home
+         first-utterance surface (placeholder typewriter, prompt
+         rotation). This composer is a follow-up input driving the
+         scripted-turn queue, so it keeps its own `data-sh-conv-*`
+         hooks and its own handler.
+
+         Send starts `disabled` because the input starts empty —
+         that's the correct initial state, and JS takes over the
+         enable/disable from the first keystroke. #}
+      <form
+        class="seller-home__conv-composer"
+        data-sh-conv-composer
+        novalidate
+      >
+        <div class="seller-home__conv-composer-inner">
+          <div class="seller-home__conv-composer-editor">
+            <div class="seller-home__conv-composer-content">
+              <label for="seller-home-conv-input" class="slds-assistive-text">
+                {{ pageTitle }}
+              </label>
+              <textarea
+                id="seller-home-conv-input"
+                class="seller-home__conv-composer-textarea"
+                placeholder="{{ composerPlaceholder }}"
+                rows="1"
+                aria-label="{{ pageTitle }}"
+                data-sh-conv-composer-input
+              ></textarea>
+            </div>
+
+            <div
+              class="seller-home__conv-composer-toolbar"
+              role="toolbar"
+              aria-label="Composer actions"
+            >
+              <div
+                class="seller-home__conv-composer-slot seller-home__conv-composer-slot--start"
+                role="group"
+                aria-label="Attach and augment"
+              >
+                {# Placeholder icon actions — same shape as the
+                   Seller Home composer so styling stays consistent
+                   across both surfaces. Non-functional in Phase 1. #}
+                <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__conv-composer-btn" title="Add" aria-label="Add">
+                  <svg class="slds-button__icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Add</span>
+                </button>
+                <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__conv-composer-btn" title="Quick action" aria-label="Quick action">
+                  <svg class="slds-button__icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#fallback"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Quick action</span>
+                </button>
+                <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__conv-composer-btn" title="Skills and tools" aria-label="Skills and tools">
+                  <svg class="slds-button__icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#apps"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Skills and tools</span>
+                </button>
+              </div>
+
+              <div
+                class="seller-home__conv-composer-slot seller-home__conv-composer-slot--end"
+                role="group"
+                aria-label="Send"
+              >
+                <button
+                  type="submit"
+                  class="slds-button slds-button_icon slds-button_icon-bare seller-home__conv-composer-btn seller-home__conv-composer-send"
+                  title="Send message"
+                  aria-label="Send message"
+                  data-sh-conv-composer-send
+                  disabled
+                >
+                  <svg class="slds-button__icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#send"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Send message</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+{% endblock %}
+
+{% block scripts_extra %}
+  {# home.js is deliberately NOT loaded here: every region it binds
+     (left nav, briefing, composer, ready-to-review) is absent on this
+     page, so it would be a no-op.
+
+     The cadence module first: home_conversation.js calls
+     `ShCadence.mount` as it wires each agent message. Both are
+     classic scripts that do their work on DOMContentLoaded, so the
+     order is for readers rather than the parser. #}
+  <script src="/scripts/home_conversation_cadence.js"></script>
+  <script src="/scripts/home_conversation.js"></script>
+{% endblock %}

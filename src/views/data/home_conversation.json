@@ -1,0 +1,40 @@
+// Conversation drill-in page mock data
+// =====================================================================
+// Consumed by src/views/home_conversation.html.
+//
+// The `conversations` registry lives in index.json — the source of
+// truth for the Seller Home surface whose review cards link here. This
+// page pulls it at build time via the `readData("index")` Nunjucks
+// global (defined in gulpfile.js) so a card and the thread it opens
+// can't drift apart.
+//
+// Fields owned by THIS file:
+//   • pageTitle             — <title>/aria label for the page.
+//   • defaultConversationId — fallback when the URL has no `?id=`.
+//                             Matches the first seeded entry in
+//                             index.json's `conversations` map. The
+//                             conversation page uses this to render a
+//                             sensible default view instead of an
+//                             empty shell.
+//   • fallbackTitle         — placeholder title when the conversation
+//                             id from the URL isn't in the registry.
+//                             Phase 1 renders placeholders; a later
+//                             phase will hydrate real content.
+//   • composerPlaceholder   — Figma copy for the sticky-bottom input.
+//   • thinkingLabel         — default copy inside the agent's thinking
+//                             indicator. A scripted turn can override
+//                             it per-turn (see `scriptedTurns` in
+//                             index.json).
+{
+  "pageTitle": "Conversation",
+  "defaultConversationId": "conv-001",
+  // Same string as `conversations.conv-001.title` in index.json so the
+  // initial SSR paint already shows the right heading for the one
+  // seeded conversation. The client-side hydration in
+  // home_conversation.js re-applies the same string when a valid
+  // `?id=` is present (idempotent). For an unknown/missing id the
+  // fallback stays visible instead of flashing a stale title.
+  "fallbackTitle": "Prospect outreach review",
+  "composerPlaceholder": "Ask a follow up\u2026",
+  "thinkingLabel": "Thinking\u2026"
+}
