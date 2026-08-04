@@ -326,6 +326,16 @@
   left: 0;
   right: 0;
 
+  // The composer overlays thread content, so say so. Until this was
+  // explicit it only won by DOM order, which loses to ANY positioned
+  // thread content carrying a positive z-index — the prospect table's
+  // frozen column did exactly that and painted over the composer. The
+  // table is isolated now, so 1 is all that's needed; it also keeps any
+  // future sticky element in the thread from reopening the same bug.
+  // Well below the citation hover card (9000), the only layer that
+  // needs to sit above the composer.
+  z-index: 1;
+
   margin: 0;
   padding: 0;
 
@@ -1164,6 +1174,16 @@ $sh-conv-table-rows: 5.5;
 
   // Keep momentum scrolling on trackpads/touch inside the wrapper.
   -webkit-overflow-scrolling: touch;
+
+  // Confine the frozen header/column layering below to this table.
+  // `overflow` alone doesn't establish a stacking context, so without
+  // this the sticky cells' z-index resolves against the page: any
+  // positive value beats the composer overlay (z-index 1, but the same
+  // was true when it had none), and the pinned column painted straight
+  // over the composer whenever a row was parked in its band. Isolating
+  // here is what makes "innermost last: 1 < 2 < 3" mean "within this
+  // table", which is how those numbers were always meant to read.
+  isolation: isolate;
 
   // Match the agent response's radius so the table reads as content
   // owned by that response rather than a free-floating dashboard
