@@ -35,13 +35,21 @@ npm start       # express, serving dist/ on PORT (default 3000)
 
 ## Deploying to Heroku
 
+The app belongs to the **sfdc-salesux** team, so it has to be created with
+`--team` — without that flag it lands in your personal account and the team
+can't see it.
+
 ```bash
-heroku create <app-name>
+heroku login
+heroku create <app-name> --team sfdc-salesux
 git push heroku main
 ```
 
 Heroku runs `npm run build` during the build phase and then the `Procfile`'s
 `web: node server.js`. Nothing else is required — no add-ons, no config vars.
+
+Already created the app in the wrong place? `heroku apps:transfer
+sfdc-salesux -a <app-name>` moves it, no redeploy needed.
 
 To put the prototype behind a password, set both:
 
