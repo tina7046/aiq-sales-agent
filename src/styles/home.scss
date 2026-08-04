@@ -386,10 +386,23 @@ main.app-wrapper {
   // (`.seller-home__god-rays` at z-index 0). Without an explicit
   // stacking context, the absolutely-positioned shader would paint
   // ON TOP of this in-flow sibling and cover the nav's white
-  // surface. `position: relative` + `z-index: 1` keeps the nav
+  // surface. `position: relative` + a positive z-index keeps the nav
   // opaque and above the ray canvas.
+  //
+  // 2, not 1, because the rail's right-edge shadow (below) is painted
+  // OUTSIDE its box, into the main pane — so the nav has to outrank
+  // whatever the main pane puts there or the shadow gets covered. At 1
+  // it tied with `.seller-home__conv-composer`, which is later in the
+  // DOM and therefore won, clipping the shadow across the composer's
+  // bottom band on the conversation page.
+  //
+  // The alternative — isolating the conversation column so its layers
+  // stay internal — was rejected: the citation hover card inside that
+  // column is `position: fixed; z-index: 9000` specifically so it can
+  // float above everything, and isolating the column would cap it
+  // under this nav wherever the two overlap.
   position: relative;
-  z-index: 1;
+  z-index: 2;
 
   background: var(--slds-g-color-surface-container-1, #ffffff);
   color: var(--slds-g-color-on-surface-1, #5c5c5c);
@@ -407,8 +420,6 @@ main.app-wrapper {
     3px 0 3px 0 rgba(0, 0, 0, 0.16),
     -1px 0 2px 0 rgba(0, 0, 0, 0.09);
 
-  position: relative;
-  z-index: 1;
   overflow: hidden; // clips the fade mask below and the collapsed-state
                     // label reflow so nothing spills onto the main pane.
 
@@ -482,6 +493,15 @@ main.app-wrapper {
     height: $sh-nav-icon-size;
     fill: currentColor;
     pointer-events: none;
+
+    // The arrow flips to face out when the rail collapses (see the
+    // `--nav-collapsed` block). Timed with the rail's own width
+    // transition so the two read as one movement.
+    transition: transform 180ms ease;
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
   }
 
   &:hover {
@@ -821,6 +841,20 @@ main.app-wrapper {
   .seller-home__nav-topbar {
     justify-content: center;
     padding: 0;
+  }
+
+  // Point the arrow the way it will move the rail: inward to collapse,
+  // outward to expand. Without this the collapsed rail still shows a
+  // left-facing arrow, which reads as "collapse further".
+  //
+  // The glyph is an arrow tucking into a bar, so mirroring is the
+  // direct expression of that flip — bar on the left with the arrow
+  // heading into it becomes bar on the right with the arrow heading
+  // out. `rotate(180deg)` looks identical here because the icon is
+  // symmetric about the horizontal axis, but would diverge for a glyph
+  // that isn't.
+  .seller-home__nav-toggle svg {
+    transform: scaleX(-1);
   }
 
   // The search input has no icon-only representation and would look
