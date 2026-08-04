@@ -7,10 +7,14 @@
 //
 // Responsibilities
 // ----------------
-//   • URL + header: read `?id=<conversationId>` from `location.search`,
-//     hydrate the header title from the embedded conversations
-//     registry, and highlight the matching recent in the left nav
-//     (URL is the sole source of truth for that selection).
+//   • URL + header: read `?id=<conversationId>` from `location.search`
+//     to pick which thread this is (falling back to the build's
+//     default), title the header, and highlight the matching recent in
+//     the left nav. The URL is the sole source of truth for both.
+//   • Arriving from Seller Home: that page's composer sends the typed
+//     text over as `?q=`. It titles the thread and is echoed as the
+//     seller's opening message, so a canned conversation reads as an
+//     answer to what they actually asked.
 //   • Prospect table: wire single-select + keyboard nav
 //     (roving-tabindex, Enter/Space, Arrow keys, Home/End). Kept
 //     independent so the table works as a standalone list even
@@ -32,6 +36,11 @@
 //     messages in on a timer instead of painting the finished thread,
 //     so arriving here looks like the agent working. Same beat player
 //     the send interaction uses.
+//   • Choosing the thread: the build renders EVERY conversation in the
+//     registry into `<template>`s tagged `data-sh-conv-for="<id>"`,
+//     because a static page can't know the URL. This file takes the
+//     set matching the active id and clones it into the thread; the
+//     rest stay inert.
 //
 // Communication model
 // -------------------
@@ -94,6 +103,10 @@
     userTemplate:     '[data-sh-conv-user-template]',
     thinkingTemplate: '[data-sh-conv-thinking-template]',
     thinkingItem:     '[data-sh-conv-thinking]',
+    // Per-conversation templates. Every conversation in the registry
+    // renders its own set, so these are always narrowed by the active
+    // id (see `scopedSelector`) before being queried.
+    inlineTemplate:   '[data-sh-conv-inline]',
     stageTemplate:    '[data-sh-conv-stage]',
     turnTemplate:     '[data-sh-conv-turn]',
     // Clickable bullet in a "suggested next steps" message:
@@ -128,6 +141,18 @@
   // Attribute on `[data-sh-conv-root]` holding the entity-encoded
   // JSON blob of conversation entries.
   var ATTR_CONVERSATIONS = 'data-sh-conversations'
+  // Conversation to open when the URL names none (or names one the
+  // registry doesn't have), so a bare /home_conversation.html still
+  // lands on a thread.
+  var ATTR_DEFAULT_CONV  = 'data-sh-conv-default'
+  // Conversation ids are authored, not user input, and they end up
+  // inside an attribute selector — so anything that isn't a plain
+  // slug is rejected rather than escaped.
+  var ID_PATTERN = /^[a-zA-Z0-9_-]+$/
+  // Longest `?q=` echoed into the thread. Matches the cap the Seller
+  // Home composer applies before it navigates; enforced again here
+  // because the URL can be edited by hand.
+  var QUERY_MAX = 500
 
   // ── Utilities ───────────────────────────────────────────────────
   // Parse the `?id=<value>` from the current URL. Wrapped in
@@ -140,11 +165,36 @@
       var raw = params.get('id')
       if (!raw) return null
       var trimmed = String(raw).trim()
-      if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) return null
+      if (!ID_PATTERN.test(trimmed)) return null
       return trimmed
     } catch (e) {
       return null
     }
+  }
+
+  // Parse `?q=<text>` — what the seller typed into the Seller Home
+  // composer before it sent them here. Echoed into the thread as
+  // their opening message and used as the header title, so arriving
+  // from Home reads as one continuous conversation rather than a
+  // canned thread that happens to answer.
+  //
+  // Absent on the Ready to Review drill-in, which is why that thread
+  // still opens straight on the agent.
+  function readQueryFromUrl () {
+    try {
+      var params = new URLSearchParams(window.location.search)
+      var raw = params.get('q')
+      if (!raw) return null
+      var trimmed = String(raw).trim().slice(0, QUERY_MAX)
+      return trimmed || null
+    } catch (e) {
+      return null
+    }
+  }
+
+  // Narrow a template selector to one conversation's set.
+  function scopedSelector (selector, id) {
+    return selector + '[data-sh-conv-for="' + id + '"]'
   }
 
   // Parse the inlined conversations JSON blob. Empty object return
@@ -176,35 +226,49 @@
     var root = document.querySelector(SELECTORS.root)
     if (!root) return
 
-    var id = readConversationIdFromUrl()
     var map = readConversationsMap(root)
-    var entry = id && map && Object.prototype.hasOwnProperty.call(map, id)
-      ? map[id]
-      : null
 
+    // Which thread this is. The URL wins; a missing or unknown id
+    // falls back to the build's default so the page always opens on
+    // something rather than an empty shell.
+    var id = readConversationIdFromUrl()
+    var has = function (key) {
+      return !!key && Object.prototype.hasOwnProperty.call(map, key)
+    }
+    if (!has(id)) id = root.getAttribute(ATTR_DEFAULT_CONV)
+    if (!has(id) || !ID_PATTERN.test(id)) id = null
+
+    var entry = id ? map[id] : null
     if (id) root.setAttribute('data-sh-conversation-id', id)
 
+    // What the seller typed on Seller Home, if they arrived that way.
+    var query = readQueryFromUrl()
+
+    // Their own words title the thread when they wrote them — the
+    // conversation's authored title is the fallback for every other
+    // way in.
+    var heading = query || (entry && entry.title)
     var titleEl = root.querySelector(SELECTORS.title)
-    if (entry && titleEl) {
-      titleEl.textContent = entry.title
-      titleEl.setAttribute('title', entry.title)
+    if (heading && titleEl) {
+      titleEl.textContent = heading
+      titleEl.setAttribute('title', heading)
     }
 
-    // URL-derived recent highlight + intercept redundant clicks.
+    // Recent highlight + intercept redundant clicks.
     applyActiveRecent(id)
     bindRecentClicks(id)
 
     // Wire the tables + reviews the server rendered. The same
-    // function runs again on anything a scripted turn injects, so
-    // build-time and runtime content get identical behavior.
+    // function runs again on anything cloned in later, so build-time
+    // and runtime content get identical behavior.
     bindMessageContent(document, map)
 
     // Composer: autosize, Enter-to-send, and the scripted reply queue.
     // It owns the thread mutations and the busy state, so the opening
     // sequence plays through the handle it returns rather than
     // reaching into the thread itself.
-    var conv = bindConvComposer(root, map)
-    if (conv) conv.playOpening()
+    var conv = bindConvComposer(root, map, id)
+    if (conv) conv.playOpening(query)
   }
 
   // Attach the interactive behaviors that live INSIDE an agent
@@ -290,7 +354,7 @@
   //
   // Nothing here talks to a server. Text the seller types is written
   // with `textContent`, so it's data in every path.
-  function bindConvComposer (root, convMap) {
+  function bindConvComposer (root, convMap, convId) {
     var form        = root.querySelector(SELECTORS.composer)
     var input       = root.querySelector(SELECTORS.composerInput)
     var send        = root.querySelector(SELECTORS.composerSend)
@@ -301,15 +365,31 @@
     var userTpl     = root.querySelector(SELECTORS.userTemplate)
     var thinkingTpl = root.querySelector(SELECTORS.thinkingTemplate)
 
+    // Every conversation in the registry rendered its own templates,
+    // so each lookup below is narrowed to the active one. An unknown
+    // id matches nothing: the thread keeps its placeholder and Send
+    // only echoes — a dead demo rather than a broken page.
+    var inlineTpl = convId
+      ? root.querySelector(scopedSelector(SELECTORS.inlineTemplate, convId))
+      : null
+
     // The reply queue, in document order.
     var turns = []
-    var turnNodes = root.querySelectorAll(SELECTORS.turnTemplate)
-    for (var i = 0; i < turnNodes.length; i++) turns.push(turnNodes[i])
+    if (convId) {
+      var turnNodes = root.querySelectorAll(
+        scopedSelector(SELECTORS.turnTemplate, convId)
+      )
+      for (var i = 0; i < turnNodes.length; i++) turns.push(turnNodes[i])
+    }
 
     // The opening sequence, likewise — play order is document order.
     var stages = []
-    var stageNodes = root.querySelectorAll(SELECTORS.stageTemplate)
-    for (var s = 0; s < stageNodes.length; s++) stages.push(stageNodes[s])
+    if (convId) {
+      var stageNodes = root.querySelectorAll(
+        scopedSelector(SELECTORS.stageTemplate, convId)
+      )
+      for (var s = 0; s < stageNodes.length; s++) stages.push(stageNodes[s])
+    }
 
     var state = {
       nextTurn: 0,   // index into `turns`
@@ -431,16 +511,36 @@
       })
     }
 
-    // Play the thread in rather than painting it finished: each stage
-    // thinks, then drops its messages. Send is held until the last one
-    // lands, so a seller who types during the sequence can't have a
-    // reply arrive before the answer it responds to.
+    // Open the thread: paint what doesn't wait, echo the seller's
+    // question if they brought one, then play the stages in — each
+    // one thinks, then drops its messages.
+    //
+    // Send is held until the last stage lands, so a seller who types
+    // during the sequence can't have a reply arrive before the answer
+    // it responds to.
+    //
+    // `query` is the text typed into the Seller Home composer, handed
+    // over in the URL. Echoing it first is the whole trick: the agent
+    // then appears to be answering them, using content that was
+    // written long before they typed anything.
     //
     // Focus is deliberately left alone at the end — this runs on load,
     // and pulling the caret into the composer would yank a screen
     // reader out of the thread it's announcing.
-    function playOpening () {
-      if (!stages.length) return
+    function playOpening (query) {
+      paintInline()
+
+      if (query) {
+        removeEmptyPlaceholder()
+        state.sent++
+        appendUserMessage(query)
+      }
+
+      if (!stages.length) {
+        scrollToLatest()
+        return
+      }
+
       removeEmptyPlaceholder()
       setBusy(true)
       next(0)
@@ -452,6 +552,18 @@
         }
         playBeat(stages[i], function () { next(i + 1) })
       }
+    }
+
+    // Messages no stage claims. They belong to the thread the moment
+    // it opens, so they go in without a beat in front of them.
+    // A conversation that stages everything still renders this
+    // template — empty but for the whitespace between Nunjucks tags —
+    // so the check is for a real element, not for child nodes.
+    function paintInline () {
+      if (!inlineTpl || !inlineTpl.content) return
+      if (!inlineTpl.content.querySelector('*')) return
+      removeEmptyPlaceholder()
+      appendTemplate(inlineTpl, convMap)
     }
 
     // ── Thread mutations ─────────────────────────────────────

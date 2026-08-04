@@ -62,59 +62,20 @@
 {% set _home = readData("index") or {} %}
 {% set conversations = _home.conversations or {} %}
 
-{# ── Server-side default conversation ────────────────────────────────
-   The runtime `?id=` param picks the conversation client-side, but the
-   static build has to commit to ONE thread at SSR time so the first
-   paint isn't blank. Pick the entry matching `defaultConversationId`
-   (from home_conversation.json). If that id isn't in the registry
-   (unseeded), fall back to an empty object — the macros no-op on
-   missing fields, so the shell still renders without messages.
+{# ── Which conversation renders ──────────────────────────────────────
+   Every entry in the registry is rendered, each into its own set of
+   inert <template>s tagged with `data-sh-conv-for="<id>"`. The build
+   can't know the URL, so it commits to none of them: JS reads `?id=`,
+   picks the matching set, and clones it into the thread.
 
-   When a future phase adds multiple conversations, this lookup will
-   need to move client-side (render all conversations hidden + toggle
-   visibility, or fetch on demand). Kept static for now — only one
-   conversation is seeded. #}
-{% set _initialConv = conversations[defaultConversationId] or {} %}
-{% set _initialMessages = _initialConv.messages or [] %}
+   `defaultConversationId` (from home_conversation.json) rides on the
+   root as the fallback for a bare `/home_conversation.html` with no
+   id — so that URL still opens on something.
 
-{# ── Scripted follow-up turns ────────────────────────────────────────
-   Pre-rendered reply payloads for the send interaction, one per send.
-   Rendered into inert <template> elements further down and cloned in
-   by home_conversation.js. An unseeded conversation yields an empty
-   list, in which case sending only echoes the seller's message. #}
-{% set _scriptedTurns = _initialConv.scriptedTurns or [] %}
-
-{# ── Opening sequence ────────────────────────────────────────────────
-   The thread plays itself out on load rather than arriving complete
-   (see `opening` in index.json). A stage names the messages it
-   reveals; those are held back into <template>s below and cloned in
-   after the stage's thinking indicator, so the drill-in reads as the
-   agent working.
-
-   `_stagedIds` is every id any stage claims, and `_inlineMessages` is
-   the remainder — what paints immediately. Both are built by pushing
-   into an array because a `{% set %}` inside a `{% for %}` dies with
-   the iteration, and neither Nunjucks `selectattr` nor `reject` can
-   express "id is in this list" here.
-
-   With no `opening`, `_stagedIds` is empty, every message is inline,
-   and the page renders exactly as it did before the sequence existed. #}
-{% set _openingStages = (_initialConv.opening and _initialConv.opening.stages) or [] %}
-
-{% set _stagedIds = [] %}
-{% for _stage in _openingStages %}
-  {%- for _mid in _stage.messageIds or [] -%}
-    {%- set _ = _stagedIds.push(_mid) -%}
-  {%- endfor -%}
-{% endfor %}
-
-{% set _inlineMessages = [] %}
-{% for _m in _initialMessages %}
-  {%- if _m.id not in _stagedIds -%}
-    {%- set _ = _inlineMessages.push(_m) -%}
-  {%- endif -%}
-{% endfor %}
-
+   The cost of rendering all of them is markup in <template>s, which
+   the parser leaves inert: not rendered, not in the a11y tree, not
+   announced. The alternative — one page per conversation, or a fetch —
+   buys nothing at this size. #}
 {% import "_home_conversation_messages.html" as convo %}
 
 {% block styles %}
@@ -138,6 +99,7 @@
     class="seller-home seller-home--conversation"
     data-sh-root
     data-sh-conv-root
+    data-sh-conv-default="{{ defaultConversationId }}"
     data-sh-conversations="{{ conversations | tojson | escape }}"
   >
     <div
@@ -208,82 +170,33 @@
           aria-live="polite"
           aria-relevant="additions"
         >
-          {% if _inlineMessages | length == 0 %}
-          {# Empty-thread fallback — same low-key placeholder the
-             previous phase shipped, so the shell still communicates
-             "this is a chat thread" if the conversation is empty.
+          {# The thread starts empty and is filled by JS from the
+             templates below, because which conversation to show is a
+             runtime question (`?id=`) and this is a static build.
 
-             It also covers the every-message-is-staged case: without
-             JS the opening never plays, and this keeps the thread from
-             rendering as a blank rectangle. The first stage clears it
-             on the way in. #}
+             So the placeholder is what the markup ships, and it's
+             honest in the two cases where nothing replaces it: a
+             conversation with no messages, and no JS at all. Anything
+             real that arrives clears it on the way in. #}
           <li class="seller-home__conv-thread-empty">
             <p class="seller-home__conv-thread-placeholder">
               Messages will appear here.
             </p>
           </li>
-          {% else %}
-          {% for msg in _inlineMessages %}
-          {# `messageItem` owns the <li> + the per-type dispatch, and
-             it's the same macro the live-send templates below use —
-             so a scripted reply appended at runtime is structurally
-             identical to a message rendered here at build time. #}
-          {{ convo.messageItem(msg) }}
-          {% endfor %}
-          {% endif %}
         </ol>
       </section>
 
-      {# ── Opening-sequence stages ─────────────────────────────────
-         One template per stage, in play order, holding the messages
-         that stage reveals. `data-sh-conv-thinking-*` is the same
-         pair the turn templates carry below — one beat player in the
-         script reads both, so an opening stage and a scripted reply
-         behave identically once the indicator clears.
+      {# ── Shared send templates ───────────────────────────────────
+         Conversation-independent, so they're rendered once:
 
-         The nested loop over `_initialMessages` (rather than over the
-         stage's ids) keeps the messages in authored order even if a
-         stage lists them out of order, and silently skips an id that
-         no longer exists — a typo drops one message instead of
-         breaking the sequence. #}
-      {% for stage in _openingStages %}
-      <template
-        data-sh-conv-stage="{{ stage.id or loop.index0 }}"
-        data-sh-conv-thinking-ms="{{ stage.thinkingMs }}"
-        data-sh-conv-thinking-label="{{ stage.thinkingLabel or thinkingLabel }}"
-      >
-        {% for msg in _initialMessages %}
-          {%- if msg.id in (stage.messageIds or []) -%}
-            {{ convo.messageItem(msg) }}
-          {%- endif -%}
-        {% endfor %}
-      </template>
-      {% endfor %}
-
-      {# ── Scripted send/reply templates ───────────────────────────
-         The demo interaction (type → send → agent thinks → reply)
-         is driven entirely from markup rendered HERE, then cloned
-         into the thread by home_conversation.js.
-
-         Why <template> rather than building HTML in JS: the reply
-         goes through the same macros as the SSR thread, so it can be
-         anything a message can be — prose, a workflow chip, a full
-         prospect table with its outreach review — and none of that
-         grammar gets re-implemented (and then drifts) in a JS string
-         literal. Template content is inert: not rendered, not in the
-         a11y tree, not announced, until it's cloned.
-
-         Three kinds:
-           • user    — the echo pill. Its text node is the write
-                       target; JS sets `textContent` from the input.
-           • thinking — the transient working row, shared by the
-                       opening stages above and the turns below. JS
-                       rewrites its label before each use, so one
-                       template serves every beat.
-           • turn N  — one per entry in `scriptedTurns`, consumed in
-                       DOM order, one per send. `thinkingMs` rides
-                       along on the element so timing is data, not
-                       a constant in the script. #}
+           • user     — the echo pill. Its text node is the write
+                        target; JS sets `textContent` from the input,
+                        which is also how the `?q=` handoff from
+                        Seller Home puts the seller's words on screen.
+           • thinking — the transient working row, used by every beat
+                        (opening stages and scripted replies alike).
+                        JS rewrites its label before each use, so one
+                        template serves them all. #}
       <template data-sh-conv-user-template>
         {{ convo.messageItem({ id: "msg-live-user", type: "user", text: "" }) }}
       </template>
@@ -292,13 +205,82 @@
         {{ convo.thinkingIndicator(thinkingLabel) }}
       </template>
 
-      {% for turn in _scriptedTurns %}
+      {# ── Per-conversation content ────────────────────────────────
+         Everything a thread is made of, rendered once per entry in the
+         registry and tagged `data-sh-conv-for="<id>"` so JS can take
+         the set matching `?id=` and ignore the rest.
+
+         Why <template> rather than building HTML in JS: this markup
+         goes through the same macros either way, so a message cloned
+         in at runtime can be anything a message can be — prose, a
+         workflow chip, a prospect table, a cadence of drafted touches
+         — and none of that grammar gets re-implemented (and then
+         drifts) in a JS string literal.
+
+         Three kinds per conversation:
+           • inline — messages no stage claims. Painted as soon as the
+                      thread is set up, above whatever the stages
+                      bring in. The escape hatch for content that
+                      shouldn't wait; empty for both seeded threads,
+                      which stage everything.
+           • stage  — one per opening stage, in play order, holding
+                      the messages that stage reveals.
+           • turn   — one per scripted follow-up, consumed in DOM
+                      order, one per send.
+
+         Stages and turns carry the same `data-sh-conv-thinking-*`
+         pair, which is what lets one beat player in the script drive
+         both. Timing is data, not a constant in the script. #}
+      {% for _cid, _conv in conversations %}
+        {%- set _messages = _conv.messages or [] -%}
+        {%- set _stages   = (_conv.opening and _conv.opening.stages) or [] -%}
+
+        {#- Every message id the stages claim. Built by pushing into an
+            array because neither Nunjucks `selectattr` nor `reject`
+            can express "id is in this list" here. -#}
+        {%- set _stagedIds = [] -%}
+        {%- for _stage in _stages -%}
+          {%- for _mid in _stage.messageIds or [] -%}
+            {%- set _ = _stagedIds.push(_mid) -%}
+          {%- endfor -%}
+        {%- endfor -%}
+
+      <template data-sh-conv-inline data-sh-conv-for="{{ _cid }}">
+        {%- for msg in _messages -%}
+          {%- if msg.id not in _stagedIds -%}
+            {{ convo.messageItem(msg) }}
+          {%- endif -%}
+        {%- endfor -%}
+      </template>
+
+        {#- Looping the conversation's messages (rather than the
+            stage's ids) keeps them in authored order even if a stage
+            lists them out of order, and silently skips an id that no
+            longer exists — a typo drops one message instead of
+            breaking the sequence. -#}
+        {% for stage in _stages %}
+      <template
+        data-sh-conv-stage="{{ stage.id or loop.index0 }}"
+        data-sh-conv-for="{{ _cid }}"
+        data-sh-conv-thinking-ms="{{ stage.thinkingMs }}"
+        data-sh-conv-thinking-label="{{ stage.thinkingLabel or thinkingLabel }}"
+      >
+        {%- for msg in _messages -%}
+          {%- if msg.id in (stage.messageIds or []) -%}
+            {{ convo.messageItem(msg) }}
+          {%- endif -%}
+        {%- endfor -%}
+      </template>
+        {% endfor %}
+
+        {% for turn in _conv.scriptedTurns or [] %}
       <template
         data-sh-conv-turn="{{ turn.id }}"
+        data-sh-conv-for="{{ _cid }}"
         data-sh-conv-thinking-ms="{{ turn.thinkingMs }}"
         data-sh-conv-thinking-label="{{ turn.thinkingLabel or thinkingLabel }}"
       >
-        {% for msg in turn.reply %}
+        {%- for msg in turn.reply -%}
           {#- A reply carrying a cadence needs a prospect roster. When
               those prospects are a table the thread already rendered,
               `rowsFrom` names that message and the rows are passed
@@ -314,7 +296,7 @@
               returns the first entry with a truthy attribute.) -#}
           {%- if msg.rowsFrom -%}
             {%- set _rows = [] -%}
-            {%- for _m in _initialMessages -%}
+            {%- for _m in _messages -%}
               {%- if _m.id == msg.rowsFrom and _m.table and _m.table.rows -%}
                 {%- set _ = _rows.push(_m.table.rows) -%}
               {%- endif -%}
@@ -323,8 +305,9 @@
           {%- else -%}
             {{ convo.messageItem(msg) }}
           {%- endif -%}
-        {% endfor %}
+        {%- endfor -%}
       </template>
+        {% endfor %}
       {% endfor %}
 
       {# ── Composer ───────────────────────────────────────────────

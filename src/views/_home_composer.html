@@ -14,6 +14,9 @@
                           Pass an empty array to disable animation
                           (surfaces like Scheduled where the placeholder
                           should stay static).
+        submitTarget   — optional URL Send navigates to, with the typed
+                          text appended as `?q=`. Omit it and Send stays
+                          local: the event fires, nothing navigates.
         actions:
           start        — Array<{ id, label, icon }> left-anchored icons.
           end          — Array<{ id, label, icon }> right-anchored icons
@@ -24,9 +27,9 @@
   explicit `with` is needed).
 
   Wiring: home.js's `bindComposer()` walks any DOM subtree containing
-  `[data-sh-composer-root]` — no per-page JS needed. Submit fires the
-  `sh:composer-submit` CustomEvent that a future consumer can listen
-  for; the prototype no-ops.
+  `[data-sh-composer-root]` — no per-page JS needed. Submit always fires
+  the `sh:composer-submit` CustomEvent, then navigates if the root
+  carries a `data-sh-composer-target`.
 
   Design source: Figma node 8574:374830 ("✨ Agentic Text Input Field")
   inside the "Welcome" frame. All measurements and states inherited
@@ -36,6 +39,7 @@
   class="seller-home__composer"
   aria-label="{{ composer.ariaLabel }}"
   data-sh-composer-root
+  {% if composer.submitTarget %}data-sh-composer-target="{{ composer.submitTarget }}"{% endif %}
 >
   <form class="seller-home__composer-form" data-sh-composer-form novalidate>
     <div class="seller-home__composer-editor">

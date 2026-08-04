@@ -518,6 +518,11 @@
 
   overflow-wrap: anywhere;
   word-break: break-word;
+
+  // From the `emphasis` filter — the browser defaults are already
+  // right, but SLDS resets `strong`/`em` globally.
+  strong { font-weight: var(--slds-g-font-weight-7, 700); }
+  em     { font-style: italic; }
 }
 
 // ── Workflow activity chip ────────────────────────────────────────
@@ -681,6 +686,296 @@
   // with the text's optical center.
   transform: translateY(0.0625rem);   // 1px
   text-decoration: none;
+}
+
+// ── Insight ───────────────────────────────────────────────────────
+// One numbered finding in an analysis: headline, evidence, takeaway.
+// Shares the agent response's 12 px indent so a thread that mixes
+// prose and findings keeps one left edge.
+//
+// No card, no border, no background. Three of these stack in a single
+// answer, and boxing each one would read as three separate tools
+// reporting in rather than as one analysis with three sections.
+.seller-home__conv-msg--insight {
+  align-self: stretch;
+  padding-inline-start: var(--slds-g-spacing-3, 0.75rem); // 12px indent
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-3, 0.75rem);                  // 12px
+
+  // Extra air above the headline so each finding separates from the
+  // one before it without a rule between them.
+  padding-block-start: var(--slds-g-spacing-3, 0.75rem);
+}
+
+.seller-home__conv-insight-heading {
+  margin: 0;
+
+  display: flex;
+  align-items: baseline;
+  gap: var(--slds-g-spacing-2, 0.5rem);                   // 8px
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  // One step up from body copy — enough to head a section, not so much
+  // that three of them shout over the answer they belong to.
+  font-size: var(--slds-g-font-scale-2, 1rem);            // 16px
+  line-height: 1.375rem;                                  // 22px
+  font-weight: var(--slds-g-font-weight-7, 700);
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+// Triage dot. `flex: 0 0 auto` so a heading that wraps to two lines
+// doesn't squash it, and the baseline nudge sits it on the cap height
+// of the first line rather than the text baseline.
+.seller-home__conv-insight-dot {
+  flex: 0 0 auto;
+  width: 0.625rem;                                        // 10px
+  height: 0.625rem;
+  border-radius: 50%;
+  transform: translateY(-0.0625rem);                      // 1px
+
+  // Overridden per severity below; neutral is the fallback for a
+  // finding authored without one.
+  background: var(--slds-g-color-neutral-base-50, #747474);
+}
+
+.seller-home__conv-insight--critical .seller-home__conv-insight-dot {
+  background: var(--slds-g-color-error-base-40, #ea001e);
+}
+
+.seller-home__conv-insight--warning .seller-home__conv-insight-dot {
+  background: var(--slds-g-color-warning-base-50, #fe9339);
+}
+
+.seller-home__conv-insight--positive .seller-home__conv-insight-dot {
+  background: var(--slds-g-color-success-base-50, #2e844a);
+}
+
+.seller-home__conv-insight-rank {
+  flex: 0 0 auto;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// Lets a long headline wrap under itself instead of under the dot.
+.seller-home__conv-insight-heading-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.seller-home__conv-insight-text {
+  margin: 0;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 0.875rem);        // 14px
+  line-height: 1.1875rem;                                 // 19px
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+
+  overflow-wrap: anywhere;
+  word-break: break-word;
+
+  strong { font-weight: var(--slds-g-font-weight-7, 700); }
+  em     { font-style: italic; }
+}
+
+// Label over a table. Smaller than the finding's own headline — it
+// names the evidence, it isn't a second finding.
+.seller-home__conv-insight-subheading {
+  margin: 0;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);     // 13px
+  line-height: 1.125rem;                                  // 18px
+  font-weight: var(--slds-g-font-weight-6, 600);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// The takeaway. A left rule instead of a filled box: it's the
+// analysis quoting its own conclusion, so it should feel like an
+// aside in the same voice, not a callout card from somewhere else.
+.seller-home__conv-insight-bottom-line {
+  margin: 0;
+  padding-inline-start: var(--slds-g-spacing-3, 0.75rem); // 12px
+  border-inline-start: 0.125rem solid var(--slds-g-color-border-1, #c9c9c9);
+
+  p {
+    margin: 0;
+
+    font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+    font-size: var(--slds-g-font-size-base, 0.8125rem);   // 13px
+    line-height: 1.125rem;                                // 18px
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+    strong { font-weight: var(--slds-g-font-weight-7, 700); color: var(--slds-g-color-on-surface-3, #001e5b); }
+    em     { font-style: italic; }
+  }
+}
+
+// Severity tints the rule so the takeaway carries the same triage
+// color as the dot above it.
+.seller-home__conv-insight--critical .seller-home__conv-insight-bottom-line {
+  border-inline-start-color: var(--slds-g-color-error-base-40, #ea001e);
+}
+
+.seller-home__conv-insight--warning .seller-home__conv-insight-bottom-line {
+  border-inline-start-color: var(--slds-g-color-warning-base-50, #fe9339);
+}
+
+.seller-home__conv-insight--positive .seller-home__conv-insight-bottom-line {
+  border-inline-start-color: var(--slds-g-color-success-base-50, #2e844a);
+}
+
+// ── Stat blocks ───────────────────────────────────────────────────
+// Headline numbers, side by side. `flex-wrap` lets them stack on a
+// narrow window rather than crushing the values.
+.seller-home__conv-insight-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--slds-g-spacing-4, 1rem);                     // 16px
+}
+
+.seller-home__conv-stat {
+  flex: 1 1 12rem;
+  min-width: 0;
+
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  border: 0.0625rem solid var(--slds-g-color-border-1, #e5e5e5);
+  border-radius: var(--slds-g-radius-border-2, 0.25rem);
+  background: var(--slds-g-color-surface-container-1, #fff);
+}
+
+.seller-home__conv-stat-label {
+  margin: 0 0 var(--slds-g-spacing-1, 0.25rem);
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);     // 12px
+  line-height: 1rem;                                      // 16px
+  font-weight: var(--slds-g-font-weight-6, 600);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+.seller-home__conv-stat-value {
+  margin: 0;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-3, 1.25rem);         // 20px
+  line-height: 1.625rem;                                  // 26px
+  font-weight: var(--slds-g-font-weight-7, 700);
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+// Direction arrow. Sized down from the value it precedes so it reads
+// as a marker rather than a second figure.
+.seller-home__conv-stat-trend {
+  margin-inline-end: 0.25rem;
+  font-size: var(--slds-g-font-size-base, 0.8125rem);     // 13px
+
+  &--up   { color: var(--slds-g-color-success-base-50, #2e844a); }
+  &--down { color: var(--slds-g-color-error-base-40, #ea001e); }
+}
+
+.seller-home__conv-stat-detail {
+  margin: var(--slds-g-spacing-1, 0.25rem) 0 0;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);     // 13px
+  line-height: 1.125rem;                                  // 18px
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// ── Data table ────────────────────────────────────────────────────
+// Figures under a finding. Unlike the prospect table, this one fits
+// the thread column: few columns, short values, no horizontal scroll,
+// no selection model. `overflow-x: auto` is a safety net for a narrow
+// window, not the layout.
+.seller-home__conv-data-table {
+  width: 100%;
+  overflow-x: auto;
+  border: 0.0625rem solid var(--slds-g-color-border-1, #e5e5e5);
+  border-radius: var(--slds-g-radius-border-2, 0.25rem);
+}
+
+.seller-home__conv-data-table-el {
+  width: 100%;
+  table-layout: auto;
+  border-collapse: collapse;
+
+  // SLDS 2 redefines `--slds-g-font-size-base` to body size (13px);
+  // stating it here keeps these cells from inheriting the smaller
+  // table default the uplift stylesheet applies.
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);     // 13px
+
+  thead th {
+    padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
+    text-align: start;
+    white-space: nowrap;
+
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);   // 12px
+    font-weight: var(--slds-g-font-weight-6, 600);
+    line-height: 1rem;
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+    background: var(--slds-g-color-surface-container-2, #f3f3f3);
+    border-block-end: 0.0625rem solid var(--slds-g-color-border-1, #e5e5e5);
+  }
+
+  tbody th,
+  tbody td {
+    padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
+    text-align: start;
+    vertical-align: middle;
+
+    font-size: var(--slds-g-font-size-base, 0.8125rem);   // 13px
+    line-height: 1.125rem;                                // 18px
+    font-weight: var(--slds-g-font-weight-4, 400);
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+    border-block-start: 0.0625rem solid var(--slds-g-color-border-1, #e5e5e5);
+  }
+
+  // Row header — the name of the record each row is about, styled the
+  // same way the prospect table styles a person or an account, so a
+  // record name looks like a record name in either table.
+  //
+  // Rendered as text, not an <a>: there's nothing to navigate to in the
+  // prototype, and a real link would promise one. The color is the
+  // foreground accent, NOT the `accent-container-*` family — those are
+  // container fills. Same token behind every actionable phrase in the
+  // proto (briefing link, suggestion CTAs, prospect names).
+  tbody th.cell_text_link {
+    font-weight: var(--slds-g-font-weight-6, 600);
+    white-space: nowrap;
+    color: var(--slds-g-color-accent-2, #0250d9);
+  }
+
+  tbody tr:first-child th,
+  tbody tr:first-child td {
+    border-block-start: 0;
+  }
+}
+
+// Figures line up on their right edge so magnitudes are comparable
+// down the column without reading every digit.
+.seller-home__conv-data-cell--right {
+  text-align: end !important;   // beats the `text-align: start` above
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+// Per-cell triage color, for the one value that explains why a row is
+// on the list.
+.seller-home__conv-data-cell--critical {
+  color: var(--slds-g-color-error-base-40, #ea001e) !important;
+  font-weight: var(--slds-g-font-weight-6, 600);
+}
+
+.seller-home__conv-data-cell--warning {
+  color: var(--slds-g-color-warning-base-30, #a86403) !important;
+  font-weight: var(--slds-g-font-weight-6, 600);
+}
+
+.seller-home__conv-data-cell--positive {
+  color: var(--slds-g-color-success-base-30, #1c6b3c) !important;
+  font-weight: var(--slds-g-font-weight-6, 600);
 }
 
 // ── Thinking indicator ────────────────────────────────────────────

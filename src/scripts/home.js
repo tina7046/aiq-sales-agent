@@ -94,6 +94,11 @@
   // older Safari, sandboxed iframes) fail silently instead of throwing.
   var STORAGE_KEY = 'sh:navCollapsed'
 
+  // Longest typed message carried in the composer's `?q=` handoff.
+  // Well inside every browser's URL limit, and far past anything a
+  // seller types into a one-line box.
+  var COMPOSER_QUERY_MAX = 500
+
   function readCollapsed () {
     try {
       return window.localStorage.getItem(STORAGE_KEY) === 'true'
@@ -670,6 +675,19 @@
         text
       )
 
+      // Hand off to the conversation surface when this composer has
+      // somewhere to send. The event above fires first either way, so
+      // a listener still sees every submission.
+      //
+      // The page is about to unload, so the textarea is deliberately
+      // NOT cleared: a blocked or slow navigation leaves the seller
+      // looking at the words they just typed rather than an empty box.
+      var target = composerTarget(composerRoot, text)
+      if (target) {
+        window.location.assign(target)
+        return
+      }
+
       textarea.value = ''
       autosize(textarea)
       updateSendState(textarea, sendBtn)
@@ -857,6 +875,23 @@
     var hasText = textarea.value.trim().length > 0
     sendBtn.disabled = !hasText
     sendBtn.setAttribute('aria-disabled', hasText ? 'false' : 'true')
+  }
+
+  // Build the URL Send navigates to, or null when this composer has no
+  // `data-sh-composer-target` (in which case submitting stays local).
+  //
+  // The typed text rides along as `q` so the conversation page can open
+  // on the seller's own words. It's capped before encoding because a
+  // pasted wall of text would otherwise blow past what browsers and
+  // servers accept in a URL; the conversation only shows the first line
+  // of it anyway.
+  function composerTarget (composerRoot, text) {
+    var target = composerRoot.getAttribute('data-sh-composer-target')
+    if (!target) return null
+    var query = String(text).slice(0, COMPOSER_QUERY_MAX)
+    return target +
+      (target.indexOf('?') === -1 ? '?' : '&') +
+      'q=' + encodeURIComponent(query)
   }
 
   // ══════════════════════════════════════════════════════════════════

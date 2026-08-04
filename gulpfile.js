@@ -65,6 +65,8 @@ const getData = (file) => {
 // components from the `hunter-main-main` prototype:
 //   • `tojson` — JSON.stringify, used by `_home_composer.html` to embed
 //     the suggestion list in a `data-*` attribute.
+//   • `emphasis` — the two inline markdown marks, so authored copy in the
+//     JSON reads as prose instead of as HTML.
 //   • `readData` — read another page's JSON at build time.
 // `noCache` matters for the dev watcher: the loader otherwise caches compiled
 // partials in memory, so editing `_template.html` or any `_*.html` include
@@ -73,6 +75,25 @@ const nunjucksEnv = new nunjucks.Environment(
   new nunjucks.FileSystemLoader(path.join(__dirname, 'src/views'), { noCache: true })
 )
 nunjucksEnv.addFilter('tojson', (obj) => JSON.stringify(obj))
+// `emphasis` — `**bold**` and `_italic_` in a JSON copy string become
+// `<strong>` and `<em>`. Copy in this project is often pasted from a
+// markdown draft, and a sentence written as prose is far easier to edit
+// than the same sentence with tags in the middle of it.
+//
+// Escapes first, so the ONLY markup that survives is the two marks this
+// filter puts there itself. Callers still need `| safe` to render the
+// result — that's the marker that says "this string went through here".
+// Deliberately not a markdown parser: no links, no lists, no code.
+nunjucksEnv.addFilter('emphasis', (input) => {
+  if (input == null) return ''
+  return String(input)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/_([^_]+)_/g, '<em>$1</em>')
+})
 // `readData("<name>")` — read src/views/data/<name>.json at build time so a
 // template can reach another page's data without copying keys into
 // shared.json (which loads on every page). Used by home_conversation.html to

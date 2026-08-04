@@ -85,13 +85,30 @@ Most changes are data, not code:
 
 - **Seller Home copy** — `src/views/data/index.json`: the greeting and
   briefing sentence, the composer prompts, the Ready to Review cards.
-- **The conversation** — also `index.json`, under `conversations.conv-001`.
-  `messages` is the thread, `opening.stages` decides which messages arrive on
-  a timer and how long the agent "thinks" before each, and `scriptedTurns` is
-  the reply queue: one send plays one turn.
-- **Drafted cadences** — inside that turn's `cadence`, keyed per prospect with
+- **The conversations** — also `index.json`, under `conversations`. Each entry
+  is one thread: `messages` is its content, `opening.stages` decides which
+  messages arrive on a timer and how long the agent "thinks" before each, and
+  `scriptedTurns` is the reply queue — one send plays one turn.
+  A message is one of `agent` (prose, optionally with a prospect table or a
+  cadence), `insight` (a ranked finding: triage dot, figures table or stat
+  blocks, and a takeaway), `workflow_activity` (the "job's done" chip), or
+  `suggestions` (the closing next steps). Prose fields take `**bold**` and
+  `_italic_`.
+- **Drafted cadences** — inside a turn's `cadence`, keyed per prospect with
   a `default` fallback. Copy can use `{firstName}`, `{company}`, and
   `{signal}` tokens, filled per prospect at render time.
+
+There are two threads, reached two different ways:
+
+- `conv-001` — the Ready to Review drill-in. A card with a `conversationId`
+  links straight to it.
+- `conv-002` — where the Seller Home composer lands. Typing anything and
+  hitting Send navigates to `composer.submitTarget`, carrying the typed text
+  as `?q=`, which titles the thread and opens it as the seller's own message.
+  Point `submitTarget` somewhere else to change where Send goes; drop it and
+  Send stops navigating. Its answer is written against one question — "What
+  are the top 3 things I must know to make my number?", the first of the
+  composer's `samplePrompts`.
 
 Each of those keys has a comment above it in the JSON explaining its contract.
 

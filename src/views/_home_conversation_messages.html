@@ -10,7 +10,8 @@
   conversations[id].messages[]):
     {
       id:   String,          // stable, unique within the thread
-      type: 'user' | 'agent' | 'workflow_activity' | 'suggestions',
+      type: 'user' | 'agent' | 'insight' | 'workflow_activity'
+          | 'suggestions',
       ...  // type-specific fields (see per-macro headers below)
     }
 
@@ -77,6 +78,8 @@
     {{ userMessage(msg) }}
   {% elif msg.type == 'agent' %}
     {{ agentMessage(msg, rows) }}
+  {% elif msg.type == 'insight' %}
+    {{ insightMessage(msg) }}
   {% elif msg.type == 'workflow_activity' %}
     {{ workflowActivity(msg) }}
   {% elif msg.type == 'suggestions' %}
@@ -221,7 +224,10 @@
   aria-label="Agent response"
 >
   {% if msg.text %}
-  <p class="seller-home__conv-msg-agent-text">{{ msg.text }}</p>
+  {# `**bold**` / `_italic_` in the authored copy — see the `emphasis`
+     filter in gulpfile.js, which escapes before it converts, so the
+     only markup that survives is the two marks it adds itself. #}
+  <p class="seller-home__conv-msg-agent-text">{{ msg.text | emphasis | safe }}</p>
   {% endif %}
 
   {% if msg.table %}
@@ -238,6 +244,183 @@
   {{ cadence.cadenceMessage(msg.cadence, _rows) }}
   {% endif %}
 </article>
+{% endmacro %}
+
+
+{# ── Insight ──────────────────────────────────────────────────────
+   One numbered finding in an analysis: a ranked headline the seller
+   can act on, the evidence under it, and the takeaway.
+
+   Structurally it's a `<section>` with its own `<h2>`, so a thread
+   that answers with three of these gives AT users a real outline to
+   navigate rather than three walls of prose. The rank number and the
+   severity dot are decoration on top of that heading — the heading
+   text carries the meaning on its own.
+
+   `severity` colors the dot and nothing else. It's the red / yellow /
+   green triage the analysis already speaks in: what's broken, what's
+   fragile, what's working.
+
+   Every part below the heading is optional, so one of these can be a
+   headline plus a table, a headline plus numbers, or all of it.
+
+   Copy in `text` and `bottomLine` runs through the `emphasis` filter,
+   so `**bold**` and `_italic_` work inline. See gulpfile.js.
+
+   Data contract:
+     {
+       id: String, type: 'insight',
+       severity:    'critical' | 'warning' | 'positive',
+       rank?:       Number,     // the "1." in front of the headline
+       heading:     String,
+       text?:       String,     // prose between headline and evidence
+       tableTitle?: String,     // label above the table
+       table?:      { … see dataTable },
+       stats?:      [ { … see statBlock } ],
+       bottomLine?: String,     // the takeaway callout
+       footnote?:   String      // closing prose under everything
+     }
+#}
+{% macro insightMessage(msg) %}
+<section
+  class="seller-home__conv-msg seller-home__conv-msg--insight seller-home__conv-insight--{{ msg.severity or 'neutral' }}"
+  data-sh-conv-msg="{{ msg.id }}"
+  data-sh-conv-msg-type="insight"
+  data-sh-conv-severity="{{ msg.severity or 'neutral' }}"
+>
+  <h2 class="seller-home__conv-insight-heading">
+    {# Dot and rank are visual ranking cues. The dot is aria-hidden
+       (its meaning is in the words); the rank keeps its period so a
+       screen reader reads "1." as an ordinal rather than gluing it to
+       the first word of the heading. #}
+    <span class="seller-home__conv-insight-dot" aria-hidden="true"></span>
+    {%- if msg.rank %}<span class="seller-home__conv-insight-rank">{{ msg.rank }}.</span>{% endif %}
+    <span class="seller-home__conv-insight-heading-text">{{ msg.heading | emphasis | safe }}</span>
+  </h2>
+
+  {% if msg.text %}
+  <p class="seller-home__conv-insight-text">{{ msg.text | emphasis | safe }}</p>
+  {% endif %}
+
+  {% if msg.tableTitle %}
+  <h3 class="seller-home__conv-insight-subheading">{{ msg.tableTitle }}</h3>
+  {% endif %}
+
+  {% if msg.table %}
+  {{ dataTable(msg.table) }}
+  {% endif %}
+
+  {% if msg.stats and msg.stats | length > 0 %}
+  <div class="seller-home__conv-insight-stats">
+    {% for stat in msg.stats %}{{ statBlock(stat) }}{% endfor %}
+  </div>
+  {% endif %}
+
+  {% if msg.bottomLine %}
+  {# A real <blockquote>: this is the analysis quoting its own
+     conclusion, and the left rule in the stylesheet is the visual
+     form of that. #}
+  <blockquote class="seller-home__conv-insight-bottom-line">
+    <p>{{ msg.bottomLine | emphasis | safe }}</p>
+  </blockquote>
+  {% endif %}
+
+  {% if msg.footnote %}
+  <p class="seller-home__conv-insight-text">{{ msg.footnote | emphasis | safe }}</p>
+  {% endif %}
+</section>
+{% endmacro %}
+
+
+{# ── Stat block ───────────────────────────────────────────────────
+   One headline number with its label and the arithmetic behind it.
+   Sized so a pair sits side by side inside the thread column.
+
+   `trend` draws an arrow before the value — 'up' and 'down' only, and
+   it's aria-hidden because `detail` already says which way things
+   went in words.
+
+   Data contract:
+     { label: String, value: String, trend?: 'up'|'down', detail?: String }
+#}
+{% macro statBlock(stat) %}
+<div class="seller-home__conv-stat">
+  <p class="seller-home__conv-stat-label">{{ stat.label }}</p>
+  <p class="seller-home__conv-stat-value">
+    {%- if stat.trend %}<span class="seller-home__conv-stat-trend seller-home__conv-stat-trend--{{ stat.trend }}" aria-hidden="true">{% if stat.trend == 'down' %}&#9660;{% else %}&#9650;{% endif %}</span>{% endif -%}
+    {{ stat.value }}
+  </p>
+  {% if stat.detail %}
+  <p class="seller-home__conv-stat-detail">{{ stat.detail }}</p>
+  {% endif %}
+</div>
+{% endmacro %}
+
+
+{# ── Data table ───────────────────────────────────────────────────
+   A plain figures table — deals, amounts, dates. Deliberately NOT the
+   prospect table below: that one is a selectable roster of people,
+   with avatars, logos, and per-row actions wired to a review. This is
+   read-only evidence under a finding, so it carries none of that
+   machinery and none of the horizontal scrolling.
+
+   Columns are `{ id, label, align? }`. `align: 'right'` is for figures,
+   where a right edge makes magnitudes comparable down the column. The
+   first column renders as `<th scope="row">`, so each row is announced
+   by its own name rather than as a bare list of values. It also carries
+   `cell_text_link` — the same link-blue record-name treatment the
+   prospect table gives a person or an account, so a record reads the
+   same wherever it appears.
+
+   A cell can be a plain value or `{ value, tone }`, where `tone`
+   ('critical' | 'warning' | 'positive') colors just that cell — for
+   the one number in a column that's the reason the row is listed.
+
+   Data contract:
+     {
+       id: String, ariaLabel: String,
+       columns: [ { id, label, align? } ],
+       rows:    [ { id, [colId]: String | { value, tone } } ]
+     }
+#}
+{% macro dataTable(table) %}
+<div class="seller-home__conv-data-table" data-sh-conv-data-table="{{ table.id }}">
+  <table
+    class="slds-table slds-table_bordered slds-table-uplift seller-home__conv-data-table-el"
+    aria-label="{{ table.ariaLabel }}"
+  >
+    <thead>
+      <tr class="slds-line-height_reset">
+        {% for col in table.columns %}
+        <th
+          scope="col"
+          data-sh-conv-col="{{ col.id }}"
+          {% if col.align == 'right' %}class="seller-home__conv-data-cell--right"{% endif %}
+        >{{ col.label }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in table.rows %}
+      <tr class="slds-hint-parent" data-sh-conv-data-row="{{ row.id }}">
+        {% for col in table.columns %}
+          {%- set _cell = row[col.id] -%}
+          {%- set _value = _cell.value if _cell.value is defined else _cell -%}
+          {%- set _tone  = _cell.tone if _cell.tone is defined else '' -%}
+          {%- set _class = 'seller-home__conv-data-cell' +
+                (' seller-home__conv-data-cell--right' if col.align == 'right' else '') +
+                (' seller-home__conv-data-cell--' + _tone if _tone else '') -%}
+          {% if loop.first %}
+          <th scope="row" class="cell_text_link {{ _class }}">{{ _value }}</th>
+          {% else %}
+          <td class="{{ _class }}">{{ _value }}</td>
+          {% endif %}
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endmacro %}
 
 

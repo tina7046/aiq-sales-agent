@@ -225,9 +225,19 @@
     ]
   },
   "composer": {
-    "placeholder": "Try \u201cWho should I follow up with?\u201d",
+    // First prompt is the one conv-002 answers, so the demo path is the
+    // one the placeholder suggests. The rest still cycle.
+    "placeholder": "Try \u201cWhat are the top 3 things I must know to make my number?\u201d",
     "ariaLabel": "Ask Agentforce",
+    // Where Send goes. The typed text rides along as `?q=`, which the
+    // conversation page echoes as the seller's first message before
+    // its opening sequence plays — so asking here and drilling in from
+    // a review card land on the same surface by different doors.
+    // Drop this field and the composer falls back to dispatching
+    // `sh:composer-submit` without navigating.
+    "submitTarget": "/home_conversation.html?id=conv-002",
     "samplePrompts": [
+      "Try \u201cWhat are the top 3 things I must know to make my number?\u201d",
       "Try \u201cWho should I follow up with?\u201d",
       "Try \u201cDraft an outreach for Acme.\u201d",
       "Try \u201cSummarize this week\u2019s pipeline.\u201d",
@@ -300,6 +310,11 @@
     { "id": "tools",     "label": "Tools",     "icon": "custom_apps" }
   ],
   "recents": [
+    {
+      "id": "rec-conv-002",
+      "label": "Pipeline reality check",
+      "conversationId": "conv-002"
+    },
     {
       "id": "rec-conv-001",
       "label": "Prospect outreach review",
@@ -1215,6 +1230,209 @@
           "body": "The approved drafts will be released to the configured outreach workflow."
         }
       }
+    },
+    // ── conv-002 — the Seller Home composer's landing thread ─────────
+    // Where `composer.submitTarget` sends the seller after they type on
+    // Home and hit Send. Deliberately its OWN entry rather than a second
+    // door into conv-001: the two answer different questions (that one
+    // reviews prepared outreach; this one reads the pipeline), so the
+    // copy here can change without touching the Ready to Review
+    // drill-in.
+    //
+    // Written against one question — "What are the top 3 things I must
+    // know to make my number?" — because that's the demo. `?q=` puts the
+    // seller's actual words at the top of the thread and in the header;
+    // this is the agent's side of it. Typing something else still works,
+    // it just gets this answer.
+    //
+    // The three findings use the `insight` message type: a ranked
+    // headline with a triage dot, the evidence under it, and the
+    // takeaway. Prose fields accept `**bold**` and `_italic_` (see the
+    // `emphasis` filter in gulpfile.js), so the copy stays readable
+    // here instead of carrying HTML.
+    "conv-002": {
+      "id": "conv-002",
+      "title": "Pipeline reality check",
+      "subtitle": "Pipeline Review",
+      "workflow": { "id": "pipeline_review", "label": "Pipeline Review" },
+      "status": "in_progress",
+      "recentLabel": "Pipeline reality check",
+      "messages": [
+        {
+          "id":   "c2-intro",
+          "type": "agent",
+          "text": "I\u2019ll pull your current pipeline data right now to give you the three most critical things you need to know to hit your number. Let me grab your open opportunities and recent win/loss data."
+        },
+        {
+          "id":   "c2-lead",
+          "type": "agent",
+          "text": "Here are the **3 things you need to know right now** to make your numbers. Today is the last day of July \u2014 this is your end-of-month reality check."
+        },
+        {
+          "id":       "c2-insight-1",
+          "type":     "insight",
+          "severity": "critical",
+          "rank":     1,
+          "heading":  "You have $126M+ in slipped deals \u2014 the close dates already passed",
+          "text":     "These deals were supposed to close **this month** but are still open, many in early stages. This is the biggest red flag in your pipeline:",
+          "tableTitle": "Slipped Deals \u2014 Close Date Already Passed",
+          // `tone` on a cell colors that value alone. Used here for the
+          // silences that make a row indefensible, not for every number
+          // in the column — if they were all red, none of them would be.
+          "table": {
+            "id": "c2-slipped-deals",
+            "ariaLabel": "Slipped deals whose close date has already passed",
+            "columns": [
+              { "id": "deal",       "label": "Deal"        },
+              { "id": "amount",     "label": "Amount",      "align": "right" },
+              { "id": "stage",      "label": "Stage"       },
+              { "id": "daysSilent", "label": "Days Silent", "align": "right" }
+            ],
+            "rows": [
+              { "id": "sd-01", "deal": "ServiceNow - CX",              "amount": "$14.6M", "stage": "Prospecting",         "daysSilent": "27" },
+              { "id": "sd-02", "deal": "Appian - Enterprise",          "amount": "$14.2M", "stage": "Qualification",       "daysSilent": { "value": "Never", "tone": "critical" } },
+              { "id": "sd-03", "deal": "Veeva - Cloud Migration",      "amount": "$14.2M", "stage": "Perception Analysis", "daysSilent": { "value": "80", "tone": "critical" } },
+              { "id": "sd-04", "deal": "CrowdStrike - Data Analytics", "amount": "$13.6M", "stage": "Value Proposition",   "daysSilent": "17" },
+              { "id": "sd-05", "deal": "Plaid - DevOps",               "amount": "$13.2M", "stage": "Needs Analysis",      "daysSilent": "34" },
+              { "id": "sd-06", "deal": "Stripe - Integration Suite",   "amount": "$12.9M", "stage": "Needs Analysis",      "daysSilent": { "value": "69", "tone": "warning" } },
+              { "id": "sd-07", "deal": "Confluent - CX",               "amount": "$12.8M", "stage": "Prospecting",         "daysSilent": "39" },
+              { "id": "sd-08", "deal": "Gong - Platform License",      "amount": "$12.1M", "stage": "Qualification",       "daysSilent": { "value": "47", "tone": "warning" } }
+            ]
+          },
+          "bottomLine": "**Bottom line:** These deals have unrealistic close dates for their stage \u2014 a $14.6M deal still in _Prospecting_ can\u2019t close today. They need to be re-dated or disqualified to get an honest forecast."
+        },
+        {
+          "id":       "c2-insight-2",
+          "type":     "insight",
+          "severity": "warning",
+          "rank":     2,
+          "heading":  "Your best bets for _actual_ revenue are 3 deals worth ~$25M weighted",
+          "text":     "Only a handful of July deals have both high probability AND recent activity:",
+          "tableTitle": "Best Bets \u2014 50%+ Probability With Recent Engagement",
+          "table": {
+            "id": "c2-best-bets",
+            "ariaLabel": "Best bets: deals over 50% probability with recent engagement",
+            "columns": [
+              { "id": "deal",      "label": "Deal"       },
+              { "id": "amount",    "label": "Amount",     "align": "right" },
+              { "id": "prob",      "label": "Prob",       "align": "right" },
+              { "id": "weighted",  "label": "Weighted",   "align": "right" },
+              { "id": "lastTouch", "label": "Last Touch" }
+            ],
+            "rows": [
+              { "id": "bb-01", "deal": "HashiCorp - DevOps",           "amount": "$11.2M", "prob": "70%", "weighted": "$7.9M", "lastTouch": { "value": "Today", "tone": "positive" } },
+              { "id": "bb-02", "deal": "CrowdStrike - Data Analytics", "amount": "$13.6M", "prob": "50%", "weighted": "$6.8M", "lastTouch": "Jul 14" },
+              { "id": "bb-03", "deal": "Square - Integration Suite",   "amount": "$10.8M", "prob": "70%", "weighted": "$7.5M", "lastTouch": { "value": "Jun 21", "tone": "warning" } }
+            ]
+          },
+          "bottomLine": "**Bottom line:** ~$22M weighted is what\u2019s actually _real_ this month. Everything else either has no recent activity or is stuck in an early stage. Push hard on these three today."
+        },
+        {
+          "id":       "c2-insight-3",
+          "type":     "insight",
+          "severity": "positive",
+          "rank":     3,
+          "heading":  "Your win rate is strong (55% count / 75% by value) \u2014 leverage it",
+          "stats": [
+            {
+              "label":  "Q3 Win Rate (by count)",
+              "value":  "55%",
+              "trend":  "up",
+              "detail": "26 won vs 21 lost"
+            },
+            {
+              "label":  "Q3 Win Rate (by value)",
+              "value":  "75%",
+              "trend":  "up",
+              "detail": "$19.0M won vs $6.5M lost"
+            }
+          ],
+          "footnote": "You\u2019re winning the _bigger_ deals when they close. The problem isn\u2019t conversion \u2014 it\u2019s **pipeline hygiene and velocity**. You have 2,500+ open opportunities, but many have no activity and unrealistic dates."
+        },
+        {
+          "id":   "c2-activity",
+          "type": "workflow_activity",
+          "workflowLabel": "Pipeline review completed",
+          "workflowIcon":  "apps",
+          "statusText":    "2,500+ open opportunities \u00b7 8 slipped \u00b7 3 best bets"
+        },
+        {
+          "id":   "c2-next-steps",
+          "type": "suggestions",
+          "text": "What do you want me to do next?",
+          "items": [
+            {
+              "id":         "c2-fix-dates",
+              "text":       "Re-date or disqualify the 8 slipped deals so the forecast is honest.",
+              "boldPhrase": "8 slipped deals",
+              "cta":        "Clean up the dates",
+              "prompt":     "Re-date or disqualify the slipped deals"
+            },
+            {
+              "id":     "c2-push-plan",
+              "text":   "Build today\u2019s push plan for HashiCorp, CrowdStrike, and Square.",
+              "cta":    "Draft the push plan",
+              "prompt": "Build a push plan for HashiCorp, CrowdStrike, and Square"
+            },
+            {
+              "id":         "c2-weekly-check",
+              "text":       "I can also run this reality check every Monday morning and open with what moved.",
+              "boldPhrase": "every Monday morning",
+              "cta":        "Schedule it weekly",
+              "prompt":     "Run this pipeline reality check every Monday morning"
+            }
+          ]
+        }
+      ],
+      // Four beats, because the answer is an analysis and it should
+      // look like one being done: pull the data, run it, check the
+      // engagement, then compare wins and losses. The labels narrate
+      // the same steps the answer describes itself taking.
+      "opening": {
+        "stages": [
+          {
+            "id": "c2-open-01",
+            "thinkingMs": 1600,
+            "thinkingLabel": "Pulling your open opportunities and win/loss data\u2026",
+            "messageIds": ["c2-intro"]
+          },
+          {
+            "id": "c2-open-02",
+            "thinkingMs": 2400,
+            "thinkingLabel": "Loading the pipeline review skill and running the analysis\u2026",
+            "messageIds": ["c2-lead", "c2-insight-1"]
+          },
+          {
+            "id": "c2-open-03",
+            "thinkingMs": 2000,
+            "thinkingLabel": "Checking probability against recent engagement\u2026",
+            "messageIds": ["c2-insight-2"]
+          },
+          {
+            "id": "c2-open-04",
+            "thinkingMs": 1800,
+            "thinkingLabel": "Comparing Q3 wins and losses\u2026",
+            "messageIds": ["c2-insight-3", "c2-activity", "c2-next-steps"]
+          }
+        ]
+      },
+      // One turn so a follow-up send doesn't dead-end. Prose only —
+      // the drafted-sequence card lives on conv-001, and pointing this
+      // thread at it would mean a second copy of the cadence data.
+      "scriptedTurns": [
+        {
+          "id": "c2-turn-01",
+          "thinkingMs": 2200,
+          "thinkingLabel": "Re-dating the slipped deals against their stage\u2026",
+          "reply": [
+            {
+              "id":   "c2-turn-01-reply",
+              "type": "agent",
+              "text": "Working on it. I\u2019ll re-date the eight slipped deals against what stage they\u2019re actually in, flag the two with no activity at all as disqualification candidates, and bring the corrected forecast back here before anything changes in Salesforce."
+            }
+          ]
+        }
+      ]
     }
   },
   "review": {
