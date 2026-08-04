@@ -115,6 +115,191 @@
     }
   }
 
+  // ── Recents ─────────────────────────────────────────────────────
+  // The Recents rail is session state rather than authored content: it
+  // starts empty and grows as the seller opens conversations. There are
+  // two ways in today — the "Found new leads" review card (conv-001)
+  // and the composer (conv-002) — and both land on
+  // home_conversation.html, so rather than instrumenting each entry
+  // point separately we record on ARRIVAL. Anything that reaches a
+  // conversation gets a row, including a pasted deep link and the
+  // Recents rows themselves.
+  //
+  // sessionStorage, not localStorage: a new tab should open on a clean
+  // slate so the demo can be re-run, while a reload mid-flow keeps what
+  // has been opened. (Nav collapse above is a genuine preference, so it
+  // uses localStorage — the two are deliberately different.)
+  var RECENTS_KEY = 'sh:recents'
+
+  // Cap the rail so a long session can't scroll forever. Oldest fall
+  // off the bottom.
+  var RECENTS_MAX = 12
+
+  // The global Home tab wipes history and starts the demo over. It
+  // lives in _template.html and shows on every page — including ones
+  // that never load this script — so the signal travels in the URL
+  // (`/index.html?reset=1`) rather than through a click handler that
+  // would only be bound on Seller Home surfaces.
+  var RESET_PARAM = 'reset'
+
+  // Clear on arrival if the flag is set, then strip it from the
+  // address bar: the reset is a one-shot action, and leaving it in
+  // place would fire again on every refresh and read as part of the
+  // route. Returns whether it fired.
+  function consumeResetFlag () {
+    try {
+      var url = new URL(window.location.href)
+      if (url.searchParams.get(RESET_PARAM) !== '1') return false
+      window.sessionStorage.removeItem(RECENTS_KEY)
+      url.searchParams.delete(RESET_PARAM)
+      window.history.replaceState({}, '', url.pathname + url.search + url.hash)
+      return true
+    } catch (e) {
+      return false
+    }
+  }
+
+  function readRecents () {
+    try {
+      var raw = window.sessionStorage.getItem(RECENTS_KEY)
+      if (!raw) return []
+      var parsed = JSON.parse(raw)
+      return Object.prototype.toString.call(parsed) === '[object Array]' ? parsed : []
+    } catch (e) {
+      // Unreadable or malformed — treat as no history rather than
+      // letting a bad payload break the whole nav.
+      return []
+    }
+  }
+
+  function writeRecents (list) {
+    try {
+      window.sessionStorage.setItem(RECENTS_KEY, JSON.stringify(list))
+    } catch (e) {
+      // Silent — the rail still renders for the current page.
+    }
+  }
+
+  // One row per conversation, and a row never moves once it exists.
+  // Re-opening a thread deliberately does NOT promote it to the top:
+  // watching the rail reshuffle under the pointer every time you click
+  // something reads as a glitch, so position is fixed at first visit.
+  //
+  // A revisit still refreshes the row in place. The label is whatever
+  // the seller typed, so a second question about the same thread has
+  // to re-title it — otherwise the rail would advertise the old
+  // question while the row now opens the new one.
+  function recordRecent (entry) {
+    if (!entry || !entry.conversationId) return readRecents()
+
+    var list = readRecents()
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && list[i].conversationId === entry.conversationId) {
+        list[i] = entry
+        writeRecents(list)
+        return list
+      }
+    }
+
+    // Genuinely new: newest on top, oldest pushed off the end.
+    list.unshift(entry)
+    list = list.slice(0, RECENTS_MAX)
+    writeRecents(list)
+    return list
+  }
+
+  // Paint the rail. Mirrors the linked-recent markup in
+  // _home_left_nav.html — keep the two in step. `activeId` gets
+  // `.is-active` here rather than waiting for home_conversation.js so
+  // the highlight doesn't depend on script order.
+  function renderRecents (root, list, activeId) {
+    var listEl = root.querySelector('[data-sh-recents-list]')
+    if (!listEl) return
+
+    // Rows only — the "Recents" heading above stays put even with no
+    // history, so the rail doesn't change shape on the first chat.
+    listEl.textContent = ''
+
+    for (var i = 0; i < list.length; i++) {
+      var r = list[i]
+      if (!r || !r.conversationId) continue
+
+      var a = document.createElement('a')
+      a.className = 'seller-home__nav-recent seller-home__nav-recent--linked'
+      // Carry the original query back. The thread only renders the
+      // seller's own bubble when `?q=` is present, so dropping it here
+      // would reopen a row labelled with what they typed onto a thread
+      // that starts on the agent.
+      a.href = '/home_conversation.html?id=' + encodeURIComponent(r.conversationId) +
+        (r.query ? '&q=' + encodeURIComponent(r.query) : '')
+      a.setAttribute('role', 'listitem')
+      a.setAttribute('data-sh-recent', r.id || ('rec-' + r.conversationId))
+      a.setAttribute('data-sh-recent-conv', r.conversationId)
+      a.title = r.label || r.conversationId
+
+      if (activeId && r.conversationId === activeId) {
+        a.classList.add('is-active')
+        a.setAttribute('aria-current', 'page')
+      }
+
+      var label = document.createElement('span')
+      label.className = 'seller-home__nav-recent-label'
+      // textContent, not innerHTML — labels are authored data today but
+      // this path would happily render a typed query tomorrow.
+      label.textContent = r.label || r.conversationId
+      a.appendChild(label)
+
+      listEl.appendChild(a)
+    }
+  }
+
+  // The conversation this page is showing, if any. Returns null on
+  // every other surface, which is what keeps Home / Knowledge /
+  // Scheduled from writing history entries.
+  function currentConversation (root) {
+    var convRoot = root.querySelector('[data-sh-conv-root]') ||
+      (root.matches && root.matches('[data-sh-conv-root]') ? root : null)
+    if (!convRoot) return null
+
+    var id = ''
+    var query = ''
+    try {
+      var params = new URLSearchParams(window.location.search)
+      id = params.get('id') || ''
+      query = String(params.get('q') || '').trim().slice(0, COMPOSER_QUERY_MAX)
+    } catch (e) {
+      id = ''
+      query = ''
+    }
+    if (!id) id = convRoot.getAttribute('data-sh-conv-default') || ''
+    if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) return null
+
+    // What the seller typed is the truest name for the thread, so it
+    // wins when there is one — matching the header the conversation
+    // page paints from the same `?q=`. The rail is a single line with
+    // an ellipsis (see .seller-home__nav-recent-label), so a long
+    // question truncates on its own; the full text stays in `title`
+    // for the hover tooltip.
+    //
+    // Arrivals with no query — the Ready to Review drill-in, a bare
+    // deep link — fall back to the curated `recentLabel` from the
+    // registry the page already inlines for home_conversation.js, so
+    // there's no second source of truth for a conversation's name.
+    var label = query
+    if (!label) {
+      label = id
+      try {
+        var registry = JSON.parse(convRoot.getAttribute('data-sh-conversations') || '{}')
+        var entry = registry[id]
+        if (entry) label = entry.recentLabel || entry.title || id
+      } catch (e) {
+        // Fall back to the raw id rather than dropping the row.
+      }
+    }
+
+    return { id: 'rec-' + id, label: label, conversationId: id, query: query || null }
+  }
+
   // ── Boot ────────────────────────────────────────────────────────
   function init () {
     var root = document.querySelector('[data-sh-root]')
@@ -133,6 +318,31 @@
         var next = !root.classList.contains('seller-home--nav-collapsed')
         applyState(root, toggle, next)
         writeCollapsed(next)
+      })
+    }
+
+    var nav = root.querySelector('[data-sh-nav-root]')
+
+    // Recents. Reset first (the Home tab's `?reset=1` wipes history),
+    // then record, then paint — so the conversation the seller just
+    // opened is already in the list it renders, with no flash of a rail
+    // that's missing the row you arrived on.
+    if (nav) {
+      consumeResetFlag()
+      var current = currentConversation(root)
+      var recents = current ? recordRecent(current) : readRecents()
+      renderRecents(nav, recents, current ? current.conversationId : null)
+    }
+
+    // Nav rows with no destination yet (Skills, Tools, Feedback and
+    // Settings) render as `href="#"` so they stay real links — focusable,
+    // and styled by the same rules as routed rows. The macro tags them
+    // `data-sh-nav-noroute`; swallow the click so the URL doesn't collect
+    // a hash and the page doesn't jump to the top.
+    if (nav) {
+      nav.addEventListener('click', function (event) {
+        var placeholder = closest(event.target, '[data-sh-nav-noroute]')
+        if (placeholder) event.preventDefault()
       })
     }
 

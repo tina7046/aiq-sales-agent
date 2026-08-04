@@ -352,8 +352,14 @@
         </div>
         <nav class="slds-context-bar__secondary" role="navigation">
           <ul class="slds-grid">
+            {# `?reset=1` clears the Recents rail on the way in, so the
+               Home tab is the demo's start-over button. home.js acts on
+               the flag and strips it from the address bar; see
+               `consumeResetFlag` there. The left nav's "New chat" points
+               at the same page WITHOUT the flag — starting a new chat
+               shouldn't erase the ones before it. #}
             <li class="slds-context-bar__item slds-is-active">
-              <a href="/index.html" class="slds-context-bar__label-action" title="Home">
+              <a href="/index.html?reset=1" class="slds-context-bar__label-action" title="Home">
                 <span class="slds-assistive-text">Current Page:</span>
                 <span class="slds-truncate" title="Home">Home</span>
               </a>

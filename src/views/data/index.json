@@ -302,38 +302,30 @@
   //                 No `href` yet; placeholder behavior via
   //                 `data-sh-nav-noroute`, same pattern used for
   //                 other unrouted items.
+  // Items without an `href` render as inert placeholders — the macro
+  // marks them `data-sh-nav-noroute` and points them at "#". Skills and
+  // Tools have no page in this prototype, so they stay unrouted.
   "navPrimary": [
-    { "id": "new_chat",  "label": "New chat",  "icon": "add" },
+    { "id": "new_chat",  "label": "New chat",  "icon": "add", "href": "/index.html" },
     { "id": "schedules", "label": "Scheduled", "icon": "date_time", "href": "/scheduled.html" },
     { "id": "skills",    "label": "Skills",    "iconImage": "/assets/images/nav-icons/workflows.png" },
     { "id": "knowledge", "label": "Knowledge", "icon": "knowledge_base", "href": "/knowledge.html" },
     { "id": "tools",     "label": "Tools",     "icon": "custom_apps" }
   ],
-  "recents": [
-    {
-      "id": "rec-conv-002",
-      "label": "Pipeline reality check",
-      "conversationId": "conv-002"
-    },
-    {
-      "id": "rec-conv-001",
-      "label": "Prospect outreach review",
-      "conversationId": "conv-001"
-    },
-    { "id": "rec-01", "label": "Acme Inc Prospecting" },
-    { "id": "rec-02", "label": "Top Account Resolutions Chart" },
-    { "id": "rec-03", "label": "Q3 Pipeline Health Report" },
-    { "id": "rec-04", "label": "Enterprise Renewal Opportunity Status" },
-    { "id": "rec-05", "label": "Sales performance Q1" },
-    { "id": "rec-06", "label": "New product launch strategy" },
-    { "id": "rec-07", "label": "Marketing campaign overview" },
-    { "id": "rec-08", "label": "Target audience analysis" },
-    { "id": "rec-09", "label": "Budget allocation strategy" },
-    { "id": "rec-10", "label": "Key performance indicators" },
-    { "id": "rec-11", "label": "Competitive analysis" },
-    { "id": "rec-12", "label": "Channel selection and planning" },
-    { "id": "rec-13", "label": "Timeline and milestones" }
-  ],
+  // ── Recents ──────────────────────────────────────────────────────
+  // Empty on purpose. The Recents rail is session state, not authored
+  // content: it starts blank and fills in as the seller opens
+  // conversations, so a demo begins from a clean slate. home.js owns
+  // the list (see `readRecents` / `recordRecent` there) and persists it
+  // in sessionStorage, which means a new tab is a fresh start while a
+  // reload mid-demo keeps what's been opened.
+  //
+  // Entries here would be rendered as a pre-seeded history. Each takes
+  // the same shape home.js writes: { id, label, conversationId }.
+  //
+  // A conversation's row label comes from its `recentLabel` in the
+  // `conversations` registry below, falling back to `title`.
+  "recents": [],
   "navFooter": [
     { "id": "feedback", "label": "Feedback", "icon": "share" },
     { "id": "settings", "label": "Settings", "icon": "settings" }

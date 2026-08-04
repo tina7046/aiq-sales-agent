@@ -62,6 +62,15 @@
 {% set _home = readData("index") or {} %}
 {% set conversations = _home.conversations or {} %}
 
+{# Left-nav content, from the same source Seller Home reads so one edit to
+   index.json moves both. `navActive` is a sentinel rather than empty: the
+   renderNavItem macro defaults to "new_chat", which would light New chat
+   on a page that isn't it. #}
+{% set navPrimary = _home.navPrimary %}
+{% set navFooter  = _home.navFooter %}
+{% set recents    = _home.recents %}
+{% set navActive  = "__none__" %}
+
 {# ── Which conversation renders ──────────────────────────────────────
    Every entry in the registry is rendered, each into its own set of
    inert <template>s tagged with `data-sh-conv-for="<id>"`. The build
@@ -102,6 +111,14 @@
     data-sh-conv-default="{{ defaultConversationId }}"
     data-sh-conversations="{{ conversations | tojson | escape }}"
   >
+    {# Left navigation — same partial and same data as Seller Home, so the
+       rail and its collapse state carry across the drill-in. `navActive`
+       is set to a sentinel above rather than left unset: the macro falls
+       back to "new_chat" when it's empty, which would light the wrong
+       item here. The recents row matching `?id=` is marked active by
+       home_conversation.js. #}
+    {% include "_home_left_nav.html" %}
+
     <div
       class="seller-home__conv"
       role="main"
@@ -411,14 +428,16 @@
 {% endblock %}
 
 {% block scripts_extra %}
-  {# home.js is deliberately NOT loaded here: every region it binds
-     (left nav, briefing, composer, ready-to-review) is absent on this
-     page, so it would be a no-op.
+  {# home.js is here for the left nav's collapse toggle and its persisted
+     state. Its other controllers (briefing, composer, ready-to-review,
+     knowledge, scheduled) no-op — each guards on a root that this page
+     doesn't render.
 
-     The cadence module first: home_conversation.js calls
-     `ShCadence.mount` as it wires each agent message. Both are
-     classic scripts that do their work on DOMContentLoaded, so the
-     order is for readers rather than the parser. #}
+     The cadence module before home_conversation.js: the latter calls
+     `ShCadence.mount` as it wires each agent message. All are classic
+     scripts that do their work on DOMContentLoaded, so the order is for
+     readers rather than the parser. #}
+  <script src="/scripts/home.js"></script>
   <script src="/scripts/home_conversation_cadence.js"></script>
   <script src="/scripts/home_conversation.js"></script>
 {% endblock %}

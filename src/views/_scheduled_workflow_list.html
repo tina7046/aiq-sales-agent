@@ -1,0 +1,273 @@
+{#
+  Seller Home — Scheduled workflow list
+  =====================================================================
+  Renders the vertical workflow list on /scheduled.html. Structural
+  cousin of `_home_knowledge_list.html`: same 56 px row, same
+  ellipsis-then-truncate name-first policy, same overflow-menu-as-a-
+  sibling pattern. Scheduled-specific differences are the leading
+  status indicator (colored dot OR solid play glyph) and a
+  secondary metadata line whose content varies per row (cadence,
+  next-run window, "Paused"). Owned by scheduled.html; consumes
+  `workflows`, `statusTypes`, `rowActions`, and `emptyState` from
+  scheduled.json (field-level comments live there).
+
+  Design source: Figma "Scheduled" (frame 8831:380388 in Issa's
+  Explorations). Row structure:
+
+    ┌──────────────────────────────────────────────────────────────────┐
+    │ [●] Workflow name (semibold, ellipsized)             [⋮]         │
+    │     Cadence · next-run window (12 px, muted)                     │
+    └──────────────────────────────────────────────────────────────────┘
+
+  Per-row measurements (matched to Figma variable defs on 8831:380388):
+    • Height: 56 px (fixed)
+    • Inline padding: 16 px each side (spacing-4)
+    • Radius: 12 px (radius-border-3)
+    • Surface: --slds-g-color-surface-1 (white)
+    • Hairline: inset 0 0 0 1 px rgba(0,0,0,0.08) (matches Knowledge)
+    • Status indicator column: 24 px wide, dot 12 px OR play glyph 16 px
+    • Indicator-to-text gap: 12 px (spacing-3)
+    • Name: 14 px Semibold (font-weight 590), leading 19 px, color
+      on-surface-2 (#2E2E2E), nowrap + ellipsis
+    • Metadata: 12 px Regular, leading 1.3, color on-surface-1 (#5C5C5C)
+    • Row-to-row gap: 8 px (spacing-2)
+
+  Interaction / a11y contract:
+    • Linked branch (`workflow.linked !== false`): row is a native
+      `<a>` that fills the row (Cmd/middle-click-compatible route
+      preview, Enter activation, focus, and native tooltip come "for
+      free"). No detail-view page ships in this increment, so every
+      row in scheduled.json is authored with `linked: false` for now.
+    • Unlinked branch (`workflow.linked === false`): row is an inert
+      `<div>` with no href, no data-sh-workflow-open hook, and no
+      chevron affordance — activation never navigates. Same defensive
+      shape Knowledge uses for its unlinked doc rows.
+    • Overflow menu (⋮ + Edit / Pause / Resume / Duplicate / Delete)
+      is a native `<button>` + `role="menu"` panel sitting as a
+      SIBLING of the row body (nesting a `<button>` inside an `<a>`
+      is invalid HTML). Absolutely positioned inside the row's
+      reserved right gutter so the row body never covers its hit
+      target. Overflow wiring will hook into bindScheduled() in
+      home.js in the follow-up step.
+    • Every row carries `data-sh-workflow-status` — that's what the
+      tab controller in Step 5 filters against without walking JSON
+      or reparsing the DOM.
+    • Empty state renders as a SIBLING of the `<ul>`. Hidden by
+      default; the tab controller toggles the `hidden` attribute on
+      both the list and the empty-state block when the active tab
+      filters out every row (mirrors the Knowledge search pattern).
+#}
+
+{#
+  Row status indicator.
+  ---------------------------------------------------------------------
+  A tiny partial-in-a-partial because the visual grammar has two
+  shapes:
+    • `dot`  — a filled 12 px circle whose color comes from
+                `statusTypes[status].dot` (`yellow` | `green`).
+                Colors are painted from CSS custom properties on the
+                dot's variant class so a future palette shift is a
+                one-line CSS change.
+    • `icon` — a solid utility-sprite glyph (used by `paused` → the
+                `play` sprite). Rendered at 16 px so the visual
+                weight lines up with the 12 px dots.
+  `aria-hidden` because the status is exposed as text on the row's
+  wrapper (`aria-label` on the linked branch; visually-hidden span
+  in the unlinked branch below) — a screen reader echoing "yellow
+  dot" on top of "Needs approval" would be noise.
+#}
+{% macro renderStatusIndicator(statusKey, statusMeta) %}
+  {% if statusMeta.icon %}
+    <span
+      class="seller-home__scheduled-status seller-home__scheduled-status--icon seller-home__scheduled-status--{{ statusKey }}"
+      aria-hidden="true"
+    >
+      <svg class="seller-home__scheduled-status-icon" focusable="false">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ statusMeta.icon }}"></use>
+      </svg>
+    </span>
+  {% else %}
+    <span
+      class="seller-home__scheduled-status seller-home__scheduled-status--dot seller-home__scheduled-status--{{ statusMeta.dot }}"
+      aria-hidden="true"
+    ></span>
+  {% endif %}
+{% endmacro %}
+
+{#
+  Workflow row.
+  ---------------------------------------------------------------------
+  Positioned wrapper (`.seller-home__scheduled-workflow-item`) owns
+  the absolute-positioning coordinate space for the overflow menu;
+  the row body + menu are its two children.
+
+  `data-sh-workflow-id`      — stable dom + event hook.
+  `data-sh-workflow-status`  — read by the tab controller in Step 5
+                               to filter without reparsing JSON.
+
+  Linked vs unlinked branches are structurally identical (same class
+  list, same class children); only the interaction contract differs,
+  the same way _home_knowledge_list.html handles it.
+#}
+{% macro renderScheduledWorkflowRow(workflow, statusTypes, actions) %}
+  {% set statusMeta = statusTypes[workflow.status] %}
+  {# `linked` defaults to true — only an explicit `linked: false`
+     opts a row out of drill-in. Every row in scheduled.json ships
+     with `linked: false` in this increment because the detail
+     view is a future increment; the branch below stays in place
+     so a single row can flip on once the detail page exists. #}
+  {% set isLinked = not (workflow.linked == false) %}
+  {% set workflowHref = workflow.href or "#" %}
+  {% set statusLabel = statusMeta.label if statusMeta else workflow.status %}
+  <li
+    class="seller-home__scheduled-workflow-item"
+    data-sh-workflow-item
+    data-sh-workflow-id="{{ workflow.id }}"
+    data-sh-workflow-status="{{ workflow.status }}"
+  >
+    {% if isLinked %}
+      <a
+        class="seller-home__scheduled-workflow-row"
+        href="{{ workflowHref }}"
+        title="{{ workflow.title }}"
+        aria-label="Open workflow, {{ workflow.title }}, {{ statusLabel }}"
+        data-sh-workflow-open
+      >
+    {% else %}
+      {# Inert branch — `<div>` instead of `<a>`. Same class list;
+         no `data-sh-workflow-open` hook so the tab controller and
+         any future router can distinguish drill-in-eligible rows
+         from placeholders. Status is embedded in the visually-
+         hidden span below so AT users still hear "Daily Pipeline
+         Snapshot, Needs approval" even without an aria-label on
+         a link. #}
+      <div
+        class="seller-home__scheduled-workflow-row seller-home__scheduled-workflow-row--unlinked"
+        title="{{ workflow.title }}"
+      >
+    {% endif %}
+      {{ renderStatusIndicator(workflow.status, statusMeta) }}
+
+      <span class="seller-home__scheduled-workflow-body">
+        <span class="seller-home__scheduled-workflow-title">{{ workflow.title }}</span>
+        <span class="seller-home__scheduled-workflow-meta">{{ workflow.cadence }}</span>
+        {# Visually-hidden status label. On linked rows this is
+           redundant with the aria-label so we suppress it there;
+           on unlinked rows there's no aria-label (no `<a>`), so
+           this is the only place the status reaches AT users. #}
+        {% if not isLinked %}
+          <span class="slds-assistive-text">Status: {{ statusLabel }}</span>
+        {% endif %}
+      </span>
+    {% if isLinked %}</a>{% else %}</div>{% endif %}
+
+    {# Overflow menu (⋮ → Edit / Pause / Resume / Duplicate / Delete).
+       SIBLING of the row body, absolutely positioned so it sits
+       inside the row's reserved right gutter without violating the
+       "no nested interactives" rule. `data-sh-workflow-stop` marks
+       clicks inside as "inside the menu" so the outside-click
+       dismisser in home.js (built in Step 6) doesn't fire on them.
+
+       Menu id is namespaced with the workflow id so multiple rows
+       never share aria-controls / aria-labelledby targets. #}
+    {% set menuId = "workflow-" ~ workflow.id ~ "-menu" %}
+    <div
+      class="seller-home__scheduled-workflow-menu"
+      data-sh-workflow-menu
+      data-sh-workflow-stop
+    >
+      <button
+        type="button"
+        class="slds-button slds-button_icon slds-button_icon-bare seller-home__scheduled-workflow-menu-trigger"
+        data-sh-workflow-menu-trigger
+        aria-haspopup="menu"
+        aria-expanded="false"
+        aria-controls="{{ menuId }}"
+        aria-label="More actions for {{ workflow.title }}"
+        title="More actions"
+      >
+        <svg class="slds-button__icon" aria-hidden="true">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
+        </svg>
+        <span class="slds-assistive-text">More actions</span>
+      </button>
+
+      <div
+        class="seller-home__scheduled-workflow-menu-list"
+        id="{{ menuId }}"
+        role="menu"
+        aria-label="Workflow actions"
+        data-sh-workflow-menu-list
+        hidden
+      >
+        <ul class="seller-home__scheduled-workflow-menu-items" role="none">
+          {% for action in actions %}
+            <li role="none">
+              <button
+                type="button"
+                class="seller-home__scheduled-workflow-menu-item"
+                role="menuitem"
+                data-sh-workflow-action="{{ action.id }}"
+              >
+                {% if action.icon %}
+                  <svg class="seller-home__scheduled-workflow-menu-item-icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
+                  </svg>
+                {% endif %}
+                <span class="seller-home__scheduled-workflow-menu-item-label">{{ action.label }}</span>
+              </button>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </li>
+{% endmacro %}
+
+
+{#
+  Outer list. Same `role`-free convention as Knowledge — the
+  surrounding page landmark labels the region, each row's `<a>` (or
+  `<div>` in the unlinked branch) is the meaningful interactive
+  element, and a plain `<ul>` matches the "list of workflows, not a
+  selection widget" mental model.
+
+  `data-sh-scheduled-workflow-list` is the delegation root for the
+  Step 5/6 controller in home.js (bindScheduled) so everything
+  inside is handled via event delegation and future workflow rows
+  added at runtime need no per-row binding.
+#}
+<ul
+  class="seller-home__scheduled-workflow-list"
+  data-sh-scheduled-workflow-list
+>
+  {% for workflow in workflows %}
+    {% if not (workflow.hidden == true) %}
+      {{ renderScheduledWorkflowRow(workflow, statusTypes, rowActions) }}
+    {% endif %}
+  {% endfor %}
+</ul>
+
+{#
+  Empty state — companion to the list, sibling of the `<ul>` so
+  the section retains its persistent header + tabs while the list
+  slot swaps content. Hidden by default; the tab controller in
+  Step 6 toggles the `hidden` attribute in tandem with the list
+  whenever the active tab filters out every workflow.
+
+  Copy comes from `emptyState.title` + `emptyState.description` in
+  scheduled.json so a future first-run empty state ("No workflows
+  scheduled yet") is a data-only edit. Plain `<div>` (no
+  `role="alert"` / `role="status"`) — the tab-controller announces
+  the count change through its own aria-live region; adding a
+  second live region here would double-announce on every tab
+  switch.
+#}
+<div
+  class="seller-home__scheduled-empty"
+  data-sh-scheduled-empty
+  hidden
+>
+  <p class="seller-home__scheduled-empty-title">{{ emptyState.title }}</p>
+  <p class="seller-home__scheduled-empty-description">{{ emptyState.description }}</p>
+</div>

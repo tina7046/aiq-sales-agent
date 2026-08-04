@@ -1,0 +1,469 @@
+{% extends "_template.html" %}
+
+{#
+  Seller Home — Knowledge document detail
+  =====================================================================
+  Reached from a document row on /knowledge.html — every row's `<a>`
+  points here with a `?id=<doc.id>` query param (see
+  `_home_knowledge_list.html`). Composes the same `.seller-home` shell
+  as /knowledge.html so the global header + left nav stay pinned as
+  the seller drills from the list into a specific document.
+
+  Data sources:
+    • This page's own JSON (knowledge_document_detail.json) — chrome
+      copy only (back link, view toggle labels, not-found state).
+    • home.json — nav content (navPrimary + navFooter + recents),
+      pulled via `readData("index")` so both this page and /index.html
+      always render an identical left nav.
+    • knowledge.json — the shared documents[] catalog (id, name, type,
+      updatedAt, updatedBy, markdown), pulled via `readData("knowledge")`
+      so the list page and the detail page read from ONE authoritative
+      source of truth. The full catalog is inlined as an
+      `<script type="application/json">` block below so the client-
+      side glue (knowledge_document_detail.js) can look up the row that
+      matches `?id=<id>` without a second network fetch.
+
+  Layout skeleton (parallel to /knowledge.html — same `.seller-home`
+  vertical shell, different right-column payload):
+
+    ┌───────────────────────────────────────────────────────────────┐
+    │  ┌ header (fixed, ~48px, flex-shrink 0) ──────────────────┐   │
+    │  │ ← Back to Knowledge                    [Edit][Preview] │   │
+    │  ├──────────────────────────────────────────────────────  ┤   │
+    │  │ body (flex 1, overflow-y: auto, min-height 0)          │   │
+    │  │                                                        │   │
+    │  │   Preview surface (default):                           │   │
+    │  │   ┌ two-column grid ────────────────────────────┐      │   │
+    │  │   │  Article col (~46rem readable)  │  TOC col  │      │   │
+    │  │   │  H1 title                       │  On page  │      │   │
+    │  │   │  Updated caption                │  · Section│      │   │
+    │  │   │  <article> body                 │  · …      │      │   │
+    │  │   └────────────────────────────────────────────┘       │   │
+    │  │                                                        │   │
+    │  │   Edit surface (toggled):                              │   │
+    │  │   ┌ full-canvas HackMD-style editor ───────────┐       │   │
+    │  │   │  Toolbar row + gutter + code area          │       │   │
+    │  │   └────────────────────────────────────────────┘       │   │
+    │  └──────────────────────────────────────────────────────  ┘   │
+    └───────────────────────────────────────────────────────────────┘
+
+  Structural parity with `.seller-home--knowledge`:
+    • Root gets `.seller-home--knowledge-detail` so the outer container
+      is viewport-locked (no page-level scroll). Only the body region
+      scrolls, matching /knowledge.html's shape.
+    • Right column `.seller-home__knowledge-doc-detail` fills the slot
+      `.seller-home__main` uses on /home.html — plain white surface,
+      no aurora gradient, so the reading surface stays quiet.
+    • The `data-knowledge-view="preview"|"edit"` attribute the shared
+      KnowledgeDocumentView module sets on `root` swaps the visible
+      surface via CSS; both surfaces are always in the DOM so the
+      article's rendered HTML and the editor's textarea round-trip
+      state through a single toggle without a re-render.
+
+  Constraints (from the Step 3 plan):
+    • No breadcrumb, no left sidebar (agent-scoped), no Save Draft /
+      Activate / version selector / Add Knowledge Source. Only the
+      Edit / Preview icon toggle from the Agent Configuration chrome
+      carries over — that's the minimum surface the shared editor
+      module actually needs.
+    • Save / Cancel / dirty tracking / beforeunload / localStorage are
+      Step 4. This file only wires the module's default behavior
+      (edits round-trip through the textarea for the lifetime of the
+      tab and revert on refresh). The module already exposes the
+      save/cancel callbacks — Step 4 will hook them into new buttons
+      rendered here from a `header.actions` binding in the JSON.
+#}
+
+{% set navPrimary = readData("index").navPrimary %}
+{% set navFooter  = readData("index").navFooter %}
+{% set recents    = readData("index").recents %}
+{% set catalog    = readData("knowledge").documents %}
+
+{% block styles %}
+  {# home.css owns the whole Seller Home shell + this page's article,
+     TOC, and editor styling. See the "Knowledge document detail —
+     reused-partial styles" block at the bottom of home.scss for the
+     rationale on why the article + TOC + editor rules live here (they
+     duplicate the Hunter Builder's cascade so the shared partials work
+     across both pages without needing to load hunter_builder.css on
+     this Seller Home page). #}
+  <link rel="stylesheet" href="/styles/home.css" />
+{% endblock %}
+
+{% block content %}
+  {# `.seller-home--knowledge-detail` scopes the viewport-lock rule
+     (`overflow: hidden`) to this page. Same trick /knowledge.html and
+     /home_conversation.html both use to keep the outer container from
+     growing to fit its children and letting page-level scroll leak
+     in when the body region already owns its own scroll. #}
+  <div class="seller-home seller-home--knowledge-detail" data-sh-root>
+    {# Left navigation — shared partial. `navActive="knowledge"` from
+       this page's JSON keeps the Knowledge nav item lit while the
+       seller is reading a specific doc (the detail page is a drill-
+       in of the Knowledge surface, not a sibling destination). #}
+    {% include "_home_left_nav.html" %}
+
+    {# ── Right column ────────────────────────────────────────────────
+       The `.seller-home__knowledge-doc-detail` root doubles as:
+         1. The layout parent (flex-column, fills the row's free space)
+         2. The module's `root` node — `KnowledgeDocumentView.create()`
+            writes `data-knowledge-view="preview"|"edit"` here and the
+            CSS selectors below key off it to swap the visible surface.
+
+       `role="main"` mirrors the pattern the /home.html shell uses —
+       the SLDS `<main class="app-wrapper">` in _template.html stays
+       as the document-level main landmark; this element is the page's
+       ARIA main region for AT / skip-links. `tabindex="-1"` keeps it
+       out of the natural tab order but makes it a programmatic focus
+       target. #}
+    <div
+      class="seller-home__knowledge-doc-detail"
+      role="main"
+      aria-label="{{ pageTitle }}"
+      tabindex="-1"
+      data-sh-knowledge-doc-detail
+      data-knowledge-view="preview"
+    >
+      {# ── Header band (fixed) ───────────────────────────────────────
+         Slim chrome row containing the back-to-list anchor on the
+         left and the Preview / Edit view toggle on the right. Kept
+         intentionally minimal so the article header (title + updated
+         caption) can live INSIDE the scroll surface below and enter
+         the reading flow instead of stealing pinned space from every
+         doc. The Agent Configuration Knowledge canvas uses the same
+         split: outer chrome carries just the toggle affordance, the
+         article header carries the doc title.
+
+         Activate / breadcrumb / version selector / Add Knowledge
+         Source are deliberately absent per the Step 3 constraints.
+         Save + Cancel land in the right cluster (Step 4) and are
+         driven by the shared module's `onDirtyChange` / `save()` /
+         `cancel()` callbacks — the buttons stay hidden while the
+         document is clean and reveal themselves the moment the
+         seller's edits diverge from the saved baseline. #}
+      <header
+        class="seller-home__knowledge-doc-detail-header"
+        data-sh-knowledge-doc-detail-header
+      >
+        {# ── Back link (left) ────────────────────────────────────────
+           Native anchor so ⌘-click / middle-click open in a new tab,
+           and Enter/Space are handled by the browser. `href` comes
+           from JSON so a future "back to <origin>" (search results,
+           agent detail, …) can be swapped with a data-only edit.
+
+           Chevron uses the shared utility-sprite `chevronleft` glyph
+           — same one the Hunter Builder breadcrumb uses so the
+           affordance reads as the same "go back one level" widget
+           the seller already knows from Agent Builder. #}
+        <div class="seller-home__knowledge-doc-detail-header-lead">
+          <a
+            class="seller-home__knowledge-doc-detail-back"
+            href="{{ back.href }}"
+            data-sh-knowledge-doc-detail-back
+          >
+            <svg class="seller-home__knowledge-doc-detail-back-icon" aria-hidden="true" focusable="false">
+              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronleft"></use>
+            </svg>
+            <span>{{ back.label }}</span>
+          </a>
+        </div>
+
+        {# ── Right cluster ─────────────────────────────────────────
+           Wraps three things, left-to-right:
+
+             1. Save / Cancel dirty-state buttons     (hidden by
+                default — the glue script reveals them on the module's
+                `onDirtyChange(true)` callback and re-hides them on
+                save/cancel).
+             2. Preview / Edit view toggle           (always visible;
+                same shape Agent Configuration uses, minus the "Add
+                Knowledge Source" secondary CTA — this detail page is
+                intentionally a reader/editor for ONE doc, not an
+                upload surface).
+             3. Visually-hidden aria-live status     (announces
+                "Changes saved" / "Discarded" / "Restored" to screen
+                readers).
+
+           Save + Cancel sit BEFORE the view toggle in the DOM so
+           screen readers meet the commit actions first when the row
+           reveals — the toggle is a mode selector (secondary), the
+           commit affordances are the primary decision when there are
+           unsaved edits. Visually the buttons sit LEFT of the toggle
+           via source order + flex.
+
+           `data-knowledge-view="preview"|"edit"` on the toggle is the
+           contract the shared module reads: on click it flips
+           `root`'s `data-knowledge-view` attribute and toggles
+           `.is-active` / `aria-pressed` on both buttons. The CSS
+           selectors mirror that so the pressed state paints without
+           a JS style write. Same base classes Agent Configuration
+           uses (`slds-button_icon slds-button_icon-border-filled`)
+           so the icon toggle reads identically across both pages. #}
+        <div class="seller-home__knowledge-doc-detail-header-actions">
+          {# ── Dirty-state cluster: Save + Cancel ─────────────────
+             Both start `hidden`; the glue script reveals them the
+             first time the module fires `onDirtyChange(true)` and
+             re-hides them on `save()` / `cancel()`. Kept as a nested
+             wrapper so the two buttons stay grouped (identical
+             top-padding, small internal gap) and the outer `header-
+             actions` flex row can leave a larger gap between this
+             cluster and the view toggle.
+
+             `data-sh-knowledge-doc-detail-save` / `-cancel` are the
+             hooks the glue script uses to attach click handlers and
+             toggle visibility. Kept as `data-*` (not `id`) so a
+             future multi-instance case (two docs open side-by-side,
+             for example) doesn't collide on id uniqueness. #}
+          <div
+            class="seller-home__knowledge-doc-detail-header-commit"
+            data-sh-knowledge-doc-detail-commit
+            hidden
+          >
+            <button
+              type="button"
+              class="slds-button slds-button_neutral seller-home__knowledge-doc-detail-cancel"
+              data-sh-knowledge-doc-detail-cancel
+              title="{{ cancel.assistiveText }}"
+              aria-label="{{ cancel.assistiveText }}"
+            >{{ cancel.label }}</button>
+            <button
+              type="button"
+              class="slds-button slds-button_brand seller-home__knowledge-doc-detail-save"
+              data-sh-knowledge-doc-detail-save
+              title="{{ save.assistiveText }}"
+              aria-label="{{ save.assistiveText }}"
+            >{{ save.label }}</button>
+          </div>
+
+          {# ── View toggle (Preview / Edit) ───────────────────────
+             SLDS `slds-button-group` provides the shared border +
+             rounded ends. `.seller-home__knowledge-doc-detail-view-
+             btn` is the page-specific hook that overrides only the
+             `.is-active` surface color (kept in home.scss). #}
+          <div
+            class="slds-button-group seller-home__knowledge-doc-detail-view-toggle"
+            role="group"
+            aria-label="{{ view.groupLabel }}"
+          >
+            <button
+              type="button"
+              class="slds-button slds-button_icon slds-button_icon-border-filled seller-home__knowledge-doc-detail-view-btn"
+              data-knowledge-view="edit"
+              aria-pressed="false"
+              title="{{ view.editLabel }}"
+              aria-label="{{ view.editLabel }}"
+            >
+              <svg class="slds-button__icon" aria-hidden="true" focusable="false">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#edit"></use>
+              </svg>
+              <span class="slds-assistive-text">{{ view.editLabel }}</span>
+            </button>
+            <button
+              type="button"
+              class="slds-button slds-button_icon slds-button_icon-border-filled seller-home__knowledge-doc-detail-view-btn is-active"
+              data-knowledge-view="preview"
+              aria-pressed="true"
+              title="{{ view.previewLabel }}"
+              aria-label="{{ view.previewLabel }}"
+            >
+              <svg class="slds-button__icon" aria-hidden="true" focusable="false">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#preview"></use>
+              </svg>
+              <span class="slds-assistive-text">{{ view.previewLabel }}</span>
+            </button>
+          </div>
+
+          {# ── Visually-hidden status region ─────────────────────
+             `role="status"` + `aria-live="polite"` means the browser
+             queues updates until the user pauses typing, so the
+             announcement never talks over an active keystroke. The
+             glue script writes the appropriate `status.*Message`
+             from JSON into `textContent` after each save / cancel /
+             draft restore. Kept as an empty node at build time so
+             the FIRST update fires an announcement (setting text
+             from empty → text is what AT engines interpret as a
+             new live-region message). #}
+          <span
+            class="slds-assistive-text"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            data-sh-knowledge-doc-detail-status
+          ></span>
+        </div>
+      </header>
+
+      {# ── Body ──────────────────────────────────────────────────────
+         The only scroll surface on the page (in Preview mode). Flex
+         column so the Edit surface can claim `flex: 1 1 auto` +
+         `min-height: 0` and fill the remaining canvas height when
+         active — matches Agent Configuration's Preview → Edit height
+         transition without a JS-driven size change.
+
+         `min-height: 0` is the flex-child unlock that actually lets
+         `overflow-y: auto` scroll (without it the intrinsic content
+         height would push the sibling header off-screen and the page
+         would scroll instead of the body).
+
+         Two mutually-exclusive surfaces live inside:
+           1. `.__-preview` — Documentation.ai-style reader (article
+              + sticky TOC). Uses the shared partials verbatim so the
+              markup, ARIA roles, and hook attributes match Agent
+              Configuration.
+           2. `.__-edit`    — Full-canvas HackMD/VS Code MDX editor,
+              same partial.
+         The module toggles `hidden` on the inactive surface via the
+         `data-knowledge-view` attribute + CSS in home.scss. #}
+      <section
+        class="seller-home__knowledge-doc-detail-body"
+        aria-label="{{ pageTitle }}"
+        data-sh-knowledge-doc-detail-body
+      >
+        {# ── Preview surface ─────────────────────────────────────────
+           Wrapper that owns the readable-column padding + centering
+           math. The inner `.__-layout` sets the two-column grid
+           (article on the left, sticky TOC on the right); the outer
+           `.__-preview` gives it 24-px vertical breathing room so
+           the article title doesn't sit flush against the header
+           divider.
+
+           The article-header (H1 title + updated caption) lives
+           INSIDE the `.__-main` column — same choice Agent
+           Configuration made — so the doc title enters the scroll
+           flow instead of stealing pinned space from the outer
+           chrome. The glue script overwrites both slots at run time
+           with the resolved doc's `name` + updated caption; before
+           it runs the `fallbackTitle` from JSON shows so a slow JS
+           load still renders a meaningful heading. #}
+        <div
+          class="seller-home__knowledge-doc-detail-preview"
+          data-knowledge-preview
+        >
+          <div class="seller-home__knowledge-doc-detail-layout">
+            <div class="seller-home__knowledge-doc-detail-main">
+              {# Article header — mirrors the shape Hunter Agent
+                 Knowledge uses. Class names match so the same CSS
+                 rules in home.scss apply verbatim. `id` is targeted
+                 by the article's `aria-labelledby` (in the reused
+                 `_knowledge_document.html`). #}
+              <header class="hunter-agent-knowledge__article-header">
+                <h1
+                  id="hunter-agent-knowledge-title"
+                  class="hunter-agent-knowledge__article-title"
+                  data-sh-knowledge-doc-detail-title
+                >{{ fallbackTitle }}</h1>
+                <p
+                  class="hunter-agent-knowledge__article-updated"
+                  data-sh-knowledge-doc-detail-updated
+                ></p>
+              </header>
+
+              {# Reused article partial — carries `.hunter-agent-
+                 knowledge__article` + `[data-knowledge-article]` so
+                 the shared KnowledgeDocumentView module can inject
+                 the rendered HTML into it directly. #}
+              {% include "_knowledge_document.html" %}
+            </div>
+
+            {# Reused TOC partial — carries `.hunter-agent-knowledge__
+               toc` + all the rail / indicator / list hook attributes
+               the module expects. Sticky positioning is provided by
+               the ported CSS rules in home.scss. #}
+            {% include "_knowledge_toc.html" %}
+          </div>
+        </div>
+
+        {# ── Edit surface ────────────────────────────────────────────
+           Full-canvas MDX code editor. Hidden by default via the
+           `hidden` attribute; the module + CSS both key off the outer
+           `data-knowledge-view="edit"` attribute to swap it in.
+           `flex: 1 1 auto; min-height: 0` (set on the `.__-edit`
+           rule in home.scss) claims the remaining body height so the
+           editor grows to fill the visible surface — same math Agent
+           Configuration uses. #}
+        <div
+          class="seller-home__knowledge-doc-detail-edit"
+          data-knowledge-edit
+          hidden
+        >
+          {% include "_knowledge_editor.html" %}
+        </div>
+
+        {# ── Not-found state ────────────────────────────────────────
+           Shown when `?id=` is missing on the URL or doesn't match
+           any row in the catalog. Rendered as a sibling of Preview +
+           Edit (not a swap of them) so the glue script can hide both
+           without touching their internal state — the module never
+           runs at all in this branch.
+
+           Copy comes from JSON so a future first-run empty state or
+           a "you don't have permission" variant is a data-only edit.
+           `href` reuses `back.href` so the action link always returns
+           the seller to the surface they came from. #}
+        <div
+          class="seller-home__knowledge-doc-detail-notfound"
+          data-sh-knowledge-doc-detail-notfound
+          hidden
+        >
+          <p class="seller-home__knowledge-doc-detail-notfound-title">{{ notFound.title }}</p>
+          <p class="seller-home__knowledge-doc-detail-notfound-description">{{ notFound.description }}</p>
+          <a
+            class="seller-home__knowledge-doc-detail-notfound-action"
+            href="{{ back.href }}"
+          >{{ notFound.actionLabel }}</a>
+        </div>
+      </section>
+
+      {# ── Shared catalog + page-level bindings ──────────────────────
+         Inlined as JSON so the glue script can:
+           1. Look up the row whose `id` matches `?id=<id>` on the URL
+              and read its `name`, `updatedBy`, `updatedAt`, `markdown`.
+           2. Read the `updatedLabelTemplate` + `fallbackTitle` +
+              `notFound` copy at hydration time.
+           3. Read the `cancel.confirmMessage` shown by
+              `window.confirm()` when the seller clicks Cancel while
+              dirty, plus the `status.*` messages announced through
+              the aria-live region after save / cancel / draft
+              restore.
+
+         Only the strings the JS actually reads at runtime need to
+         land here. `save.label`, `save.assistiveText`, `cancel.label`,
+         `cancel.assistiveText`, and every `view.*Label` are already
+         interpolated into their template attributes above, so they
+         stay out of the JSON to keep the payload lean.
+
+         `type="application/json"` is inert (unknown script types
+         don't execute) but keeps the payload addressable via
+         `document.getElementById`. `tojson | safe` JSON-escapes the
+         values so quotes / newlines / unicode round-trip through the
+         script tag without needing HTML-entity escapes on top. #}
+      <script type="application/json" id="sh-knowledge-doc-detail-config">
+        {
+          "catalog": {{ catalog | tojson | safe }},
+          "fallbackTitle": {{ fallbackTitle | tojson | safe }},
+          "updatedLabelTemplate": {{ updatedLabelTemplate | tojson | safe }},
+          "notFound": {{ notFound | tojson | safe }},
+          "cancel": {{ cancel | tojson | safe }},
+          "status": {{ status | tojson | safe }}
+        }
+      </script>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts_extra %}
+  {# home.js drives the shared shell (nav collapse toggle, persisted
+     state). Its Briefing / Composer / Ready-to-Review / Knowledge-list
+     handlers no-op on this page because those roots don't exist here. #}
+  <script src="/scripts/home.js"></script>
+
+  {# Shared Preview / Edit / TOC controller — must load BEFORE the
+     page-specific caller. `knowledge_document_detail.js` is the thin
+     glue that resolves this page's DOM nodes + the `?id=` URL param
+     and hands everything to the module; without the module loaded
+     first it exits with a console warning and the surface never
+     hydrates. Same load-order contract /hunter_agent_knowledge.html
+     uses for /scripts/knowledge_agent.js. #}
+  <script src="/scripts/knowledge_document_view.js"></script>
+  <script src="/scripts/knowledge_document_detail.js"></script>
+{% endblock %}

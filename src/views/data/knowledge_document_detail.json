@@ -1,0 +1,179 @@
+// Seller Home — Knowledge document detail page data
+// =====================================================================
+// Consumed by src/views/knowledge_document_detail.html. gulpfile.js's
+// getData() auto-merges this file into the template's local scope by
+// filename → template lookup (knowledge_document_detail.json →
+// knowledge_document_detail.html).
+//
+// This file carries ONLY page-level bindings — the shell chrome copy
+// (back link, view toggle labels, not-found state) plus the shared
+// nav-active id. The actual document catalog (rows, markdown bodies,
+// authors) lives in knowledge.json and is pulled at template time via
+// `readData("knowledge").documents`, so both the list page and this
+// detail page share one authoritative source of truth for document
+// data — no duplication, no drift.
+//
+// Fields:
+//   • pageTitle             (string) window title + <main aria-label>.
+//                           Used as the fallback title when `?id=` on
+//                           the URL doesn't match any row in the
+//                           catalog. The glue script (knowledge_
+//                           document_detail.js) overwrites the visible
+//                           `<h1>` with the matched doc's `name` once
+//                           the row resolves.
+//   • navActive             (string) id of the currently-active left-
+//                           nav item. Reuses "knowledge" so the same
+//                           left-nav item that lit up on /knowledge.html
+//                           stays highlighted while the seller is
+//                           reading a specific document (the detail
+//                           page is a drill-in of that surface, not a
+//                           sibling nav destination).
+//   • back                  (object) back-link chrome above the doc
+//                           title. Fields:
+//                             - label  (string) visible link text +
+//                                      accessible name for the back
+//                                      anchor.
+//                             - href   (string) target route. Points
+//                                      back to /knowledge.html so the
+//                                      seller returns to the list they
+//                                      came from. Kept as data (not a
+//                                      template constant) so a future
+//                                      "back to <origin>" — e.g. from
+//                                      a search results view — can be
+//                                      swapped without a template edit.
+//   • view                  (object) copy for the Preview / Edit view
+//                           toggle. The buttons themselves are icon-
+//                           only; these labels feed the SLDS
+//                           `assistive-text` + `title` attributes so
+//                           screen readers and hover tooltips both name
+//                           the affordance. Fields:
+//                             - previewLabel  (string) "Preview" (or a
+//                                             localized equivalent).
+//                             - editLabel     (string) "Edit".
+//                             - groupLabel    (string) aria-label for
+//                                             the containing button
+//                                             group ("Document view").
+//   • fallbackTitle         (string) prefilled `<h1>` text used before
+//                           the JS resolves `?id=<id>` on the URL. If
+//                           the JS hydration fails or the id doesn't
+//                           match any row, this stays visible so the
+//                           user still sees something meaningful in
+//                           the title slot instead of a blank line.
+//   • updatedLabelTemplate  (string) format string for the "Last
+//                           edited by …" caption below the title.
+//                           `{updatedBy}` and `{updatedAt}` are simple
+//                           token slots the JS replaces at render time.
+//                           Kept as data so a future localization pass
+//                           (or a "Created" caption on brand-new docs)
+//                           can swap the string without a JS edit.
+//   • notFound              (object) copy for the "document not found"
+//                           state, shown when `?id=` is missing or
+//                           doesn't match any catalog row. Fields:
+//                             - title        (string) primary heading.
+//                             - description  (string) supporting body
+//                                            copy.
+//                             - actionLabel  (string) label + a11y name
+//                                            for the "Return to
+//                                            Knowledge" link that
+//                                            recovers the user to the
+//                                            list surface. The link's
+//                                            `href` reuses `back.href`.
+//   • save                  (object) copy for the primary Save button
+//                           that appears in the header actions cluster
+//                           when the seller has unsaved edits. Fields:
+//                             - label           (string) visible button
+//                                               text.
+//                             - assistiveText   (string) accessible
+//                                               name + tooltip.
+//   • cancel                (object) copy for the secondary Cancel
+//                           button that appears alongside Save. Fields:
+//                             - label           (string) visible button
+//                                               text.
+//                             - assistiveText   (string) accessible
+//                                               name + tooltip.
+//                             - confirmMessage  (string) `window.
+//                                               confirm()` prompt shown
+//                                               before discarding
+//                                               unsaved edits. Kept as
+//                                               data so a future dialog
+//                                               component can consume
+//                                               the same string.
+//   • status                (object) copy for the visually-hidden
+//                           `role="status"` + `aria-live="polite"`
+//                           announcement region in the header. Fields:
+//                             - savedMessage      (string) announced
+//                                                 after a successful
+//                                                 Save.
+//                             - discardedMessage  (string) announced
+//                                                 after a successful
+//                                                 Cancel.
+//                             - restoredMessage   (string) announced on
+//                                                 load when unsaved
+//                                                 edits were recovered
+//                                                 from a previous
+//                                                 session's localStorage
+//                                                 draft.
+//                             - unloadMessage     (string) copy passed
+//                                                 to the `beforeunload`
+//                                                 event's `returnValue`
+//                                                 when dirty. Most
+//                                                 modern browsers
+//                                                 ignore custom text
+//                                                 and show a generic
+//                                                 prompt; kept as data
+//                                                 so any engine that
+//                                                 still respects the
+//                                                 string uses our copy.
+//
+// Step 4 landed the save/cancel/dirty/beforeunload/localStorage wiring
+// on top of Step 3's shell:
+//   • Save + Cancel appear only when the module reports a dirty state
+//     (via `onDirtyChange(true)`) and disappear again on save or
+//     cancel. They live inside the header actions cluster next to the
+//     Preview/Edit view toggle.
+//   • Every input event on the editor textarea debounces a write to
+//     `localStorage["sh:knowledge:draft:v1:<doc.id>"]` so navigating
+//     away + returning restores the seller's in-progress edits. Save
+//     clears the entry; Cancel clears the entry and reverts the
+//     textarea to the shipped `doc.markdown`.
+//   • A `beforeunload` handler is registered once on init; while
+//     `view.isDirty()` returns true, closing / reloading / navigating
+//     the tab triggers the browser's built-in "leave site?" prompt.
+//   • On load, a stored draft is compared against `doc.markdown`; if
+//     it differs the textarea is rehydrated to the draft and a
+//     `restoredMessage` is announced through the aria-live region.
+{
+  "pageTitle": "Knowledge Document",
+  "navActive": "knowledge",
+  "back": {
+    "label": "Back to Knowledge",
+    "href": "/knowledge.html"
+  },
+  "view": {
+    "previewLabel": "Preview",
+    "editLabel": "Edit",
+    "groupLabel": "Document view"
+  },
+  "fallbackTitle": "Document",
+  "updatedLabelTemplate": "Last edited by {updatedBy} · {updatedAt}",
+  "notFound": {
+    "title": "Document not found",
+    "description": "The document you were looking for isn't in this Knowledge library. It may have been renamed, moved, or removed.",
+    "actionLabel": "Return to Knowledge"
+  },
+  "save": {
+    "label": "Save",
+    "assistiveText": "Save changes"
+  },
+  "cancel": {
+    "label": "Cancel",
+    "assistiveText": "Discard unsaved changes",
+    "confirmMessage": "You have unsaved changes. Discard them?"
+  },
+  "status": {
+    "savedMessage": "Changes saved.",
+    "discardedMessage": "Unsaved changes discarded.",
+    "restoredMessage": "Restored unsaved changes from your previous session.",
+    "unloadMessage": "You have unsaved changes."
+  }
+}

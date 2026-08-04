@@ -1,0 +1,285 @@
+{% extends "_template.html" %}
+
+{#
+  Seller Home — Scheduled workflows landing
+  =====================================================================
+  Reached from the Seller Home left nav's "Schedules" item (see
+  home.json → navPrimary). Shares the same `.seller-home` shell (left
+  nav + right column) that /home.html and /knowledge.html use so the
+  global header + left nav stay visually pinned as the user moves
+  between Seller Home surfaces.
+
+  Design source: Figma node 8831:380388 ("Scheduled").
+
+  Left-nav content (navPrimary, navFooter, recents) is hydrated at
+  build time from home.json via the `readData` Nunjucks global — one
+  authoritative list feeds every Seller Home page so a nav item added
+  to home.json shows up here automatically. `navActive = "schedules"`
+  is set below so the shared nav partial highlights the Schedules item.
+
+  Layout skeleton — mirrors knowledge.html:
+    ┌──────────────────────────────────────────────────────────┐
+    │  ┌ header (48 px, flex-shrink 0) ────────────────────┐   │
+    │  │ Scheduled                                          │   │
+    │  ├───────────────────────────────────────────────────┤   │
+    │  │ body <section> (flex: 1 1 auto, scroll surface)   │   │
+    │  │                                                   │   │
+    │  │             ┌─────────────────────────────┐       │   │
+    │  │             │  50rem inner column          │       │   │
+    │  │             │                              │       │   │
+    │  │             │  Description paragraph       │       │   │
+    │  │             │  Composer (shared partial)   │       │   │
+    │  │             │  Tabs + filter button        │       │   │
+    │  │             │  Workflow list (56 px rows)  │       │   │
+    │  │             └─────────────────────────────┘       │   │
+    │  └───────────────────────────────────────────────────┘   │
+    └──────────────────────────────────────────────────────────┘
+
+  All chrome (page shell, header band, body scroll) reuses Knowledge's
+  CSS by adopting the same `.seller-home__knowledge-*` class stack.
+  Scheduled-only concerns (tabs, filter, workflow row) live under
+  their own `.seller-home__scheduled-*` namespace in home.scss.
+
+  `navActive = "schedules"` drives the nav highlight; `pageTitle`
+  drives the `role="main"` region's accessible name. `currentPage`
+  auto-injected by gulpfile.js keeps the Home context-bar tab lit —
+  the OR chain in _template.html was extended to include this stem.
+#}
+
+{% set navActive = "schedules" %}
+
+{% set navPrimary = readData("index").navPrimary %}
+{% set navFooter  = readData("index").navFooter %}
+{% set recents    = readData("index").recents %}
+
+{% block styles %}
+  <link rel="stylesheet" href="/styles/home.css" />
+{% endblock %}
+
+{% block content %}
+  {# `.seller-home--scheduled` scopes the viewport-lock rule
+     (`overflow: hidden`) to this page only, exactly like
+     `.seller-home--knowledge` does for /knowledge.html. Without it
+     the outer container would grow to fit its children and the
+     body-section's `overflow-y: auto` would never engage.
+
+     We deliberately also apply `.seller-home--knowledge` so this
+     page inherits Knowledge's already-tuned column widths, body
+     scroll, and header-band styling without duplicating rules. The
+     new `.seller-home--scheduled` class is reserved for
+     Scheduled-only overrides (composer margin above the tabs,
+     tab-row spacing, workflow-row layout). #}
+  <div class="seller-home seller-home--knowledge seller-home--scheduled" data-sh-root>
+    {# Left navigation — same partial Seller Home + Knowledge use.
+       `navActive = "schedules"` set above drives the highlight. #}
+    {% include "_home_left_nav.html" %}
+
+    {# ── Right column ────────────────────────────────────────────────
+       Sibling to the left nav; fills the remaining width. Reuses
+       Knowledge's `.seller-home__knowledge` class so the outer
+       column layout, header band, and body scroll behavior stay
+       identical between the two surfaces. `role="main"` +
+       `aria-label="Scheduled"` give AT users a meaningful region
+       label; `tabindex="-1"` makes the region a programmatic focus
+       target (for skip-links) without pulling it into the natural
+       tab order. #}
+    <div
+      class="seller-home__knowledge seller-home__scheduled"
+      role="main"
+      aria-label="{{ pageTitle }}"
+      tabindex="-1"
+      data-sh-scheduled-root
+    >
+      {# ── Header band (48 px) ─────────────────────────────────────
+         Reuses Knowledge's header structure — flex-shrink 0, plain
+         white surface, 48 px in practice. Only the `<h1>` is on
+         this page (no right-anchored action per Figma). Wrapped in
+         the same class so `padding-inline`, `min-height`, and
+         `border-bottom` come from `.seller-home__knowledge-header`
+         without duplication. #}
+      <header
+        class="seller-home__knowledge-header"
+        data-sh-scheduled-header
+      >
+        <h1 class="seller-home__knowledge-header-title">{{ header.heading }}</h1>
+      </header>
+
+      {# ── Body section ────────────────────────────────────────────
+         Same scrollable pattern as Knowledge. The inner column is
+         capped at 50 rem (800 px) via the shared
+         `.seller-home__knowledge-body-inner` rule. Content order
+         mirrors Figma node 8831:380388 exactly:
+           1. Description paragraph
+           2. Composer (shared partial)
+           3. Tabs + filter button
+           4. Workflow list (Step 4)
+         Steps 4-6 slot content beneath this scaffold; this file
+         holds the container so future edits stay local. #}
+      <section
+        class="seller-home__knowledge-body"
+        aria-label="{{ pageTitle }}"
+      >
+        <div class="seller-home__knowledge-body-inner">
+          {# ── Description ──────────────────────────────────────────
+             Intro paragraph beneath the header, above the composer.
+             14/19 Regular per Figma tokens (`--slds-g-color-on-surface-2`
+             = #2E2E2E). Kept as a semantic `<p>` so AT users get the
+             right shape; role owned by the surrounding page landmark. #}
+          <p class="seller-home__scheduled-description">
+            {{ header.description }}
+          </p>
+
+          {# ── Composer ─────────────────────────────────────────────
+             Shared partial. Reads its config from the `composer`
+             context variable set in scheduled.json. Empty
+             `samplePrompts` disables home.js's placeholder
+             typewriter — Scheduled ships a single static
+             "Schedule a task" placeholder per the design. #}
+          {% include "_home_composer.html" %}
+
+          {# ── Tabs row (filter chips) + filter button ─────────────
+             ARIA note: these are filter chips over one list, NOT
+             SLDS tabpanel-swapping tabs. So we use `role="radiogroup"`
+             + `role="radio"` per the WAI-ARIA authoring practices
+             for "pick one option that changes what's shown" —
+             `role="tab"` implies a `role="tabpanel"` sibling per
+             option, which this design doesn't have.
+
+             Counts are rendered server-side by iterating
+             `workflows` per tab: Nunjucks's outer-scope `{% set %}`
+             DOES propagate through this build (probed 2026-07-30),
+             so first-paint counts are always in sync with the JSON
+             without a JS hydration step. `bindScheduled()` in
+             Step 6 also recomputes counts client-side so any
+             future JS-driven workflow add/remove keeps them
+             correct.
+
+             `defaultTabId` from scheduled.json controls the
+             first-paint active row (server-side). URL hash drives
+             the runtime active tab; `bindScheduled()` reads
+             `location.hash` on load and updates the highlight +
+             list filter to match. #}
+          <div
+            class="seller-home__scheduled-toolbar"
+            data-sh-scheduled-toolbar
+          >
+            {# ── Tabs (filter chips) ──────────────────────────── #}
+            <div
+              class="seller-home__scheduled-tabs"
+              role="radiogroup"
+              aria-label="Filter workflows by status"
+              data-sh-scheduled-tabs
+            >
+              {% for tab in tabs.items %}
+                {# Count for this tab. `tab.statuses` empty means
+                   "match every workflow" ({{ workflows.length }}
+                   total, minus any hidden rows for future-proofing).
+                   Server-side count aligns with the row-visibility
+                   rule in bindScheduled() so first paint and later
+                   filters never disagree. #}
+                {% set count = 0 %}
+                {% for w in workflows %}
+                  {% if not (w.hidden == true) %}
+                    {% if (tab.statuses | length) == 0 or w.status in tab.statuses %}
+                      {% set count = count + 1 %}
+                    {% endif %}
+                  {% endif %}
+                {% endfor %}
+                {% set isActive = (tab.id == tabs.defaultTabId) %}
+                <button
+                  type="button"
+                  class="seller-home__scheduled-tab{% if isActive %} is-active{% endif %}"
+                  role="radio"
+                  aria-checked="{% if isActive %}true{% else %}false{% endif %}"
+                  aria-controls="seller-home-scheduled-list"
+                  data-sh-scheduled-tab="{{ tab.id }}"
+                  data-sh-scheduled-tab-statuses="{{ tab.statuses | join(',') }}"
+                  {# Roving tabindex — only the active radio is in
+                     the natural tab order; the rest are reached via
+                     Left/Right arrow (wired in Step 6). Matches the
+                     WAI-ARIA radiogroup keyboard convention. #}
+                  tabindex="{% if isActive %}0{% else %}-1{% endif %}"
+                >
+                  <span class="seller-home__scheduled-tab-label">{{ tab.label }}</span>
+                  <span
+                    class="seller-home__scheduled-tab-count"
+                    data-sh-scheduled-tab-count
+                    aria-hidden="true"
+                  >{{ count }}</span>
+                  {# Screen-reader-only companion so AT users hear
+                     "Scheduled, 5 workflows" instead of just
+                     "Scheduled, 5" (the visible pill is decorative). #}
+                  <span class="slds-assistive-text">
+                    {{ count }} workflow{% if count != 1 %}s{% endif %}
+                  </span>
+                </button>
+              {% endfor %}
+            </div>
+
+            {# ── Filter icon-button (right-anchored) ─────────────
+               Circular icon-only affordance. Click dispatches
+               `sh:scheduled-filter` on `[data-sh-scheduled-root]`
+               so a future filter menu can bind without touching
+               this markup. Reuses SLDS 2's icon-bare button so
+               height, focus ring, and hover come from the base
+               stylesheet. #}
+            <button
+              type="button"
+              class="slds-button slds-button_icon slds-button_icon-bare seller-home__scheduled-filter"
+              data-sh-scheduled-filter
+              title="{{ filterAction.label }}"
+              aria-label="{{ filterAction.label }}"
+            >
+              <svg class="slds-button__icon" aria-hidden="true">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ filterAction.icon }}"></use>
+              </svg>
+              <span class="slds-assistive-text">{{ filterAction.label }}</span>
+            </button>
+          </div>
+
+          {# ── Live-region — announces tab-switch results ─────────
+             Visually hidden. bindScheduled() writes a phrase like
+             "Showing 4 scheduled workflows" here whenever the
+             active tab changes, so AT users hear the count without
+             the visible layout having to shift. Kept as a sibling
+             of the toolbar (not inside it) so a re-render of the
+             toolbar can't accidentally clobber the region node.
+
+             `role="status"` + `aria-live="polite"` gives us the
+             standard "announce but don't interrupt" contract; the
+             ready-to-review search field uses the same pattern. #}
+          <div
+            id="seller-home-scheduled-status"
+            class="slds-assistive-text"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            data-sh-scheduled-status
+          ></div>
+
+          {# ── Workflow list ─────────────────────────────────────
+             Renders every workflow in scheduled.json. Rows carry
+             their status in a data-attribute so the tab controller
+             (Step 6) can flip visibility by matching
+             `[data-sh-workflow-status]` without walking JSON. The
+             list carries `id="seller-home-scheduled-list"` so the
+             tab chips above can reference it via `aria-controls`. #}
+          <div
+            id="seller-home-scheduled-list"
+            data-sh-scheduled-list-region
+          >
+            {% include "_scheduled_workflow_list.html" %}
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts_extra %}
+  {# home.js drives the shared shell: nav collapse toggle, composer,
+     and (in a follow-up step) the Scheduled tab controller. Its
+     Briefing / Knowledge-search handlers no-op on this page because
+     those roots don't exist. #}
+  <script src="/scripts/home.js"></script>
+{% endblock %}

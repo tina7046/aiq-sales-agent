@@ -317,8 +317,28 @@ main.app-wrapper {
   // below take effect.
   top: -$sh-god-rays-overscan;
   right: -$sh-god-rays-overscan;
-  left: -$sh-god-rays-overscan;
   height: calc(100% + #{$sh-god-rays-overscan * 2});
+
+  // Left edge starts where the content column starts, not where the row
+  // does. The shader converges on the centre of its own box (`u_originX:
+  // 0.5` in the mount script), so a box spanning nav + content would put
+  // the convergence point half the nav width to the left of the composer
+  // it's supposed to sit under. Insetting by the nav width makes the box
+  // and the content column the same span, which is what keeps the focal
+  // point on the composer.
+  //
+  // The host can't simply be parented to `.seller-home__main` instead —
+  // that element owns `overflow-y: auto`, so an absolutely-positioned
+  // child would scroll away with the briefing.
+  left: calc(#{$sh-nav-width-expanded} - #{$sh-god-rays-overscan});
+
+  // Matches the nav's own width transition so the rays glide to their new
+  // centre with the rail instead of snapping ahead of it.
+  transition: left 180ms ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 
   // Floor on the box height, so a short window still gets a ray field long
   // enough to reach the bottom of the shell instead of a squashed one. Below
@@ -771,6 +791,14 @@ main.app-wrapper {
   .seller-home__nav {
     flex: 0 0 $sh-nav-width-collapsed;
     width: $sh-nav-width-collapsed;
+  }
+
+  // Follow the rail in, so the shader box keeps matching the content
+  // column and the convergence point stays under the composer. Same
+  // transition as the nav width, otherwise the rays would snap to their
+  // new centre while the rail was still sliding.
+  .seller-home__god-rays {
+    left: calc(#{$sh-nav-width-collapsed} - #{$sh-god-rays-overscan});
   }
 
   .seller-home__nav-topbar {
@@ -3818,7 +3846,11 @@ main.app-wrapper {
   margin: 0;
   font-size: var(--slds-g-font-scale-6, 2rem);
   font-weight: var(--slds-g-font-weight-7, 700);
-  color: var(--slds-g-color-on-surface-3, #04061a);
+  // H1 shares the article body's #2e2e2e so the page title reads
+  // as the top of the markdown document rather than a separate,
+  // higher-contrast heading. See the `.__article` block below for
+  // the rationale on the unified prose color.
+  color: #2e2e2e;
   line-height: 1.25;
 }
 
@@ -3833,10 +3865,36 @@ main.app-wrapper {
 // Applied to the client-rendered HTML inside `[data-knowledge-article]`.
 // Values track the Documentation.ai spec: h2 ~24px / h3 ~18px / body
 // ~16px / line-height ~1.5–1.6 / comfortable vertical rhythm.
+//
+// Body color is a scoped charcoal (#2E2E2E) — one unified tone for
+// every piece of markdown-derived text (H1 title, H2 / H3 section
+// headings, paragraphs, list items, and inline spans). Explicit
+// exceptions that must NOT inherit this color:
+//   • `.evidence-link` — supporting-evidence deep-links stay
+//     #0250d9 so they read as navigable references, not prose.
+//   • Generic markdown `<a>` — keeps the SLDS accent color so
+//     inline links remain discoverable.
+//   • Inline `<code>` — keeps its own token so identifiers read
+//     as technical chrome.
+//   • `.__article-updated` caption — metadata, not markdown body.
+//   • `.__toc*` (On this page) — separate nav surface, out of scope.
 .hunter-agent-knowledge__article {
-  color: var(--slds-g-color-on-surface-3, #04061a);
+  color: #2e2e2e;
   font-size: 1rem;
   line-height: 1.6;
+
+  // Belt-and-suspenders overrides for the elements the design spec
+  // called out explicitly (paragraphs, list items, and any inline
+  // `<span>` the parser might emit in the future). `color` already
+  // inherits from `.__article`, but repeating it here makes the
+  // scope self-documenting and shields the tone from any future
+  // utility class that might set a heavier weight or accent color
+  // on these tags globally.
+  p,
+  li,
+  span {
+    color: #2e2e2e;
+  }
 
   // Placeholder shown while the JS parser hydrates the article.
   &-placeholder {
@@ -3849,18 +3907,50 @@ main.app-wrapper {
   }
 
   // Section headings — buffer for the sticky panel header on
-  // anchor jumps.
+  // anchor jumps. Color matches the unified #2e2e2e prose tone so
+  // Q-section headings sit visually inside the article rather than
+  // reading as a separate high-contrast layer.
   h2,
   h3 {
-    color: var(--slds-g-color-on-surface-3, #04061a);
+    color: #2e2e2e;
     scroll-margin-top: 5rem;
   }
 
   h2 {
     margin: 2rem 0 0.75rem 0;
-    font-size: var(--slds-g-font-scale-5, 1.5rem); // ~24px
+    // Q-section divider — a 1px #c9c9c9 hairline sits above every
+    // H2 so the boundary between Q1 → Q2 → Q3 … is visible without
+    // shouting. `padding-top` opens 2rem of breathing room below the
+    // hairline before the heading text, matching the 2rem `margin-top`
+    // above it, so the divider is optically centered in the section
+    // gap. The very first H2 (typically Q1) has this treatment reset
+    // by the `:first-child` rule below so it sits flush under the
+    // article-header caption.
+    padding-top: 2rem;
+    border-top: 1px solid #c9c9c9;
+    // Locked at 24px — we don't route through `--slds-g-font-scale-5`
+    // here because the live SLDS theme currently resolves that token
+    // to a larger value than its 1.5rem CSS fallback, which pushes
+    // the Q-section headings out of the 24px target the design brief
+    // specifies. Hard-coding the exact value keeps the heading at
+    // 24px regardless of theme drift.
+    font-size: 1.5rem;
     font-weight: var(--slds-g-font-weight-7, 700);
     line-height: 1.3;
+  }
+
+  // First H2 in the article (Q1) doesn't get a divider — the
+  // article-header ("Auto-Learning from Your Past…" + "Last edited
+  // by…") already creates a visual top for the document, so an
+  // additional hairline there would double-underline the caption
+  // and push Q1 off the fold. This selector is scoped to
+  // `h2:first-child` (the first flow child of `.__article`), not
+  // `h2:first-of-type`, so any content the markdown parser emits
+  // above the first Q section (e.g. an intro paragraph) would
+  // correctly leave the divider on the H2 that follows it.
+  h2:first-child {
+    padding-top: 0;
+    border-top: 0;
   }
 
   h3 {
@@ -3896,12 +3986,86 @@ main.app-wrapper {
     display: list-item;
   }
 
+  // ── Parameter-snapshot panel ──────────────────────────────────
+  // Every skill-generated knowledge doc ends with a
+  //   ## Footer: Parameter Snapshot for Deterministic Re-Run
+  // heading whose body is a bulleted `key: value` list —
+  // `run_id`, `plan_version`, `lookback_days`, `opp_cap`, etc.
+  // That block is machine-provenance metadata, not prose, so we
+  // render it as a raised monospace panel (matching the fenced
+  // code-block treatment used elsewhere in the article) instead
+  // of an inline bullet list.
+  //
+  // Selector: any `<h2>` inside the article whose id begins with
+  // `footer-` claims its immediately-following `<ul>` as the
+  // params panel. Slugs are deterministic (see `allocateSlug` in
+  // scripts/knowledge_document_view.js) so this catches every
+  // current + future skill output without touching the parser.
+  //
+  // The `+ ul` sibling combinator is safe because the parser
+  // emits the heading and its list back-to-back with no
+  // intervening `<p>` (verified in `renderMarkdown`).
+  h2[id^="footer-"] + ul {
+    list-style: none;
+    margin: 0 0 1rem 0;
+    padding: 1rem 1.25rem;
+    // Hard-coded to #f3f3f3 rather than routed through
+    // `--slds-g-color-surface-container-1` — the live SLDS 2
+    // theme currently resolves that token to a warmer / slightly
+    // darker container tone than the design brief specifies for
+    // this panel, so we pin the exact value here to keep the
+    // params surface visually identical across themes.
+    background: #f3f3f3;
+    border-radius: 0.5rem;
+    font-family: var(--slds-g-font-family-monospace, "SF Mono", Menlo, Consolas, monospace);
+    font-size: 0.875rem;
+    line-height: 1.75;
+
+    li {
+      display: block;
+      margin: 0;
+      padding: 0;
+      color: #2e2e2e;
+    }
+
+    // The markdown labels are `**run_id:**` → `<strong>run_id:</strong>`.
+    // Inside the panel we want a plain monospace "key: value"
+    // line, so dial the strong weight back to regular. Labels
+    // still read as labels because of the trailing colon +
+    // key ordering, no bold needed.
+    strong {
+      font-weight: 400;
+    }
+
+    // Inline `<code>` values (`` `9e2b819a-…` `` etc.) render as
+    // chips elsewhere in the article. Inside this panel the whole
+    // block is already monospace on the same #f3f3f3 surface, so
+    // strip the chip padding/background/size lift and let code
+    // values inherit the surrounding style — the result reads as
+    // one uniform monospace block rather than nested chips.
+    code {
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      font-family: inherit;
+      font-size: inherit;
+    }
+  }
+
   // Inline `<code>` — subtle chip so code identifiers read as
   // technical without pulling focus from surrounding prose.
+  //
+  // Background hard-coded to #f3f3f3 for the same reason as the
+  // params panel above: `--slds-g-color-surface-container-1`
+  // resolves to a warmer / slightly off tone in the live SLDS 2
+  // theme, and design has pinned the chip surface to this exact
+  // value. Font color and family still route through their
+  // tokens so the code identifiers keep their existing pink/
+  // technical treatment from the SLDS palette.
   code {
     padding: 0.05rem 0.35rem;
     border-radius: 0.25rem;
-    background: var(--slds-g-color-surface-container-1, #f3f3f3);
+    background: #f3f3f3;
     color: var(--slds-g-color-on-surface-3, #04061a);
     font-family: var(--slds-g-font-family-monospace, "SF Mono", Menlo, Consolas, monospace);
     font-size: 0.875em;
@@ -3914,6 +4078,34 @@ main.app-wrapper {
     &:hover,
     &:focus-visible {
       text-decoration: underline;
+    }
+  }
+
+  // Evidence-list rows — every `<li>` beneath an `**Evidence:**`
+  // heading is wrapped by the parser in a `.evidence-link` anchor
+  // (see `renderMarkdown` in scripts/knowledge_document_view.js).
+  // The entire row is clickable: `display: block` makes the anchor
+  // fill its `<li>`'s content area (numbered / bulleted markers sit
+  // outside the anchor via `list-style-position: outside`, unchanged).
+  // Color uses #0250d9 to signal these are supporting-evidence
+  // deep-links, distinct from the SLDS accent blue used for generic
+  // article-body links (#0176d3). Specificity (0,2,0) beats the
+  // generic `.__article a` rule above (0,1,1) so the evidence tone
+  // always wins on these rows.
+  .evidence-link {
+    display: block;
+    color: #0250d9;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: 2px solid currentColor;
+      outline-offset: 2px;
+      border-radius: 2px;
     }
   }
 
@@ -3955,6 +4147,14 @@ main.app-wrapper {
 // indicator; the anchor list sits above them.
 .hunter-agent-knowledge__toc-body {
   position: relative;
+  // 20px gutter between the vertical rail (which sits at `left: 0`
+  // via absolute positioning) and every top-level row in the flow.
+  // Because the rail + active indicator are absolutely positioned
+  // against the body's padding edge, they stay flush at x=0 while
+  // the list, its `<li>`s, and each row wrapper start inside the
+  // padding at x=20px. The h3 sublist's own `padding-left: 1.75rem`
+  // stacks on top, preserving the existing h2→h3 indent step.
+  padding-left: 1.25rem;
 }
 
 // Straight vertical rail — 1px full-height gray column, static.
@@ -4004,10 +4204,16 @@ main.app-wrapper {
   flex-direction: column;
   gap: 0.125rem;
 
-  // h2 anchors — 16px left padding so the label clears the rail.
-  > li > a {
+  // h2 anchors — shared visual treatment whether the row is a leaf
+  // (`> li > a`) or lives inside a collapsible row wrapper
+  // (`> li > .__toc-item-row > a`). Padding varies between the two
+  // shapes (see the `> li > a` and `.__toc-item-row > a` overrides
+  // below) so the label lines up correctly with the rail either way.
+  > li > a,
+  > li > .hunter-agent-knowledge__toc-item-row > a {
     display: block;
-    padding: 0.25rem 0 0.25rem 1rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
     color: var(--slds-g-color-on-surface-2, #545454);
     font-size: 0.8125rem;
     line-height: 1.3;
@@ -4024,6 +4230,96 @@ main.app-wrapper {
       font-weight: var(--slds-g-font-weight-6, 600);
     }
   }
+
+  // Leaf h2 (no chevron). The 24px rail-to-row gutter is provided by
+  // `.__toc-body`'s `padding-left`; the anchor itself carries no
+  // horizontal padding so it sits flush at the content-edge (x=24
+  // from the rail).
+  > li > a {
+    padding-left: 0;
+  }
+
+  // Collapsible h2 — the row wrapper places a chevron button to the
+  // left of the anchor. Both the row wrapper and the chevron sit
+  // flush at the content edge (x=24 from the rail), so the chevron
+  // provides the visible affordance and the label appears one
+  // chevron-width further right, matching the accordion pattern.
+  > li > .hunter-agent-knowledge__toc-item-row > a {
+    padding-left: 0;
+    padding-right: 0.25rem;
+    flex: 1 1 auto;
+    min-width: 0; // let the label ellipsis kick in inside a flex row.
+  }
+}
+
+// Collapsible top-level row — flex container holding the chevron
+// toggle button and the section anchor. The row sits inside
+// `> li` (not the anchor) so the chevron and the anchor are
+// siblings, not nested, keeping the click-target semantics clean:
+// chevron toggles, anchor scrolls.
+.hunter-agent-knowledge__toc-item-row {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem; // 2px between chevron and anchor.
+}
+
+// Chevron button — 14px square hit target, 10px icon inside. Sits
+// at the row's content edge (24px from the rail, courtesy of
+// `.__toc-body`'s padding-left). Reset native button chrome, then
+// apply the muted TOC label color so the chevron reads as secondary
+// UI, not a primary action.
+.hunter-agent-knowledge__toc-chevron {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  flex: 0 0 0.875rem;
+  width: 0.875rem;
+  height: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--slds-g-color-on-surface-2, #545454);
+  cursor: pointer;
+  border-radius: 2px;
+
+  &:hover {
+    color: var(--slds-g-color-on-surface-3, #04061a);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-accent-2, #0176d3);
+    outline-offset: 1px;
+  }
+}
+
+.hunter-agent-knowledge__toc-chevron-icon {
+  // 10px glyph inside the 14px button — leaves 2px of transparent
+  // margin on either side so the underlying rail (and the active
+  // indicator) can peek through without being visually clipped by
+  // the icon shape.
+  width: 0.625rem;
+  height: 0.625rem;
+  fill: currentColor;
+  transform: rotate(0deg);
+  transform-origin: center;
+  // Chevron rotation — 160ms is the middle of the 150–200ms range
+  // spec'd on the design brief and matches other subtle-motion
+  // affordances in the Knowledge surface.
+  transition: transform 160ms ease;
+}
+
+// Expanded state — rotate the chevron from ▶ to ▼. Class lives on
+// the `<li>` so the rest of the accordion CSS can key off the same
+// signal (currently only the chevron rotation, but keeps room for
+// future treatments — e.g. active-section connector, hover state).
+.hunter-agent-knowledge__toc-item.is-expanded .hunter-agent-knowledge__toc-chevron-icon {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hunter-agent-knowledge__toc-chevron-icon { transition: none; }
 }
 
 .hunter-agent-knowledge__toc-sublist {
@@ -4061,6 +4357,15 @@ main.app-wrapper {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+// `.hunter-agent-knowledge__toc-sublist` above sets `display: flex`,
+// which overrides the browser's default `[hidden] { display: none }`
+// (author > UA). Boost specificity so the collapsed state actually
+// hides. Same pattern used elsewhere in this file for popovers that
+// carry a display-setting class alongside the `hidden` attribute.
+.hunter-agent-knowledge__toc-sublist[hidden] {
+  display: none;
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -4230,7 +4535,12 @@ main.app-wrapper {
   &__code {
     position: relative;
     flex: 1 1 auto;
+    // Both axes need an explicit 0. Every descendant here is absolutely
+    // positioned and out of flow, so `min-height: auto` is harmless
+    // today — but it would let a future in-flow child inflate the flex
+    // calculation and break the textarea's definite-height chain.
     min-width: 0;
+    min-height: 0;
     overflow: hidden;
     background: var(--ke-bg);
   }
@@ -4264,9 +4574,25 @@ main.app-wrapper {
     will-change: transform;
     box-sizing: border-box;
     background: transparent;
+
+    // The injected `<code>` defaults to `display: inline`, and a
+    // non-atomic inline box is not transformable. Scroll sync applies
+    // its `transform` to this `<pre>` today, so nothing is broken —
+    // forcing the child to a block box means a refactor that moves the
+    // transform onto the `<code>` won't silently kill scroll sync.
+    > code {
+      display: block;
+    }
   }
 
   &__source {
+    // `inset: 0` alone does not size a textarea. The element keeps an
+    // intrinsic size from its `rows`/`cols` attributes, and Blink and
+    // WebKit use THAT — not the offset rect — for internal scroll
+    // math. The box would render full height while `clientHeight`
+    // stayed ~2 rows, making `scrollHeight === clientHeight` so the
+    // wheel did nothing. The explicit width/height below are what pin
+    // it to a box the browser also scrolls against.
     position: absolute;
     inset: 0;
     width: 100%;
@@ -4281,7 +4607,14 @@ main.app-wrapper {
     font-size: var(--ke-font-size);
     line-height: var(--ke-line-height);
     resize: none;
-    overflow: auto;
+
+    // Split by axis rather than using the shorthand: `overflow-x` pairs
+    // with `wrap="off"` on the element so long lines scroll sideways,
+    // and keeping the axes separate means a later rule touching one
+    // can't clobber the other.
+    overflow-y: auto;
+    overflow-x: auto;
+
     white-space: pre;
     word-wrap: normal;
     z-index: 2;

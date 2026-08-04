@@ -1,0 +1,76 @@
+{#
+  KnowledgeTableOfContents — sticky right-side "On this page" nav.
+
+  Two elements make up the active-item indicator, sitting side-by-
+  side inside `.__toc-body`:
+
+    1. `.__toc-rail` — a static 1px gray vertical column running
+       the full height of the TOC. Purely decorative (aria-hidden)
+       and pointer-events: none so it never intercepts clicks. It's
+       just a positioned div with a background color; no SVG, no
+       diagonal segments, no depth-aware routing — the same rail
+       shape whether the doc has 3 headings or 30, at every nesting
+       level.
+
+    2. `.__toc-active-indicator` — a 2px blue block layered on top
+       of the rail (also inside `.__toc-body` but visually stacked
+       over the gray column). `scripts/knowledge_agent.js` measures
+       the active TOC link's `getBoundingClientRect` relative to the
+       body and sets `transform: translateY(<top>px)` +
+       `height: <linkHeight>px` on this element so the block
+       highlights exactly the current section's row. Because we
+       only ever move it vertically, the block STAYS straight — no
+       diagonals, no ballooning across multiple items, just a
+       single row height per active section.
+
+  The `<ol>` link list sits to the right of the rail. Heading
+  depth is signalled through per-anchor `padding-left` (16px for h2,
+  28px for h3) so the labels indent but the gray rail stays flush
+  at x=0 for every level.
+
+  Populated by JS on load + every Preview render. Sub-list nesting
+  is preserved for accessible position-in-list semantics.
+#}
+<aside
+  class="hunter-agent-knowledge__toc"
+  data-knowledge-toc
+  aria-label="Table of contents"
+>
+  <p class="hunter-agent-knowledge__toc-eyebrow">
+    <svg class="hunter-agent-knowledge__toc-eyebrow-icon" aria-hidden="true">
+      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#rows"></use>
+    </svg>
+    On this page
+  </p>
+
+  {# `__toc-body` is `position: relative` so the absolutely-
+     positioned rail + indicator resolve against it, and the link
+     list can share the same coordinate space for offsetTop
+     measurements. #}
+  <div class="hunter-agent-knowledge__toc-body" data-knowledge-toc-body>
+    {# Gray column. `aria-hidden` because it duplicates the semantic
+       list next to it; screen readers use the semantic `<nav>` +
+       `<ol>` for navigation. `pointer-events: none` so clicks land
+       on the anchor links that sit above / beside it. #}
+    <div
+      class="hunter-agent-knowledge__toc-rail"
+      data-knowledge-toc-rail
+      aria-hidden="true"
+    ></div>
+
+    {# Blue block. Starts collapsed (height 0) so the initial paint
+       doesn't flash a full-height indicator before the JS applies
+       the first section's slot. `will-change: transform, height`
+       is set in the SCSS so the compositor prepares an off-screen
+       texture for the transform. #}
+    <div
+      class="hunter-agent-knowledge__toc-active-indicator"
+      data-knowledge-toc-rail-indicator
+      aria-hidden="true"
+    ></div>
+
+    <nav aria-label="On this page">
+      <ol class="hunter-agent-knowledge__toc-list" data-knowledge-toc-list></ol>
+    </nav>
+  </div>
+</aside>

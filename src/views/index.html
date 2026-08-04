@@ -184,11 +184,6 @@
 	  home.js drop in unchanged and future changes can be diffed against the
 	  source prototype.
 
-	  One deliberate difference: no left nav. `_home_left_nav.html` and the
-	  `.seller-home__nav*` markup are not ported, so `.seller-home` is a
-	  single-column shell. home.js's nav-collapse controller no-ops (it guards
-	  on `[data-sh-nav-toggle]` being present).
-
 	  What this page adds over the source is the live tuning panel further down.
 	  Everything the shader depends on — the host element, its geometry, the
 	  focal-point solve — is kept the same, so numbers dialled here transfer
@@ -198,10 +193,19 @@
 	  component controllers wire up.
 	#}
 	<div class="seller-home" data-sh-root>
+		{# Left navigation. Collapse state is owned by home.js and persisted in
+		   localStorage, so the rail keeps its width across pages. #}
+		{% include "_home_left_nav.html" %}
+
 		{# God-rays shader canvas host. The module script at the bottom of this
 		   file mounts a WebGL canvas inside it; geometry and stacking come from
 		   `.seller-home__god-rays` in home.scss. Empty and aria-hidden — it's
-		   decoration with no semantic content. #}
+		   decoration with no semantic content.
+
+		   It stays a child of the row rather than of `__main` because `__main`
+		   is the scroll container — parented there the shader would scroll away
+		   with the briefing. Instead its left edge is inset to the nav width in
+		   home.scss, which is what keeps the box centred on the content column. #}
 		<div class="seller-home__god-rays" data-sh-god-rays aria-hidden="true"></div>
 
 		{# A plain div, not <main role="main">: this sits inside the template's

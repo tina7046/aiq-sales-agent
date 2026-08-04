@@ -1,0 +1,41 @@
+{#
+  KnowledgeDocument — rendered-article surface.
+
+  Ships as an empty `<article>` at build time; `scripts/knowledge_agent.js`
+  parses the raw MDX (from the sibling `<script type="text/markdown">`
+  seeded by `hunter_agent_knowledge.html`) and injects the resulting
+  HTML into `[data-knowledge-article]` on load AND every time the user
+  flips back from Edit → Preview.
+
+  Why we don't pre-render at build time:
+    • The Edit surface owns the raw MDX as its source of truth and
+      needs to re-render on every toggle back to Preview. Doing the
+      first render at build time would double the code paths (one
+      Nunjucks-side markdown pass, one client-side pass) and risk
+      drift when the client's parser subset diverges from a
+      Nunjucks-side one.
+    • The heading-id derivation the TOC relies on is easier to keep
+      in sync when a single client-side parser owns both the article
+      and the TOC generation (same slug function, same output).
+    • Prototype scope — the article is only meaningful with the JS
+      loaded (edit toggle, scroll-spy, TOC anchoring); shipping a
+      no-JS static render would be misleading.
+
+  Structure:
+    • `<article>` — semantic wrapper. Class + data attribute give
+                     JS + CSS separate hooks (class for typography,
+                     data attribute for rendering target).
+    • Fallback text inside — the block briefly holds "Loading …"
+                             copy so a slow JS load doesn't render a
+                             blank frame. `.hunter-agent-knowledge__article-placeholder`
+                             hides itself when `.article` gains
+                             `data-rendered="true"` (via a CSS
+                             sibling rule).
+#}
+<article
+  class="hunter-agent-knowledge__article"
+  data-knowledge-article
+  aria-labelledby="hunter-agent-knowledge-title"
+>
+  <p class="hunter-agent-knowledge__article-placeholder" aria-hidden="true">Loading knowledge document…</p>
+</article>

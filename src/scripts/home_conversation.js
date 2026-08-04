@@ -426,6 +426,24 @@
       submit()
     })
 
+    // Record names in a data table are real anchors so they get the
+    // browser's own hover / focus / active states and a tab stop. They
+    // have nowhere to go, though — there's no deal record in the
+    // prototype — so their click is swallowed here rather than letting
+    // `href="#"` push a hash onto the URL and jump the thread to the
+    // top. Same arrangement home.js uses for an unlinked review card.
+    //
+    // Delegated from the thread so a table that arrives inside a stage
+    // or a scripted reply is covered without re-binding.
+    threadInner.addEventListener('click', function (event) {
+      var link = event.target && event.target.closest
+        ? event.target.closest('[data-sh-conv-record-link]')
+        : null
+      if (link && (link.getAttribute('href') || '#') === '#') {
+        event.preventDefault()
+      }
+    })
+
     // Suggested next steps load the composer instead of sending. The
     // seller can edit the wording, and a demo driver decides when the
     // reply fires. Delegated from the thread so suggestions that

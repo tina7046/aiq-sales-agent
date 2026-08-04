@@ -1,0 +1,277 @@
+{% extends "_template.html" %}
+
+{#
+  Seller Home — Knowledge landing
+  =====================================================================
+  Reached from the Seller Home left nav's "Knowledge" item (see
+  home.json → navPrimary). Shares the same `.seller-home` shell (left
+  nav + right column) so the global header + left nav stay visually
+  pinned as the user moves between /home.html and this page.
+
+  Left-nav content (navPrimary, navFooter, recents) is hydrated at
+  build time from index.json via the `readData` Nunjucks global — one
+  authoritative list feeds both pages so a nav item added to
+  index.json shows up here automatically. `navActive` comes from this
+  page's own data (knowledge.json → navActive = "knowledge") so the
+  renderNavItem macro highlights the Knowledge item.
+
+  Layout skeleton — mirrors home_conversation.html:
+    ┌──────────────────────────────────────────────────────────┐
+    │  ┌ header (48px, flex-shrink 0) ─────────────────────┐   │
+    │  │ Knowledge                    [+ New Knowledge]    │   │
+    │  ├───────────────────────────────────────────────────┤   │
+    │  │ body <section> (flex: 1 1 auto, scroll surface)   │   │
+    │  │                                                   │   │
+    │  │             ┌───────────────────────┐             │   │
+    │  │             │  50rem inner column   │             │   │
+    │  │             │  Document list (56px  │             │   │
+    │  │             │  rows, 8px gaps, per  │             │   │
+    │  │             │  Figma 8931:383007)   │             │   │
+    │  │             └───────────────────────┘             │   │
+    │  └───────────────────────────────────────────────────┘   │
+    └──────────────────────────────────────────────────────────┘
+
+  This layout is deliberately parallel to `.seller-home__conv` on the
+  conversation page:
+    • Root gets `.seller-home--knowledge` so the outer container is
+      viewport-locked (no page-level scroll). Only the body section
+      scrolls, exactly like `.seller-home--conversation` on
+      home_conversation.html.
+    • Right column `.seller-home__knowledge` replaces
+      `.seller-home__main` for this page — plain white surface
+      (--slds-g-color-surface-1), no aurora gradient, so Knowledge
+      reads as a quiet reading surface instead of the Seller Home
+      landing.
+    • Header `.seller-home__knowledge-header` is a fixed 48px band
+      (min-height 3rem + spacing-2 vertical pad = 48px in practice,
+      same math conv-header uses), title anchored left, brand-outline
+      pill anchored right via `justify-content: space-between`.
+    • Body `.seller-home__knowledge-body` fills the remaining flex
+      track and owns `overflow-y: auto`. Its inner wrapper caps the
+      content at 50rem (800px), same column width as the briefing +
+      composer, so all Seller-Home surfaces share one content column
+      and left edge.
+
+  Phase 3 lands the doc list (via _home_knowledge_list.html →
+  renderKnowledgeDocRow macro). Phase 4 adds the search field
+  (Figma 8931:383736 → "Input - Search") as a sibling above the
+  `<ul>` inside `.seller-home__knowledge-body-inner` and swaps in an
+  empty state (`[data-sh-knowledge-empty]`) when the client-side
+  filter (`home.js → bindKnowledgeSearch`) drops every row. The
+  header + search field stay visible across all states so keyboard
+  focus never leaves the field while the user types.
+#}
+
+{% set navPrimary = readData("index").navPrimary %}
+{% set navFooter  = readData("index").navFooter %}
+{% set recents    = readData("index").recents %}
+
+{% block styles %}
+  <link rel="stylesheet" href="/styles/home.css" />
+{% endblock %}
+
+{% block content %}
+  {# `.seller-home--knowledge` scopes the viewport-lock rule
+     (`overflow: hidden`) to this page only, exactly like
+     `.seller-home--conversation` does for home_conversation.html.
+     Without it the outer container would grow to fit its children
+     and the body-section's `overflow-y: auto` would never engage. #}
+  <div class="seller-home seller-home--knowledge" data-sh-root>
+    {# Left navigation — same partial Seller Home uses. `navActive`
+       from knowledge.json drives the "Knowledge" item's .is-active
+       state; nothing else here differs from home.html's nav. #}
+    {% include "_home_left_nav.html" %}
+
+    {# ── Right column ────────────────────────────────────────────────
+       Sibling to the left nav; fills the remaining width. Not a
+       `<main>` element so the SLDS `<main class="app-wrapper">` in
+       _template.html can retain its role as the document-level main
+       landmark — this element is the page's ARIA `main` region via
+       `role="main"`, matching the pattern home_conversation.html
+       uses on `.seller-home__conv`.
+
+       `tabindex="-1"` makes the region a programmatic focus target
+       (for skip-links) without pulling it into the natural tab
+       order, same convention the Seller Home + Conversation pages
+       already use. #}
+    <div
+      class="seller-home__knowledge"
+      role="main"
+      aria-label="{{ pageTitle }}"
+      tabindex="-1"
+    >
+      {# ── Header band (48px) ───────────────────────────────────────
+         Figma frame 8931:383002 ("Title") — title on the left,
+         brand-outline "+ New Knowledge" pill on the right. Structural
+         parallel to `.seller-home__conv-header`: flex-shrink 0,
+         plain white surface, `min-height: 3rem` + `padding-block:
+         spacing-2` lands at exactly 48px in practice.
+
+         The button is a stub — clicking it will dispatch
+         `sh:knowledge-new` in a later phase so a future consumer can
+         wire real routing (new-doc creation flow) without touching
+         this template. Same event-delegation contract used by the
+         composer / briefing-popover actions.
+
+         Button styling comes entirely from SLDS 2 — the button uses
+         `slds-button` (base) + `slds-button_neutral` (variant) so it
+         inherits the whole SLDS 2 button system: 32-px height (line-
+         height 30 + 1-px borders), spacing-4 (16 px) inline padding,
+         `--slds-g-radius-border-pill` radius, `surface-container-1`
+         (white) background, `border-2` (neutral gray) border, and
+         `accent-2` (brand blue) text via `--slds-s-button-color`.
+         Hover / active / focus-visible states are all owned by the
+         SLDS 2 rules (`--slds-c-button-color-background-hover`,
+         `--slds-g-shadow-insetinverse-focus-1`, etc.) so dark-mode
+         and future token retunes flow through automatically.
+
+         The extra `seller-home__knowledge-new` class is retained as
+         a page-specific hook — no rules attached today, but keeps a
+         single place to hang tuning later without editing SLDS.
+
+         Icon markup mirrors the project's standard SLDS pattern
+         (`slds-button__icon slds-button__icon_left` from
+         _knowledge_header_actions.html, _write_messaging_body.html,
+         etc.) so the 8-px icon-to-label gap is owned by the shared
+         SLDS utility, not a bespoke gap rule on the button. #}
+      <header
+        class="seller-home__knowledge-header"
+        data-sh-knowledge-header
+      >
+        <h1 class="seller-home__knowledge-header-title">{{ header.heading }}</h1>
+        <button
+          type="button"
+          class="slds-button slds-button_neutral seller-home__knowledge-new"
+          data-sh-knowledge-new
+        >
+          <svg class="slds-button__icon slds-button__icon_left" aria-hidden="true">
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
+          </svg>
+          {{ newKnowledgeLabel }}
+        </button>
+      </header>
+
+      {# ── Body section ─────────────────────────────────────────────
+         The only scrollable region on the page (`overflow-y: auto`)
+         so the header stays pinned. `min-height: 0` + `flex: 1 1
+         auto` are what actually enable scrolling inside a flex
+         column — without the min-height escape the flex child's
+         intrinsic content height would push the header off-screen.
+
+         Content column is capped at 50rem (800px) and centered per
+         Figma, same math `.seller-home__conv-thread-inner` uses.
+
+         `data-sh-knowledge-body` marks the swap target so a future
+         phase (search filtering, empty-state toggles) can bind
+         without needing to know the current markup. #}
+      <section
+        class="seller-home__knowledge-body"
+        aria-label="Documents"
+        data-sh-knowledge-body
+      >
+        <div class="seller-home__knowledge-body-inner">
+          {# ── Search field ─────────────────────────────────────────
+             Figma frame 8931:383736 ("📝 Input - Search", Default /
+             Default state). Compact 275×32 pill-adjacent input:
+             1-px border-2 (#5c5c5c), 8-px radius, 13-px SF Pro body
+             text, magnifying-glass icon at the left, no submit
+             button — filtering is instant / client-only, so the
+             field never needs to "commit" a query.
+
+             Layout: `seller-home__knowledge-search` is a plain block
+             that anchors to the column's left edge, deliberately NOT
+             stretched to the full 800-px inner column so it visually
+             reads as an inline utility rather than a form field.
+             The clear (×) button surfaces only when the field has a
+             value (see home.js → bindKnowledgeSearch → toggles the
+             `hidden` attribute).
+
+             a11y contract:
+               • `<label>` is `slds-assistive-text`-hidden so the
+                 visually iconic input still has a first-class
+                 accessible name.
+               • `type="search"` gives the input the browser's
+                 semantic keyboard mode (search key on iOS,
+                 X-to-clear on some engines) — we ADD our own clear
+                 button because the built-in one is unstyled + not
+                 keyboard-focusable in every engine.
+               • `[data-sh-knowledge-search-status]` is a visually
+                 hidden `role="status"` + `aria-live="polite"` region
+                 that receives the result-count text after each
+                 keystroke. `polite` is what lets us update the text
+                 without interrupting typing.
+               • The field is a sibling of the doc-list slot below;
+                 it stays mounted (never re-rendered) so keyboard
+                 focus is preserved across every filter update. #}
+          <div class="seller-home__knowledge-search" data-sh-knowledge-search-field>
+            <label class="slds-assistive-text" for="knowledge-search">{{ search.label }}</label>
+
+            <span class="seller-home__knowledge-search-icon" aria-hidden="true">
+              <svg class="seller-home__knowledge-search-icon-svg" focusable="false">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#search"></use>
+              </svg>
+            </span>
+
+            <input
+              type="search"
+              id="knowledge-search"
+              class="seller-home__knowledge-search-input"
+              placeholder="{{ search.placeholder }}"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+              data-sh-knowledge-search
+            />
+
+            <button
+              type="button"
+              class="seller-home__knowledge-search-clear"
+              data-sh-knowledge-search-clear
+              aria-label="{{ search.clearLabel }}"
+              title="{{ search.clearLabel }}"
+              hidden
+            >
+              <svg class="seller-home__knowledge-search-clear-icon" aria-hidden="true" focusable="false">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+              </svg>
+              <span class="slds-assistive-text">{{ search.clearLabel }}</span>
+            </button>
+
+            {# Visually hidden result-count live region. `role="status"` +
+               `aria-live="polite"` means updates are queued and delivered
+               between the user's own typing bursts, so the announcement
+               never talks over the letters they're still entering. The
+               text is set imperatively from home.js after every filter. #}
+            <span
+              class="slds-assistive-text"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              data-sh-knowledge-search-status
+            ></span>
+          </div>
+
+          {# ── Document list ────────────────────────────────────────
+             Phase 3: the compact doc-list from Figma frame 8931:383007
+             ("Convo Thread - rich objects"). The partial defines the
+             `renderKnowledgeDocRow` macro so future callers (e.g. a
+             search-results panel that reuses the same row) can render
+             matching rows from arbitrary data by importing the macro.
+             The partial ALSO renders the sibling empty-state block
+             (`[data-sh-knowledge-empty]`, hidden by default) which
+             the search controller swaps in when a query drops every
+             row — no placeholder skeleton rows, only prose. #}
+          {% include "_home_knowledge_list.html" %}
+        </div>
+      </section>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts_extra %}
+  {# home.js drives the shared shell — nav collapse toggle + persisted
+     state. Its Briefing / Composer / Ready-to-Review handlers no-op
+     on this page because those roots don't exist. #}
+  <script src="/scripts/home.js"></script>
+{% endblock %}

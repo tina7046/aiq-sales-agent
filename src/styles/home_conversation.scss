@@ -932,19 +932,51 @@
     border-block-start: 0.0625rem solid var(--slds-g-color-border-1, #e5e5e5);
   }
 
-  // Row header — the name of the record each row is about, styled the
-  // same way the prospect table styles a person or an account, so a
-  // record name looks like a record name in either table.
-  //
-  // Rendered as text, not an <a>: there's nothing to navigate to in the
-  // prototype, and a real link would promise one. The color is the
-  // foreground accent, NOT the `accent-container-*` family — those are
-  // container fills. Same token behind every actionable phrase in the
-  // proto (briefing link, suggestion CTAs, prospect names).
-  tbody th.cell_text_link {
+  // Row header — the name of the record each row is about.
+  tbody th {
     font-weight: var(--slds-g-font-weight-6, 600);
     white-space: nowrap;
+  }
+
+  // The record name itself is an anchor, so every interaction state is
+  // the browser's rather than a simulation.
+  //
+  // Colors come from the accent ramp, which is what this theme actually
+  // paints links with — a bare <a> here already computes to accent-2.
+  // NOT `--slds-g-link-color`: that's the SLDS 1 link blue (#0b5cab),
+  // still defined but no longer what the agentic theme uses, so keying
+  // off it would drift a few degrees away from every other link on the
+  // page. Also not the `accent-container-*` family, which are container
+  // fills, not foreground colors.
+  //
+  // accent-2 → accent-3 on hover is the ramp's own darker step, the same
+  // direction SLDS moves a link when you point at it.
+  .cell_text_link {
     color: var(--slds-g-color-accent-2, #0250d9);
+    font-weight: inherit;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--slds-g-color-accent-3, #022ac0);
+      text-decoration: underline;
+      text-underline-offset: 0.1875rem;   // 3px — clears the descenders
+    }
+
+    &:active {
+      color: var(--slds-g-color-accent-3, #022ac0);
+    }
+
+    // Same 2 px brand ring the table rows and the cadence controls use.
+    // Underlined as well as ringed so the state survives a high-contrast
+    // mode that drops the outline.
+    &:focus-visible {
+      outline: 2px solid var(--slds-g-color-border-brand-1, #0176d3);
+      outline-offset: 2px;
+      border-radius: var(--slds-g-radius-border-1, 0.125rem);
+      text-decoration: underline;
+      text-underline-offset: 0.1875rem;
+    }
   }
 
   tbody tr:first-child th,

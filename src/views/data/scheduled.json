@@ -1,0 +1,183 @@
+// Seller Home — Scheduled workflows
+// =====================================================================
+// Data source for /scheduled.html. Read at build time by
+// gulpfile.js:getData() because the filename matches the .html stem.
+//
+// Sections:
+//   • pageTitle     — accessible name for the right-column `<main>`
+//                     region and the document title. Kept parallel
+//                     to knowledge.json for consistency.
+//   • header        — text above the composer.
+//                       - heading      → the visible `<h1>`
+//                       - description  → intro paragraph beneath it
+//   • composer      — same shape home.json's `composer` uses so the
+//                     shared `_home_composer.html` partial renders
+//                     identically. Empty `samplePrompts` disables
+//                     home.js's typewriter (per design — Scheduled
+//                     ships a single static placeholder).
+//   • tabs          — filter chips + counts across the workflow list.
+//                       - id           → filter key wired to `status`
+//                       - label        → visible label
+//                       - statuses[]   → status values that pass this
+//                                        filter (empty → "match all")
+//                     `defaultTabId` selects which tab paints active
+//                     on first paint; JS hydrates from URL hash if
+//                     one is present. Counts are recomputed by JS on
+//                     load so they never drift when the workflow list
+//                     is edited.
+//   • statusTypes   — semantic status registry. Each entry:
+//                       - label        → screen-reader-friendly name
+//                       - dot          → "yellow" | "green" for the
+//                                         12-px circle indicator
+//                       - icon         → optional utility-sprite id
+//                                         to render instead of the
+//                                         dot (used by `paused` →
+//                                         solid `play` glyph)
+//                     Keys ("needs_approval" | "scheduled" | "paused")
+//                     are the `status` values referenced by each
+//                     workflow row.
+//   • workflows     — the rows. Each entry:
+//                       - id           → stable dom + event key
+//                       - title        → semibold 14 px name
+//                       - cadence      → 12 px muted meta line
+//                       - status       → key into statusTypes
+//                       - linked       → optional; `false` opts the
+//                                         row out of drill-in (the
+//                                         template renders it as an
+//                                         inert `<div>` with no
+//                                         chevron affordance).
+//   • rowActions    — overflow-menu (⋮) actions per workflow. Dispatch
+//                     `sh:workflow-action` on click; a future
+//                     scheduler backend can listen.
+//   • filterAction  — the top-right filter icon-button. Same
+//                     dispatch pattern — click emits
+//                     `sh:scheduled-filter` for a future consumer.
+//   • emptyState    — copy shown when a tab filter has zero matches
+//                     (rendered by the list partial's sibling block,
+//                     toggled by JS).
+{
+  "pageTitle": "Scheduled",
+  "header": {
+    "heading": "Scheduled",
+    "description": "Agents that keep working in the background, on a schedule, on a trigger, or until a job is done. Type /schedule in any chat to set one up."
+  },
+  // Composer — reuses the shared `_home_composer.html` partial. Empty
+  // `samplePrompts` deliberately disables the placeholder typewriter
+  // per the design (single static "Schedule a task" placeholder).
+  "composer": {
+    "placeholder": "Schedule a task",
+    "ariaLabel": "Schedule a task",
+    "samplePrompts": [],
+    "actions": {
+      "start": [
+        { "id": "add",          "label": "Add",              "icon": "add" },
+        { "id": "quick_action", "label": "Quick action",     "icon": "fallback" },
+        { "id": "skills",       "label": "Skills and tools", "icon": "apps" }
+      ],
+      "end": [
+        { "id": "voice",        "label": "Voice input",      "icon": "unmuted" }
+      ]
+    }
+  },
+  // Tabs. Counts are computed client-side from `workflows[]` by
+  // bindScheduled() in home.js so the JSON never has to hand-track
+  // them. `statuses: []` on "all" means the tab matches everything.
+  "tabs": {
+    "defaultTabId": "scheduled",
+    "items": [
+      { "id": "all",       "label": "All",       "statuses": [] },
+      { "id": "scheduled", "label": "Scheduled", "statuses": ["needs_approval", "scheduled"] },
+      { "id": "paused",    "label": "Paused",    "statuses": ["paused"] }
+    ]
+  },
+  // Status registry — one entry per `workflow.status` value. Adding
+  // a new status (e.g. "failed") is a two-line change: append here +
+  // reference from a row's `status`. The row macro reads
+  // `statusTypes[<row.status>]` and paints either a colored dot or
+  // an inline utility-sprite icon (`paused` uses `play`).
+  "statusTypes": {
+    "needs_approval": { "label": "Needs approval", "dot": "yellow" },
+    "scheduled":      { "label": "Scheduled",      "dot": "green"  },
+    "paused":         { "label": "Paused",         "icon": "play"  }
+  },
+  // Workflows. `linked: false` on every row for now — the design
+  // ships a list surface; the workflow-detail view is a separate
+  // future increment (mirrors the deferred detail-view step in the
+  // implementation plan). When a detail page lands, drop the
+  // `linked: false` field and the row automatically renders as an
+  // `<a>` to the row's route.
+  "workflows": [
+    {
+      "id":      "wf-daily-pipeline-snapshot",
+      "title":   "Daily Pipeline Snapshot",
+      "cadence": "Daily at 9:00 AM PST",
+      "status":  "needs_approval",
+      "linked":  false
+    },
+    {
+      "id":      "wf-daily-deal-summary",
+      "title":   "Daily Deal Summary",
+      "cadence": "Daily at 9:30 AM PST",
+      "status":  "scheduled",
+      "linked":  false
+    },
+    {
+      "id":      "wf-buyer-engage",
+      "title":   "Buyer Engage",
+      "cadence": "Daily at 9:30 AM PST",
+      "status":  "scheduled",
+      "linked":  false
+    },
+    {
+      "id":      "wf-prepare-for-meetings",
+      "title":   "Prepare for Meetings",
+      "cadence": "Daily at 9:30 AM PST",
+      "status":  "scheduled",
+      "linked":  false
+    },
+    {
+      "id":      "wf-cold-prospecting",
+      "title":   "Cold Prospecting",
+      "cadence": "Daily at 9:30 AM PST",
+      "status":  "scheduled",
+      "linked":  false
+    },
+    {
+      "id":      "wf-stay-in-touch-outreach",
+      "title":   "Stay in Touch Outreach",
+      "cadence": "Paused",
+      "status":  "paused",
+      "linked":  false
+    }
+  ],
+  // Per-row overflow menu (⋮). Actions dispatch `sh:workflow-action`
+  // CustomEvent with `{ workflowId, actionId }` so a future
+  // scheduler backend can bind without touching this markup.
+  // Keeping Pause / Resume as two entries rather than a toggle so
+  // the row can decide which one to show based on the current
+  // status. For now the template renders both; a future increment
+  // can hide the inapplicable one.
+  "rowActions": [
+    { "id": "edit",      "label": "Edit",      "icon": "edit"      },
+    { "id": "pause",     "label": "Pause",     "icon": "pause"     },
+    { "id": "resume",    "label": "Resume",    "icon": "play"      },
+    { "id": "duplicate", "label": "Duplicate", "icon": "copy"      },
+    { "id": "delete",    "label": "Delete",    "icon": "delete"    }
+  ],
+  // Right-anchored filter button next to the tabs. Icon-only,
+  // circular, brand-blue funnel glyph. Click emits
+  // `sh:scheduled-filter` — a future consumer can open a filter
+  // menu without changes here.
+  "filterAction": {
+    "id":       "filter",
+    "label":    "Filter workflows",
+    "icon":     "filterList"
+  },
+  // Empty state — rendered as a sibling of the list. Hidden by
+  // default; bindScheduled() toggles the `hidden` attribute when
+  // the active tab filters out every workflow.
+  "emptyState": {
+    "title":       "No workflows match this filter",
+    "description": "Switch to another tab to see workflows in a different state."
+  }
+}

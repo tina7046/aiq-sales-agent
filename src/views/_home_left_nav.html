@@ -1,0 +1,381 @@
+{#
+  Seller Home — left navigation
+  =====================================================================
+  Renders the fixed 300px left-hand navigation for /home.html.
+
+    ┌───────────────────────────────┐  ◂  Sticky top region:
+    │                        ◂ (…)  │      • Row 0: collapse button
+    │  [🔍 Search…            ]     │      • Row 1: search field
+    │  + New chat                   │      • Rows 2-6: primary items
+    │  🗓 Schedules                 │        (New chat, Schedules,
+    │  ▦ Skills                     │        Skills, Knowledge, Tools)
+    │  📚 Knowledge                 │
+    │  🔧 Tools                     │
+    │                               │  ◂  Scrollable middle region:
+    │  🕒 Recents  (semibold hdr)   │      • Padded top → visible
+    │    Acme Inc Prospecting       │        separation between the
+    │    Top Account Resolutions…   │        primary group and the
+    │    Q3 Pipeline Health Report  │        Recents header per the
+    │    …                          │        current design.
+    ├───────────────────────────────┤  ◂  Sticky footer region:
+    │  💬 Feedback                  │      • Feedback, Settings
+    │  ⚙ Settings                   │
+    └───────────────────────────────┘
+
+  Consumes context vars provided by src/views/data/home.json:
+    • navPrimary — Array<{ id, label, icon | iconImage, href? }>.
+                   Top primary items (currently New chat, Schedules,
+                   Skills, Knowledge, Tools).
+    • navFooter  — Array<{ id, label, icon }>. Bottom pinned items.
+    • navActive  — String. `id` of the current active item. Defaults to
+                   "new_chat". Ignored when unmatched (renders no active
+                   state — intended for L1/orphaned surfaces).
+    • recents    — Array<{ id, label }>. Scrollable Recents list.
+
+  Search field
+  ────────────
+  A prototype-level SLDS 2 search input sits above the primary list.
+  It uses the canonical
+    slds-form-element → slds-input-has-icon_left → slds-input
+  pattern (matches _hunter_agents_table.html and
+  _prospect_list/_knowledge_tab.html), so SLDS 2 focus / hover /
+  keyboard behavior comes for free. No global-search JS is wired to
+  it yet — the prototype only requires visual + a11y correctness.
+
+  Structure follows the Hunter Builder nav pattern (macro + data-driven
+  render, sprite icons, CSS-only collapse via a modifier class) but is
+  namespaced under `.seller-home__nav` so nothing here couples to
+  hunter_builder.scss.
+
+  Collapse behaviour: the outer `.seller-home` container carries
+  `.seller-home--nav-collapsed` when the user has toggled the nav shut.
+  home.js persists that state to localStorage under key `sh:navCollapsed`.
+  Collapsed styles live in home.scss and simply reduce the width +
+  hide labels; the markup below stays identical between states so JS
+  never has to rebuild the DOM.
+#}
+
+{# Reusable nav-item macro. Kept parallel to the Hunter Builder
+   `renderNavItem` shape — same {id,label,icon} contract, same `<a>`
+   markup, same aria-current-on-active convention — so anyone who
+   knows one knows the other. Two intentional differences:
+     • Icons live under a dedicated wrapper (`.seller-home__nav-icon`)
+       so collapse-state styling can size/center them without
+       reaching into `<svg>` selectors.
+     • Two icon sources are supported:
+         - `icon: "<sprite-id>"`      → utility-sprite symbol via <svg><use>
+                                        (the default; adapts to currentColor)
+         - `iconImage: "<asset-path>"` → raster image via <img> — used when
+                                        the design ships a bespoke glyph that
+                                        isn't in the SLDS utility sprite.
+                                        `iconImage` wins if both are set.
+                                        NOTE: <img> icons don't inherit
+                                        `currentColor`, so active/hover
+                                        state color changes won't tint the
+                                        raster. Provide the raster with the
+                                        final rendered color baked in, or
+                                        supply a proper SVG for
+                                        color-adaptive rendering.
+#}
+{% macro renderNavItem(item, activeId) %}
+{% set isActive = activeId == item.id %}
+<a
+  href="{{ item.href or '#' }}"
+  class="seller-home__nav-item{% if isActive %} is-active{% endif %}"
+  role="listitem"
+  data-sh-nav="{{ item.id }}"
+  {% if not item.href %}data-sh-nav-noroute{% endif %}
+  {% if isActive %}aria-current="page"{% endif %}
+  title="{{ item.label }}"
+>
+  <span class="seller-home__nav-icon" aria-hidden="true">
+    {% if item.iconImage %}
+      {# Raster-image branch. width/height match the SVG branch (20×20)
+         so nav-item vertical rhythm stays identical regardless of icon
+         source. `alt=""` because the wrapper is already aria-hidden and
+         the sibling `.nav-label` (or `title` on the anchor when
+         collapsed) provides the accessible name. #}
+      <img
+        class="seller-home__nav-icon-image"
+        src="{{ item.iconImage }}"
+        alt=""
+        width="20"
+        height="20"
+        aria-hidden="true"
+      />
+    {% else %}
+      {# Sprite branch. width/height presentation attrs mirror the
+         Hunter Builder pattern: they pin the intrinsic size to 20×20
+         during CSS-load races. Runtime rules in home.scss
+         (.seller-home__nav-icon svg{ … }) still win once styles apply. #}
+      <svg width="20" height="20" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ item.icon }}"></use>
+      </svg>
+    {% endif %}
+  </span>
+  <span class="seller-home__nav-label">{{ item.label }}</span>
+</a>
+{% endmacro %}
+
+{# ── renderRunningRing(r) ─────────────────────────────────────────
+   Small SLDS 2-style progress ring rendered at the trailing edge of
+   a Recents row when `r.runStatus == "running"`. The ring represents
+   the ACTIVE EXECUTION in that conversation — not any reusable Skill
+   the run happens to be exercising (see the "Skill / RecentChat
+   split" note atop `data/skills.json`).
+
+   Two modes, driven by whether `r.progress` is present:
+
+     • Determinate — `r.progress` is a number 0-100. Rendered as a
+                     stroke-dasharray arc filling from the top,
+                     clockwise, to `progress`% of the ring. This is
+                     the default surface for a running chat because
+                     the platform can report real progress. Role:
+                     `progressbar`, with aria-valuemin/max/now.
+     • Indeterminate — no `progress` (or `null`). Rendered as a
+                     partial arc that spins on a fixed animation
+                     loop (see `.seller-home__nav-recent-ring--
+                     indeterminate` in home.scss). Role: `img`
+                     (no numeric value to report). Reserved for
+                     "we know a run is happening but the platform
+                     can't give us a percentage."
+
+   Both modes share the same 16 px round chrome (gray track +
+   accent-1 blue fill) so the visual affordance is stable across
+   states — the arc's SHAPE and BEHAVIOR differ, not the ring's
+   size or color palette.
+
+   Ring GEOMETRY: circle at (10,10) with r=8 in a 20-unit viewBox.
+   Circumference = 2 π × 8 ≈ 50.2654. `stroke-dasharray` sets the
+   dash length; `stroke-dashoffset` moves the dash "start" so the
+   visible arc represents the desired percentage. Rotation to
+   12 o'clock is done on the SVG element in home.scss (transform:
+   rotate(-90deg)) rather than per-<circle>, so animation and
+   determinate rendering share the same base orientation.
+
+   Aria-label copy is spec-driven ("<label> is running." / "<label>
+   is running, N percent complete.") — do not localize here without
+   also updating the RecentChat model doc.
+#}
+{% macro renderRunningRing(r) %}
+  {% if r.runStatus == "running" %}
+    {% set _hasProgress = (r.progress is defined) and (r.progress != null) %}
+    {% if _hasProgress %}
+      {# Clamp 0-100 without leaning on Nunjucks filters we don't
+         have in scope. Guards against upstream data that hasn't
+         been validated. #}
+      {% set _p = r.progress %}
+      {% if _p < 0   %}{% set _p = 0   %}{% endif %}
+      {% if _p > 100 %}{% set _p = 100 %}{% endif %}
+      {# stroke-dashoffset = C × (1 - p/100).  C ≈ 50.2654. #}
+      {% set _dashOffset = 50.2654 * (100 - _p) / 100 %}
+      <span
+        class="seller-home__nav-recent-ring seller-home__nav-recent-ring--running"
+        role="progressbar"
+        aria-label="{{ r.label }} is running, {{ _p }} percent complete."
+        aria-valuenow="{{ _p }}"
+        aria-valuemin="0"
+        aria-valuemax="100"
+      >
+        <svg viewBox="0 0 20 20" focusable="false" aria-hidden="true">
+          <circle class="seller-home__nav-recent-ring-track" cx="10" cy="10" r="8"></circle>
+          <circle
+            class="seller-home__nav-recent-ring-fill"
+            cx="10" cy="10" r="8"
+            stroke-dasharray="50.2654 50.2654"
+            stroke-dashoffset="{{ _dashOffset }}"
+          ></circle>
+        </svg>
+      </span>
+    {% else %}
+      <span
+        class="seller-home__nav-recent-ring seller-home__nav-recent-ring--running seller-home__nav-recent-ring--indeterminate"
+        role="img"
+        aria-label="{{ r.label }} is running."
+      >
+        <svg viewBox="0 0 20 20" focusable="false" aria-hidden="true">
+          <circle class="seller-home__nav-recent-ring-track" cx="10" cy="10" r="8"></circle>
+          {# ~30% arc — long enough to read as "progress" without
+             matching any specific percentage. Rotation animation
+             in home.scss sweeps it around the ring. #}
+          <circle
+            class="seller-home__nav-recent-ring-fill"
+            cx="10" cy="10" r="8"
+            stroke-dasharray="15 50.2654"
+          ></circle>
+        </svg>
+      </span>
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{# Default the active id from home.json so pages that include this
+   partial without setting anything render the "New chat" landing state
+   we want. Pass `navActive` explicitly on any consumer that needs a
+   different active state (e.g. a future Workflows sub-page). #}
+{% set _shNavActive = navActive or "new_chat" %}
+
+<aside
+  class="seller-home__nav"
+  aria-label="Seller Home navigation"
+  data-sh-nav-root
+>
+  {# ── Sticky top ──────────────────────────────────────────────────
+     Holds the collapse toggle and the four primary nav items. Stays
+     visible when the Recents list scrolls. #}
+  <div class="seller-home__nav-top">
+    <div class="seller-home__nav-topbar">
+      <button
+        type="button"
+        class="seller-home__nav-toggle"
+        data-sh-nav-toggle
+        aria-label="Collapse navigation"
+        aria-expanded="true"
+        aria-controls="seller-home-nav-body"
+      >
+        <svg width="20" height="20" aria-hidden="true">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#arrow_left"></use>
+        </svg>
+      </button>
+    </div>
+
+    {# ── Search field ────────────────────────────────────────────────
+       SLDS 2 search input. Wrapped in `.seller-home__nav-search` so
+       home.scss can inset it against the sidebar's horizontal padding
+       and hide the whole block when the sidebar is collapsed (a bare
+       SLDS input would look wrong in a 64px rail). Structure mirrors
+       _hunter_agents_table.html / _prospect_list/_knowledge_tab.html
+       so accessibility (assistive-text label + type="search") stays
+       consistent across the app. No wired-up search behavior yet — the
+       prototype spec calls for "visually functional without
+       implementing global search behavior". #}
+    <div class="slds-form-element seller-home__nav-search" data-sh-nav-search>
+      <label
+        class="slds-form-element__label slds-assistive-text"
+        for="seller-home-nav-search-input"
+      >Search navigation</label>
+      <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon_left">
+        <span
+          class="slds-icon_container slds-icon-utility-search slds-input__icon slds-input__icon_left"
+          aria-hidden="true"
+        >
+          <svg class="slds-icon slds-icon-text-default slds-icon_x-small" aria-hidden="true">
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#search"></use>
+          </svg>
+        </span>
+        <input
+          type="search"
+          id="seller-home-nav-search-input"
+          class="slds-input seller-home__nav-search-input"
+          placeholder="Search..."
+          aria-label="Search navigation"
+          autocomplete="off"
+        />
+      </div>
+    </div>
+
+    <div class="seller-home__nav-list seller-home__nav-list--primary" role="list">
+      {% for item in navPrimary %}
+        {{ renderNavItem(item, _shNavActive) }}
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ── Scrollable middle ────────────────────────────────────────────
+     Recents header sits inside the scroll region (not the sticky top)
+     because Figma shows the header scrolling out of view with the list
+     — the sticky region is JUST the collapse + primary items above. #}
+  <div
+    class="seller-home__nav-scroll"
+    id="seller-home-nav-body"
+    tabindex="0"
+    aria-label="Recent conversations"
+  >
+    {# The "Recents" heading is always present, including on a cold
+       start with no history — it's a fixed landmark in the rail, so
+       hiding it would shuffle the nav's shape the first time a
+       conversation is opened. Only the rows below it come and go. #}
+    <div class="seller-home__nav-section">
+      <div class="seller-home__nav-section-header" role="heading" aria-level="2">
+        <span class="seller-home__nav-icon" aria-hidden="true">
+          <svg width="20" height="20" aria-hidden="true">
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#clock"></use>
+          </svg>
+        </span>
+        <span class="seller-home__nav-label">Recents</span>
+      </div>
+
+      {# Rows are re-rendered from session storage by home.js on every
+         page load, so this server-rendered pass is a seed rather than
+         the source of truth. Both paths emit the same markup — see
+         `renderRecents` in home.js if you change the shape here. #}
+      <div
+        class="seller-home__nav-list seller-home__nav-list--recents"
+        role="list"
+        data-sh-recents-list
+      >
+        {% for r in recents %}
+        {# Recents rows have no icon — Figma shows label-only, indented
+           under the "Recents" header. Different visual weight from the
+           primary nav items (regular vs. semibold, gray vs. dark blue).
+
+           Two variants:
+             • Linked   (`r.conversationId` set) — anchor points at the
+                        conversation route; JS applies `.is-active` +
+                        `aria-current="page"` when `location.search.id`
+                        matches this recent's `conversationId`. The URL
+                        is the sole source of truth for selection —
+                        no separate "active recent" flag stored
+                        anywhere.
+             • Unlinked (no `conversationId`)    — legacy Phase-1 rows
+                        with `href="#"`, kept keyboard-reachable but
+                        not wired to a real route yet.
+
+           Selection is applied at RUN TIME by home_conversation.js
+           rather than in Nunjucks so a future navigation between
+           conversations (same page, different `?id=`) can move the
+           highlight without a full re-render. #}
+        {% if r.conversationId %}
+        <a
+          href="/home_conversation.html?id={{ r.conversationId }}"
+          class="seller-home__nav-recent seller-home__nav-recent--linked{% if r.runStatus == 'running' %} seller-home__nav-recent--running{% endif %}"
+          role="listitem"
+          data-sh-recent="{{ r.id }}"
+          data-sh-recent-conv="{{ r.conversationId }}"
+          {% if r.runStatus %}data-sh-recent-run-status="{{ r.runStatus }}"{% endif %}
+          title="{{ r.label }}"
+        >
+          <span class="seller-home__nav-recent-label">{{ r.label }}</span>
+          {{ renderRunningRing(r) }}
+        </a>
+        {% else %}
+        <a
+          href="#"
+          class="seller-home__nav-recent{% if r.runStatus == 'running' %} seller-home__nav-recent--running{% endif %}"
+          role="listitem"
+          data-sh-recent="{{ r.id }}"
+          data-sh-nav-noroute
+          {% if r.runStatus %}data-sh-recent-run-status="{{ r.runStatus }}"{% endif %}
+          title="{{ r.label }}"
+        >
+          <span class="seller-home__nav-recent-label">{{ r.label }}</span>
+          {{ renderRunningRing(r) }}
+        </a>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {# ── Sticky footer ───────────────────────────────────────────────
+     Feedback + Settings anchored at the bottom regardless of scroll
+     position. Border-top separates the footer from the scroll region;
+     see .seller-home__nav-footer in home.scss. #}
+  <div class="seller-home__nav-footer">
+    <div class="seller-home__nav-list seller-home__nav-list--footer" role="list">
+      {% for item in navFooter %}
+        {{ renderNavItem(item, _shNavActive) }}
+      {% endfor %}
+    </div>
+  </div>
+</aside>

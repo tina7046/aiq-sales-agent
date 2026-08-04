@@ -367,10 +367,19 @@
    Columns are `{ id, label, align? }`. `align: 'right'` is for figures,
    where a right edge makes magnitudes comparable down the column. The
    first column renders as `<th scope="row">`, so each row is announced
-   by its own name rather than as a bare list of values. It also carries
-   `cell_text_link` — the same link-blue record-name treatment the
-   prospect table gives a person or an account, so a record reads the
-   same wherever it appears.
+   by its own name rather than as a bare list of values.
+
+   That name is a real `<a>`, so hover / focus / active come from the
+   browser's own link machinery instead of being approximated on a
+   `<span>` — and it's a tab stop, which is the only way a keyboard user
+   ever sees the focus state. It carries `cell_text_link`, the same
+   record-name class the prospect table uses, so a record looks the same
+   wherever it appears.
+
+   `href="#"` with the click preventDefaulted: there's no deal record to
+   open in the prototype. Same arrangement as an unlinked Ready to
+   Review card — see the thread's anchor delegate in
+   home_conversation.js, which keeps the URL free of a phantom hash.
 
    A cell can be a plain value or `{ value, tone }`, where `tone`
    ('critical' | 'warning' | 'positive') colors just that cell — for
@@ -411,7 +420,9 @@
                 (' seller-home__conv-data-cell--right' if col.align == 'right' else '') +
                 (' seller-home__conv-data-cell--' + _tone if _tone else '') -%}
           {% if loop.first %}
-          <th scope="row" class="cell_text_link {{ _class }}">{{ _value }}</th>
+          <th scope="row" class="{{ _class }}">
+            <a href="#" class="cell_text_link" data-sh-conv-record-link>{{ _value }}</a>
+          </th>
           {% else %}
           <td class="{{ _class }}">{{ _value }}</td>
           {% endif %}

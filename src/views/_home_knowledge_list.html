@@ -1,0 +1,305 @@
+{#
+  Seller Home — Knowledge document list
+  =====================================================================
+  Renders the compact, vertical doc list on /knowledge.html. Owned by
+  knowledge.html; consumes `documents` + `documentActions` from
+  knowledge.json (see the field-level comments there).
+
+  Design source: Figma "Convo Thread - rich objects"
+  (frame 8931:383007 in Issa's Explorations). Row structure:
+
+    ┌────────────────────────────────────────────────────────────────┐
+    │ [TXT icon]  Document name (semibold, ellipsized)   [⋮]    [ ▷ ] │
+    │             Document · Jul 28, 2026 (12px, muted)              │
+    └────────────────────────────────────────────────────────────────┘
+
+  Per-row measurements (Figma get_variable_defs on 8931:383007):
+    • Height: 56px (fixed)
+    • Inline padding: 16px each side (spacing-4)
+    • Radius: 12px (radius-border-3)
+    • Surface: --slds-g-color-surface-1 (white)
+    • Hairline: drop-shadow(0 0 1px rgba(0,0,0,0.16)) — modelled in
+      CSS as a 1px inset outline (box-shadow: inset 0 0 0 1px)
+    • Icon: 24px doctype-sprite/txt (yellow TXT file glyph)
+    • Icon-to-text gap: 12px (spacing-3)
+    • Name: 14px Semibold (font-weight 590), leading 19px,
+      color on-surface-2 (#2E2E2E), whitespace-nowrap + ellipsis
+    • Metadata: 12px Regular, leading 1.3, color on-surface-1 (#5C5C5C)
+    • Chevron: 20px, icon-default (#747474)
+    • Row-to-row gap: 8px (spacing-2)
+
+  Interaction / a11y contract:
+    • The row is a native `<a>` (URL-preserving, Cmd/middle-click-
+      compatible) that fills the row, so Enter activation, focus, and
+      route-preview all come "for free" from the browser. The full doc
+      name is exposed via the row's native `title` tooltip so long
+      names remain discoverable after the ellipsis kicks in.
+    • The overflow menu (⋮ + Download / Delete) is a native `<button>`
+      + `role="menu"` panel sitting as a SIBLING of the anchor (nesting
+      a `<button>` inside an `<a>` is invalid HTML). It's absolutely
+      positioned INSIDE the row's reserved right gutter so the anchor
+      never covers the menu's hit target. The anchor's body reserves
+      a matching right margin so the doc name never crashes into the
+      menu button when it ellipsizes.
+    • Overflow menu wiring lives in home.js (`bindKnowledgeDocList` +
+      `knowledgeDocOverflowController`). Same convention Ready-to-
+      Review uses: `data-sh-knowledge-doc-menu` + `-trigger` + `-list`
+      + `-action` DOM hooks; the controller handles open/close,
+      Escape, Arrow-Up/Down inside the panel, and outside-click
+      dismissal.
+    • Row-open path: the anchor's href drives navigation (empty for
+      now → in-page `#`), and a `sh:knowledge-doc-open` CustomEvent
+      fires so a future router can preventDefault and take over.
+
+  Phase 4 additions (search + empty state):
+    • Every row carries `data-sh-knowledge-doc-name` +
+      `data-sh-knowledge-doc-type` — those are the two fields the
+      client-side filter in home.js (`bindKnowledgeSearch`) matches
+      against (trimmed, case-insensitive substring). Kept in DOM
+      attributes so the filter never has to rescan text nodes or
+      parse the row's rendered content.
+    • The empty state (`[data-sh-knowledge-empty]`) renders as a
+      sibling of the `<ul>` inside the same section, hidden by
+      default. `bindKnowledgeSearch` toggles the `hidden` attribute
+      on both the list and the empty state whenever a query
+      filters out every row — so the region never shows placeholder
+      rows, only prose + the persistent search field / header.
+#}
+
+{% macro renderKnowledgeDocRow(doc, actions) %}
+  {#
+    One doc row. Positioned wrapper (`.seller-home__knowledge-doc-item`)
+    owns the absolute-positioning coordinate space for the overflow
+    menu; the anchor + menu are its two children.
+
+    `data-sh-knowledge-doc-id` is the row's stable hook. The overflow
+    controller uses it to attribute action dispatches to the right doc
+    (`sh:knowledge-doc-action` detail = { action, docId }) without
+    parsing the anchor's href.
+
+    Linked vs unlinked rows:
+      • Default (`doc.linked` unset or truthy) — row body is a native
+        `<a>` with an `href` that opens the Seller Home detail page.
+        This is the standard drill-in path.
+      • `doc.linked === false` — row body is an inert `<div>` (no href,
+        no `data-sh-knowledge-doc` hook, no chevron affordance) so a
+        click / Enter / Cmd-click never navigates and never emits the
+        `sh:knowledge-doc-open` CustomEvent that home.js listens for.
+        The overflow menu still works because it lives as a SIBLING
+        of the row body, not as a child of the anchor.
+      Both shapes share the same class list and structural markup so
+      hover / focus / typography stay pixel-identical; only the
+      interaction contract differs.
+  #}
+  {#
+    Default routing: rows open the Seller Home detail page at
+    `/knowledge_document_detail.html?id=<doc.id>`. The doc's id
+    round-trips through URL-encoding so kebab-case ids (which are the
+    common shape here) stay untouched but any future doc id with a
+    space, plus, or slash still forms a valid URL. Data can override
+    with an explicit `doc.href` (external URL, legacy route, etc.).
+    Only evaluated on the linked branch below.
+  #}
+  {% set docHref = doc.href or ("/knowledge_document_detail.html?id=" ~ (doc.id | urlencode)) %}
+  {# `linked` defaults to true — only an explicit `linked: false` in
+     knowledge.json opts a row out of drill-in. We negate the negative
+     rather than using `!== false` / `sameas` because this Nunjucks
+     build doesn't parse those tests. #}
+  {% set isLinked = not (doc.linked == false) %}
+  <li
+    class="seller-home__knowledge-doc-item"
+    data-sh-knowledge-doc-item
+    data-sh-knowledge-doc-name="{{ doc.name }}"
+    data-sh-knowledge-doc-type="{{ doc.type }}"
+  >
+    {% if isLinked %}
+    <a
+      class="seller-home__knowledge-doc-row"
+      href="{{ docHref }}"
+      title="{{ doc.name }}"
+      aria-label="Open document, {{ doc.name }}"
+      data-sh-knowledge-doc
+      data-sh-knowledge-doc-id="{{ doc.id }}"
+    >
+    {% else %}
+    {# Inert branch — `<div>` instead of `<a>`, so no anchor semantics
+       (no keyboard-activation-as-a-link, no browser routing, no
+       CustomEvent from home.js). No `data-sh-knowledge-doc` hook,
+       which is the exact selector home.js uses to detect a
+       drill-in-eligible row. `title` is still the doc name so the
+       tooltip surfaces the full name after the ellipsis kicks in,
+       but the aria-label drops the "Open document," prefix since
+       activation no longer opens anything. #}
+    <div
+      class="seller-home__knowledge-doc-row seller-home__knowledge-doc-row--unlinked"
+      title="{{ doc.name }}"
+      aria-label="{{ doc.name }}"
+    >
+    {% endif %}
+      {# Left cluster — 24-px doctype icon.
+         `aria-hidden` because the accessible name on the row wrapper
+         already carries the doc name; a screen reader echoing "TXT
+         icon" on top of that would be noise. #}
+      <span class="seller-home__knowledge-doc-icon" aria-hidden="true">
+        <svg class="seller-home__knowledge-doc-icon-svg" focusable="false">
+          <use xlink:href="/assets/icons/doctype-sprite/svg/symbols.svg#{{ doc.fileType }}"></use>
+        </svg>
+      </span>
+
+      {# Center cluster — primary name + secondary metadata stack.
+         `min-width: 0` on this element (via CSS) is what lets the
+         name's `text-overflow: ellipsis` bite; without it the flex
+         child's intrinsic content width would push the row wider
+         than its parent. Metadata is nowrap so a very narrow column
+         breaks the name first, per the spec ("At narrow widths,
+         let the document name truncate before hiding its metadata"). #}
+      <span class="seller-home__knowledge-doc-body">
+        <span class="seller-home__knowledge-doc-name">{{ doc.name }}</span>
+        <span class="seller-home__knowledge-doc-meta">
+          {{ doc.type }}
+          <span class="seller-home__knowledge-doc-meta-sep" aria-hidden="true">·</span>
+          {{ doc.updatedAt }}
+        </span>
+      </span>
+
+      {# Right cluster — chevron affordance ("this row leads
+         somewhere"). Purely decorative — the anchor is the click
+         target, not this element. `focusable="false"` keeps IE-family
+         browsers from adding the SVG to the tab order (harmless in
+         modern browsers). Suppressed on unlinked rows since a
+         chevron on an inert row would falsely promise a drill-in. #}
+      {% if isLinked %}
+      <span class="seller-home__knowledge-doc-chevron" aria-hidden="true">
+        <svg class="seller-home__knowledge-doc-chevron-svg" focusable="false">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
+        </svg>
+      </span>
+      {% endif %}
+    {% if isLinked %}</a>{% else %}</div>{% endif %}
+
+    {#
+      Overflow menu (⋮ → Download / Delete).
+
+      SIBLING of the anchor, absolutely positioned so it sits inside
+      the anchor's reserved right gutter without violating the "no
+      nested interactives" HTML rule. `data-sh-knowledge-doc-menu` is
+      the outside-click-detect boundary — clicks anywhere inside this
+      element are treated as "inside the menu" and don't dismiss it.
+
+      The menu id is namespaced with the doc id so multiple rows
+      never share aria-controls / aria-labelledby targets.
+    #}
+    {% set menuId = "knowledge-doc-" ~ doc.id ~ "-menu" %}
+    <div
+      class="seller-home__knowledge-doc-menu"
+      data-sh-knowledge-doc-menu
+      data-sh-knowledge-doc-stop
+    >
+      <button
+        type="button"
+        class="slds-button slds-button_icon slds-button_icon-bare seller-home__knowledge-doc-menu-trigger"
+        data-sh-knowledge-doc-menu-trigger
+        aria-haspopup="menu"
+        aria-expanded="false"
+        aria-controls="{{ menuId }}"
+        aria-label="More actions for {{ doc.name }}"
+        title="More actions"
+      >
+        <svg class="slds-button__icon" aria-hidden="true">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
+        </svg>
+        <span class="slds-assistive-text">More actions</span>
+      </button>
+
+      <div
+        class="seller-home__knowledge-doc-menu-list"
+        id="{{ menuId }}"
+        role="menu"
+        aria-label="Document actions"
+        data-sh-knowledge-doc-menu-list
+        hidden
+      >
+        <ul class="seller-home__knowledge-doc-menu-items" role="none">
+          {% for action in actions %}
+            <li role="none">
+              <button
+                type="button"
+                class="seller-home__knowledge-doc-menu-item"
+                role="menuitem"
+                data-sh-knowledge-doc-action="{{ action.id }}"
+              >
+                {% if action.icon %}
+                  <svg class="seller-home__knowledge-doc-menu-item-icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
+                  </svg>
+                {% endif %}
+                <span class="seller-home__knowledge-doc-menu-item-label">{{ action.label }}</span>
+              </button>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </li>
+{% endmacro %}
+
+
+{#
+  Outer list. `role`-free `<ul>` — the enclosing `<section aria-label=
+  "Documents">` in knowledge.html already labels the region, and each
+  row's `<a>` is the meaningful interactive element. Using a plain
+  `<ul>` (over `role="listbox"` / `role="grid"`) matches the "list of
+  documents, not a selection widget" mental model per the spec.
+
+  `data-sh-knowledge-doc-list` is the delegation root for the JS
+  controller (home.js → bindKnowledgeDocList). Everything inside is
+  handled via event delegation so future doc rows added at runtime
+  need no per-row binding.
+#}
+<ul
+  class="seller-home__knowledge-doc-list"
+  data-sh-knowledge-doc-list
+>
+  {#
+    `doc.hidden === true` opts the doc out of the visible list without
+    deleting its data. We skip rendering rather than emitting a hidden
+    row so:
+      • the row never enters the search index (bindKnowledgeSearch
+        walks DOM rows, not raw data),
+      • no accessible-name / tab-order noise reaches AT users,
+      • Cmd-click on the invisible slot can't accidentally deep-link
+        to the detail page.
+    Nunjucks `== true` vs `is sameas true`: the plain equality is
+    tolerated by the older Nunjucks build this project uses.
+  #}
+  {% for doc in documents %}
+    {% if not (doc.hidden == true) %}
+      {{ renderKnowledgeDocRow(doc, documentActions) }}
+    {% endif %}
+  {% endfor %}
+</ul>
+
+{#
+  Empty state — Figma 8931:383736 "no matches" companion. Sibling of
+  the list so the section retains its persistent header + search
+  field while the list slot swaps content. Hidden by default; the
+  search controller in home.js (`bindKnowledgeSearch`) toggles the
+  `hidden` attribute in tandem with the list whenever a query filters
+  out every row.
+
+  Copy comes from `emptyState.title` + `emptyState.description` in
+  knowledge.json so a future first-run empty state ("You haven't
+  added any knowledge yet") is a data-only edit. Kept as a plain
+  `<div>` (no `role="alert"` / `role="status"`) — the aria-live
+  region owned by the search field already announces the count
+  change; adding a second live region here would double-announce
+  every keystroke.
+#}
+<div
+  class="seller-home__knowledge-empty"
+  data-sh-knowledge-empty
+  hidden
+>
+  <p class="seller-home__knowledge-empty-title">{{ emptyState.title }}</p>
+  <p class="seller-home__knowledge-empty-description">{{ emptyState.description }}</p>
+</div>
