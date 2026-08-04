@@ -107,6 +107,30 @@ nunjucksEnv.addGlobal('readData', (name) => {
     return null
   }
 })
+// `today()` — the current date as "Mon July 13", the shape the Seller Home
+// review header has always shown. A function rather than a value so a
+// dev watcher left running overnight re-renders it, and so a `dist` built
+// on Monday isn't stamped Monday forever.
+//
+// Build time is only half the story: `dist` is a static bundle, so a
+// deploy from last week would still serve last week's date. home.js
+// re-stamps any `[data-sh-today]` element on load, which is what makes it
+// genuinely live. This global exists so the markup ships with the right
+// date already in it instead of flashing a stale one.
+//
+// `formatToParts` + filter rather than `format`, because en-US puts a
+// comma after the weekday ("Mon, July 13") and the design doesn't have
+// one. The same formatter is duplicated in home.js — six lines in two
+// languages beats a build step to share them.
+nunjucksEnv.addGlobal('today', () => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    weekday: 'short', month: 'long', day: 'numeric'
+  }).formatToParts(new Date())
+  return parts
+    .filter((p) => p.type === 'weekday' || p.type === 'month' || p.type === 'day')
+    .map((p) => p.value)
+    .join(' ')
+})
 
 gulp.task('views', () =>
   gulp

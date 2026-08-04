@@ -166,13 +166,21 @@
     // The briefing sentence, also rendered verbatim. Numbers are baked into
     // the copy rather than interpolated from the fields below, so reword
     // freely without touching the template.
-    "text": "You’re 76% to quota with 30 days left in the quarter. Here’s what to do to hit your goal of President’s Club.",
+    // Dollars rather than a percentage, and the pair is not arbitrary:
+    // $19M against a $25M quota is the 76% this line used to read, and
+    // $19.0M is the same figure the pipeline conversation reports as won
+    // in Q3. Keep the two in step if either moves — a quota here that
+    // disagrees with the deal amounts in conv-002 reads as a bug.
+    "text": "You’ve closed $19M of your $25M quota with 30 days left in the quarter. Here’s what to do to hit your goal of President’s Club.",
     // Substring of `text` to render with the interactive link treatment
     // (accent color, dotted underline that thickens on hover, pointer
     // cursor). Appearance only — clicking is a no-op until a topic is
     // wired up. Must match the sentence above exactly; a phrase that
     // isn't found just renders as plain prose.
-    "linkPhrase": "76% to quota",
+    "linkPhrase": "$19M of your $25M quota",
+    // Attainment as a number, for anything that wants the figure rather
+    // than the sentence. Still 76% — $19M of $25M — now that the copy
+    // spells the dollars out.
     "quotaPercent": 76,
     "quarterDaysRemaining": 30,
     "atRiskDeals": {
@@ -1428,11 +1436,18 @@
     }
   },
   "review": {
-    "heading": "Ready to Review",
-    "date": "Mon July 13",
+    "heading": "Your path to quota",
+    // Optional PIN for the date beside the heading. null = show today,
+    // recomputed on every page load. Set a literal string ("Mon July 13")
+    // to freeze it — useful when a screenshot has to match a deck.
+    "date": null,
     "defaultTabId": "ready",
+    // `label` is dormant while there's a single tab — the header renders
+    // `heading` as a plain <h2>. Kept in step with it so restoring the
+    // tablist (see _home_ready_to_review.html) doesn't resurrect the old
+    // wording.
     "tabs": [
-      { "id": "ready", "label": "Ready to Review", "dataKey": "reviewItems" }
+      { "id": "ready", "label": "Your path to quota", "dataKey": "reviewItems" }
     ],
     "overflowActions": [
       { "id": "view_all",        "label": "View all" },

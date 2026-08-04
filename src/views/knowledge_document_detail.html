@@ -74,10 +74,16 @@
       rendered here from a `header.actions` binding in the JSON.
 #}
 
-{% set navPrimary = readData("index").navPrimary %}
-{% set navFooter  = readData("index").navFooter %}
-{% set recents    = readData("index").recents %}
-{% set catalog    = readData("knowledge").documents %}
+{% set navPrimary       = readData("index").navPrimary %}
+{% set navFooter        = readData("index").navFooter %}
+{% set recents          = readData("index").recents %}
+{% set catalog          = readData("knowledge").documents %}
+{# Legacy-id redirect table (Step 16 of the Auto-Learning split
+   refactor). Projected into the client config blob so the resolver
+   in knowledge_document_detail.js can fall back to an aliased id
+   when a direct catalog lookup misses. See the field-level doc
+   comment in knowledge.json for the full contract and rationale. #}
+{% set documentAliases  = readData("knowledge").documentAliases %}
 
 {% block styles %}
   {# home.css owns the whole Seller Home shell + this page's article,
@@ -440,6 +446,7 @@
       <script type="application/json" id="sh-knowledge-doc-detail-config">
         {
           "catalog": {{ catalog | tojson | safe }},
+          "documentAliases": {{ documentAliases | tojson | safe }},
           "fallbackTitle": {{ fallbackTitle | tojson | safe }},
           "updatedLabelTemplate": {{ updatedLabelTemplate | tojson | safe }},
           "notFound": {{ notFound | tojson | safe }},

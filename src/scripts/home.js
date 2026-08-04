@@ -71,10 +71,17 @@
 // Persistence:
 //   State lives in localStorage under 'sh:navCollapsed' so a user's
 //   preference survives navigation and reloads. Values are strings
-//   ('true'/'false') per localStorage's storage contract. On boot we
-//   read the value BEFORE the first paint (see the try/catch below)
-//   and apply the collapsed class synchronously to avoid a flash of
-//   expanded state.
+//   ('true'/'false') per localStorage's storage contract.
+//
+//   This script CANNOT restore that state without a visible flash: it
+//   loads at the end of <body> and boots on DOMContentLoaded, both of
+//   which are after the rail's first paint, and the rail has a 180ms
+//   width transition — so a collapsed user would watch it sweep open
+//   and shut on every navigation. The restore therefore happens in a
+//   parser-blocking inline script in _home_left_nav.html, which lands
+//   the class before the rail is laid out. What's left here is the
+//   toggle itself, the ARIA state, and thawing the transition one
+//   frame in (`releasePreload`).
 //
 // A11y:
 //   • The toggle button flips `aria-expanded` and `aria-label` so
@@ -300,17 +307,88 @@
     return { id: 'rec-' + id, label: label, conversationId: id, query: query || null }
   }
 
+  // ── Today's date ────────────────────────────────────────────────
+  // Re-stamp every `[data-sh-today]` element from the browser's clock.
+  //
+  // The build already wrote today's date into the markup (see the
+  // `today()` global in gulpfile.js), but `dist` is a static bundle —
+  // a deploy from last week would keep serving last week's date. This
+  // is the half that makes it live.
+  //
+  // Format is "Mon July 13", matching the review header's design.
+  // `formatToParts` rather than `format` because en-US inserts a comma
+  // after the weekday. Deliberately duplicated from the gulpfile: the
+  // build and the browser each need their own copy, and six lines is
+  // cheaper than a shared-module build step in a no-bundler project.
+  //
+  // Elements the author pinned to a fixed date aren't tagged, so
+  // there's nothing here to opt them out of.
+  function formatToday (date) {
+    if (!window.Intl || typeof window.Intl.DateTimeFormat !== 'function') return null
+    try {
+      var fmt = new window.Intl.DateTimeFormat('en-US', {
+        weekday: 'short', month: 'long', day: 'numeric'
+      })
+      if (typeof fmt.formatToParts !== 'function') return null
+      var out = []
+      var parts = fmt.formatToParts(date)
+      for (var i = 0; i < parts.length; i++) {
+        var type = parts[i].type
+        if (type === 'weekday' || type === 'month' || type === 'day') out.push(parts[i].value)
+      }
+      return out.length ? out.join(' ') : null
+    } catch (e) {
+      // Leave the build-time value in place rather than blanking it.
+      return null
+    }
+  }
+
+  function stampToday (root) {
+    var text = formatToday(new Date())
+    if (!text) return
+    var nodes = root.querySelectorAll('[data-sh-today]')
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].textContent !== text) nodes[i].textContent = text
+    }
+  }
+
+  // Drop the class that freezes the rail's width transition during
+  // load. Guarded on rAF so a browser without it (or a page where the
+  // inline script never ran) still ends up unfrozen.
+  function releasePreload (root) {
+    var thaw = function () {
+      root.classList.remove('seller-home--nav-preload')
+    }
+    if (typeof window.requestAnimationFrame !== 'function') return thaw()
+    window.requestAnimationFrame(function () {
+      window.requestAnimationFrame(thaw)
+    })
+  }
+
   // ── Boot ────────────────────────────────────────────────────────
   function init () {
     var root = document.querySelector('[data-sh-root]')
     if (!root) return
 
+    // The inline script in _home_left_nav.html has already put the rail
+    // in its restored state and frozen its width transition. Thaw it
+    // once the browser has painted that state, so the first user-driven
+    // toggle animates but the restore never did.
+    //
+    // Two frames, not one: the first fires before the paint this style
+    // change belongs to, and removing the class there can still let the
+    // restore animate.
+    releasePreload(root)
+
+    // Correct any build-time date stamp to the browser's today.
+    stampToday(root)
+
     var toggle = root.querySelector('[data-sh-nav-toggle]')
     if (toggle) {
-      // Apply persisted state before wiring the click handler so the
-      // initial ARIA attrs match the DOM. `readCollapsed` returns
-      // false for a fresh session, so the default is expanded —
-      // matching the "Expanded Composed" Figma frame.
+      // Re-apply the persisted state so the toggle's ARIA attrs match
+      // the classes the inline script set. Idempotent by design — the
+      // classes are already correct, so this changes nothing visually
+      // and no transition fires even before the thaw above lands.
       applyState(root, toggle, readCollapsed())
 
       toggle.addEventListener('click', function (event) {

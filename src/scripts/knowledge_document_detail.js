@@ -119,6 +119,16 @@
       // property access.
       parsed.cancel = (parsed.cancel && typeof parsed.cancel === 'object') ? parsed.cancel : {};
       parsed.status = (parsed.status && typeof parsed.status === 'object') ? parsed.status : {};
+      // Legacy-id alias table (Step 16 of the Auto-Learning split
+      // refactor). Consulted by `resolveDocId` when a direct catalog
+      // lookup misses — see the field-level comment on
+      // `documentAliases` in knowledge.json. An empty object here
+      // means "no aliases", which is the correct behavior for any
+      // future page that reuses this config shape without ships-set
+      // legacy ids.
+      parsed.documentAliases = (parsed.documentAliases && typeof parsed.documentAliases === 'object')
+        ? parsed.documentAliases
+        : {};
       return parsed;
     } catch (_e) {
       // eslint-disable-next-line no-console
@@ -156,6 +166,65 @@
       if (catalog[i] && catalog[i].id === id) return catalog[i];
     }
     return null;
+  }
+
+  // ── Alias-aware resolver ────────────────────────────────────────────
+  // Wraps `findDoc` with a single legacy-id fallback: when the direct
+  // lookup misses, consult `aliases[id]` and retry once with the
+  // aliased id. Returns `{ doc, resolvedId, aliased }` so the caller
+  // can distinguish "hit on the original id" from "hit via an alias"
+  // and — for the aliased case — correct the URL bar to the canonical
+  // route (see `init()` below).
+  //
+  // Only ONE alias hop is honored. If `aliases[id]` also happens to
+  // be an alias, we do NOT recurse — that would let a broken alias
+  // chain silently mask a "not found" state, and the shipped table
+  // never needs multi-hop resolution (every legacy id maps directly
+  // to a current doc). If future data requires chaining, extend here
+  // rather than at the caller so the URL-correction step still
+  // reflects the final resolved id.
+  function resolveDocId(catalog, aliases, id) {
+    var direct = findDoc(catalog, id);
+    if (direct) return { doc: direct, resolvedId: id, aliased: false };
+    if (!aliases || typeof aliases !== 'object') {
+      return { doc: null, resolvedId: id, aliased: false };
+    }
+    var aliasedId = aliases[id];
+    if (!aliasedId || aliasedId === id) {
+      return { doc: null, resolvedId: id, aliased: false };
+    }
+    var aliasedDoc = findDoc(catalog, aliasedId);
+    if (aliasedDoc) {
+      return { doc: aliasedDoc, resolvedId: aliasedId, aliased: true };
+    }
+    return { doc: null, resolvedId: id, aliased: false };
+  }
+
+  // ── URL correction ──────────────────────────────────────────────────
+  // After an alias resolves, replace the current history entry with the
+  // canonical `?id=<resolvedId>` route so the address bar, share-menu,
+  // and any subsequent reload land on the current stable route rather
+  // than the legacy one. `replaceState` (not `pushState`) keeps the
+  // back button behavior identical to a direct load — the seller can
+  // still hit Back to return to the Knowledge index without stepping
+  // through an intermediate legacy-URL entry.
+  //
+  // Wrapped in a try/catch because `replaceState` can throw on very
+  // old browsers with History API turned off (rare, but the drill-in
+  // must never crash on load).
+  function replaceUrlToCanonical(resolvedId) {
+    if (!resolvedId || !window.history || typeof window.history.replaceState !== 'function') return;
+    try {
+      var params = new URLSearchParams(window.location.search || '');
+      params.set('id', resolvedId);
+      var newSearch = '?' + params.toString();
+      // Preserve hash so #section-id deep links survive the correction.
+      var newUrl = window.location.pathname + newSearch + (window.location.hash || '');
+      window.history.replaceState(window.history.state || null, '', newUrl);
+    } catch (_e) {
+      // Silent — URL correction is a polish, not a correctness
+      // requirement. The content still hydrates from the aliased doc.
+    }
   }
 
   // ── Text formatting ─────────────────────────────────────────────────
@@ -610,9 +679,16 @@
     }
 
     var id = readIdFromUrl();
-    var doc = findDoc(config.catalog, id);
-    if (doc) {
-      hydrateFound(root, doc, config);
+    var resolved = resolveDocId(config.catalog, config.documentAliases, id);
+    if (resolved.doc) {
+      // When the incoming id was aliased, swap the address bar over to
+      // the current stable route before hydration so a page reload or
+      // shared URL lands directly on the canonical doc instead of
+      // making another alias hop.
+      if (resolved.aliased) {
+        replaceUrlToCanonical(resolved.resolvedId);
+      }
+      hydrateFound(root, resolved.doc, config);
     } else {
       hydrateNotFound(root);
     }

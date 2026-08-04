@@ -215,6 +215,47 @@
    different active state (e.g. a future Workflows sub-page). #}
 {% set _shNavActive = navActive or "new_chat" %}
 
+{# ── Pre-paint nav state ──────────────────────────────────────────────
+   The collapsed preference is client state, so the static markup always
+   ships the expanded 300px rail. home.js applies the real state, but it
+   runs on DOMContentLoaded — after the first paint — and the rail has a
+   180ms width transition, so a collapsed user watched it sweep open and
+   shut on every navigation.
+
+   This runs it earlier instead. A parser-blocking inline script here,
+   ahead of the rail's own markup and inside `[data-sh-root]`, lands the
+   class before the nav is ever laid out, so there's nothing to animate
+   away from.
+
+   Both classes are set, not just the collapsed one: the `max-width:
+   40rem` rule in home.scss auto-collapses `.seller-home:not(
+   .seller-home--nav-expanded)`, so on a narrow window an expanded user
+   would otherwise get the same flash in reverse.
+
+   `--nav-preload` kills the width transition until home.js drops it
+   after the first frame — insurance so any future late state change
+   snaps rather than animates. The storage key is duplicated from
+   home.js by necessity: nothing else has loaded yet at this point. #}
+<script>
+  (function () {
+    var script = document.currentScript
+    var root = script && script.closest ? script.closest('[data-sh-root]') : null
+    if (!root) return
+
+    var collapsed = false
+    try {
+      collapsed = window.localStorage.getItem('sh:navCollapsed') === 'true'
+    } catch (e) {
+      // Storage unavailable — fall through to the expanded default,
+      // which is what the markup already renders.
+    }
+
+    root.classList.add('seller-home--nav-preload')
+    root.classList.toggle('seller-home--nav-collapsed', collapsed)
+    root.classList.toggle('seller-home--nav-expanded', !collapsed)
+  })()
+</script>
+
 <aside
   class="seller-home__nav"
   aria-label="Seller Home navigation"

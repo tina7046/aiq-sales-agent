@@ -421,6 +421,23 @@ main.app-wrapper {
   }
 }
 
+// ── Load-time animation suppression ───────────────────────────────
+// The two rules that animate on collapse — the rail's width and the
+// shader box's left inset — are the two that must not animate while
+// the page is still settling into the state it was already in.
+//
+// `--nav-preload` is set by the inline script in _home_left_nav.html
+// before first paint and dropped by home.js one frame later, so a
+// restored collapsed rail arrives already narrow instead of sweeping
+// shut. Both selectors are single-class, matching the specificity of
+// the rules they override, and come later in the file so they win.
+.seller-home--nav-preload {
+  .seller-home__nav,
+  .seller-home__god-rays {
+    transition: none;
+  }
+}
+
 // Sticky top — collapse control + primary items.
 .seller-home__nav-top {
   flex: 0 0 auto;
@@ -961,16 +978,16 @@ main.app-wrapper {
 .seller-home__briefing-heading {
   letter-spacing: 0;
   // font-size: var(--slds-g-font-scale-3, 1.25rem);
-  font-size: 32px;
-  font-weight: 400;
+  font-size: 28px;
+  font-weight: 590;
   line-height: var(--slds-g-font-line-height-2, 1.25);
   color: var(--slds-g-color-on-surface-3, #03234d);
   display: block;
 }
 
 .seller-home__briefing-text {
-      font-size: 14px;
-        color: var(--slds-g-color-on-surface-2, #03234d);
+      font-size: 1rem;
+      color: var(--slds-g-color-on-surface-2, #03234d);
 }
 
 // Inline "link" that's semantically a button (see comment in

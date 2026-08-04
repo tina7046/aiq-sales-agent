@@ -154,6 +154,11 @@
   // because the URL can be edited by hand.
   var QUERY_MAX = 500
 
+  // Breathing room left above an anchored message when a reply scrolls
+  // it to the top of the thread, so it doesn't sit flush against the
+  // edge and read as clipped.
+  var SCROLL_ANCHOR_GUTTER = 12
+
   // ── Utilities ───────────────────────────────────────────────────
   // Parse the `?id=<value>` from the current URL. Wrapped in
   // try/catch because URLSearchParams throws on malformed input in
@@ -477,20 +482,24 @@
 
       state.sent++
       removeEmptyPlaceholder()
-      appendUserMessage(text)
+      var userItem = appendUserMessage(text)
 
       input.value = ''
       autosize()
 
       var turnTpl = turns[state.nextTurn] || null
       if (!turnTpl) {
-        // Queue exhausted — the echo is the whole interaction.
+        // Queue exhausted — the echo is the whole interaction, and it's
+        // one line, so the end of the feed and the top of the newest
+        // message are the same place.
         updateSendState()
         scrollToLatest()
         return
       }
       state.nextTurn++
-      runTurn(turnTpl)
+      // The seller's own question anchors the reply: it stays put at the
+      // top while the answer builds underneath it.
+      runTurn(turnTpl, userItem)
     }
 
     // One beat of the agent working: show the indicator for the
@@ -502,31 +511,38 @@
     // so they stay data. Both the opening stages and the scripted
     // replies carry that pair, which is what lets one function play
     // either.
-    function playBeat (tpl, done) {
+    // `anchor`, when given, is the message the viewport should sit on
+    // for the whole beat — see scrollAnchorToTop. Both scrolls use the
+    // same anchor: pulling the indicator out shifts everything below it
+    // up by its height, so the second call is what actually lands the
+    // anchor at the top once the reply is in place.
+    function playBeat (tpl, done, anchor) {
       var label = tpl.getAttribute('data-sh-conv-thinking-label') || ''
       var delay = parseInt(tpl.getAttribute('data-sh-conv-thinking-ms'), 10)
       if (!isFinite(delay) || delay < 0) delay = DEFAULT_THINKING_MS
 
       var indicator = appendThinking(label)
-      scrollToLatest()
+      if (anchor) scrollAnchorToTop(anchor)
+      else        scrollToLatest()
 
       window.setTimeout(function () {
         if (indicator && indicator.parentNode) {
           indicator.parentNode.removeChild(indicator)
         }
         appendTemplate(tpl, convMap)
-        scrollToLatest()
+        if (anchor) scrollAnchorToTop(anchor)
+        else        scrollToLatest()
         if (done) done()
       }, delay)
     }
 
-    function runTurn (turnTpl) {
+    function runTurn (turnTpl, anchor) {
       setBusy(true)
       playBeat(turnTpl, function () {
         setBusy(false)
         // Hand the caret back so a follow-up doesn't need a click.
         if (typeof input.focus === 'function') input.focus()
-      })
+      }, anchor)
     }
 
     // Open the thread: paint what doesn't wait, echo the seller's
@@ -671,8 +687,7 @@
       input.style.height = input.scrollHeight + 'px'
     }
 
-    function scrollToLatest () {
-      var top = thread.scrollHeight
+    function scrollThreadTo (top) {
       try {
         thread.scrollTo({
           top: top,
@@ -682,6 +697,42 @@
         // Older browsers: scrollTo doesn't accept options.
         thread.scrollTop = top
       }
+    }
+
+    function scrollToLatest () {
+      scrollThreadTo(thread.scrollHeight)
+    }
+
+    // Bring `anchor`'s top edge up to the top of the thread's viewport.
+    //
+    // This is what a scripted reply uses instead of scrollToLatest. A
+    // reply can be several screens tall — the cadence card answering
+    // "draft the emails" runs one block per prospect — and scrolling to
+    // the BOTTOM of the feed drops the seller at its far end, with the
+    // whole answer above them and nothing to read below. Anchoring the
+    // question they just asked keeps it on screen and lets the answer
+    // fill in underneath, from the top.
+    //
+    // The opening sequence deliberately keeps scrollToLatest: its last
+    // stage ends on the suggested next steps, and those are meant to be
+    // what's on screen once the thread finishes loading.
+    function scrollAnchorToTop (anchor) {
+      if (!anchor || typeof anchor.getBoundingClientRect !== 'function') {
+        return scrollToLatest()
+      }
+
+      var offset = anchor.getBoundingClientRect().top -
+        thread.getBoundingClientRect().top
+      var top = thread.scrollTop + offset - SCROLL_ANCHOR_GUTTER
+
+      // Nothing can be pulled higher than the last screenful. The
+      // browser would clamp this itself, but doing it here stops a
+      // smooth scroll from easing toward a position it can't reach.
+      var max = thread.scrollHeight - thread.clientHeight
+      if (top > max) top = max
+      if (top < 0) top = 0
+
+      scrollThreadTo(top)
     }
 
     return { playOpening: playOpening }

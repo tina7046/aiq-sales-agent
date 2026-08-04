@@ -411,9 +411,20 @@
       <h2 id="seller-home-ready-heading" class="seller-home__ready-heading">
         {{ review.heading }}
       </h2>
-      {% if review.date %}
-        <span class="seller-home__ready-date">{{ review.date }}</span>
-      {% endif %}
+      {#
+        The date is live by default. `review.date` in index.json is an
+        optional PIN: set it to a literal string to freeze the header on
+        a chosen day (handy for a screenshot), leave it null for today.
+
+        When it isn't pinned we stamp the build date in via `today()` so
+        the markup never ships empty, and tag the element
+        `data-sh-today` — home.js rewrites it from the browser's clock on
+        load, which is what keeps a `dist` deployed last week honest.
+      #}
+      <span
+        class="seller-home__ready-date"
+        {% if not review.date %}data-sh-today{% endif %}
+      >{{ review.date or today() }}</span>
     </div>
 
     {#
