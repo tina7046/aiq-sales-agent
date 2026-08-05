@@ -2715,6 +2715,49 @@ main.app-wrapper {
   line-height: 1.125rem; // 18px
 }
 
+// ── Run summary ──
+// One line of facts about the last auto-learning run, under the
+// description. 12px against the description's 13px so it reads as
+// evidence for the sentence above rather than a second claim.
+//
+// Flex + wrap (not inline text) so the line breaks BETWEEN facts
+// instead of splitting "1,468 call recordings" across two lines. No
+// `max-width` here (unlike the description): the line should use every
+// pixel the column has before it wraps.
+//
+// The current copy needs ~436px against the column's ~448px, so it fits
+// on one line — but only by ~12px. Lengthening either phrase wraps it,
+// which is safe: the separators stay attached to the phrase after them
+// (see the template) so none is orphaned at the end of a line, and at
+// narrow widths the facts stack one per line.
+.knowledge-banner__stats {
+  margin: var(--slds-g-spacing-2, 0.5rem) 0 0; // 8px below description
+
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--slds-g-spacing-2, 0.5rem); // 8px between facts
+
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-size: 0.75rem; // 12px
+  line-height: 1.125rem; // 18px — matches the description's leading
+}
+
+// One fact, plus the separator that introduces it. Flex so that
+// separator sits an even 8px from the phrase — matching the gap between
+// facts — without depending on the markup's whitespace.
+.knowledge-banner__stat {
+  display: flex;
+  align-items: baseline;
+  gap: var(--slds-g-spacing-2, 0.5rem); // 8px
+}
+
+// Muted a step below the facts so the line reads as three phrases with
+// quiet dividers, not as one string of equal-weight glyphs.
+.knowledge-banner__stats-sep {
+  color: var(--slds-g-color-on-surface-3, #939393);
+}
+
 // ── CTA ──
 // Deliberately NOT an `.slds-button`: the authored markup carries only
 // its own class, so the SLDS neutral-button treatment (32-px height,

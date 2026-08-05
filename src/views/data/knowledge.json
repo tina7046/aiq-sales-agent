@@ -30,8 +30,9 @@
 //                                    from the Figma frame 8931:383002.
 //   • banner             (object) copy for the promo banner at the top
 //                        of the scrollable body, above the search field —
-//                        badge, title, description, and CTA label, laid
-//                        out beside the illustration. Omit the whole
+//                        badge, title, description, run-summary stats,
+//                        and CTA label, laid out beside the
+//                        illustration. Omit the whole
 //                        object and the template renders nothing — no
 //                        empty box, no reserved space — so turning the
 //                        banner off is a data-only edit. Fields:
@@ -48,6 +49,23 @@
 //                                         outline or a screen reader's
 //                                         heading list.
 //                          - description  (string) supporting paragraph.
+//                          - stats        (array of strings, optional)
+//                                         run-summary facts shown on one
+//                                         line under the description,
+//                                         joined by "∙" separators the
+//                                         TEMPLATE emits (each is
+//                                         `aria-hidden`, so a screen
+//                                         reader reads the facts as a
+//                                         list instead of "bullet
+//                                         operator" three times). Store
+//                                         the phrases only — no
+//                                         separators, no trailing
+//                                         punctuation. Any length: the
+//                                         line wraps item-by-item at
+//                                         narrow widths rather than
+//                                         breaking mid-phrase. Omit or
+//                                         empty the array and the line
+//                                         disappears.
 //                          - buttonLabel  (string) CTA label. The button
 //                                         is a stub — it carries a
 //                                         `data-sh-knowledge-setup` hook
@@ -279,9 +297,13 @@
     "heading": "Knowledge"
   },
   "banner": {
-    "badge": "Auto-Learning On",
-    "title": "Here's what I learned",
-    "description": "Your agent learns from your product docs, call transcripts, and site content to build a shared knowledge base — then keeps auto-learning as new material lands.",
+    "badge": "New",
+    "title": "Turn Learning into Doing, Automatically",
+    "description": "With Auto-Learning, your agent learns from product docs, call transcripts, and site content to generate prospects, draft emails, and build skills that help you work smarter.",
+    "stats": [
+      "Ran for 2 days and 18 hours",
+      "Read 1,468 call recordings and 10,822 emails"
+    ],
     "buttonLabel": "Got it"
   },
   "search": {

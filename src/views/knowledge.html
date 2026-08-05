@@ -191,9 +191,9 @@
              standalone markup; keeping its own names means the authored
              HTML and this template stay diffable against each other.
 
-             The unclassed `<div>` around badge/title/description is
-             load-bearing: it groups the three text nodes as ONE flex
-             child so the button can be pushed away from them.
+             The unclassed `<div>` around badge/title/description/stats
+             is load-bearing: it groups the text nodes as ONE flex child
+             so the button can be pushed away from them.
 
              `.knowledge-banner__illustration` is deliberately empty —
              the art arrives as a CSS `background-image` (see home.scss),
@@ -209,6 +209,33 @@
                 <span class="knowledge-banner__badge">{{ banner.badge }}</span>
                 <p class="knowledge-banner__title">{{ banner.title }}</p>
                 <p class="knowledge-banner__description">{{ banner.description }}</p>
+
+                {# Run summary — "Ran for 2 days and 18 hours ∙ Listened
+                   to 1,468 call recordings ∙ …".
+
+                   The facts don't fit on one line in this column, so the
+                   line is built to wrap cleanly: each separator lives
+                   INSIDE the phrase that follows it, making the pair one
+                   unbreakable flex item. A wrapped line therefore opens
+                   with "∙ Read 10,822 emails" rather than leaving an
+                   orphaned "∙" at the end of the line above.
+
+                   Separators are `aria-hidden` — same reasoning as the
+                   doc row's "Document · Updated July 28" — so a screen
+                   reader gets three facts, not three readings of "bullet
+                   operator". Guarded on the array so `stats: []` (or no
+                   `stats` at all) collapses the line instead of leaving
+                   an empty element holding vertical space. #}
+                {% if banner.stats and banner.stats | length %}
+                <p class="knowledge-banner__stats">
+                  {% for stat in banner.stats %}
+                  <span class="knowledge-banner__stat">
+                    {% if not loop.first %}<span class="knowledge-banner__stats-sep" aria-hidden="true">∙</span>{% endif %}
+                    {{ stat }}
+                  </span>
+                  {% endfor %}
+                </p>
+                {% endif %}
               </div>
               {# Stub, same contract as the header's "+ New Knowledge"
                  button: the `data-sh-*` hook is here so a later phase can
