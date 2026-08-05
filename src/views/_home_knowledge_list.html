@@ -9,9 +9,14 @@
   (frame 8931:383007 in Issa's Explorations). Row structure:
 
     ┌────────────────────────────────────────────────────────────────┐
-    │ [TXT icon]  Document name (semibold, ellipsized)   [⋮]    [ ▷ ] │
-    │             Document · Jul 28, 2026 (12px, muted)              │
+    │ [TXT icon]  Doc name (semibold, ellipsized)    (Badge) [⋮] [ ▷ ] │
+    │             Document · Updated July 28 (12px, muted)           │
     └────────────────────────────────────────────────────────────────┘
+
+  The badge is optional (`doc.badge`) — a purple pill matching the page
+  banner's. It right-aligns into the slot left of the overflow trigger
+  and centres across BOTH text lines, so it reads as part of the row's
+  right cluster rather than as a suffix on the name.
 
   Per-row measurements (Figma get_variable_defs on 8931:383007):
     • Height: 56px (fixed)
@@ -117,7 +122,10 @@
       class="seller-home__knowledge-doc-row"
       href="{{ docHref }}"
       title="{{ doc.name }}"
-      aria-label="Open document, {{ doc.name }}"
+      {# The badge is appended to the accessible name because `aria-label`
+         REPLACES the anchor's inner text for AT — without this the pill
+         would be visible-only. #}
+      aria-label="Open document, {{ doc.name }}{% if doc.badge %}, {{ doc.badge }}{% endif %}"
       data-sh-knowledge-doc
       data-sh-knowledge-doc-id="{{ doc.id }}"
     >
@@ -133,7 +141,7 @@
     <div
       class="seller-home__knowledge-doc-row seller-home__knowledge-doc-row--unlinked"
       title="{{ doc.name }}"
-      aria-label="{{ doc.name }}"
+      aria-label="{{ doc.name }}{% if doc.badge %}, {{ doc.badge }}{% endif %}"
     >
     {% endif %}
       {# Left cluster — 24-px doctype icon.
@@ -158,20 +166,39 @@
         {% endif %}
       </span>
 
-      {# Center cluster — primary name + secondary metadata stack.
-         `min-width: 0` on this element (via CSS) is what lets the
-         name's `text-overflow: ellipsis` bite; without it the flex
-         child's intrinsic content width would push the row wider
-         than its parent. Metadata is nowrap so a very narrow column
-         breaks the name first, per the spec ("At narrow widths,
-         let the document name truncate before hiding its metadata"). #}
+      {# Center cluster — the name / metadata stack, plus an optional
+         right-aligned badge. The stack is its own element so the badge
+         can be a horizontal sibling of it rather than a third line.
+         `min-width: 0` on BOTH (via CSS) is what lets the name's
+         `text-overflow: ellipsis` bite; without it the flex child's
+         intrinsic content width would push the row wider than its
+         parent. Metadata is nowrap so a very narrow column breaks the
+         name first, per the spec ("At narrow widths, let the document
+         name truncate before hiding its metadata"). #}
       <span class="seller-home__knowledge-doc-body">
-        <span class="seller-home__knowledge-doc-name">{{ doc.name }}</span>
-        <span class="seller-home__knowledge-doc-meta">
-          {{ doc.type }}
-          <span class="seller-home__knowledge-doc-meta-sep" aria-hidden="true">·</span>
-          {{ doc.updatedAt }}
+        <span class="seller-home__knowledge-doc-text">
+          <span class="seller-home__knowledge-doc-name">{{ doc.name }}</span>
+          {# "Document · Updated July 28". The "Updated" label lives here
+             rather than in the data so `updatedAt` stays a pure date —
+             the detail page reuses that same field inside its own
+             "Last edited by …" caption, which supplies its own label. #}
+          <span class="seller-home__knowledge-doc-meta">
+            {{ doc.type }}
+            <span class="seller-home__knowledge-doc-meta-sep" aria-hidden="true">·</span>
+            Updated {{ doc.updatedAt }}
+          </span>
         </span>
+
+        {# Optional provenance pill. A trailing SIBLING of the text stack
+           (not part of the name line) so it right-aligns to the body's
+           end edge — which the body's reserved right gutter places
+           directly left of the overflow trigger — and centres against
+           both text lines, matching the trigger's own vertical centre.
+           The text stack is the only shrinkable child, so a long name
+           ellipsizes rather than displacing the pill. #}
+        {% if doc.badge %}
+        <span class="seller-home__knowledge-doc-badge">{{ doc.badge }}</span>
+        {% endif %}
       </span>
 
       {# Right cluster — chevron affordance ("this row leads

@@ -2676,6 +2676,8 @@ main.app-wrapper {
 // ── Badge ──
 // `inline-block` (not inline) so the margin below it actually applies
 // and the pill's vertical padding doesn't overlap the title.
+// Purple pill. `.seller-home__knowledge-doc-badge` (doc rows, further
+// down) reuses this color pair on purpose — change both together.
 .knowledge-banner__badge {
   display: inline-block;
   margin-block-end: var(--slds-g-spacing-2, 0.5rem); // 8px
@@ -3218,10 +3220,8 @@ main.app-wrapper {
   object-fit: contain;
 }
 
-// ── Text stack (center) ──
-// Name (14px Semibold) stacked over the metadata line (12px). No
-// gap between the two per Figma — the leading of each line already
-// gives them enough visual separation.
+// ── Center cluster ──
+// Horizontal: text stack on the left, optional badge pinned right.
 //
 // `min-width: 0` is the flex-child ellipsis unlock — without it, the
 // intrinsic width of the name would push the row wider than its
@@ -3229,15 +3229,31 @@ main.app-wrapper {
 // fire.
 //
 // `margin-inline-end` reserves the 44-px right gutter (32 overflow
-// button + 12 gap) so the ellipsized name never overlaps the
-// absolute-positioned overflow menu. See the block header above for
-// the full coordinate math.
+// button + 12 gap) so neither the ellipsized name nor the badge
+// overlaps the absolute-positioned overflow menu. That reservation is
+// also what aligns the badge: flush against this element's end edge
+// leaves it ~20px clear of the overflow trigger (~16px below the 40rem
+// breakpoint, where the reservation tightens). See the block header
+// above for the full coordinate map.
 .seller-home__knowledge-doc-body {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem); // 8px — text-to-badge minimum
   margin-inline-end: 2.75rem; // 44px (32 overflow button + 12 gap)
+}
+
+// Text stack. Name (14px Semibold) over the metadata line (12px). No
+// gap between the two per Figma — the leading of each line already
+// gives them enough visual separation. The only shrinkable child of
+// the cluster, so a long name ellipsizes instead of pushing the badge
+// out of its aligned slot.
+.seller-home__knowledge-doc-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .seller-home__knowledge-doc-name {
@@ -3253,6 +3269,33 @@ main.app-wrapper {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+}
+
+// Provenance pill ("Auto-learned"), set from `doc.badge`. Deliberately
+// the same purple pair as `.knowledge-banner__badge` at the top of this
+// page — one visual vocabulary for "the agent produced this" — but a
+// separate rule because the banner badge carries block-end margin for
+// its stacked context, which would break this one's vertical centring.
+// Retune both together.
+//
+// `margin-inline-start: auto` right-aligns it against the cluster's end
+// edge, which lands it directly left of the overflow trigger (see the
+// gutter math on `.seller-home__knowledge-doc-body`). `flex-shrink: 0`
+// makes the name absorb a narrow column instead: the pill stays
+// legible and the name ellipsizes.
+.seller-home__knowledge-doc-badge {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+
+  padding: 0.125rem var(--slds-g-spacing-2, 0.5rem); // 2px / 8px
+  border-radius: var(--slds-g-radius-border-pill, 15rem);
+  background: #ece1f9;
+
+  color: #401075;
+  font-size: 0.6875rem; // 11px — a label, one step under body text
+  font-weight: 600;
+  line-height: 1rem;
+  white-space: nowrap;
 }
 
 .seller-home__knowledge-doc-meta {

@@ -125,7 +125,7 @@
   // ── Recents ─────────────────────────────────────────────────────
   // The Recents rail is session state rather than authored content: it
   // starts empty and grows as the seller opens conversations. There are
-  // two ways in today — the "Found new leads" review card (conv-001)
+  // two ways in today — the "Found new prospects" review card (conv-001)
   // and the composer (conv-002) — and both land on
   // home_conversation.html, so rather than instrumenting each entry
   // point separately we record on ARRIVAL. Anything that reaches a

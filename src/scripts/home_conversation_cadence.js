@@ -129,15 +129,15 @@
   // seller can course-correct either way.
   var ACTION_STATE = {
     not_reviewed: {
-      approveDisabled: false, approveLabel: 'Approve sequence',
-      requestDisabled: false, requestLabel: 'Request changes'
+      approveDisabled: false, approveLabel: 'Approve Cadence',
+      requestDisabled: false, requestLabel: 'Request Changes'
     },
     approved: {
       approveDisabled: true,  approveLabel: 'Approved',
-      requestDisabled: false, requestLabel: 'Request changes'
+      requestDisabled: false, requestLabel: 'Request Changes'
     },
     changes_requested: {
-      approveDisabled: false, approveLabel: 'Approve sequence',
+      approveDisabled: false, approveLabel: 'Approve Cadence',
       requestDisabled: true,  requestLabel: 'Changes requested'
     }
   }
@@ -459,7 +459,7 @@
       })
 
       // A row's Accept / Reject is the same decision as this card's
-      // Approve / Request changes, so it lands in the same state.
+      // Approve / Request Changes, so it lands in the same state.
       document.addEventListener(EVT_TABLE_DECISION, function (event) {
         var d = event.detail || {}
         if (!d.rowId || ids.indexOf(d.rowId) < 0) return
