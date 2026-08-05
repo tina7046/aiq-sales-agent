@@ -1,0 +1,1129 @@
+// ──────────────────────────────────────────────────────────────────────
+// Prospect PIVOT lab — page data
+// ──────────────────────────────────────────────────────────────────────
+// GENERATED. Do not hand-edit — edit the CSVs and re-run:
+//     python3 tools/lab-data/build_lab_data.py
+//
+// Same join as prospect_table_lab.json, pivoted: one row per ACCOUNT,
+// with its people nested in `prospects` and spread across numbered
+// Prospect columns. Gulp injects this into prospect_pivot_lab.html.
+//
+// Shape notes:
+//   • 15 rows, one per account, in rank order. Accounts with nobody
+//     listed are rows with every prospect slot empty — no placeholder
+//     person, which is what the flat table has to invent.
+//   • `columns` carries 10 Prospect columns because Notion has 10
+//     people. Every other account leaves slots empty; Vanta, Stripe and
+//     Acme Corp fill 3 of 10.
+//   • Each Prospect column carries `prospectIndex`, its 0-based slot in
+//     a row's `prospects` array, so the template indexes rather than
+//     parsing the column id.
+//   • Account-level fields are NOT repeated here — that's the point of
+//     the pivot. They appear once per row, after the people.
+//   • `opportunities` is the CRM string parsed into the deals it names —
+//     name, amount, stage, close date. Real data, only structured, and
+//     account-level like the string it came from: the group lab shows
+//     the account's deals in each of its people's CRM cells.
+//   • Each nested person also carries `pitch`, which the group lab
+//     renders per person. That one IS synthesized — derived from the job
+//     title, since the CSV has a pitch per account. Deterministic, so
+//     the layout doesn't shift on rebuild, but placeholder copy.
+// ──────────────────────────────────────────────────────────────────────
+{
+  "table": {
+    "id": "lab-pivot",
+    "ariaLabel": "Target accounts with their prospects, ranked by account tier",
+    "maxProspects": 10,
+    "columns": [
+      {
+        "id": "company",
+        "label": "Company"
+      },
+      {
+        "id": "prospect1",
+        "label": "Prospect 1",
+        "isProspect": true,
+        "prospectIndex": 0
+      },
+      {
+        "id": "prospect2",
+        "label": "Prospect 2",
+        "isProspect": true,
+        "prospectIndex": 1
+      },
+      {
+        "id": "prospect3",
+        "label": "Prospect 3",
+        "isProspect": true,
+        "prospectIndex": 2
+      },
+      {
+        "id": "prospect4",
+        "label": "Prospect 4",
+        "isProspect": true,
+        "prospectIndex": 3
+      },
+      {
+        "id": "prospect5",
+        "label": "Prospect 5",
+        "isProspect": true,
+        "prospectIndex": 4
+      },
+      {
+        "id": "prospect6",
+        "label": "Prospect 6",
+        "isProspect": true,
+        "prospectIndex": 5
+      },
+      {
+        "id": "prospect7",
+        "label": "Prospect 7",
+        "isProspect": true,
+        "prospectIndex": 6
+      },
+      {
+        "id": "prospect8",
+        "label": "Prospect 8",
+        "isProspect": true,
+        "prospectIndex": 7
+      },
+      {
+        "id": "prospect9",
+        "label": "Prospect 9",
+        "isProspect": true,
+        "prospectIndex": 8
+      },
+      {
+        "id": "prospect10",
+        "label": "Prospect 10",
+        "isProspect": true,
+        "prospectIndex": 9
+      },
+      {
+        "id": "tier",
+        "label": "Tier"
+      },
+      {
+        "id": "whyProspect",
+        "label": "Why this prospect?"
+      },
+      {
+        "id": "signal",
+        "label": "Signal"
+      },
+      {
+        "id": "source",
+        "label": "Source"
+      },
+      {
+        "id": "icpFit",
+        "label": "ICP Fit"
+      },
+      {
+        "id": "crm",
+        "label": "CRM"
+      },
+      {
+        "id": "pitch",
+        "label": "Recommended Pitch"
+      }
+    ],
+    "rows": [
+      {
+        "company": "Notion",
+        "companyLogoUrl": "/assets/images/company-logos/accounts/notion.png",
+        "employees": "~600",
+        "industry": "Software / Productivity",
+        "location": "San Francisco, CA",
+        "whyProspect": "SDR team 5x'd in 2 years (120+ reps), transitioning PLG→outbound, using competitor Common Room, hiring SDRs globally, $500M+ ARR, pre-IPO",
+        "signals": [
+          "Hiring SDRs/BDRs globally",
+          "Active outbound buildout",
+          "Common Room customer",
+          "New Head of Enterprise Americas (Katie Layng)",
+          "Built internal Salestino bot",
+          "6+ GTM tools",
+          "Job posts explicitly mention AI/outbound"
+        ],
+        "signal": "Hiring SDRs/BDRs globally",
+        "lastTouch": "n/a",
+        "lastTouchIso": "",
+        "owner": "n/a",
+        "source": "Salesforce",
+        "isNewAccount": false,
+        "rank": "1",
+        "tier": "Red Hot",
+        "accountId": "001Wt00001eZpBOIA0",
+        "icpFit": "Perfect (all 5 criteria met)",
+        "crm": "Active GTM Platform opp ($180K Discovery) + Renewal ($145K)",
+        "opportunities": [
+          {
+            "name": "GTM Platform",
+            "amount": "$180K",
+            "stage": "Discovery",
+            "close": "",
+            "meta": "$180K · Discovery"
+          },
+          {
+            "name": "Renewal",
+            "amount": "$145K",
+            "stage": "",
+            "close": "",
+            "meta": "$145K"
+          }
+        ],
+        "pitch": "You've 5x'd your SDR team — Bluebirds collapses Common Room + Clay + ZoomInfo + Outreach into one AI-native layer",
+        "themes": "1, 2, 4, 6, 7, 8",
+        "id": "acct-01",
+        "prospectCount": 10,
+        "prospects": [
+          {
+            "name": "Pravesh Mistry",
+            "role": "Head of Global Sales",
+            "email": "pravesh.mistry@notion.so",
+            "phone": "+1 (415) 555-0142",
+            "recordId": "003Wt00000YlW2TIAV",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Hit the number without adding headcount — the same pipeline coverage from the team you already have.",
+            "source": "ZoomInfo",
+            "isNewContact": true
+          },
+          {
+            "name": "Johnny DeFazio",
+            "role": "Head of Sales Dev, NA",
+            "email": "johnny.defazio@notion.so",
+            "phone": "+1 (415) 555-0187",
+            "recordId": "003Wt00000YlW45IAF",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Ramp is the leak — new reps take ~90 days to produce. This has them sourcing qualified accounts inside week one.",
+            "source": "Report",
+            "isNewContact": false
+          },
+          {
+            "name": "Erika Ryan",
+            "role": "Head of Sales Dev (EMEA)",
+            "email": "erika.ryan@notion.so",
+            "phone": "+1 (415) 555-0231",
+            "recordId": "003Wt00000YlVPmIAN",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Ramp is the leak — new reps take ~90 days to produce. This has them sourcing qualified accounts inside week one.",
+            "source": "Report",
+            "isNewContact": false
+          },
+          {
+            "name": "Bryan Blanquet",
+            "role": "Enterprise Demand Gen Head",
+            "email": "bryan.blanquet@notion.so",
+            "phone": "+1 (415) 555-0298",
+            "recordId": "003Wt00000YlW7JIAV",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Stop handing sales unqualified lists: only accounts showing live intent get routed, with the signal attached to the handoff.",
+            "source": "Report",
+            "isNewContact": false
+          },
+          {
+            "name": "Maximiliano Tommasi",
+            "role": "Manager, Growth Marketing",
+            "email": "max.tommasi@notion.so",
+            "phone": "+1 (415) 555-0345",
+            "recordId": "003Wt00000YmhLdIAJ",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Stop handing sales unqualified lists: only accounts showing live intent get routed, with the signal attached to the handoff.",
+            "source": "Gong",
+            "isNewContact": false
+          },
+          {
+            "name": "Tori Moss",
+            "role": "Global Head of RevOps",
+            "email": "tori.moss@notion.so",
+            "phone": "+1 (415) 555-0412",
+            "recordId": "003Wt00000YlW5hIAF",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Six-plus GTM tools collapse into one layer. No new stack to administer, and the routing logic stops living in three places.",
+            "source": "Gong",
+            "isNewContact": false
+          },
+          {
+            "name": "Katie Layng",
+            "role": "Head of Enterprise, Americas",
+            "email": "katie.layng@notion.so",
+            "phone": "+1 (415) 555-0478",
+            "recordId": "003Wt00000YlWthIAF",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Hit the number without adding headcount — the same pipeline coverage from the team you already have.",
+            "source": "TechCrunch",
+            "isNewContact": false
+          },
+          {
+            "name": "Susan Dettmar",
+            "role": "GM, Co-AMER (Interim)",
+            "email": "susan.dettmar@notion.so",
+            "phone": "+1 (415) 555-0521",
+            "recordId": "003Wt00000YlWqTIAV",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Hit the number without adding headcount — the same pipeline coverage from the team you already have.",
+            "source": "ZoomInfo",
+            "isNewContact": true
+          },
+          {
+            "name": "Kimberly Graves",
+            "role": "GM, Americas",
+            "email": "kimberly.graves@notion.so",
+            "phone": "+1 (415) 555-0589",
+            "recordId": "003Wt00000YlWs5IAF",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Hit the number without adding headcount — the same pipeline coverage from the team you already have.",
+            "source": "ZoomInfo",
+            "isNewContact": true
+          },
+          {
+            "name": "Erica Anderson",
+            "role": "CRO",
+            "email": "erica.anderson@notion.so",
+            "phone": "+1 (415) 555-0634",
+            "recordId": "003Wt00000YlYXJIA3",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Hit the number without adding headcount — the same pipeline coverage from the team you already have.",
+            "source": "ZoomInfo",
+            "isNewContact": true
+          }
+        ]
+      },
+      {
+        "company": "Datadog",
+        "companyLogoUrl": "/assets/images/company-logos/accounts/datadog.png",
+        "employees": "~7,000",
+        "industry": "Software / Cloud Monitoring & Observability",
+        "location": "New York, NY",
+        "whyProspect": "Hiring SDRs across 8 offices; Posted GTM StratOps SDR & AI role explicitly seeking AI-driven SDR productivity; $3.67B revenue growing 28-32% YoY",
+        "signals": [
+          "SDR hiring globally",
+          "AI SDR productivity role",
+          "PLG-to-ABM transformation",
+          "Data cleanliness pain acknowledged",
+          "Adaptive ML acquisition",
+          "Active $220K RevOps opp"
+        ],
+        "signal": "SDR hiring globally",
+        "lastTouch": "n/a",
+        "lastTouchIso": "",
+        "owner": "n/a",
+        "source": "Salesforce",
+        "isNewAccount": false,
+        "rank": "2",
+        "tier": "Red Hot",
+        "accountId": "001Wt00001eZvyNIAS",
+        "icpFit": "Full match",
+        "crm": "Active RevOps Enablement opp ($220K Discovery) with VP RevOps Sarah Chen as champion",
+        "opportunities": [
+          {
+            "name": "RevOps Enablement",
+            "amount": "$220K",
+            "stage": "Discovery",
+            "close": "",
+            "meta": "$220K · Discovery"
+          }
+        ],
+        "pitch": "You're actively building an AI-powered SDR productivity function — Bluebirds delivers this out of the box in 30 minutes",
+        "themes": "3, 7, 8, 9",
+        "id": "acct-02",
+        "prospectCount": 7,
+        "prospects": [
+          {
+            "name": "Petra Sommerville",
+            "role": "VP, Global Sales Dev",
+            "email": "petra.sommerville@datadoghq.com",
+            "phone": "+1 (212) 555-0142",
+            "recordId": "003Wt00000Ylg3SIAR",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Ramp is the leak — new reps take ~90 days to produce. This has them sourcing qualified accounts inside week one.",
+            "source": "ZoomInfo",
+            "isNewContact": true
+          },
+          {
+            "name": "Marshall Hunger",
+            "role": "Director, Sales Dev",
+            "email": "marshall.hunger@datadoghq.com",
+            "phone": "+1 (212) 555-0187",
+            "recordId": "003Wt00000YlfwzIAB",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Ramp is the leak — new reps take ~90 days to produce. This has them sourcing qualified accounts inside week one.",
+            "source": "ZoomInfo",
+            "isNewContact": true
+          },
+          {
+            "name": "Zuzana Estokova",
+            "role": "Sr Director, Sales Dev",
+            "email": "zuzana.estokova@datadoghq.com",
+            "phone": "+1 (212) 555-0231",
+            "recordId": "003Wt00000Ylg0DIAR",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Ramp is the leak — new reps take ~90 days to produce. This has them sourcing qualified accounts inside week one.",
+            "source": "ZoomInfo",
+            "isNewContact": true
+          },
+          {
+            "name": "Sandy Hwang",
+            "role": "VP, GTM StratOps",
+            "email": "sandy.hwang@datadoghq.com",
+            "phone": "+1 (212) 555-0298",
+            "recordId": "003Wt00000YmhtVIAR",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Six-plus GTM tools collapse into one layer. No new stack to administer, and the routing logic stops living in three places.",
+            "source": "Gong",
+            "isNewContact": false
+          },
+          {
+            "name": "Sean Walters",
+            "role": "CRO",
+            "email": "sean.walters@datadoghq.com",
+            "phone": "+1 (212) 555-0345",
+            "recordId": "003Wt00000YmhrtIAB",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Hit the number without adding headcount — the same pipeline coverage from the team you already have.",
+            "source": "ZoomInfo",
+            "isNewContact": true
+          },
+          {
+            "name": "Shane Phair",
+            "role": "VP Marketing - Growth & Demand Gen",
+            "email": "shane.phair@datadoghq.com",
+            "phone": "+1 (212) 555-0412",
+            "recordId": "003Wt00000YlcStIAJ",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Stop handing sales unqualified lists: only accounts showing live intent get routed, with the signal attached to the handoff.",
+            "source": "Gong",
+            "isNewContact": false
+          },
+          {
+            "name": "Kunal Arya",
+            "role": "Director, Demand Gen",
+            "email": "kunal.arya@datadoghq.com",
+            "phone": "+1 (212) 555-0478",
+            "recordId": "003Wt00000Ymhv7IAB",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Stop handing sales unqualified lists: only accounts showing live intent get routed, with the signal attached to the handoff.",
+            "source": "ZoomInfo",
+            "isNewContact": true
+          }
+        ]
+      },
+      {
+        "company": "Vanta",
+        "companyLogoUrl": "/assets/images/company-logos/accounts/vanta.png",
+        "employees": "~800",
+        "industry": "Software / Security & Compliance",
+        "location": "San Francisco, CA",
+        "whyProspect": "120+ SDRs scaled 4x; $300M ARR accelerating; EMEA expansion; Q3 re-engagement window explicitly requested; In-house AI SDR at crossroads",
+        "signals": [
+          "Hiring SDRs globally",
+          "8+ GTM tools (tool sprawl)",
+          "Phone-first outbound transition",
+          "$150M Series D",
+          "New VP Sales Americas & EMEA",
+          "New CFO (IPO readiness)"
+        ],
+        "signal": "Hiring SDRs globally",
+        "lastTouch": "n/a",
+        "lastTouchIso": "",
+        "owner": "n/a",
+        "source": "Salesforce",
+        "isNewAccount": false,
+        "rank": "3",
+        "tier": "Red Hot",
+        "accountId": "001Wt00001eZwETIA0",
+        "icpFit": "Perfect",
+        "crm": "Active Outbound Motion opp ($120K Qualification); Jordan Reyes requested Q3 re-engagement",
+        "opportunities": [
+          {
+            "name": "Outbound Motion",
+            "amount": "$120K",
+            "stage": "Qualification",
+            "close": "",
+            "meta": "$120K · Qualification"
+          }
+        ],
+        "pitch": "120+ SDRs at scale — every week of ramp = six figures in missed pipeline. Bluebirds ships the same outcome as your internal Clay AI SDR without the engineering dependency",
+        "themes": "1, 2, 7, 9",
+        "id": "acct-03",
+        "prospectCount": 3,
+        "prospects": [
+          {
+            "name": "Jordan Reyes",
+            "role": "Director of Sales",
+            "email": "jordan.reyes@vanta.com",
+            "phone": "+1 (415) 555-0701",
+            "recordId": "CRM existing",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Hit the number without adding headcount — the same pipeline coverage from the team you already have.",
+            "source": "Salesforce",
+            "isNewContact": false
+          },
+          {
+            "name": "Jessica Farrell",
+            "role": "Director, Sales Dev EMEA",
+            "email": "jessica.farrell@vanta.com",
+            "phone": "+1 (415) 555-0756",
+            "recordId": "CRM existing",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Ramp is the leak — new reps take ~90 days to produce. This has them sourcing qualified accounts inside week one.",
+            "source": "Report",
+            "isNewContact": false
+          },
+          {
+            "name": "Roger Benson",
+            "role": "Head of Sales, Startups & Growth",
+            "email": "roger.benson@vanta.com",
+            "phone": "+1 (415) 555-0812",
+            "recordId": "CRM existing",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Hit the number without adding headcount — the same pipeline coverage from the team you already have.",
+            "source": "ZoomInfo",
+            "isNewContact": true
+          }
+        ]
+      },
+      {
+        "company": "Ramp",
+        "companyLogoUrl": "/assets/images/company-logos/accounts/ramp.png",
+        "employees": "~1,300",
+        "industry": "Fintech / Corporate Cards & Spend",
+        "location": "New York, NY",
+        "whyProspect": "Built sophisticated in-house outbound engine (5-7 growth engineers, Dark TAM Engine equivalent)",
+        "signals": [
+          "130+ SDRs onboarding 10-12/month",
+          "20+ GTM tools",
+          "$750M Series F at $44B",
+          "Billhop acquisition (UK/EU)",
+          "SVP Sales Max Freeman promoted Jun 2026"
+        ],
+        "signal": "130+ SDRs onboarding 10-12/month",
+        "lastTouch": "n/a",
+        "lastTouchIso": "",
+        "owner": "n/a",
+        "source": "Salesforce",
+        "isNewAccount": false,
+        "rank": "4",
+        "tier": "Solid",
+        "accountId": "001Wt00001eZwCrIAK",
+        "icpFit": "n/a",
+        "crm": "Active SDR Automation opp ($145K Discovery)",
+        "opportunities": [
+          {
+            "name": "SDR Automation",
+            "amount": "$145K",
+            "stage": "Discovery",
+            "close": "",
+            "meta": "$145K · Discovery"
+          }
+        ],
+        "pitch": "Your outbound machine is best-in-class but takes an army of GTM engineers. Bluebirds gives you the same output without the custom infrastructure",
+        "themes": "1, 2, 4, 8",
+        "id": "acct-04",
+        "prospectCount": 5,
+        "prospects": [
+          {
+            "name": "Max Freeman",
+            "role": "SVP of Sales",
+            "email": "max.freeman@ramp.com",
+            "phone": "+1 (646) 555-0142",
+            "recordId": "003Wt00000YlfKHIAZ",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Hit the number without adding headcount — the same pipeline coverage from the team you already have.",
+            "source": "TechCrunch",
+            "isNewContact": false
+          },
+          {
+            "name": "Kaitlyn Giori",
+            "role": "Sr Manager, New Biz Dev",
+            "email": "kaitlyn.giori@ramp.com",
+            "phone": "+1 (646) 555-0187",
+            "recordId": "003Wt00000YlgufIAB",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Ramp is the leak — new reps take ~90 days to produce. This has them sourcing qualified accounts inside week one.",
+            "source": "Report",
+            "isNewContact": false
+          },
+          {
+            "name": "Kevin Dzierzawski",
+            "role": "Head of New Business",
+            "email": "kevin.dzierzawski@ramp.com",
+            "phone": "+1 (646) 555-0231",
+            "recordId": "003Wt00000YlfNVIAZ",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Ramp is the leak — new reps take ~90 days to produce. This has them sourcing qualified accounts inside week one.",
+            "source": "Report",
+            "isNewContact": false
+          },
+          {
+            "name": "Kyle Bastien",
+            "role": "Director, Revenue Enablement",
+            "email": "kyle.bastien@ramp.com",
+            "phone": "+1 (646) 555-0298",
+            "recordId": "003Wt00000YlafaIAB",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Enablement that adapts per rep instead of six playbook versions nobody opens — the messaging is generated against each account.",
+            "source": "Gong",
+            "isNewContact": false
+          },
+          {
+            "name": "Asher Kaplan",
+            "role": "VP, GTM Finance & Ops",
+            "email": "asher.kaplan@ramp.com",
+            "phone": "+1 (646) 555-0345",
+            "recordId": "003Wt00000YlgwHIAR",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Cost per qualified meeting, not per seat: the same coverage without the headcount line or the tooling sprawl underneath it.",
+            "source": "Gong",
+            "isNewContact": false
+          }
+        ]
+      },
+      {
+        "company": "Rippling",
+        "companyLogoUrl": "/assets/images/company-logos/accounts/rippling.png",
+        "employees": "~3,500",
+        "industry": "Software / HR & IT Management",
+        "location": "San Francisco, CA",
+        "whyProspect": "Built internal Dark TAM Engine (ML entity resolution, automated list building)",
+        "signals": [
+          "290+ SDRs",
+          "8+ GTM tools",
+          "$450M Series G at $16.8B",
+          "DACH founding BDR team",
+          "New SDR Director Natalie Ortega"
+        ],
+        "signal": "290+ SDRs",
+        "lastTouch": "n/a",
+        "lastTouchIso": "",
+        "owner": "n/a",
+        "source": "Salesforce",
+        "isNewAccount": false,
+        "rank": "5",
+        "tier": "Solid",
+        "accountId": "001Wt00001eZqgwIAC",
+        "icpFit": "n/a",
+        "crm": "Active SDR Ramp Acceleration opp ($260K Discovery)",
+        "opportunities": [
+          {
+            "name": "SDR Ramp Acceleration",
+            "amount": "$260K",
+            "stage": "Discovery",
+            "close": "",
+            "meta": "$260K · Discovery"
+          }
+        ],
+        "pitch": "Your internal engine is engineering-dependent — Bluebirds gives SDR managers the same power without depending on eng. Time-to-value for DACH launch: days, not quarters",
+        "themes": "1, 2, 4, 7, 8",
+        "id": "acct-05",
+        "prospectCount": 5,
+        "prospects": [
+          {
+            "name": "Natalie Ortega",
+            "role": "Director, Sales Dev (Enterprise)",
+            "email": "natalie.ortega@rippling.com",
+            "phone": "+1 (415) 555-0901",
+            "recordId": "003Wt00000Ylfk5IAB",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Ramp is the leak — new reps take ~90 days to produce. This has them sourcing qualified accounts inside week one.",
+            "source": "TechCrunch",
+            "isNewContact": false
+          },
+          {
+            "name": "Alex Netsch",
+            "role": "VP, Revenue Operations",
+            "email": "alex.netsch@rippling.com",
+            "phone": "+1 (415) 555-0954",
+            "recordId": "003Wt00000YlfovIAB",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Six-plus GTM tools collapse into one layer. No new stack to administer, and the routing logic stops living in three places.",
+            "source": "Gong",
+            "isNewContact": false
+          },
+          {
+            "name": "John Buchman",
+            "role": "Director, Sales Dev",
+            "email": "john.buchman@rippling.com",
+            "phone": "+1 (415) 555-1002",
+            "recordId": "003Wt00000Ylh17IAB",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Ramp is the leak — new reps take ~90 days to produce. This has them sourcing qualified accounts inside week one.",
+            "source": "Report",
+            "isNewContact": false
+          },
+          {
+            "name": "Madeline Bria",
+            "role": "Manager, Outbound SDR IT Cloud",
+            "email": "madeline.bria@rippling.com",
+            "phone": "+1 (415) 555-1067",
+            "recordId": "003Wt00000YmfF0IAJ",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Ramp is the leak — new reps take ~90 days to produce. This has them sourcing qualified accounts inside week one.",
+            "source": "Report",
+            "isNewContact": false
+          },
+          {
+            "name": "Bert Brokaw",
+            "role": "Sr Director, Sales Dev",
+            "email": "bert.brokaw@rippling.com",
+            "phone": "+1 (415) 555-1123",
+            "recordId": "003Wt00000YlfnJIAR",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Ramp is the leak — new reps take ~90 days to produce. This has them sourcing qualified accounts inside week one.",
+            "source": "Report",
+            "isNewContact": false
+          }
+        ]
+      },
+      {
+        "company": "Stripe",
+        "companyLogoUrl": "/assets/images/company-logos/accounts/stripe.png",
+        "employees": "~8,500",
+        "industry": "Fintech / Payments Infrastructure",
+        "location": "South San Francisco, CA / Dublin",
+        "whyProspect": "n/a",
+        "signals": [
+          "New CRO Tyler Bryson (Jun 2026)",
+          "80+ SDRs Americas",
+          "$53B PayPal bid",
+          "Usage-below-plan risk",
+          "Analytics module interest"
+        ],
+        "signal": "New CRO Tyler Bryson (Jun 2026)",
+        "lastTouch": "n/a",
+        "lastTouchIso": "",
+        "owner": "n/a",
+        "source": "Salesforce",
+        "isNewAccount": false,
+        "rank": "6",
+        "tier": "Solid",
+        "accountId": "001Wt00001eZj2lIAC",
+        "icpFit": "Existing customer — renewal/expansion",
+        "crm": "Active Enterprise Renewal ($320K Negotiation, close Sep 3)",
+        "opportunities": [
+          {
+            "name": "Enterprise Renewal",
+            "amount": "$320K",
+            "stage": "Negotiation",
+            "close": "Sep 3",
+            "meta": "$320K · Negotiation · closes Sep 3"
+          }
+        ],
+        "pitch": "Quick win for Tyler's first 60 days — prove Bluebirds drives pipeline, not just sits on the invoice. Get Analytics module into the renewal before terms lock",
+        "themes": "1, 5, 7, 13",
+        "id": "acct-06",
+        "prospectCount": 3,
+        "prospects": [
+          {
+            "name": "Emmy Marty",
+            "role": "Sr Manager, Enterprise Sales Dev",
+            "email": "emmy.marty@stripe.com",
+            "phone": "+1 (650) 555-0142",
+            "recordId": "003Wt00000YmgasIAB",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Ramp is the leak — new reps take ~90 days to produce. This has them sourcing qualified accounts inside week one.",
+            "source": "Report",
+            "isNewContact": false
+          },
+          {
+            "name": "Evan Luthringer",
+            "role": "GTM FS Head",
+            "email": "evan.luthringer@stripe.com",
+            "phone": "+1 (650) 555-0187",
+            "recordId": "003Wt00000YlYcAIAV",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Hit the number without adding headcount — the same pipeline coverage from the team you already have.",
+            "source": "Gong",
+            "isNewContact": false
+          },
+          {
+            "name": "Parul Gangwal",
+            "role": "GTM Strategy & Ops Head (Americas)",
+            "email": "parul.gangwal@stripe.com",
+            "phone": "+1 (650) 555-0231",
+            "recordId": "003Wt00000YlfVZIAZ",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Six-plus GTM tools collapse into one layer. No new stack to administer, and the routing logic stops living in three places.",
+            "source": "Gong",
+            "isNewContact": false
+          }
+        ]
+      },
+      {
+        "company": "Twilio",
+        "companyLogoUrl": "/assets/images/company-logos/accounts/twilio.png",
+        "employees": "~5,900",
+        "industry": "Software / Communications APIs",
+        "location": "San Francisco, CA",
+        "whyProspect": "Downgraded from Red due to enterprise scale + existing deep relationship",
+        "signals": [
+          "Hiring SDRs + SDR Manager (Jul 2026)",
+          "Record-high sales hiring",
+          "Stytch acquisition data complexity",
+          "1,174 sales staff"
+        ],
+        "signal": "Hiring SDRs + SDR Manager (Jul 2026)",
+        "lastTouch": "n/a",
+        "lastTouchIso": "",
+        "owner": "n/a",
+        "source": "Salesforce",
+        "isNewAccount": false,
+        "rank": "7",
+        "tier": "Solid",
+        "accountId": "001Wt00001VGPZZIA5",
+        "icpFit": "n/a",
+        "crm": "9 active opps (~$41.9M pipeline) — NOT a cold prospecting target",
+        "opportunities": [
+          {
+            "name": "9 active opps",
+            "amount": "~$41.9M",
+            "stage": "",
+            "close": "",
+            "meta": "~$41.9M"
+          }
+        ],
+        "pitch": "New SDR Manager hire is the entry point — they'll be evaluating tools in their first 90 days",
+        "themes": "4, 5, 9, 11",
+        "id": "acct-07",
+        "prospectCount": 0,
+        "prospects": []
+      },
+      {
+        "company": "Acme Corp",
+        "companyLogoUrl": "/assets/images/company-logos/accounts/acme-corp.png",
+        "employees": "~500",
+        "industry": "Software / B2B SaaS (demo)",
+        "location": "San Francisco, CA",
+        "whyProspect": "n/a",
+        "signals": [
+          "$50M Series C (Feb 2026)",
+          "New Head of Sales EMEA David Lee",
+          "Global expansion (London/Singapore/Tokyo)",
+          "Tool consolidation (5→1)",
+          "Active $240K opp"
+        ],
+        "signal": "$50M Series C (Feb 2026)",
+        "lastTouch": "n/a",
+        "lastTouchIso": "",
+        "owner": "n/a",
+        "source": "Salesforce",
+        "isNewAccount": false,
+        "rank": "8",
+        "tier": "Solid",
+        "accountId": "001Wt00001eRF6hIAG",
+        "icpFit": "n/a",
+        "crm": "Active Platform Expansion opp ($240K Solution Validation)",
+        "opportunities": [
+          {
+            "name": "Platform Expansion",
+            "amount": "$240K",
+            "stage": "Solution Validation",
+            "close": "",
+            "meta": "$240K · Solution Validation"
+          }
+        ],
+        "pitch": "You're opening London, Singapore, Tokyo — cold TAM in every geo. Bluebirds gives your new EMEA Head of Sales prioritized lists from day one",
+        "themes": "5, 14",
+        "id": "acct-08",
+        "prospectCount": 3,
+        "prospects": [
+          {
+            "name": "David Lee",
+            "role": "Head of Sales, EMEA",
+            "email": "david.lee@acmecorp.com",
+            "phone": "+1 (415) 555-1301",
+            "recordId": "003Wt00000YmgEIIAZ",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Hit the number without adding headcount — the same pipeline coverage from the team you already have.",
+            "source": "TechCrunch",
+            "isNewContact": false
+          },
+          {
+            "name": "Alice Johnson",
+            "role": "CMO",
+            "email": "alice.johnson@acmecorp.com",
+            "phone": "+1 (415) 555-1345",
+            "recordId": "003Wt00000YmjFNIAZ",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Stop handing sales unqualified lists: only accounts showing live intent get routed, with the signal attached to the handoff.",
+            "source": "Salesforce",
+            "isNewContact": false
+          },
+          {
+            "name": "Jane Doe",
+            "role": "CEO",
+            "email": "jane.doe@acmecorp.com",
+            "phone": "+1 (415) 555-1389",
+            "recordId": "003Wt00000YmjGzIAJ",
+            "recordType": "Contact",
+            "icon": "contact",
+            "pitch": "Hit the number without adding headcount — the same pipeline coverage from the team you already have.",
+            "source": "Salesforce",
+            "isNewContact": false
+          }
+        ]
+      },
+      {
+        "company": "Northbend Logistics",
+        "companyLogoUrl": "/assets/images/company-logos/accounts/northbend-logistics.png",
+        "employees": "~2,000",
+        "industry": "Transportation & Logistics",
+        "location": "Seattle, WA",
+        "whyProspect": "n/a",
+        "signals": [
+          "RevOps modernization (Head of RevOps Priya Nair)",
+          "27% stalled-deal rate (board-level)",
+          "E-commerce fulfillment expansion"
+        ],
+        "signal": "RevOps modernization (Head of RevOps Priya Nair)",
+        "lastTouch": "n/a",
+        "lastTouchIso": "",
+        "owner": "n/a",
+        "source": "Salesforce",
+        "isNewAccount": false,
+        "rank": "9",
+        "tier": "Solid",
+        "accountId": "001Wt00001eRIJ4IAO",
+        "icpFit": "Outside core B2B SaaS ICP (Transportation/Logistics)",
+        "crm": "Active RevOps Platform opp ($95K Qualification); Budget slipped to next quarter; Peer case study owed",
+        "opportunities": [
+          {
+            "name": "RevOps Platform",
+            "amount": "$95K",
+            "stage": "Qualification",
+            "close": "",
+            "meta": "$95K · Qualification"
+          }
+        ],
+        "pitch": "80% of outbound success is targeting, not messaging. Bluebirds' ICP scoring gets reps in front of the right accounts",
+        "themes": "3",
+        "id": "acct-09",
+        "prospectCount": 0,
+        "prospects": []
+      },
+      {
+        "company": "Kestrel Analytics",
+        "companyLogoUrl": "/assets/images/company-logos/accounts/kestrel-analytics.png",
+        "employees": "~350",
+        "industry": "Software / Analytics",
+        "location": "Denver, CO",
+        "whyProspect": "n/a",
+        "signals": [
+          "Active $260K Enterprise expansion in Negotiation",
+          "CFO Sarah Chen requesting TCO for board",
+          "RevOps enablement gap identified by VP Sales"
+        ],
+        "signal": "Active $260K Enterprise expansion in Negotiation",
+        "lastTouch": "n/a",
+        "lastTouchIso": "",
+        "owner": "n/a",
+        "source": "Salesforce",
+        "isNewAccount": false,
+        "rank": "10",
+        "tier": "Solid",
+        "accountId": "001Wt00001eRgy6IAC",
+        "icpFit": "Existing Growth-tier customer — expansion target",
+        "crm": "Enterprise Renewal + Expansion ($260K, close Aug 31); 3-year TCO doc owed",
+        "opportunities": [
+          {
+            "name": "Enterprise Renewal + Expansion",
+            "amount": "$260K",
+            "stage": "",
+            "close": "Aug 31",
+            "meta": "$260K · closes Aug 31"
+          }
+        ],
+        "pitch": "Frame the $80K delta as RevOps team productivity gain. Deliver TCO comparison for the board pack",
+        "themes": "3, 6, 12",
+        "id": "acct-10",
+        "prospectCount": 0,
+        "prospects": []
+      },
+      {
+        "company": "Halcyon Foods",
+        "companyLogoUrl": "/assets/images/company-logos/accounts/halcyon-foods.png",
+        "employees": "~12,000",
+        "industry": "Consumer Packaged Goods (CPG)",
+        "location": "Chicago, IL",
+        "whyProspect": "n/a",
+        "signals": [
+          "Not B2B SaaS (CPG)",
+          "Enterprise 12K emp",
+          "No SDR team",
+          "Demo seed account"
+        ],
+        "signal": "Not B2B SaaS (CPG)",
+        "lastTouch": "n/a",
+        "lastTouchIso": "",
+        "owner": "n/a",
+        "source": "ZoomInfo",
+        "isNewAccount": true,
+        "rank": "11",
+        "tier": "Avoid",
+        "accountId": "001Wt00001eRSQVIA4",
+        "icpFit": "n/a",
+        "crm": "n/a",
+        "opportunities": [],
+        "pitch": "n/a",
+        "themes": "10",
+        "id": "acct-11",
+        "prospectCount": 0,
+        "prospects": []
+      },
+      {
+        "company": "salesforce.com",
+        "companyLogoUrl": "/assets/images/company-logos/accounts/salesforce-com.png",
+        "employees": "~83,000",
+        "industry": "Software / CRM",
+        "location": "San Francisco, CA",
+        "whyProspect": "n/a",
+        "signals": [
+          "Parent company of Bluebirds",
+          "Owns competitor Agentforce SDR",
+          "83K employees"
+        ],
+        "signal": "Parent company of Bluebirds",
+        "lastTouch": "n/a",
+        "lastTouchIso": "",
+        "owner": "n/a",
+        "source": "ZoomInfo",
+        "isNewAccount": true,
+        "rank": "12",
+        "tier": "Avoid",
+        "accountId": "001Wt00001Kgm4GIAR",
+        "icpFit": "n/a",
+        "crm": "n/a",
+        "opportunities": [],
+        "pitch": "n/a",
+        "themes": "11",
+        "id": "acct-12",
+        "prospectCount": 0,
+        "prospects": []
+      },
+      {
+        "company": "Atlassian",
+        "companyLogoUrl": "/assets/images/company-logos/accounts/atlassian.png",
+        "employees": "~13,000",
+        "industry": "Software / DevOps & Collaboration",
+        "location": "Sydney, Australia",
+        "whyProspect": "n/a",
+        "signals": [
+          "Enterprise 13K+ emp",
+          "Builds competing tools (Loom, Rovo AI)",
+          "Uses Common Room"
+        ],
+        "signal": "Enterprise 13K+ emp",
+        "lastTouch": "n/a",
+        "lastTouchIso": "",
+        "owner": "n/a",
+        "source": "ZoomInfo",
+        "isNewAccount": true,
+        "rank": "13",
+        "tier": "Avoid",
+        "accountId": "001Wt00001Kgm4FIAR",
+        "icpFit": "n/a",
+        "crm": "n/a",
+        "opportunities": [],
+        "pitch": "n/a",
+        "themes": "6, 11",
+        "id": "acct-13",
+        "prospectCount": 0,
+        "prospects": []
+      },
+      {
+        "company": "Acme (Acme United)",
+        "companyLogoUrl": "/assets/images/company-logos/accounts/acme-acme-united.png",
+        "employees": "~700",
+        "industry": "Manufacturing / Consumer Goods",
+        "location": "Fairfield, CT",
+        "whyProspect": "n/a",
+        "signals": [
+          "Manufacturing/consumer goods",
+          "No SDR team",
+          "Retail/channel model"
+        ],
+        "signal": "Manufacturing/consumer goods",
+        "lastTouch": "n/a",
+        "lastTouchIso": "",
+        "owner": "n/a",
+        "source": "ZoomInfo",
+        "isNewAccount": true,
+        "rank": "14",
+        "tier": "Avoid",
+        "accountId": "001Wt00001Wku98IAB",
+        "icpFit": "n/a",
+        "crm": "n/a",
+        "opportunities": [],
+        "pitch": "n/a",
+        "themes": "11",
+        "id": "acct-14",
+        "prospectCount": 0,
+        "prospects": []
+      },
+      {
+        "company": "CNET (Ziff Davis)",
+        "companyLogoUrl": "/assets/images/company-logos/accounts/cnet-ziff-davis.png",
+        "employees": "~4,300",
+        "industry": "Digital Media / Publishing",
+        "location": "New York, NY",
+        "whyProspect": "n/a",
+        "signals": [
+          "Digital media (not B2B SaaS)",
+          "Owns SWZD (competitor in intent data space)"
+        ],
+        "signal": "Digital media (not B2B SaaS)",
+        "lastTouch": "n/a",
+        "lastTouchIso": "",
+        "owner": "n/a",
+        "source": "ZoomInfo",
+        "isNewAccount": true,
+        "rank": "15",
+        "tier": "Avoid",
+        "accountId": "001Wt00001Kgm4EIAR",
+        "icpFit": "n/a",
+        "crm": "n/a",
+        "opportunities": [],
+        "pitch": "n/a",
+        "themes": "11",
+        "id": "acct-15",
+        "prospectCount": 0,
+        "prospects": []
+      }
+    ]
+  }
+}

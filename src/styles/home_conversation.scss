@@ -487,7 +487,9 @@
   padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem); // 12 16
 
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);  // 13px per Figma
+  // 13px is --slds-g-font-size-base here, not a step on the neg scale:
+  // neg-1 is 12px and neg-2 is 10px, so neither hits the Figma size.
+  font-size: var(--slds-g-font-size-base, 0.8125rem);    // 13px per Figma
   line-height: 1.125rem;                                 // 18px per Figma
   color: var(--slds-g-color-on-surface-3, #001e5b);
 
@@ -584,7 +586,7 @@
 
 .seller-home__conv-msg-activity-label {
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: var(--slds-g-font-scale-neg-2, 0.75rem);    // 12px per Figma tool-call chip
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);    // 12px per Figma tool-call chip
   line-height: 1rem;                                     // 16px
   font-weight: var(--slds-g-font-weight-4, 400);         // Regular
   color: var(--slds-g-color-on-surface-2, #2e2e2e);
@@ -592,7 +594,7 @@
 
 .seller-home__conv-msg-activity-status {
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: var(--slds-g-font-scale-neg-2, 0.75rem);    // 12px
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);    // 12px
   line-height: 1rem;
   color: var(--slds-g-color-on-surface-1, #5c5c5c);      // muted — secondary status
 }
@@ -1044,7 +1046,7 @@
 
 .seller-home__conv-thinking-label {
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: var(--slds-g-font-scale-neg-2, 0.75rem);    // 12px
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);    // 12px
   line-height: 1rem;
   color: var(--slds-g-color-on-surface-2, #2e2e2e);
 }
@@ -1141,10 +1143,15 @@
 //   • Per-column minimum widths, keyed off the header's
 //     `data-sh-conv-col` so the JSON `columns` order stays free.
 //   • The cell-layout utilities the ported hunter macros expect
-//     (`slds-td-formatter`, `cell_text_link`, …), scoped to this
-//     table so they can't leak onto other pages.
-//   • Row selection styling (SLDS uplift provides hover/focus, but
-//     not the "selected" background this prototype needs).
+//     (`slds-td-formatter`, `cell_text_link`, …) and the `ptl-*` cell
+//     classes that came back from /prospect_table_lab.html, all scoped
+//     to this table so they can't leak onto other pages.
+//   • The reviewed-status stripe (see the row-state block below).
+//
+// The lab is the sandbox copy of this region — same class names, its
+// own stylesheet, no page loads both — so a layout change is worked
+// out there and ported back as a copy of the changed lines rather than
+// a translation. prospect_table_lab.scss is the file to diff against.
 // Height budget for the scroll viewport. A row is as tall as the
 // tallest cell layout: the Prospect cell's four stacked lines at 20 px
 // leading (80 px), the inner block's vertical padding (16 px), the
@@ -1216,22 +1223,61 @@ $sh-conv-table-rows: 5.5;
 
   // Per-column minimums, keyed off the header cell's column id so
   // reordering `columns` in the JSON doesn't require touching CSS.
-  // Rationale gets the most room (it's a sentence); the rest are
-  // sized to their content shape.
-  th[data-sh-conv-col="prospect"]    { min-width: 15rem; }    // 240px — avatar + 4 lines
-  th[data-sh-conv-col="company"]     { min-width: 14rem; }    // 224px — logo + 4 lines
-  // Fixed, not just minimum: the rationale is a sentence, so its column
-  // is sized to the line length we want it to wrap at (~2–3 lines)
-  // rather than to its content, which would run the column very wide.
-  th[data-sh-conv-col="whyProspect"] {
-    width: 22rem;                                             // 352px
-    min-width: 22rem;
+  // The prose columns get fixed widths (they hold sentences, and
+  // sizing them to content would run each as wide as its longest row);
+  // the rest are sized to their content shape.
+  //
+  // The Prospect floor stays at 15rem even though the column now
+  // carries the reject control too. It doesn't need raising: the table
+  // is `width: max-content`, so these are floors and content decides
+  // the real width — with the button in it this column measures ~321px
+  // and nothing in the name / email stack clips. Raising the floor to
+  // "make room" measured as a no-op in the lab, and would read like a
+  // load-bearing number to the next person.
+  th[data-sh-conv-col="prospect"]    { min-width: 15rem; }    // 240px — avatar + 4 lines + decide
+  // A cap, not a floor, and the second rule further down (on
+  // `.ptl-company-text`) is what makes it bind — see the note there.
+  th[data-sh-conv-col="company"] {
+    width: 20rem;                                             // 320px — was ~390px, content-driven
+    min-width: 20rem;
   }
-  th[data-sh-conv-col="signal"]      { min-width: 12rem; }    // 192px
-  th[data-sh-conv-col="lastTouch"]   { min-width: 8.5rem; }   // 136px
+  th[data-sh-conv-col="whyProspect"] {
+    width: 15rem;                                             // 240px
+    min-width: 15rem;
+  }
+  // Signal carries the CSV's semicolon-separated list rather than one
+  // short phrase, so it gets a prose width and renders as bullets.
+  th[data-sh-conv-col="signal"] {
+    width: 18rem;                                             // 288px
+    min-width: 18rem;
+  }
   th[data-sh-conv-col="source"]      { min-width: 9.5rem; }   // 152px — badge + optional badges
-  th[data-sh-conv-col="owner"]       { min-width: 9rem; }     // 144px
-  th[data-sh-conv-col="actions"]     { min-width: 7.5rem; }   // 120px — two icon buttons
+  th[data-sh-conv-col="icpFit"] {
+    width: 14rem;                                             // 224px
+    min-width: 14rem;
+  }
+  th[data-sh-conv-col="crm"] {
+    width: 16rem;                                             // 256px
+    min-width: 16rem;
+  }
+  th[data-sh-conv-col="pitch"] {
+    width: 20rem;                                             // 320px — the longest field
+    min-width: 20rem;
+  }
+  // Widths for the columns `_hidden` skips, parked rather than deleted:
+  // the fields are all still on the rows, so these come back together
+  // with the column. Restoring one means removing its id from `_hidden`
+  // in _home_conversation_messages.html and un-commenting its line.
+  //
+  //   th[data-sh-conv-col="actions"]     { min-width: 7.5rem; }   // 120px — two icon buttons
+  //   th[data-sh-conv-col="tier"]        { min-width: 7.5rem; }   // 120px — "Red Hot" badge
+  //   th[data-sh-conv-col="rank"]        { min-width: 4.5rem; }   // 72px  — two digits
+  //   th[data-sh-conv-col="themes"]      { min-width: 8rem; }     // 128px — "1, 2, 4, 6, 7, 8"
+  //   th[data-sh-conv-col="recordType"]  { min-width: 8rem; }     // 128px — "Contact"
+  //   th[data-sh-conv-col="recordId"]    { min-width: 12.5rem; }  // 200px — 18-char id
+  //   th[data-sh-conv-col="accountId"]   { min-width: 12.5rem; }  // 200px — 18-char id
+  //   th[data-sh-conv-col="lastTouch"]   { min-width: 8.5rem; }   // 136px
+  //   th[data-sh-conv-col="owner"]       { min-width: 9rem; }     // 144px
 
   // Header row — same 13 px base size hunter's prospect tables use.
   // Weight and text color come from the SLDS table-header tokens; only
@@ -1321,6 +1367,40 @@ $sh-conv-table-rows: 5.5;
     min-width: 0;
   }
 
+  // The decision control, the trailing child of the Prospect cell's
+  // flex row. `flex: none` opts it out of the `min-width: 0` above
+  // (which is there for the truncating name stack, and would otherwise
+  // let the button be squeezed); `margin-left: auto` pins it to the
+  // cell's trailing edge so the control lines up down the column
+  // however long the names run.
+  //
+  // `align-self: center` centres it in the row, replacing the top
+  // alignment it would inherit from the flex row's `flex-start`. This
+  // works because the cell's `.slds-grid` already fills the full cell
+  // height, so the flex line to centre within IS the row; no height or
+  // `vertical-align` change is needed, and the name stack above stays
+  // top-aligned.
+  .seller-home__conv-prospect-decide {
+    flex: none;
+    margin-left: auto;
+    align-self: center;
+    padding-left: var(--slds-g-spacing-2, 0.5rem);
+  }
+
+  // A 24px button rather than the 32px `slds-button_icon-border-filled`
+  // ships with, so the control sits closer in weight to the name it
+  // trails. Set here rather than inline because it has to beat that
+  // SLDS class; nesting inside the table wrapper is what wins it, so
+  // keep the rule in this block if it moves.
+  //
+  // The glyph is sized by `slds-button__icon_small` on the svg itself,
+  // which measures 12px — half the button, so the ring keeps its
+  // breathing room without any padding of our own.
+  [data-sh-conv-reject] {
+    width: var(--slds-g-sizing-7, 1.5rem);
+    height: var(--slds-g-sizing-7, 1.5rem);
+  }
+
   // Record name / company name — the link-styled first line of the
   // stacked cells. Rendered as text, not an <a>: there's nothing to
   // navigate to in the prototype, and a real link would promise one.
@@ -1347,9 +1427,58 @@ $sh-conv-table-rows: 5.5;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     white-space: pre-line;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  // The stacked text beside the company logo. Needs an explicit zero
+  // floor or it takes its width from its longest line — a flex item's
+  // default `min-width: auto` won't shrink below its content — and
+  // "Software / Cloud Monitoring & Observability" would push the column
+  // wide instead of truncating inside it.
+  //
+  // The right margin is the gap the tier badge's `margin-left: auto`
+  // can't guarantee. An auto margin absorbs whatever space is free,
+  // which is the right behaviour for pinning the badge — but on the row
+  // whose text is widest there IS no free space, the auto resolves to 0,
+  // and the badge ends up against the text. This is the floor.
+  .ptl-company-text {
+    min-width: 0;
+    margin-right: var(--slds-g-spacing-2, 0.5rem);
+  }
+
+  // Everything under the company name: employees, industry, location.
+  // This rule is what lets the 320px width above bind, and that's the
+  // whole story of it. Asking for any width from 384px down to 160px
+  // left the column at 390px, because these three lines carry
+  // `slds-truncate` — which is `white-space: nowrap`, and a nowrap
+  // line's MIN-content width is the whole string. "Software / Cloud
+  // Monitoring & Observability" is 265px of unbreakable line, so 265 +
+  // logo + badge + padding was the floor and no requested width could
+  // go under it. (`min-width: 0` above doesn't help: that governs flex
+  // shrinking inside a known box, not the intrinsic width the table
+  // asks each column for.)
+  //
+  // Letting them wrap drops their contribution to their longest WORD,
+  // and the 1-line clamp keeps them one line tall with an ellipsis —
+  // the same thing `slds-truncate` looked like, now able to shrink.
+  //
+  // The name keeps nowrap deliberately, so it never clips, and it sets
+  // the real floor: 241px, the width of the longest company name plus
+  // the fixed furniture. Below that the browser ignores the request.
+  //
+  // Cost at 320px, measured in the lab across all its rows: 11 industry
+  // lines clip and nothing else does. Everything clipped stays on the
+  // element's `title`.
+  .ptl-company-text > div:not(:first-child) {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    overflow: hidden;
   }
 
   // Avatar images (company logos) — SLDS sizes the container, but the
@@ -1360,65 +1489,159 @@ $sh-conv-table-rows: 5.5;
     object-fit: cover;
   }
 
-  .slds-accept-fill-color { fill: var(--slds-g-color-success-base-60, #2e844a); }
+  // No `.slds-accept-fill-color`: nothing renders a check any more.
   .slds-reject-fill-color { fill: var(--slds-g-color-error-base-40, #ba0517); }
+
+  // ── Treatments for the account CSV's own fields ──────────────────
+  // Missing values. The marker is muted and italic — enough to read as
+  // "nothing here" while skimming a column without becoming the
+  // loudest thing in the cell.
+  .ptl-na {
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+    font-style: italic;
+  }
+
+  // Tier — three fixed values, so the colour carries the meaning: red
+  // for the hottest, brand blue for the middle tier, neutral grey for
+  // the ones being skipped. Modifier class comes from the value slugged
+  // in the macro, so an unexpected fourth tier still renders (as a
+  // plain badge) rather than disappearing.
+  .ptl-tier {
+    font-weight: var(--slds-g-font-weight-6, 590);
+    white-space: nowrap;
+  }
+
+  // The same badge, living in the Company cell rather than a column of
+  // its own. The cell is a flex row of [logo][text][badge].
+  // `margin-left: auto` pins the badge to the right edge and
+  // `align-self: flex-start` keeps it level with the company name
+  // rather than centred against three or four lines of firmographics —
+  // "top right" only reads as deliberate if it's aligned to something,
+  // and the name is that something.
+  //
+  // `flex: none` because the text block beside it is allowed to shrink
+  // and truncate; without this the badge would be the thing that gives,
+  // and a half-width "Red Ho…" is worse than a clipped industry string.
+  .ptl-company-tier {
+    flex: none;
+    align-self: flex-start;
+    margin-left: auto;
+  }
+
+  .ptl-tier--red-hot {
+    background: var(--slds-g-color-error-container-1, #fddde3);
+    color: var(--slds-g-color-error-base-30, #8a033e);
+  }
+
+  .ptl-tier--solid {
+    background: var(--slds-g-color-brand-base-95, #edf4ff);
+    color: var(--slds-g-color-accent-2, #0250d9);
+  }
+
+  .ptl-tier--avoid {
+    background: var(--slds-g-color-neutral-base-95, #f3f3f3);
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  }
+
+  // Signals — a bulleted list, capped at two items in the macro. SLDS
+  // resets list markers globally, so `list-style` has to be asked for
+  // back; a bare `<ul>` here renders as unbulleted lines.
+  //
+  // The height bound is that item cap, not a line clamp, which is what
+  // lets a long signal WRAP rather than truncate — and the longest of
+  // these ("RevOps modernization (Head of RevOps Priya Nair)") is one
+  // you want whole. Clamping each bullet to one line to buy room for a
+  // third was tried in the lab: it still overshot the height the row
+  // can absorb, and cost 6 of the 64 signals their tail.
+  .ptl-signal-list {
+    margin: 0;
+    padding-left: var(--slds-g-spacing-4, 1rem);
+    list-style: disc;
+
+    li {
+      white-space: normal;
+    }
+
+    li + li {
+      margin-top: var(--slds-g-spacing-1, 0.25rem);
+    }
+  }
+
+  // "+2 more". Muted, and not a control: there's nowhere to expand to,
+  // and the full list is on the cell's `title` — the same reveal every
+  // other truncated cell here uses. Give it a real affordance the
+  // moment it has somewhere to go.
+  .ptl-signal-more {
+    margin-top: var(--slds-g-spacing-1, 0.25rem);
+    padding-left: var(--slds-g-spacing-4, 1rem);
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    color: var(--slds-g-color-neutral-base-50, #747474);
+  }
+
+  // ── Hidden columns' cell treatments ─────────────────────────────
+  // Neither class is exercised right now: Rank, Record ID and Account
+  // ID are all in `_hidden`, so no cell emits either. Kept, not
+  // deleted, because the data and the cell macros are both still there
+  // and the styling comes back with the column.
+  //
+  // Rank — tabular figures so the column reads as a list of numbers
+  // rather than as ragged text.
+  .ptl-rank {
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--slds-g-font-weight-6, 590);
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  }
+
+  // Record / Account ID — a lookup key, not prose. Monospaced so ids
+  // line up digit-for-digit, and muted so it doesn't compete with the
+  // name.
+  .ptl-id {
+    font-family: var(--slds-g-font-family-monospace, ui-monospace, "SF Mono", Menlo, monospace);
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);   // 12px — 18 chars in 200px
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  }
 }
 
-// ── Row states: hover, focus, selected ────────────────────────────
-// SLDS uplift already ships hover-row + focus-cell rules. These
-// rules re-assert the desired hover color (a light neutral tint
-// rather than the SLDS default blue-tint, which would fight the
-// user pill's brand-95 backdrop above) and add the missing
-// "selected" background. `.slds-hint-parent` on each row is what
-// enables the SLDS row-level hover class match.
+// ── Row states: hover, reviewed ───────────────────────────────────
+// SLDS uplift already ships a hover-row rule. This re-asserts the
+// desired hover color (a light neutral tint rather than the SLDS
+// default blue-tint, which would fight the user pill's brand-95
+// backdrop above). `.slds-hint-parent` on each row is what enables the
+// SLDS row-level hover class match.
+//
+// Two rules that used to be here are gone with row selection: the
+// `is-selected` brand-tinted background, and the row-level `:focus`
+// outline that went with the roving tabindex. Nothing adds the class
+// and nothing focuses a `<tr>` any more, so both would be dead CSS.
+// Bringing selection back means restoring them alongside `selectRow`
+// in home_conversation.js.
 //
 // Reviewed-status modifier — `[data-sh-review-status]` on the row
 // carries the current review state (approved / changes_requested).
-// A leading vertical accent stripe on the row communicates that
-// this prospect has already been reviewed, without changing the
-// row's density or column layout. See binder in home_conversation.js
-// for the DOM update path.
+// A leading vertical accent stripe communicates that this prospect has
+// already been reviewed, without changing the row's density or column
+// layout. See binder in home_conversation.js for the DOM update path.
 .seller-home__conv-prospect-row {
-  cursor: pointer;
+  // Not `pointer`: the row itself no longer answers a click. The X
+  // keeps its own pointer, being a button. Hover stays — the neutral
+  // tint still tracks which row you're reading, which is worth having
+  // whether or not the row is clickable.
+  cursor: default;
 
-  // Hover: light neutral — subtle "you can click this" without
-  // stealing attention from the user pill. Uses SLDS neutral-95
-  // (#f3f3f3) so it flows with the header background and doesn't
-  // clash with any theme.
+  // Hover: light neutral. Uses SLDS neutral-95 (#f3f3f3) so it flows
+  // with the header background and doesn't clash with any theme.
   &:hover {
     background: var(--slds-g-color-neutral-base-95, #f3f3f3);
   }
 
-  // Keyboard focus — SLDS renders an outline on the focused cell
-  // by default, but for row-level focus (roving tabindex) we want
-  // the whole row to signal focus. `outline` on the <tr> renders
-  // correctly across browsers thanks to `border-collapse: collapse`
-  // on the SLDS table.
-  &:focus,
-  &:focus-visible {
-    outline: 2px solid var(--slds-g-color-border-brand-1, #0176d3);
-    outline-offset: -2px;
-  }
-
-  // Selected: brand-tinted background. Kept lighter than the user
-  // pill (brand-95 vs. brand-90) so a selected row doesn't compete
-  // with the pill for visual weight. The `is-selected` class is
-  // toggled by home_conversation.js on single-select interactions.
-  &.is-selected {
-    background: var(--slds-g-color-brand-base-95, #edf4ff);
-  }
-
-  &.is-selected:hover {
-    // Slightly darker on hover-of-selected so the affordance stays
-    // legible even when the row is already selected.
-    background: var(--slds-g-color-brand-base-90, #dbe7fb);
-  }
-
   // Reviewed-status accent — a 3 px leading stripe using the
-  // first-cell background painter. Applied via
-  // `[data-sh-review-status="approved|changes_requested"]` toggled
-  // by JS on each review-state change. Kept as `inset` box-shadow
-  // so a future column resize doesn't fight `border-left`.
+  // first-cell background painter. Kept as `inset` box-shadow so a
+  // future column resize doesn't fight `border-left`.
+  //
+  // `approved` is still reachable, just not from the row: there's no
+  // Accept button any more, and the green stripe now arrives in batch
+  // when the cadence card's "approve all" fires `sh:review-decision`
+  // with `approve_all`. `changes_requested` is what the X sets.
   &[data-sh-review-status="approved"] td:first-child {
     box-shadow: inset 3px 0 0 0 var(--slds-g-color-success-base-70, #2e844a);
   }
@@ -1426,16 +1649,16 @@ $sh-conv-table-rows: 5.5;
     box-shadow: inset 3px 0 0 0 var(--slds-g-color-warning-base-60, #c68a00);
   }
 
-  // Once a decision exists, the opposite action recedes — the row
-  // still allows changing its mind, but the current state is legible
-  // at a glance while scanning the Actions column.
-  &[data-sh-review-status="approved"] [data-sh-conv-reject],
-  &[data-sh-review-status="changes_requested"] [data-sh-conv-accept] {
+  // On an approved row, removing is the opposite action, so it
+  // recedes — the row still allows changing its mind. There's no
+  // matching rule for the other direction now: with one control there
+  // is nothing to dim on a removed row, and dimming the only way back
+  // would be the wrong call.
+  &[data-sh-review-status="approved"] [data-sh-conv-reject] {
     opacity: 0.4;
   }
 
-  // The chosen action reads as held down.
-  [data-sh-conv-accept][aria-pressed="true"],
+  // The X reads as held down while the row is out.
   [data-sh-conv-reject][aria-pressed="true"] {
     background-color: var(--slds-g-color-neutral-base-95, #f3f3f3);
     border-color: var(--slds-g-color-border-2, #aeaeae);
@@ -1668,7 +1891,7 @@ $sh-conv-table-rows: 5.5;
   align-items: center;
   padding: 0.125rem var(--slds-g-spacing-2, 0.5rem);   // 2 px vertical, 8 px horizontal
   border-radius: var(--slds-g-radius-border-2, 0.5rem);
-  font-size: var(--slds-g-font-scale-neg-2, 0.75rem); // 12 px
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12 px
   line-height: 1rem;
   font-weight: var(--slds-g-font-weight-6, 590);
   white-space: nowrap;
@@ -1743,7 +1966,7 @@ $sh-conv-table-rows: 5.5;
   border-radius: var(--slds-g-radius-border-2, 0.5rem);
   background: var(--slds-g-color-neutral-base-95, #f3f3f3);
   color: var(--slds-g-color-on-surface-2, #2e2e2e);
-  font-size: var(--slds-g-font-scale-neg-2, 0.75rem);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);   // 12px
   line-height: 1rem;
   font-weight: var(--slds-g-font-weight-6, 590);
   white-space: nowrap;
@@ -1933,7 +2156,7 @@ $sh-conv-table-rows: 5.5;
 
 .seller-home__conv-review-completed-copy {
   margin: 0;
-  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);   // 13px
   line-height: 1.125rem;
   color: var(--slds-g-color-on-surface-2, #2e2e2e);
 }
@@ -2049,7 +2272,7 @@ $sh-conv-table-rows: 5.5;
 .seller-home__conv-cadence-summary {
   margin: 0;
   color: var(--slds-g-color-on-surface-1, #5c5c5c);
-  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);  // 13 px
+  font-size: var(--slds-g-font-size-base, 0.8125rem);    // 13px
   line-height: 1.125rem;
 }
 
@@ -2062,7 +2285,9 @@ $sh-conv-table-rows: 5.5;
   align-items: center;
   gap: var(--slds-g-spacing-1, 0.25rem);
   color: var(--slds-g-color-on-surface-1, #5c5c5c);
-  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);
+  // Inherited by the chevron buttons and the "N of M" spans, which set
+  // no size of their own.
+  font-size: var(--slds-g-font-size-base, 0.8125rem);    // 13px
   line-height: 1.125rem;
 }
 

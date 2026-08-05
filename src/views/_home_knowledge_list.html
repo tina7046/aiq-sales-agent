@@ -139,11 +139,23 @@
       {# Left cluster — 24-px doctype icon.
          `aria-hidden` because the accessible name on the row wrapper
          already carries the doc name; a screen reader echoing "TXT
-         icon" on top of that would be noise. #}
+         icon" on top of that would be noise.
+
+         Two sources, same 24-px box. `doc.iconSrc` (a bitmap under
+         /assets) wins when present, for doc kinds SLDS has no glyph
+         for — the AI-generated Auto-Learning docs use it. Everything
+         else falls through to `doc.fileType`, which names a symbol in
+         the SLDS doctype sprite. `fileType` is deliberately left in
+         the data on rows that set `iconSrc`, so deleting the override
+         restores the sprite glyph without having to reconstruct it. #}
       <span class="seller-home__knowledge-doc-icon" aria-hidden="true">
+        {% if doc.iconSrc %}
+        <img class="seller-home__knowledge-doc-icon-img" src="{{ doc.iconSrc }}" alt="" />
+        {% else %}
         <svg class="seller-home__knowledge-doc-icon-svg" focusable="false">
           <use xlink:href="/assets/icons/doctype-sprite/svg/symbols.svg#{{ doc.fileType }}"></use>
         </svg>
+        {% endif %}
       </span>
 
       {# Center cluster — primary name + secondary metadata stack.

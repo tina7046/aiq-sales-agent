@@ -5,52 +5,99 @@
   agent response (see `prospectTable` in
   _home_conversation_messages.html, which dispatches on `col.id`).
 
-  Ported from the Approval Required table in the hunter prototype
-  (`src/views/_prospect_list/_macros.html`) so density, avatars, badge
-  treatment, and the inline-edit affordance match the Prospecting
-  surface a seller sees elsewhere in the app. Differences from hunter,
-  all deliberate:
+  Where this came from, twice over. The original was a port of the
+  Approval Required table in the hunter prototype
+  (`src/views/_prospect_list/_macros.html`), so density, avatars and
+  badge treatment match the Prospecting surface a seller sees elsewhere.
+  The current version came back from /prospect_table_lab.html, the
+  sandbox copy of this file, after the layout was worked out there
+  against the real account data. The lab is still the place to try the
+  next change: it renders the same rows at the same 800 px width with
+  its own stylesheet, so nothing there can affect the demo.
+
+  That's also why the cell classes are spelled `ptl-` here. They were
+  the lab's, and keeping the names means the next port is a copy of the
+  changed block rather than a translation of it. Read the prefix as
+  "prospect table", not "lab" — home_conversation.scss defines them
+  scoped INSIDE the table wrapper, so they can't leak onto other pages.
+  Same reasoning for the hunter-spelled utilities (`slds-td-formatter`,
+  `cell_text_link`, the `*-fill-color` helpers).
+
+  Differences from hunter, all deliberate:
 
     • No row-number gutter, no select-all checkbox column, no sort
       controls, no column-resize handles. The conversation table is a
       read-and-decide surface, not a list view to be managed.
     • No inline feedback column. Feedback on a specific draft belongs
-      to the outreach review below the table, which already has a
-      per-prospect feedback field.
+      to the cadence card below the table, which has a per-prospect
+      feedback field.
     • No `Review` button. In hunter it opens a side panel; this page
-      has no side panel — the inline outreach-review component below
-      the table plays that role.
-    • No `More Options` chevrons next to Accept / Reject. They were
-      decorative in hunter (tooltip only) and would read as broken
-      here.
+      has no side panel — the cadence card below the table plays that
+      role.
+    • One decision control, not two. Accept is gone and the X lives in
+      the Prospect cell (see `decideButtons`), which makes the list
+      read as opt-OUT: every prospect is in unless the seller removes
+      one. The explicit yes comes from the cadence card's batch
+      approve, not from the row.
 
   Every macro takes the conversation's own row object (see
-  data/index.json → conversations[id].messages[].table.rows), so field
-  names follow this page's flat convention (`prospect`, `role`,
-  `company`) rather than hunter's (`prospectName`, `prospectTitle`,
-  `companyName`).
-
-  Utility class names (`slds-td-formatter`, `cell_text_link`, the
-  `*-fill-color` helpers) are kept as hunter spells them, and
-  home_conversation.scss defines them scoped INSIDE the table wrapper.
-  Keeping the names aligned makes a future re-sync a diff rather than a
-  translation; scoping them keeps them from leaking onto other pages.
+  data/index.json → conversations[id].messages[].table.rows). Those
+  rows are generated from the account and prospect CSVs, and they carry
+  more fields than this page renders — `_hidden` in
+  _home_conversation_messages.html decides which columns appear, and
+  the macros for the skipped ones are kept below so a column comes back
+  without rebuilding anything.
 #}
 
 
-{# ── Prospect ─────────────────────────────────────────────────────
-   Avatar + name / title / email / phone. The standard sprite icon
-   picks its background from `row.icon` ("contact" or "lead"), matching
-   the two entity colors hunter uses.
+{# ── Missing values ───────────────────────────────────────────────
+   The CSVs don't carry everything this table has columns for, so absent
+   fields arrive as the literal string "n/a". This renders that marker
+   muted, so a cell reads at a glance as "no data here" rather than as
+   content.
 
-   Email and phone are real `mailto:` / `tel:` links; they sit inside a
-   row that also handles click-to-select, so the JS row handler ignores
-   clicks that land on an anchor.
+   Today that's Last touch and Owner, both of which are also hidden —
+   so the marker is mostly insurance for the next field the data
+   doesn't have. Anything that isn't the marker passes straight
+   through, so the macro is safe to wrap around a real value.
+#}
+{% macro na(value) %}
+{%- if value == 'n/a' or value == '' or value is none -%}
+<span class="ptl-na" title="No value in the source data">n/a</span>
+{%- else -%}
+{{ value }}
+{%- endif -%}
+{% endmacro %}
+
+
+{# ── Prospect ─────────────────────────────────────────────────────
+   Avatar + name / title / email / phone, and the reject control,
+   pinned to the trailing edge of the cell.
+
+   The button sits OUTSIDE the text stack rather than under the phone
+   line, so it holds one position down the column no matter how many
+   of the optional lines a row happens to have. It's vertically centred
+   in the row, so it reads as belonging to the whole row rather than to
+   the name line.
+
+   Keeping it in the leading column has a side effect worth knowing:
+   this column is the frozen one, so the control stays on screen while
+   scrolling sideways through Company / Signal / Source. It used to
+   live in a trailing Actions column, which is the first thing to
+   scroll out of view.
+
+   Email and phone are real `mailto:` / `tel:` links.
 #}
 {% macro cellProspect(row) %}
 <td class="slds-cell_action-mode" scope="row">
   <div class="slds-grid slds-td-formatter slds-p-vertical_x-small">
     <span class="slds-no-flex slds-m-right_small slds-avatar slds-avatar_small slds-avatar_circle">
+      {#- `icon` comes from the data: Record Type picks contact vs lead.
+          The glyph and its colour both follow from that — the colour
+          via SLDS's own `.slds-icon-standard-*` class, which is what
+          actually paints the circle. The inline custom property below
+          loses to that class and has no effect, which is worth knowing
+          before anyone tries to recolour an avatar by editing it. -#}
       <div class="slds-icon-standard-{{ row.icon | default('contact') }} slds-icon_container">
         <span style="--sds-c-icon-color-background: var(--slds-c-icon-color-background, {% if row.icon == 'lead' %}rgb(27, 150, 255){% else %}#9050E9{% endif %})">
           <svg class="slds-icon" aria-hidden="true">
@@ -60,31 +107,124 @@
       </div>
     </span>
     <div>
-      <div class="cell_text_link slds-truncate" title="{{ row.prospect }}">{{ row.prospect }}</div>
-      <div class="slds-text-body_regular slds-text-color_weak slds-truncate" title="{{ row.role }}">{{ row.role }}</div>
-      {% if row.email %}
-      <div class="slds-text-body_regular slds-truncate">
-        <a href="mailto:{{ row.email }}" class="slds-text-link">{{ row.email }}</a>
-      </div>
-      {% endif %}
-      {% if row.phone %}
-      <div class="slds-text-body_regular slds-truncate">
-        <a href="tel:{{ row.phone }}" class="slds-text-link">{{ row.phone }}</a>
-      </div>
-      {% endif %}
+      {#- The name is the row's anchor line, so it keeps the link
+          treatment — except where there's no person, where styling
+          "n/a" as a name would suggest there is one. -#}
+      <div
+        class="slds-truncate {% if row.prospect != 'n/a' %}cell_text_link{% endif %}"
+        title="{{ row.prospect }}"
+      >{{ na(row.prospect) }}</div>
+      <div class="slds-text-body_regular slds-text-color_weak slds-truncate" title="{{ row.role }}">{{ na(row.role) }}</div>
+      {{ contactLines(row.email, row.phone) }}
+    </div>
+
+    {# Keeps the `data-sh-conv-reject` hook the row-state CSS and
+       home_conversation.js both bind to, so moving the control between
+       cells stayed a markup change. #}
+    <div class="seller-home__conv-prospect-decide">
+      {{ decideButtons(row) }}
     </div>
   </div>
 </td>
 {% endmacro %}
 
 
-{# ── Company ──────────────────────────────────────────────────────
-   Logo + name / headcount / industry / location. `companyLogoUrl` is
-   a path under /assets/images/company-logos/; a row without one still
-   renders (the avatar collapses to empty) rather than showing a broken
-   image frame.
+{# ── Email + phone ────────────────────────────────────────────────
+   The two contact lines under a person's name and title.
+
+   Linkified ONLY when there's a real value: `mailto:n/a` would be a
+   live link to nothing, which reads as a bug rather than as missing
+   data.
+
+   `title` on both, because an address like
+   petra.sommerville@datadoghq.com overruns the name column, and
+   truncation without a way to read the rest would make the data worse
+   than absent.
 #}
-{% macro cellCompany(row) %}
+{% macro contactLines(email, phone) %}
+{% if email %}
+<div class="slds-text-body_regular slds-truncate" title="{{ email }}">
+  {% if email != 'n/a' %}
+  <a href="mailto:{{ email }}" class="slds-text-link">{{ email }}</a>
+  {% else %}{{ na(email) }}{% endif %}
+</div>
+{% endif %}
+{% if phone %}
+<div class="slds-text-body_regular slds-truncate" title="{{ phone }}">
+  {% if phone != 'n/a' %}
+  <a href="tel:{{ phone }}" class="slds-text-link">{{ phone }}</a>
+  {% else %}{{ na(phone) }}{% endif %}
+</div>
+{% endif %}
+{% endmacro %}
+
+
+{# ── Reject control ───────────────────────────────────────────────
+   The only control in the row. Two consequences worth being deliberate
+   about, since they change what the table MEANS rather than just how
+   it looks:
+
+     • A row can't reach `approved` on its own any more. It still gets
+       there in batch — the cadence card's "approve all" fires
+       `sh:review-decision` with `approve_all`, and every row takes the
+       green stripe — but there is no per-row yes.
+     • With one control, the table reads as opt-OUT: every prospect is
+       in unless the seller removes it. The Accept / Reject pair read
+       as opt-IN, where a row sat undecided until someone chose.
+
+   Still a `<button>` with `aria-pressed`, not a one-shot dismiss: the
+   click toggles, so a mis-click is recoverable without a second
+   control. The `slds-button-group` wrapper is dropped, since a group of
+   one is only noise in the a11y tree.
+
+   Kept as its own macro so the control can be moved between cells
+   without duplicating the markup.
+#}
+{% macro decideButtons(row) %}
+<button
+  type="button"
+  class="slds-button slds-button_icon slds-button_icon-border-filled"
+  data-sh-conv-reject
+  aria-pressed="false"
+  title="Remove"
+>
+  <svg class="slds-button__icon slds-button__icon_small slds-reject-fill-color" aria-hidden="true">
+    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+  </svg>
+  {#- Falls back to the company where there's no person, so a screen
+      reader hears "Remove Halcyon Foods" rather than "Remove n/a". -#}
+  <span class="slds-assistive-text">Remove {{ row.prospect if row.prospect != 'n/a' else row.company }} from this list</span>
+</button>
+{% endmacro %}
+
+
+{# ── Company ──────────────────────────────────────────────────────
+   Logo + name / headcount / industry / location, with the Tier badge
+   folded in at the top right. `companyLogoUrl` is a path under
+   /assets/images/company-logos/; a row without one still renders (the
+   avatar collapses to empty) rather than showing a broken image frame.
+
+   Headcounts keep the source's "~" and are suffixed "employees": a
+   bare "~600" under a company name could be read as revenue, customers
+   or anything else.
+
+   Industry and location carry `title` because both genuinely overrun
+   the column — "Software / Cloud Monitoring & Observability" and
+   "South San Francisco, CA / Dublin" are the long ones — so hovering
+   is the only way to read them in full.
+#}
+{#- `withTier` folds the Tier badge into this cell, top right, and is
+    how this page renders tier: it drops the standalone Tier column in
+    favour of this, because tier and company name are the pair you read
+    together when deciding whether an account is worth the time, and
+    they were four columns apart.
+
+    Opt-in rather than always-on because /prospect_pivot_lab.html shares
+    this macro and still shows Tier as its own column; passing the badge
+    there would print the tier twice. Same badge markup and BEM modifier
+    as `cellTier` below, so the tier→colour mapping stays in one place
+    in the stylesheet and the two can't drift. -#}
+{% macro cellCompany(row, withTier=false) %}
 <td class="slds-cell_action-mode" role="gridcell">
   <div class="slds-grid slds-td-formatter slds-p-vertical_x-small">
     {% if row.companyLogoUrl %}
@@ -92,32 +232,55 @@
       <img alt="" src="{{ row.companyLogoUrl }}" title="{{ row.company }}">
     </span>
     {% endif %}
-    <div>
+    <div class="ptl-company-text">
       <div class="cell_text_link slds-truncate" title="{{ row.company }}">{{ row.company }}</div>
       {% if row.employees %}
-      <div class="slds-text-body_regular slds-text-color_weak slds-truncate">{{ row.employees }}</div>
+      <div class="slds-text-body_regular slds-text-color_weak slds-truncate">{{ na(row.employees) }}{% if row.employees != 'n/a' %} employees{% endif %}</div>
       {% endif %}
       {% if row.industry %}
-      <div class="slds-text-body_regular slds-text-color_weak slds-truncate">{{ row.industry }}</div>
+      <div class="slds-text-body_regular slds-text-color_weak slds-truncate" title="{{ row.industry }}">{{ na(row.industry) }}</div>
       {% endif %}
       {% if row.location %}
-      <div class="slds-text-body_regular slds-text-color_weak slds-truncate">{{ row.location }}</div>
+      <div class="slds-text-body_regular slds-text-color_weak slds-truncate" title="{{ row.location }}">{{ na(row.location) }}</div>
       {% endif %}
     </div>
+    {% if withTier and row.tier and row.tier != 'n/a' %}
+    <span class="slds-badge ptl-tier ptl-tier--{{ row.tier | lower | replace(' ', '-') }} ptl-company-tier">{{ row.tier }}</span>
+    {% endif %}
   </div>
 </td>
 {% endmacro %}
 
 
-{# ── Why this prospect ────────────────────────────────────────────
-   Multi-line rationale, clamped to a fixed number of lines so every
-   row keeps the same height however long the copy runs. The full text
-   stays available via `title`.
+{# ── Opening <td> for the account-level cells ─────────────────────
+   Exists so /prospect_group_lab.html can merge these cells down a group
+   of prospect rows with `rowspan` while this page and the pivot lab
+   keep rendering them one per row.
+
+   Nothing here ever spans: `span` defaults to 1 and the attribute is
+   only emitted above 1, so the markup is byte-identical to a plain
+   `<td>`. It's carried so these macros stay a straight copy of the
+   lab's.
 #}
-{% macro cellWhyProspect(row) %}
-<td class="slds-cell_action-mode" role="gridcell">
+{% macro tdOpen(span=1, merged=false, extraClass='') %}
+<td class="slds-cell_action-mode{% if merged %} is-pivot-merged{% endif %}{% if extraClass %} {{ extraClass }}{% endif %}" role="gridcell"{% if span > 1 %} rowspan="{{ span }}"{% endif %}>
+{% endmacro %}
+
+
+{# ── Why this prospect ────────────────────────────────────────────
+   Multi-line rationale, clamped to three lines so every row keeps the
+   same height however long the copy runs. The full text stays
+   available via `title`.
+
+   Through `na()` like the other prose cells: six rows (Stripe's and
+   Acme Corp's) have no rationale in the CSV, and printing the raw
+   value made those read as the literal word "n/a" in body text rather
+   than as the muted marker every other empty cell uses.
+#}
+{% macro cellWhyProspect(row, span=1, merged=false) %}
+{{ tdOpen(span, merged) }}
   <div class="slds-td-formatter slds-p-vertical_x-small">
-    <div class="slds-line-clamp_medium" title="{{ row.whyProspect }}">{{ row.whyProspect }}</div>
+    <div class="slds-line-clamp_medium" title="{{ row.whyProspect }}">{{ na(row.whyProspect) }}</div>
   </div>
 </td>
 {% endmacro %}
@@ -126,13 +289,22 @@
 {# ── Source ───────────────────────────────────────────────────────
    Where the prospect came from, plus optional "new record" badges.
    `row.source` is matched against the known integrations; anything
-   unrecognized falls through to ZoomInfo, mirroring hunter's mapping
-   so the same data renders identically on both surfaces.
+   recognized renders its badge.
+
+   Not in either CSV — the generator derives it per person from what
+   the account's CRM and Signals strings say about them (named on the
+   opportunity reads as Salesforce, named as a new hire in a signal
+   reads as press, and so on; the rules are in
+   tools/lab-data/build_lab_data.py). The `n/a` branch is first and
+   deliberate: falling through to a ZoomInfo badge for an unrecognized
+   value would invent provenance the data never claimed.
 #}
-{% macro cellSource(row) %}
-<td class="slds-cell_action-mode" role="gridcell">
+{% macro cellSource(row, span=1, merged=false) %}
+{{ tdOpen(span, merged) }}
   <div class="slds-td-formatter slds-p-vertical_x-small" style="flex-direction: column">
-    {% if row.source == 'Salesforce' %}
+    {% if not row.source or row.source == 'n/a' %}
+    {{ na(row.source) }}
+    {% elif row.source == 'Salesforce' %}
     <span class="slds-badge slds-badge_lightest slds-truncate">
       <span class="slds-badge__icon slds-badge__icon_left" style="color:#0176D3">
         <span class="slds-icon_container slds-current-color" title="Salesforce">
@@ -204,10 +376,10 @@
 
 
 {# ── Plain text cell ──────────────────────────────────────────────
-   Fallback for simple columns (Owner, Last touch, Signal, or any
-   column added to `columns` without a dedicated macro). `isoDate`
-   carries a machine-readable value for the Last-touch column so a
-   future formatter can re-render the cell without re-parsing prose.
+   Fallback for simple columns (Owner, Last touch, or any column added
+   to `columns` without a dedicated macro). `isoDate` carries a
+   machine-readable value for the Last-touch column so a future
+   formatter can re-render the cell without re-parsing prose.
 #}
 {% macro cellText(row, colId, isoDate) %}
 <td
@@ -215,44 +387,177 @@
   role="gridcell"
   {% if isoDate %}data-sh-conv-lasttouch-iso="{{ isoDate }}"{% endif %}
 >
-  <div class="slds-truncate slds-td-formatter slds-p-vertical_x-small" title="{{ row[colId] }}">{{ row[colId] }}</div>
+  <div class="slds-truncate slds-td-formatter slds-p-vertical_x-small" title="{{ row[colId] }}">{{ na(row[colId]) }}</div>
+</td>
+{% endmacro %}
+
+
+{# ── Prose cell ───────────────────────────────────────────────────
+   For the CSV's long-form fields — ICP Fit, CRM, Recommended Pitch.
+   Same treatment as "Why this prospect?": wrap inside a fixed column
+   width and clamp to three lines so a paragraph can't set the row
+   height, with the full text on `title`.
+
+   Width is per-column CSS (keyed off `data-sh-conv-col`), not a
+   parameter here, so the shape of the table stays adjustable from the
+   stylesheet.
+#}
+{% macro cellProse(row, colId, span=1, merged=false) %}
+{{ tdOpen(span, merged) }}
+  <div class="slds-td-formatter slds-p-vertical_x-small">
+    <div class="slds-line-clamp_medium" title="{{ row[colId] }}">{{ na(row[colId]) }}</div>
+  </div>
+</td>
+{% endmacro %}
+
+
+{# ── Signals ──────────────────────────────────────────────────────
+   Semicolon-separated in the CSV, so it arrives as a list, and it
+   renders as one — bulleted, one signal per line.
+
+   It used to be joined into a single clamped paragraph, for a real
+   reason: `-webkit-line-clamp` needs one inline flow to place its
+   ellipsis, so block children inside a clamped box get cut off without
+   one. That's why the height is bounded by CAPPING THE ITEMS instead —
+   a clamp cuts mid-signal wherever the third line happens to end,
+   where a cap ends on a whole one and says how many it kept back.
+
+   TWO, and the cap is where it is because of height. This cell has
+   about 100px before it becomes the thing that sets the row height —
+   the Prospect cell's four lines set it at ~105px. Measured in the
+   lab, with the items wrapping freely:
+
+     2 bullets + "+N more"   ~100px   nothing cut, 2 rows grow
+     3 bullets + "+N more"    144px   nothing cut, table 12% deeper
+     3 bullets, 1 line each   108px   still overshoots, AND 6 of the
+                                      64 signals lose their tail
+
+   Counts run 2 to 7 per account, so all but one collapse to "+N more".
+   The full list stays on the cell's `title`.
+
+   Falls back to the flat `signal` string if a row has no list.
+#}
+{% macro cellSignals(row, span=1, merged=false) %}
+{#- Inside the macro, not above it. A template-level `set` read from in
+    here has been unreliable in this project before — the `_hidden`
+    list had to move inside `prospectTable` for the same reason. -#}
+{%- set signalCap = 2 -%}
+{{ tdOpen(span, merged) }}
+  <div class="slds-td-formatter slds-p-vertical_x-small">
+    {%- if row.signals and row.signals | length -%}
+    <div class="ptl-signals" title="{{ row.signals | join('; ') }}">
+      <ul class="ptl-signal-list">
+        {% for signal in row.signals.slice(0, signalCap) %}
+        <li>{{ signal }}</li>
+        {% endfor %}
+      </ul>
+      {% if row.signals | length > signalCap %}
+      <div class="ptl-signal-more">+{{ (row.signals | length) - signalCap }} more</div>
+      {% endif %}
+    </div>
+    {%- else -%}
+    {#- One value, so no list: a lone bullet reads as a broken list
+        rather than as an item. -#}
+    <div class="slds-line-clamp_medium" title="{{ row.signal }}">{{ na(row.signal) }}</div>
+    {%- endif -%}
+  </div>
+</td>
+{% endmacro %}
+
+
+{# ── Columns the table doesn't currently render ────────────────────
+   Everything below has a field on every row and a branch in
+   `prospectTable`, but its column id sits in that macro's `_hidden`
+   list. Kept whole so bringing one back is a one-line edit there plus
+   un-commenting its width in home_conversation.scss.
+#}
+
+
+{# ── Rank ─────────────────────────────────────────────────────────
+   The CSV's own ordering, 1–15. Rows render in this order already, so
+   the column would be there to make the ranking explicit (and to
+   survive any future sort).
+#}
+{% macro cellRank(row) %}
+<td class="slds-cell_action-mode" role="gridcell">
+  <div class="slds-td-formatter slds-p-vertical_x-small ptl-rank">{{ na(row.rank) }}</div>
+</td>
+{% endmacro %}
+
+
+{# ── Tier ─────────────────────────────────────────────────────────
+   Red Hot / Solid / Avoid, as a standalone column. Superseded by the
+   badge inside the Company cell — `cellCompany(row, true)` — which is
+   what this page renders; this stays for the pivot lab, which shares
+   these macros and shows Tier as its own column.
+
+   A badge rather than text: it's the most decision-relevant field in
+   the CSV, and three fixed values are what badges are for. Colour
+   comes from a BEM modifier so the mapping lives in one place in the
+   stylesheet — red for the hottest, brand blue for the middle tier,
+   neutral grey for the ones to skip.
+#}
+{% macro cellTier(row, span=1, merged=false) %}
+{%- set _slug = (row.tier | lower | replace(' ', '-')) -%}
+{{ tdOpen(span, merged) }}
+  <div class="slds-td-formatter slds-p-vertical_x-small">
+    {% if row.tier and row.tier != 'n/a' %}
+    <span class="slds-badge ptl-tier ptl-tier--{{ _slug }}">{{ row.tier }}</span>
+    {% else %}{{ na(row.tier) }}{% endif %}
+  </div>
+</td>
+{% endmacro %}
+
+
+{# ── Themes ───────────────────────────────────────────────────────
+   A comma-separated list of theme numbers ("1, 2, 4, 6"). Rendered as
+   the raw numbers because the CSV ships no legend for what they mean —
+   inventing labels here would be worse than showing the source values.
+#}
+{% macro cellThemes(row) %}
+<td class="slds-cell_action-mode" role="gridcell">
+  <div class="slds-truncate slds-td-formatter slds-p-vertical_x-small" title="Themes {{ row.themes }}">{{ na(row.themes) }}</div>
+</td>
+{% endmacro %}
+
+
+{# ── Record / Account ID ──────────────────────────────────────────
+   Salesforce ids — the account's, and the person's. Monospaced and
+   muted: they're lookup keys, not something to read, and a
+   proportional font makes ids hard to compare at a glance.
+
+   `colId` picks which one, so the two columns share this macro.
+
+   Not every value is an id: Vanta's three people carry the literal
+   "CRM existing" where an id would go. That passes through as written
+   rather than being blanked to n/a — it's what the source says, and
+   hiding it would hide the gap.
+#}
+{% macro cellId(row, colId) %}
+<td class="slds-cell_action-mode" role="gridcell">
+  <div class="slds-truncate slds-td-formatter slds-p-vertical_x-small ptl-id" title="{{ row[colId] }}">{{ na(row[colId]) }}</div>
+</td>
+{% endmacro %}
+
+
+{# ── Record Type ──────────────────────────────────────────────────
+   Contact or Lead. Every row in the current CSV is a Contact, so this
+   column would be one repeated value today — kept because it's a field
+   the source carries, and because it's what drives the leading glyph
+   in the Prospect cell.
+#}
+{% macro cellRecordType(row) %}
+<td class="slds-cell_action-mode" role="gridcell">
+  <div class="slds-truncate slds-td-formatter slds-p-vertical_x-small" title="{{ row.recordType }}">{{ na(row.recordType) }}</div>
 </td>
 {% endmacro %}
 
 
 {# ── Actions ──────────────────────────────────────────────────────
-   Accept / Reject. Both drive the same per-prospect decision model the
-   inline outreach review uses, so a decision made here shows up in the
-   review's progress count and status pill (and vice versa) — see
-   `bindProspectTable` in home_conversation.js.
+   Deliberately absent. This used to be a trailing column holding an
+   Accept / Reject pair; the single reject control now lives in
+   `cellProspect`, and `actions` is in `_hidden` so the column isn't
+   rendered. Restoring the column means wrapping `decideButtons` back
+   in a `<td>` — and restoring Accept means writing that button again,
+   plus the row's `approved` path in home_conversation.js.
 #}
-{% macro cellActions(row) %}
-<td class="slds-cell_action-mode" role="gridcell">
-  <div class="slds-grid slds-actions-formatter">
-    <div class="slds-button-group" role="group">
-      <button
-        type="button"
-        class="slds-button slds-button_icon slds-button_icon-border-filled"
-        data-sh-conv-accept
-        title="Accept"
-      >
-        <svg class="slds-button__icon slds-accept-fill-color" aria-hidden="true">
-          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
-        </svg>
-        <span class="slds-assistive-text">Accept outreach to {{ row.prospect }}</span>
-      </button>
-      <button
-        type="button"
-        class="slds-button slds-button_icon slds-button_icon-border-filled"
-        data-sh-conv-reject
-        title="Reject"
-      >
-        <svg class="slds-button__icon slds-reject-fill-color" aria-hidden="true">
-          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
-        </svg>
-        <span class="slds-assistive-text">Reject outreach to {{ row.prospect }}</span>
-      </button>
-    </div>
-  </div>
-</td>
-{% endmacro %}

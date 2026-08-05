@@ -1,0 +1,68 @@
+// ═══════════════════════════════════════════════════════════════════
+// Prospect PIVOT lab
+// ═══════════════════════════════════════════════════════════════════
+// Pivot-only rules for /prospect_pivot_lab.html. The page loads
+// prospect_table_lab.css first for the shared table styling — wrapper,
+// frozen first column, header treatment, tier badges, prose clamping,
+// the 24px reject button — and this file adds only what the pivot shape
+// needs on top.
+//
+// The two files hold DISJOINT selectors on purpose, so link order
+// doesn't decide which rule wins. Everything here is scoped under
+// `.ppl-table` or a `ppl-` class, none of which the flat lab uses.
+//
+// Selectors carry no `!important` and no ID: if a rule here isn't
+// landing, it's specificity against the shared file, and the fix is to
+// scope it under `.ppl-table` rather than to escalate.
+
+.ppl-table {
+  // Per-column widths. The prospect columns are the whole question this
+  // page exists to answer, so they're deliberately narrow — wide enough
+  // for a name and a truncated title with the X beside it, and no wider,
+  // because ten of them side by side is already far past the 800px
+  // frame. At 11rem each that's 110rem of prospects alone.
+  th[data-sh-conv-col^="prospect"] {
+    min-width: 11rem;                                          // 176px
+  }
+
+  // A short account's unused slots. Centred and muted so a run of them
+  // reads as one empty region rather than as ten separate values —
+  // which is what makes the sparseness legible at a glance.
+  .ppl-empty {
+    text-align: center;
+    color: var(--slds-g-color-neutral-base-60, #939393);
+  }
+
+  // The title under a name. Clamped to one line: at 11rem most of these
+  // truncate, and the `title` attribute carries the full string.
+  .ppl-role {
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);        // 12px
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  // Lets the name / title stack truncate instead of forcing the cell
+  // wider — the same reason the flat lab sets `min-width: 0` on its
+  // stacked cells.
+  .ppl-prospect-text {
+    min-width: 0;
+  }
+
+  // A removed prospect. The name is struck through and the cell dims,
+  // rather than the leading-stripe treatment the flat lab uses: a stripe
+  // marks a ROW, and here the decision belongs to one cell of several in
+  // the row.
+  td.is-removed {
+    background: var(--slds-g-color-surface-container-1, #f3f3f3);
+
+    .cell_text_link {
+      color: var(--slds-g-color-on-surface-1, #5c5c5c);
+      text-decoration: line-through;
+    }
+
+    .ppl-role {
+      text-decoration: line-through;
+    }
+  }
+}

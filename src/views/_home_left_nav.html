@@ -5,8 +5,7 @@
 
     ┌───────────────────────────────┐  ◂  Sticky top region:
     │                        ◂ (…)  │      • Row 0: collapse button
-    │  [🔍 Search…            ]     │      • Row 1: search field
-    │  + New chat                   │      • Rows 2-6: primary items
+    │  + New chat                   │      • Rows 1-5: primary items
     │  🗓 Schedules                 │        (New chat, Schedules,
     │  ▦ Skills                     │        Skills, Knowledge, Tools)
     │  📚 Knowledge                 │
@@ -31,16 +30,6 @@
                    "new_chat". Ignored when unmatched (renders no active
                    state — intended for L1/orphaned surfaces).
     • recents    — Array<{ id, label }>. Scrollable Recents list.
-
-  Search field
-  ────────────
-  A prototype-level SLDS 2 search input sits above the primary list.
-  It uses the canonical
-    slds-form-element → slds-input-has-icon_left → slds-input
-  pattern (matches _hunter_agents_table.html and
-  _prospect_list/_knowledge_tab.html), so SLDS 2 focus / hover /
-  keyboard behavior comes for free. No global-search JS is wired to
-  it yet — the prototype only requires visual + a11y correctness.
 
   Structure follows the Hunter Builder nav pattern (macro + data-driven
   render, sprite icons, CSS-only collapse via a modifier class) but is
@@ -278,41 +267,6 @@
           <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#arrow_left"></use>
         </svg>
       </button>
-    </div>
-
-    {# ── Search field ────────────────────────────────────────────────
-       SLDS 2 search input. Wrapped in `.seller-home__nav-search` so
-       home.scss can inset it against the sidebar's horizontal padding
-       and hide the whole block when the sidebar is collapsed (a bare
-       SLDS input would look wrong in a 64px rail). Structure mirrors
-       _hunter_agents_table.html / _prospect_list/_knowledge_tab.html
-       so accessibility (assistive-text label + type="search") stays
-       consistent across the app. No wired-up search behavior yet — the
-       prototype spec calls for "visually functional without
-       implementing global search behavior". #}
-    <div class="slds-form-element seller-home__nav-search" data-sh-nav-search>
-      <label
-        class="slds-form-element__label slds-assistive-text"
-        for="seller-home-nav-search-input"
-      >Search navigation</label>
-      <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon_left">
-        <span
-          class="slds-icon_container slds-icon-utility-search slds-input__icon slds-input__icon_left"
-          aria-hidden="true"
-        >
-          <svg class="slds-icon slds-icon-text-default slds-icon_x-small" aria-hidden="true">
-            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#search"></use>
-          </svg>
-        </span>
-        <input
-          type="search"
-          id="seller-home-nav-search-input"
-          class="slds-input seller-home__nav-search-input"
-          placeholder="Search..."
-          aria-label="Search navigation"
-          autocomplete="off"
-        />
-      </div>
     </div>
 
     <div class="seller-home__nav-list seller-home__nav-list--primary" role="list">

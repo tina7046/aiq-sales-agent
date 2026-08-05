@@ -1,0 +1,473 @@
+// ═══════════════════════════════════════════════════════════════════
+// Prospect GROUP lab  —  "Account view"
+// ═══════════════════════════════════════════════════════════════════
+// Rules for /prospect_group_lab.html, where every prospect keeps its own
+// row and the account's cells are merged down the group with `rowspan`.
+//
+// Ported from BB - Prospect List's src/styles/_prospect_pivot.scss,
+// keeping its class names (`is-pivot-company-cell`, `is-pivot-group-start`,
+// `is-pivot-hovered`) so a change here can be copied back without being
+// translated first.
+//
+// The page loads prospect_table_lab.css ahead of this file for the shared
+// table styling. Unlike the pivot lab's sheet, this one is NOT purely
+// additive: the frozen-column rule has to be undone and re-pointed, and
+// that override is the one place the two files touch the same property.
+// Every selector below is nested under BOTH wrapper classes, so it beats
+// the shared file on specificity rather than on link order.
+
+.seller-home__conv-prospect-table.pgl-table {
+
+  // ── Frozen column: Prospect, not Company ───────────────────────
+  // Company scrolls away; PROSPECT is the frozen column, pinning when it
+  // reaches the left edge. This reverses the arrangement this file opened
+  // with, where the shared sheet's frozen first column was re-pointed at
+  // the merged company cell.
+  //
+  // Three rules, because three selectors in the shared sheet match cells
+  // on this page:
+  //
+  //   1. Company is `td:first-child` on a group's FIRST row, so the shared
+  //      rule sticks it. Unstuck below.
+  //   2. Prospect is `td:first-child` on every OTHER row, so the shared
+  //      rule already sticks it there — but not on group first rows, where
+  //      it's the second cell. Sticking it by CLASS covers both cases:
+  //      `left: 0` measures from the scroll container's edge, not from the
+  //      cell's own slot, so a second-child pins exactly like a first.
+  //   3. The header needs the same swap, or the frozen body column would
+  //      slide under a Company heading.
+  //
+  // No z-index fight between the two, and that's a property of the widths
+  // rather than luck: Prospect pins only once scrollLeft passes Company's
+  // own width (320px, set at the bottom of this file), by which point
+  // Company has fully left the viewport. Narrow or widen that column and
+  // the changeover moves with it, still without an overlap. The cells that
+  // DO pass beneath Prospect are Signal, CRM and Pitch — hence the opaque
+  // background and the layer above ordinary cells.
+  //
+  // `left: auto` rather than `position: static` on the header, because the
+  // generic `thead th` rule above it also sticks the header to the TOP.
+  // Going static would drop the company heading out of the frozen header
+  // row on vertical scroll; releasing just the left offset keeps it.
+  thead th:first-child {
+    left: auto;
+  }
+
+  tbody td.is-pivot-company-cell {
+    position: static;
+  }
+
+  thead th[data-sh-conv-col="prospect"],
+  tbody td.pgl-prospect {
+    position: sticky;
+    left: 0;
+    border-right: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  }
+
+  tbody td.pgl-prospect {
+    // Opaque, or the columns scrolling underneath show through. `inherit`
+    // rather than a literal white so a rejected row's dimming still reads
+    // through the frozen cell.
+    background-color: inherit;
+    z-index: 1;
+  }
+
+  thead th[data-sh-conv-col="prospect"] {
+    z-index: 3;
+  }
+
+  // Kept on Company even though it no longer marks a freeze: it's the seam
+  // between the account summary and the per-person columns, which is the
+  // one division in this table that isn't just a column boundary.
+  tbody td.is-pivot-company-cell {
+    border-right: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  }
+
+  // ── The merged cell ────────────────────────────────────────────
+  // Singular now: Company is the only cell in this table that spans its
+  // group. Signal followed CRM and Recommended Pitch down to the prospect
+  // grain and Source was dropped, so the `.is-pivot-merged` rules that
+  // used to sit here — top alignment for several cells, and an unclamp for
+  // the merged prose columns — went with them. The class is still emitted
+  // by the shared `tdOpen` macro; nothing on this page passes `merged`.
+  //
+  // Top-aligned, because the cell is as tall as its whole group and
+  // centring an account summary against ten prospect rows leaves it
+  // floating with no clear owner. BB does the same.
+  td.is-pivot-company-cell {
+    vertical-align: top;
+  }
+
+  // ── Group divider ──────────────────────────────────────────────
+  // The 2px rule that opens each account. Without it the merged cells
+  // are the only signal that a group started, and they're easy to miss
+  // once you've scrolled sideways past them.
+  tr.is-pivot-group-start > td {
+    border-top: 2px solid var(--slds-g-color-border-2, #c9c9c9);
+  }
+
+  // ── No hover, no selection ─────────────────────────────────────
+  // This table has neither, and the reason is the merge. A merged cell is
+  // as tall as its whole group, so any row-level tint has to cover the
+  // group to look coherent — the paired hover that used to live here lit
+  // all ten of Notion's rows at once. Correct, and still wrong: washing
+  // 1000px of table on pointer-over reads as a selection, not a hint.
+  //
+  // The alternative, tinting only the row under the pointer, is worse. It
+  // leaves the account cells cold, or lights them only when the pointer
+  // happens to be on the group's first row.
+  //
+  // Turning them off took THREE separate edits, because three different
+  // layers were painting:
+  //   1. `is-pivot-hovered` — the rule that used to be here, plus the
+  //      mouseover/mouseout listeners in the page that set it.
+  //   2. SLDS itself, via
+  //      `.slds-table:not(.slds-no-row-hover) tbody tr:hover > td`.
+  //      Handled in the markup by adding `slds-no-row-hover` to the
+  //      table, since that's the switch SLDS provides. Worth knowing that
+  //      it paints the CELLS: repainting the row here did nothing, and
+  //      dropping `slds-hint-parent` didn't either, because neither stops
+  //      that `> td` selector from matching.
+  //   3. prospect_table_lab.scss, which asserts its own hover and
+  //      selected backgrounds on `.seller-home__conv-prospect-row`. That
+  //      sheet is shared with the other two labs, so it can't be changed
+  //      — hence the override below.
+  //
+  // What stays: the focus outline, since keyboard users still need to see
+  // where they are, and the rejected-row dimming, which encodes data
+  // rather than pointer position.
+  tbody tr.seller-home__conv-prospect-row {
+    // Nothing here responds to a click any more except the X, which has
+    // its own button cursor.
+    cursor: default;
+
+    // Repainted to the same token the resting row uses, two rules up in
+    // the shared sheet — so this is "no change on hover" rather than a
+    // hardcoded white that would drift if the row colour ever moved.
+    &:hover,
+    &.is-selected,
+    &.is-selected:hover {
+      background: var(--slds-g-color-surface-container-1, #ffffff);
+    }
+  }
+
+  // ── The company cell ───────────────────────────────────────────
+  // Now the account's whole summary rather than just its name: logo,
+  // firmographics, tier badge, "Why this account?" and ICP Fit. It can
+  // carry all that because it spans the group — Notion's is 650px tall,
+  // and before this it was a name over 600px of nothing.
+  //
+  // Overrides the shared sheet's `.slds-td-formatter`, which is a flex ROW
+  // built for a single line of cell content. This stacks.
+  // The gap is 8px rather than 12px: with four blocks stacked it was 36px
+  // of the cell, and on a single-prospect account that's a third of the
+  // row height the prospect actually needs.
+  .pgl-company {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--slds-g-spacing-2, 0.5rem);
+
+    // How far in the header's TEXT column starts. The head row is
+    // [logo][text][badge], so the company name, firmographics and prospect
+    // count all begin one avatar plus one margin from the cell's padding
+    // edge — 36px. The blocks below are siblings of that whole row, so
+    // they began at the padding edge instead, leaving every label hanging
+    // 36px to the left of the name it belongs to.
+    //
+    // Composed from the avatar's own metrics rather than typed as 36px, so
+    // swapping `slds-avatar_small` or `slds-m-right_small` for another size
+    // keeps the two columns in step instead of silently splitting them.
+    --pgl-text-indent: calc(
+      var(--slds-g-sizing-7, 1.5rem) + var(--slds-g-spacing-3, 0.75rem)
+    );
+  }
+
+  // Applied to the wrapper rather than to each label and paragraph, so the
+  // signals list keeps its own bullet indent relative to its label instead
+  // of having to know about this one.
+  .pgl-company-block {
+    padding-left: var(--pgl-text-indent);
+  }
+
+  // Logo, text stack, then the badge — which `margin-left: auto` pushes to
+  // the right edge and `align-self: flex-start` keeps level with the
+  // company name rather than centred against the firmographics.
+  .pgl-company-head {
+    display: flex;
+    align-items: flex-start;
+  }
+
+  .pgl-tier {
+    flex: none;
+    align-self: flex-start;
+    margin-left: auto;
+  }
+
+  // Small caps-ish label over each prose block. Without it the two
+  // paragraphs are unattributed text: they used to sit under column
+  // headers that said what they were.
+  .pgl-company-label {
+    font-size: var(--slds-g-font-scale-neg-2, 0.6875rem);
+    font-weight: var(--slds-g-font-weight-bold, 700);
+    text-transform: uppercase;
+    letter-spacing: 0.0625rem;
+    color: var(--slds-g-color-neutral-base-50, #747474);
+    margin-bottom: var(--slds-g-spacing-1, 0.25rem);
+  }
+
+  // Headcount · industry · location. Wraps rather than truncating, and the
+  // reason is column width rather than legibility — see the macro comment.
+  // Two lines here still beats the three it replaced.
+  .pgl-company-meta {
+    white-space: normal;
+  }
+
+  // A label beside its value rather than above it, for ICP Fit — where the
+  // value is short enough that a whole line spent on the word "ICP FIT"
+  // was the more expensive half of the block.
+  .pgl-company-block--inline {
+    display: flex;
+    align-items: baseline;
+    gap: var(--slds-g-spacing-2, 0.5rem);
+  }
+
+  .pgl-company-label--inline {
+    flex: none;
+    margin-bottom: 0;
+  }
+
+  .pgl-company-prose {
+    white-space: normal;
+    color: var(--slds-g-color-on-surface-2, #444);
+  }
+
+  // Two lines, then ellipsis, with the full text on the element's `title`.
+  // Deliberately NOT the shared `.slds-line-clamp_medium` (three lines):
+  // this is the block that pushed single-prospect accounts past 300px, and
+  // the third line is where the rationales tip from a summary into a
+  // paragraph.
+  .pgl-clamp-2 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+
+  // The account's signals, rehoused here when the Signal column went to
+  // the prospect grain. A list because Notion has seven of them and the
+  // "·"-joined line the column used read as a wall at that length — but
+  // capped in the markup, because seven of anything is 140px and this was
+  // comfortably the tallest block in the cell.
+  //
+  // Tight leading and a small hanging indent: reference material, not
+  // something to read top to bottom.
+  .pgl-company-signals {
+    margin: 0;
+    padding-left: var(--slds-g-spacing-4, 1rem);
+    list-style: disc;
+    color: var(--slds-g-color-on-surface-2, #444);
+
+    li {
+      white-space: normal;
+    }
+
+    li + li {
+      margin-top: var(--slds-g-spacing-1, 0.25rem);
+    }
+  }
+
+  // "+4 more". Muted and unclickable on purpose — there's nowhere to
+  // expand to on a prototype page, and the full list is on the block's
+  // `title`, which is the same reveal the truncated cells here already
+  // use. Give it a real affordance the moment it needs to do more.
+  .pgl-company-more {
+    margin-top: var(--slds-g-spacing-1, 0.25rem);
+    padding-left: var(--slds-g-spacing-4, 1rem);
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    color: var(--slds-g-color-neutral-base-50, #747474);
+  }
+
+  // ── CRM and Recommended Pitch ──────────────────────────────────
+  // Both were empty placeholders until per-person content was generated
+  // for them; the `.pgl-pending` min-height that used to be here was only
+  // holding blank cells open and has gone with them.
+
+  // Status over deal, stacked. The wrapper is the shared `slds-td-formatter`
+  // flex ROW, so this has to opt into a column like the company cell does.
+  .pgl-stack {
+    display: flex;
+    flex-direction: column;
+  }
+
+  // One block per opportunity, so an account with two deals reads as two
+  // things rather than four stacked lines. The gap is what does that
+  // work — matched to the company cell's block gap so the two columns
+  // separate their groups by the same amount.
+  .pgl-opp + .pgl-opp {
+    margin-top: var(--slds-g-spacing-2, 0.5rem);
+  }
+
+  // The deal name. Weight only: the colour is the table's inherited text
+  // colour, and restating it as a token would be a second place to keep in
+  // step for no gain.
+  //
+  // Wraps rather than truncates. "Enterprise Renewal + Expansion" is 30
+  // characters and the column is 192px, so something has to give, and a
+  // deal name is the one thing in this cell you can't half-read — the
+  // amount and stage under it are only meaningful once you know which
+  // deal they belong to.
+  .pgl-opp-name {
+    font-weight: var(--slds-g-font-weight-bold, 700);
+    white-space: normal;
+  }
+
+  // Amount · stage · close date. Muted via `slds-text-color_weak` in the
+  // markup rather than from here — see the note on that element for why
+  // the token that looks right isn't. Wraps for the same reason as the
+  // name: Stripe's is "$320K · Negotiation · closes Sep 3", which no
+  // sensible column width fits on one line.
+  .pgl-opp-meta {
+    white-space: normal;
+  }
+
+  // `white-space: normal` because the shared cell rules set nowrap; the
+  // clamp below needs it wrapping to have lines to count.
+  .pgl-pitch-text {
+    white-space: normal;
+  }
+
+  // Three lines rather than the two the company cell's prose gets. These
+  // are the longest strings in a row and the row has nothing else tall in
+  // it, so the third line is affordable here where it wasn't there.
+  .pgl-clamp-3 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+  }
+
+  // ── Cell contents ──────────────────────────────────────────────
+  // The prospect count under the company name. With the rationale merged
+  // across the group, this is the only cue for how many rows the account
+  // covers, so it's a step up from the muted metadata lines around it.
+  .pgl-count {
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);        // 12px
+    margin-top: var(--slds-g-spacing-1, 0.25rem);
+  }
+
+  // Lets the stacked text truncate rather than widening the column.
+  .pgl-company-text,
+  .pgl-prospect-text {
+    min-width: 0;
+  }
+
+  // An account with nobody listed. Muted and italic — the same voice as
+  // the `n/a` marker, since this is also an absence, but worded because
+  // a lone "n/a" in a name column reads as a broken record.
+  .pgl-none {
+    font-style: italic;
+    color: var(--slds-g-color-neutral-base-60, #939393);
+  }
+
+  // A rejected prospect. Struck through and dimmed in place; nothing
+  // leaves the DOM, which is why this page doesn't need BB's logic for
+  // hopping a rowspan onto the next surviving row.
+  //
+  // Everything here is scoped to the PROSPECT cell rather than to the
+  // row, and that matters: on a group's first row the merged account
+  // cells are children of that same `<tr>`, so dimming `tr.is-removed >
+  // td` would grey out the whole account's rationale — for all ten of
+  // its rows — because one person was rejected.
+  tr.is-removed .pgl-prospect {
+    opacity: 0.65;
+
+    .cell_text_link {
+      color: var(--slds-g-color-on-surface-1, #5c5c5c);
+      text-decoration: line-through;
+    }
+
+    .slds-text-color_weak {
+      text-decoration: line-through;
+    }
+  }
+
+  // ── Column widths ──────────────────────────────────────────────
+  // Company is FIXED, not a floor, and it's the one column here that has
+  // to be. It holds three blocks of prose, so left to `max-content` it
+  // would size to the longest of them and run several hundred px wide —
+  // the same reason the prose columns in the shared sheet are fixed.
+  //
+  // 20rem, down from 24. This column can be narrowed but not freely: it
+  // trades width for depth, and the first thing lost is the tail of the
+  // firmographics line. Measured across the sweep, WITH the text indent
+  // above in place — it eats 36px of prose width, so these numbers are
+  // ~40-60px deeper than the same sweep without it:
+  //
+  //   384px  1574 wide  5710 deep   1 of 15 firmographics lines clipped
+  //   352px  1542       5770        3 of 15
+  //   320px  1510       5810        7 of 15   ← here
+  //   288px  1478       5850       14 of 15, and all 6 rationales
+  //   261px  1450       5990       the floor; below this the request is
+  //                                ignored outright
+  //
+  // The widths in that sweep are historical — it was measured when Signal
+  // was still a column and every account showed all its people. Dropping
+  // Signal, capping at four people and adding Source back have moved the
+  // total to 1339px at 320px Company. The DELTAS still hold, which is what
+  // the sweep is for: each 32px off Company is 32px off the table.
+  //
+  // 320px is where the accounts you see first still show all three
+  // firmographic facts — at 288px Notion loses "San Francisco, CA" — and
+  // 100px of depth is a fair trade for 64px of scroll. Company names never
+  // clip at any width, so the name is not what's at risk.
+  //
+  // One account pays for the combination: Kestrel Analytics' cell is 318px
+  // here, 28px TALLER than the 290px it was before any of this, because at
+  // 267px of prose its ICP Fit line wraps. 368px is the narrowest width at
+  // which no cell is taller than where it started.
+  //
+  // The floor is structural, not one long string: hiding the tier badge,
+  // the logo, the ICP Fit block or the signals, or letting the company name
+  // wrap, each moves it by at most 9px. It was 234px before the indent.
+  //
+  // Changing this ALSO moves the freeze changeover, since Prospect pins
+  // at exactly this width — see the frozen-column block at the top.
+  th[data-sh-conv-col="company"]     { width: 20rem; }         // 320px — logo, badge, firmographics, 3 blocks
+  th[data-sh-conv-col="prospect"]    { min-width: 15rem; }     // 240px — name, title, email, phone, X
+  // CRM and the pitch. Both carry content now, so these widths hold real
+  // text rather than reserving space: CRM is a deal name over its amount
+  // and stage, one block per opportunity, and the pitch is a sentence
+  // clamped to three lines. Fixed rather than `max-content` for the
+  // pitch's sake — the longest of the six runs 150 characters, which on
+  // one line would be most of the table.
+  //
+  // CRM went 176px -> 192px when it changed from a status word to deal
+  // names: "SDR Ramp Acceleration" and "Enterprise Renewal" need the room,
+  // and at 176px the first wrapped to three lines.
+  //
+  // Signal used to sit between them at 288px. Dropped as a column; the
+  // account's signals are in the Company cell.
+  //
+  // Both need `min-width` as well as `width`, not just for the floor:
+  // prospect_table_lab.scss loads ahead of this file and sets a 16rem /
+  // 20rem MIN on the same two columns for the flat lab. A `width` alone
+  // can't undercut someone else's `min-width` — CRM asked for 11rem and
+  // rendered at 16rem until this line existed.
+  th[data-sh-conv-col="crm"]   { width: 12rem; min-width: 12rem; }  // 192px
+  th[data-sh-conv-col="pitch"] { width: 22rem; min-width: 22rem; }  // 352px
+
+  // Source, back as a column and now per person. A badge plus an optional
+  // stacked "New Contact" under it, both `slds-badge` — so this holds the
+  // widest single badge rather than a line of text, and the two never sit
+  // side by side.
+  //
+  // Same 9.5rem the flat lab uses, for the same reason: "TechCrunch" and
+  // "New Contact" are the longest of the seven and measure ~112px with
+  // their icon, so 152px carries either without truncating. `min-width`
+  // alongside `width` because the flat lab's sheet loads first and sets
+  // its own floor on this column id.
+  th[data-sh-conv-col="source"] { width: 9.5rem; min-width: 9.5rem; }  // 152px
+}

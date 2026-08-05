@@ -54,6 +54,7 @@
     // Header + identity write targets:
     touches:     '[data-sh-cadence-touches]',
     channels:    '[data-sh-cadence-channels]',
+    summary:     '[data-sh-cadence-summary]',
     current:     '[data-sh-cadence-current]',
     name:        '[data-sh-cadence-name]',
     role:        '[data-sh-cadence-role]',
@@ -244,6 +245,7 @@
       steps:       root.querySelector(SELECTORS.steps),
       touches:     root.querySelector(SELECTORS.touches),
       channels:    root.querySelector(SELECTORS.channels),
+      summary:     root.querySelector(SELECTORS.summary),
       current:     root.querySelector(SELECTORS.current),
       name:        root.querySelector(SELECTORS.name),
       role:        root.querySelector(SELECTORS.role),
@@ -323,6 +325,11 @@
       }
       if (els.channels) {
         els.channels.textContent = tpl.getAttribute('data-sh-cadence-seq-channels') || ''
+      }
+      // Same reason, one level up: the sentence describing the cadence
+      // is the card's unless the sequence carries its own.
+      if (els.summary) {
+        els.summary.textContent = tpl.getAttribute('data-sh-cadence-seq-summary') || ''
       }
 
       mintStepIds(els.steps)
@@ -508,6 +515,12 @@
 
   // Whichever prospect row the table already has selected, if this
   // card arrived after the seller picked one.
+  //
+  // Finds nothing today: the prospect table dropped row selection, so
+  // no row ever carries `.is-selected` and this returns null, which
+  // starts the card on the first prospect in the roster. Kept, with the
+  // `sh:conv-row-select` subscriber below, so restoring selection makes
+  // the card follow the table again without a change here.
   function findSelectedRowId (ids) {
     var row = document.querySelector('[data-sh-conv-row].is-selected')
     if (!row) return null

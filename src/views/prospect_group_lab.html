@@ -1,0 +1,728 @@
+{#
+  Prospect GROUP lab  —  "Account view"
+  =====================================================================
+  Third shape for the prospect table, and the one ported from the
+  `BB - Prospect List` prototype's Account view:
+
+    EVERY PROSPECT IS STILL ITS OWN ROW. The account-level cells are
+    merged down the group with `rowspan`, so Notion's rationale is
+    written once and spans its ten prospect rows instead of repeating
+    down all ten.
+
+  The three labs, all reading one join so they can only differ in layout:
+    /prospect_table_lab.html  FLAT   44 rows, account fields repeated
+    /prospect_pivot_lab.html  PIVOT  15 rows, people across 10 columns
+    /prospect_group_lab.html  GROUP  44 rows, account fields merged  ← here
+
+  Since the port, the columns have been rebalanced around what belongs to
+  the account and what belongs to the person:
+
+    Company  merged, and the ONLY merged cell — logo, name, tier badge,
+             firmographics, prospect count, "Why this account?", ICP Fit
+             and the account's signals. Four of those were columns of their
+             own; folding them into the cell that already had spare height
+             cut the table from 2243px to 1573px WIDE, and narrowing this
+             column from 24rem to 20rem took it to 1510px. Dropping Signal
+             and adding Source back leave it at 1339px today. It has been
+             cut DOWN too — see the compression note below.
+             It does NOT freeze. Prospect does, at exactly this column's
+             width.
+    Prospect per row — name, title, email, phone, reject.
+    Source   per row — a provenance badge, plus "New Contact" for the ten
+             people with no trace in the CRM. Was a merged account column,
+             was then dropped, and is back at the PERSON grain.
+    CRM      per row — the account's open opportunities, by name.
+    Pitch    per row — an angle derived from the person's job title.
+    Signal   dropped as a column; the account's signals are in the
+             Company cell.
+
+  Signals is the one thing in the company cell that wasn't asked for. The
+  Signal column went to the prospect grain, but all 15 accounts carry
+  signals — 64 of them, 2 to 7 each — and that merged column was the only
+  place they appeared. Emptying it without rehousing them would have
+  silently dropped the lot. Delete the block if the account summary is
+  getting too tall; it's self-contained.
+
+  Compressing the summary: it's shorter by four changes rather than by any
+  single one — firmographics joined onto one line, ICP Fit's label inline,
+  the rationale clamped to two lines, and signals capped at three with a
+  "+N more" count. Everything trimmed is still on a `title`.
+
+  Two things to know before trimming further. First, on accounts with three
+  or more prospects the cell is sized by its PEOPLE, not by the summary
+  (Notion: ten rows at 105px = 1051px), so shortening the summary changes
+  the content inside the box and not the box. Only the eight single-prospect
+  accounts have boxes that move, and they came down 210–334px → 186–306px.
+  Second, anything given `white-space: nowrap` to keep it on one line will
+  push the COLUMN wider instead, because a nowrap line contributes its full
+  width to an auto-layout table's column sizing. That's how the one-line
+  firmographics, on its first attempt, took Company from 384px to 636px —
+  a bigger column for a shorter cell, which is not the trade anyone wanted.
+
+  Column width is its own lever and pulls the opposite way: see the width
+  sweep in prospect_group_lab.scss. It's 20rem now, and 234px is the hard
+  floor below which the browser ignores the request.
+
+  Ported from BB - Prospect List, deliberately keeping ITS class names
+  (`is-pivot-company-cell`, `is-pivot-group-start`, `is-pivot-hovered`)
+  so this reads as the same technique and porting back is a copy rather
+  than a translation:
+    src/views/_macros.html          `cell_pivot_company` / `_why_account`
+    src/views/index.html            the group-then-item nested loop
+    src/styles/_prospect_pivot.scss the merged-cell + divider rules
+    src/scripts/pivot.js            group tagging
+
+  What is NOT ported, because it belongs to that prototype's shell rather
+  than to the grouping idea: the Display picklist that switches Prospect
+  view / Account view, the KPI tabs it coordinates, checkboxes, row
+  numbers, the feedback column, and the merged-cell "hop" that moves a
+  rowspan onto the next row when the lead row is removed. Rejecting here
+  dims the prospect in place, so nothing has to hop.
+
+  BB's paired group hover WAS ported and has since been removed, along
+  with row selection: a merged cell is as tall as its group, so any row
+  tint had to wash the whole group, which read as a selection rather than
+  a hint. See the row-state note in prospect_group_lab.scss — the states
+  come from three places, so turning them off took three edits.
+
+  Data: data/prospect_pivot_lab.json via `readData`, since the pivot's
+  one-row-per-account-with-nested-people shape is already exactly the
+  grouped shape this page needs. No third data file, and no way for the
+  three pages to disagree on content.
+#}
+
+{% extends "_template.html" %}
+
+{% import "_prospect_table_lab_cells.html" as cells %}
+
+{% set table = readData("prospect_pivot_lab").table %}
+
+
+{% block styles %}
+  {# Shared table styling first, then the group-only rules. Disjoint
+     selectors, except for the deliberate frozen-column override the
+     second file documents. #}
+  <link rel="stylesheet" href="/styles/prospect_table_lab.css" />
+  <link rel="stylesheet" href="/styles/prospect_group_lab.css" />
+{% endblock %}
+
+
+{# ── The Prospect cell ─────────────────────────────────────────────
+   Per row, so this is the one cell that is NOT merged. Name over title
+   plus the reject control, the same arrangement the flat lab uses.
+
+   `p` is null on an account with nobody listed, which gets one row with
+   an empty prospect cell rather than an invented placeholder person.
+#}
+{% macro groupProspectCell(p, company) %}
+<td class="slds-cell_action-mode pgl-prospect" role="gridcell">
+  {% if p %}
+  <div class="slds-grid slds-td-formatter slds-p-vertical_x-small">
+    <span class="slds-no-flex slds-m-right_small slds-avatar slds-avatar_small slds-avatar_circle">
+      <div class="slds-icon-standard-{{ p.icon | default('contact') }} slds-icon_container">
+        <span>
+          <svg class="slds-icon" aria-hidden="true">
+            <use xlink:href="/assets/icons/standard-sprite/svg/symbols.svg#{{ p.icon | default('contact') }}"></use>
+          </svg>
+        </span>
+      </div>
+    </span>
+    <div class="pgl-prospect-text">
+      <div class="cell_text_link slds-truncate" title="{{ p.name }}">{{ p.name }}</div>
+      <div class="slds-text-body_regular slds-text-color_weak slds-truncate" title="{{ p.role }}">{{ p.role }}</div>
+      {#- Shared with the other two labs. Per-prospect data, so unlike the
+          firmographics above there's nothing for the merge to save here —
+          four lines per person is the floor for any one-row-per-prospect
+          shape, and it costs this table the compact 66px row. -#}
+      {{ cells.contactLines(p.email, p.phone) }}
+    </div>
+    <div class="seller-home__conv-prospect-decide">
+      <button
+        type="button"
+        class="slds-button slds-button_icon slds-button_icon-border-filled"
+        data-pgl-reject
+        aria-pressed="false"
+        title="Remove"
+      >
+        <svg class="slds-button__icon slds-button__icon_small slds-reject-fill-color" aria-hidden="true">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+        </svg>
+        <span class="slds-assistive-text">Remove {{ p.name }} from {{ company }}</span>
+      </button>
+    </div>
+  </div>
+  {% else %}
+  <div class="slds-td-formatter slds-p-vertical_x-small pgl-none">No prospects listed</div>
+  {% endif %}
+</td>
+{% endmacro %}
+
+
+{# ── The merged account cells ──────────────────────────────────────
+   Emitted ONLY on a group's first row, each spanning the group. This is
+   BB's `cell_pivot_company` / `cell_pivot_why_account` pair, widened to
+   every account-level column, since in this data Tier, Signal, ICP Fit,
+   CRM and the pitch all describe the account too.
+
+   `span` is the number of prospect rows in the group — 1 for an account
+   with nobody listed, so the cell still renders and the row still has
+   its account context.
+
+   The prospect count under the company name is BB's, and it earns its
+   place here: with the rationale merged, the count is the only cue for
+   how many rows the group covers.
+#}
+{# Headcount, industry and location on ONE dot-separated line instead of
+   three stacked ones. Rendered through a macro so the `title` on the line
+   can reuse the exact same string rather than rebuilding it — the line
+   truncates (the longest pair runs to "Software / Cloud Monitoring &
+   Observability" + "South San Francisco, CA / Dublin"), so the tooltip is
+   doing real work.
+
+   Every account currently has all three, but the separator is emitted
+   conditionally anyway: a missing middle value would otherwise leave a
+   stranded " · " that reads as a rendering bug. #}
+{% macro companyMeta(row) %}
+{%- set _e = row.employees if row.employees and row.employees != 'n/a' else null -%}
+{%- set _i = row.industry  if row.industry  and row.industry  != 'n/a' else null -%}
+{%- set _l = row.location  if row.location  and row.location  != 'n/a' else null -%}
+{%- if _e %}{{ _e }} employees{% endif -%}
+{%- if _i %}{% if _e %} · {% endif %}{{ _i }}{% endif -%}
+{%- if _l %}{% if _e or _i %} · {% endif %}{{ _l }}{% endif -%}
+{% endmacro %}
+
+
+{% macro groupCompanyCell(row, span) %}
+{%- set _meta = companyMeta(row) | trim -%}
+{#- How many signals to show before collapsing to "+N more". Three is what
+    fits a single-prospect account's row without the summary being the
+    thing that sets its height; the counts run 2 to 7, so 8 of the 15
+    accounts collapse. The full list stays reachable in the block's
+    `title`. -#}
+{%- set _signalCap = 3 -%}
+<td class="slds-cell_action-mode is-pivot-company-cell" role="gridcell" rowspan="{{ span }}">
+  <div class="slds-td-formatter slds-p-vertical_x-small pgl-company">
+
+    {#- Header line: logo, name, firmographics — and the tier badge pinned
+        top right. The badge used to be its own column; it's the single
+        most decision-relevant field in the CSV, so it reads better as the
+        account's label than as a cell three columns over. -#}
+    <div class="pgl-company-head">
+      <span class="slds-no-flex slds-m-right_small slds-avatar slds-avatar_small slds-avatar_circle">
+        <img alt="{{ row.company }}" src="{{ row.companyLogoUrl }}" title="{{ row.company }}" />
+      </span>
+      <div class="pgl-company-text">
+        <div class="cell_text_link slds-truncate" title="{{ row.company }}">{{ row.company }}</div>
+        {#- Firmographics from the account CSV. Written once per account
+            here rather than once per prospect row, which is the merge
+            paying off — the flat table repeats all three down every one
+            of Notion's ten rows.
+
+            One dot-separated line rather than three stacked ones. Stacked
+            they were 60px of the header's 104px, and that height wasn't
+            free: on the eight accounts with a single prospect the summary
+            is what set the row height, so every line here was pushing a
+            105px row taller.
+
+            It WRAPS — no `slds-truncate`, unlike the company name above.
+            Truncating means `white-space: nowrap`, and under this table's
+            auto layout a nowrap line contributes its full width to the
+            column's max-content: the joined string is ~490px, and with the
+            logo and badge it dragged the company column from 384px to
+            636px. That's trading height for width, which is the opposite
+            of the point. Wrapping keeps the column at 24rem and lets the
+            line take one row or two depending on how long the industry
+            and location strings are.
+
+            Clamped to two, though, or Datadog's pairing of "Software /
+            Cloud Monitoring & Observability" with "South San Francisco, CA
+            / Dublin" wraps to three and the line saves nothing at all on
+            the account that needs it most. `title` has the whole string. -#}
+        <div class="slds-text-body_regular slds-text-color_weak pgl-company-meta pgl-clamp-2" title="{{ _meta }}">{{ _meta }}</div>
+        {#- The count has to say what's on screen AND what exists, now that
+            groups are capped at four rows. "10 prospects" over four rows
+            would read as a rendering bug, and "4 prospects" would be a
+            claim about Notion that isn't true. `span` is the rendered row
+            count, so this stays right if the cap moves. -#}
+        <div class="slds-text-body_regular slds-text-color_weak slds-truncate pgl-count">
+          {%- if row.prospectCount > span -%}
+          Showing {{ span }} of {{ row.prospectCount }} prospects
+          {%- else -%}
+          {{ row.prospectCount }} prospect{% if row.prospectCount != 1 %}s{% endif %}
+          {%- endif -%}
+        </div>
+      </div>
+      {% if row.tier and row.tier != 'n/a' %}
+      {#- Same badge markup and BEM modifier as the shared cellTier macro,
+          so the tier→colour mapping stays in one place in the stylesheet
+          and this can't drift from the other two labs. -#}
+      <span class="slds-badge ptl-tier ptl-tier--{{ row.tier | lower | replace(' ', '-') }} pgl-tier">{{ row.tier }}</span>
+      {% endif %}
+    </div>
+
+    {#- The account's prose, folded in below the header. Both were merged
+        columns of their own a moment ago; moving them in here trades ~500px
+        of horizontal scroll for vertical space the merged cell already had
+        going spare. Labelled, because out of a column with a header these
+        two paragraphs would otherwise be unattributed text.
+
+        Clamped to two lines now, where they used to run in full. The
+        argument for unclamping was that a merged cell is as tall as its
+        group so there's no row height to protect — true for Notion's ten
+        rows, false for the eight accounts with one prospect, where this
+        block IS what sets the height. `title` carries the full text. -#}
+    {% if row.whyProspect and row.whyProspect != 'n/a' %}
+    <div class="pgl-company-block">
+      <div class="pgl-company-label">Why this account?</div>
+      <div class="pgl-company-prose pgl-clamp-2" title="{{ row.whyProspect }}">{{ row.whyProspect }}</div>
+    </div>
+    {% endif %}
+
+    {#- ICP Fit reads as a key and a value rather than a paragraph — the
+        longest is "Outside core B2B SaaS ICP (Transportation/Logistics)"
+        and most are two words — so its label sits inline instead of
+        costing a line of its own above it. -#}
+    {% if row.icpFit and row.icpFit != 'n/a' %}
+    <div class="pgl-company-block pgl-company-block--inline">
+      <span class="pgl-company-label pgl-company-label--inline">ICP Fit</span>
+      <span class="pgl-company-prose">{{ row.icpFit }}</span>
+    </div>
+    {% endif %}
+
+    {#- Signals, moved in here when the Signal COLUMN became per-prospect.
+        This block is the one thing on the page that wasn't asked for, and
+        it's here to avoid a silent deletion: all 15 accounts carry signals
+        — 64 of them, 2 to 7 each — and they were only ever on screen in
+        that merged column. Emptying the column without rehousing them
+        would have quietly dropped every one.
+
+        A list rather than the "·"-joined line the column used, because at
+        seven items that line was a wall — but capped, because it was also
+        the tallest block in the cell by some way (Notion's seven ran
+        188px). Everything past the cap is counted, not dropped, and the
+        block's `title` holds all of them.
+
+        Delete this block if the summary is still too long; nothing else
+        depends on it. -#}
+    {% if row.signals and row.signals | length %}
+    <div class="pgl-company-block" title="{{ row.signals | join(' · ') }}">
+      <div class="pgl-company-label">Signals</div>
+      <ul class="pgl-company-signals">
+        {% for signal in row.signals.slice(0, _signalCap) %}
+        <li>{{ signal }}</li>
+        {% endfor %}
+      </ul>
+      {% if row.signals | length > _signalCap %}
+      <div class="pgl-company-more">+{{ (row.signals | length) - _signalCap }} more</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+  </div>
+</td>
+{% endmacro %}
+
+
+{# ── CRM ───────────────────────────────────────────────────────────
+   The account's open opportunities, by name: the deal, then its amount,
+   stage and close date under it.
+
+   This reads the ACCOUNT, not the person, even though it sits in a
+   per-person column — the opportunities belong to the account, so all
+   four of Notion's people show Notion's two deals. That repetition is
+   real and it's visible; if it's the wrong trade, this cell's content
+   belongs in the merged Company cell, where it would be stated once.
+
+   Real data, unlike the pitch beside it. `opportunities` is the account
+   CSV's CRM column split into its parts by build_lab_data.py, so what's
+   here is what the source says — the parsing is what's new, not the
+   content. Notion's "Active GTM Platform opp ($180K Discovery) + Renewal
+   ($145K)" becomes two named deals rather than one sentence.
+#}
+{% macro groupCrmCell(account, p) %}
+<td class="slds-cell_action-mode pgl-crm" role="gridcell">
+  {% if p and account.opportunities and account.opportunities | length %}
+  <div class="slds-td-formatter slds-p-vertical_x-small pgl-stack">
+    {% for opp in account.opportunities %}
+    <div class="pgl-opp">
+      <div class="pgl-opp-name">{{ opp.name }}</div>
+      {#- Amount, stage and close date on one line. Joined in
+          build_lab_data.py rather than here, because all three parts are
+          optional in every combination and Nunjucks has no list append —
+          conditionally assembling it in the template needs a nested if per
+          separator. `opp.amount` / `.stage` / `.close` are still on the
+          data if this ever wants to lay them out separately. -#}
+      {% if opp.meta %}
+      {#- `slds-text-color_weak` rather than a colour in the stylesheet:
+          it's the same utility the company cell's firmographics and the
+          prospect's job title already use, so all the muted lines in a row
+          resolve to one value. Worth being specific about because the
+          obvious token here is wrong — `--slds-g-color-on-surface-3`
+          sounds like the third step of a text ramp but resolves to
+          #03234d, a navy, and this line rendered as if it were a link.
+          Muted in this theme is on-surface-1 / #5c5c5c. -#}
+      <div class="pgl-opp-meta slds-text-color_weak">{{ opp.meta }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% elif p %}
+  {#- A person at an account whose CRM column is n/a. None of the seven
+      accounts with people are in this state today, so this is a guard
+      rather than something on screen. -#}
+  <div class="slds-td-formatter slds-p-vertical_x-small slds-text-color_weak">No open opportunity</div>
+  {% else %}
+  {#- An account with nobody listed. Left blank rather than filled with a
+      dash or n/a: there's no person here for a deal to sit against, and
+      the Prospect cell beside it already states the absence outright. -#}
+  <div class="slds-td-formatter slds-p-vertical_x-small" data-pgl-empty="crm"></div>
+  {% endif %}
+</td>
+{% endmacro %}
+
+
+{# ── Recommended Pitch, per person ─────────────────────────────────
+   Same history as CRM, and the same caveat: derived from the person's job
+   title rather than sourced, so a Sales Dev lead gets the ramp-time angle
+   and a RevOps lead gets tool consolidation. Six angles across the 36
+   people, which is what makes this worth having at the person grain at
+   all — an account-level pitch was one string for ten different jobs.
+
+   Clamped to three lines. These run longer than anything else in a row,
+   and unclamped the tallest of them sets the height of every row in the
+   table.
+#}
+{% macro groupPitchCell(p) %}
+<td class="slds-cell_action-mode pgl-pitch" role="gridcell">
+  {% if p %}
+  <div class="slds-td-formatter slds-p-vertical_x-small">
+    <div class="pgl-pitch-text pgl-clamp-3" title="{{ p.pitch }}">{{ p.pitch }}</div>
+  </div>
+  {% else %}
+  <div class="slds-td-formatter slds-p-vertical_x-small" data-pgl-empty="pitch"></div>
+  {% endif %}
+</td>
+{% endmacro %}
+
+
+{# ── Source, per person ────────────────────────────────────────────
+   Where this person's record came from: one badge, plus a stacked "New
+   Contact" when they're new to the CRM.
+
+   The shared `cellSource` macro renders it, unchanged and uncopied — the
+   same one the other two labs call. All this page does is hand it a
+   PERSON instead of an account, which works because the badge markup
+   reads `source` / `isNewContact` off whatever it's given, and
+   build_lab_data.py now puts both on each nested prospect.
+
+   Source came back at a different grain than it left at. As a merged
+   account column it said one thing about all ten of Notion's people;
+   per person it distinguishes the four the signals name as new hires
+   from the ones with no trace in the CRM at all.
+
+   Blank on an account with nobody listed, like CRM and Pitch beside it.
+   The account's own provenance does exist in the data — `source` and
+   `isNewAccount` are on the account too, and the flat lab's placeholder
+   rows badge exactly that — but this column is about a person's record,
+   and there's no person on those rows. If the account's provenance is
+   wanted here, the merged Company cell is where it belongs, stated once.
+#}
+{% macro groupSourceCell(p) %}
+{% if p %}{{ cells.cellSource(p) }}{% else %}
+<td class="slds-cell_action-mode" role="gridcell">
+  <div class="slds-td-formatter slds-p-vertical_x-small" data-pgl-empty="source"></div>
+</td>
+{% endif %}
+{% endmacro %}
+
+
+{#- There is no longer a `groupAccountCells` macro. Signal followed CRM
+    and Recommended Pitch down to the prospect grain and Source came back
+    at that grain too, which leaves Company as the ONLY merged cell in the
+    table. The shared `cellSignals` macro is untouched and still used by
+    the other two labs; this page just stopped calling it, along with the
+    `span` / `merged` arguments that existed for the merged cells. -#}
+
+
+{# ── Table ────────────────────────────────────────────────────────
+   Company leads but does NOT freeze: it scrolls away like any other
+   column, and PROSPECT is the frozen one, pinning when it reaches the left
+   edge. So the account summary is what you scroll past to reach the
+   per-person columns, and the person stays on screen once you're there.
+
+   Company's own width is what sets the changeover: that's how far you
+   scroll before Prospect touches the edge, and it's why the two never
+   overlap. 320px today; narrowing that column moves the changeover with
+   it, and still without an overlap.
+
+   Column order matters more than usual here: only the Prospect column
+   repeats per row, so every row after a group's first emits exactly ONE
+   cell, and the browser flows it into the single column slot the
+   rowspans leave open.
+#}
+{% macro groupTable(table) %}
+<div
+  class="seller-home__conv-prospect-table pgl-table"
+  data-sh-conv-table="{{ table.id }}-grouped"
+>
+  {#- `slds-no-row-hover` is SLDS's own opt-out, and it's the reason this
+      table has no hover tint. SLDS paints hover on the CELLS, not the row:
+
+        .slds-table:not(.slds-no-row-hover) tbody tr:hover > td { … }
+
+      which is why dropping `slds-hint-parent` and repainting the row in
+      our own sheet wasn't enough — both leave the `> td` rule matching, so
+      every cell in the row still lit up. Adding the class is what actually
+      turns it off, and it's a supported switch rather than an override
+      war. Note it kills the `tr:focus > td` half too; the focus ring in
+      prospect_table_lab.scss is what marks position now. -#}
+  <table
+    class="slds-table slds-table_bordered slds-table-uplift slds-no-row-hover seller-home__conv-prospect-table-el prospect-table-pivot"
+    role="grid"
+    aria-label="Prospects grouped by account, ranked by account tier"
+  >
+    <thead>
+      <tr class="slds-line-height_reset">
+        {#- Five columns, down from nine at the port. Tier, Why this
+            account, ICP Fit and Signals all live inside the Company cell;
+            Signal is gone as a column entirely. Source, CRM and
+            Recommended Pitch are at the PERSON grain and all three carry
+            content. -#}
+        {% for col in [
+          { "id": "company",     "label": "Company" },
+          { "id": "prospect",    "label": "Prospect" },
+          { "id": "source",      "label": "Source" },
+          { "id": "crm",         "label": "CRM" },
+          { "id": "pitch",       "label": "Recommended Pitch" }
+        ] %}
+        <th class="slds-cell_action-mode" scope="col" data-sh-conv-col="{{ col.id }}">
+          <div class="slds-grid slds-grid_vertical-align-center slds-has-flexi-truncate">
+            <span class="slds-truncate" title="{{ col.label }}">{{ col.label }}</span>
+          </div>
+        </th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for account in table.rows %}
+        {#- Four people per account, at most. Notion has ten and Datadog
+            seven, and rendering all of them made those two groups 1051px
+            and 736px of one screen — the merged summary beside them is
+            317px, so most of that height was a column of names with an
+            account rationale floating in white space next to it.
+
+            Four is enough to read a buying group and still fit a group
+            beside its own summary. It takes the table from 44 rows to 33
+            and from 5810px to about 4600px deep.
+
+            The rest are NOT dropped from the data — `prospectCount` still
+            reports the true total, and the company cell says "Showing 4 of
+            10" rather than claiming Notion has four people. Raise `_rowCap`
+            to show more; there's nothing else to change. -#}
+        {%- set _rowCap = 4 -%}
+        {%- set _shown = account.prospects.slice(0, _rowCap) -%}
+        {#- An account with nobody listed still gets one row, so all 15
+            stay visible with their tier. `span` is the RENDERED row count,
+            which is 1 for those and at most `_rowCap` otherwise. Deriving
+            it from the shown list rather than from `prospectCount` is what
+            keeps the rowspan honest — a span of 10 over 4 rows would push
+            the company cell down through the next account's rows. -#}
+        {%- set span = (_shown | length) if account.prospectCount > 0 else 1 -%}
+        {%- set people = _shown if account.prospectCount > 0 else [null] -%}
+        {% for p in people %}
+        {#- No `slds-hint-parent`, no `aria-selected`, no `tabindex`. All
+            three were about a row you hover and select, and this table
+            does neither — see the note above the stylesheet's row-state
+            block. `slds-hint-parent` in particular is the hook SLDS's own
+            uplift row-hover rule matches on, so dropping the class is how
+            you opt out of it rather than fighting it in CSS. -#}
+        <tr
+          class="seller-home__conv-prospect-row{% if loop.first %} is-pivot-group-start{% endif %}"
+          data-sh-conv-row
+          data-sh-conv-row-id="{{ account.id }}-p{{ loop.index }}"
+          data-pgl-group="{{ account.id }}"
+        >
+          {#- Emission order has to match the header exactly, because a
+              `<td>` has no idea which column it belongs to — it takes the
+              next free slot.
+
+              Simpler than it was, now that Company is the only merged
+              cell: every row emits the same four per-person cells, and
+              only a group's first also emits Company ahead of them. On
+              the other rows slot 1 is held by the company rowspan, so the
+              four land in slots 2–5 — where the header says Prospect,
+              Source, CRM and Recommended Pitch are.
+
+              Getting this wrong is a silent failure, not an error: an
+              earlier version emitted the merged cells before the prospect
+              one, which rendered a table that looked fine but filed every
+              column under the wrong heading. The column alignment
+              assertion in the check script exists for this. -#}
+          {% if loop.first %}{{ groupCompanyCell(account, span) }}{% endif %}
+          {{ groupProspectCell(p, account.company) }}
+          {{ groupSourceCell(p) }}
+          {{ groupCrmCell(account, p) }}
+          {{ groupPitchCell(p) }}
+        </tr>
+        {% endfor %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endmacro %}
+
+
+{% block content %}
+<div class="ptl-page">
+  <div class="ptl-col">
+
+    <h1 class="ptl-title">Prospect table — group lab</h1>
+    <p class="ptl-sub">
+      Every prospect is its own row, with the account’s cells merged down
+      the group — the Account view from
+      <code>BB&nbsp;-&nbsp;Prospect&nbsp;List</code>. Compare against
+      <a href="/prospect_table_lab.html" class="slds-text-link">the flat table</a>
+      and       <a href="/prospect_pivot_lab.html" class="slds-text-link">the column pivot</a>.
+      All three read the same 36 prospects across 15 accounts; this one now
+      shows the first four per account, 25 rows.
+    </p>
+
+    {#- ── Change log, not rendered ──────────────────────────────────
+        Commented out rather than deleted: it's a record of every tweak
+        this page has been through, with the measurements behind each
+        decision — column width sweeps, clip counts per width, depth
+        deltas — and several of those numbers exist nowhere else. Cheap to
+        keep (Nunjucks strips comments, so nothing ships) and it's the
+        answer to "why is this column 320px" six weeks from now.
+
+        To put it back on screen, delete this comment's opening delimiter
+        and the closing one that follows the list. Take care writing in
+        here: spelling the closing delimiter out inline ends the comment
+        early, which is exactly how this first went wrong — the list
+        rendered anyway and the rest of the sentence came out as page copy.
+    <ul class="ptl-tweaks">
+      <li><strong>One row per prospect, kept.</strong> The account’s cells use <code>rowspan</code>, so Notion’s rationale is written once and spans its 10 rows instead of repeating down all 10. That was the repetition worth removing, and this removes it without the pivot’s 10 sparse columns.</li>
+      <li><strong>The Company cell is the account summary</strong>, and now the only merged cell in the table. Logo and name, the tier badge pinned top right, headcount / industry / location, the prospect count, then <em>Why this account?</em>, <em>ICP Fit</em> and the account’s <em>Signals</em>. Those last four were columns of their own; folding them in traded about 670px of horizontal scroll for vertical space the merged cell already had spare — Notion’s is over 1000px tall. The table went <strong>2243px → 1573px</strong> wide, and narrowing this column to 20rem took it to <strong>1510px</strong>.</li>
+      <li><strong>The Company column is 320px, and 261px is the floor.</strong> It can be narrowed, but width comes back as depth, and the first thing lost is the tail of the firmographics line: 384px clips 1 of 15 of them, 320px clips 7, and 288px clips 14 plus all six rationales. 320px is where the accounts you meet first still show all three facts — at 288px Notion loses <em>San Francisco, CA</em>. Company names never clip at any width. Below 261px the browser ignores the request outright, and that floor is structural rather than one long string: hiding the badge, the logo, the ICP block or the signals, or letting the name wrap, each moves it by at most 9px.</li>
+      <li><strong>Everything under the header lines up with the company name</strong>, not with the logo. The header is a row of logo, text and badge, so the name, firmographics and prospect count all start 36px in — one avatar plus its margin — while <em>Why this account?</em>, <em>ICP Fit</em> and <em>Signals</em> are siblings of that whole row and began at the cell’s padding edge, leaving every label hanging 36px left of what it described. They’re now indented to match, composed from the avatar’s own metrics so changing the avatar size can’t split the two columns apart.<br>It isn’t free: 36px of indent is 36px off the prose, which is 100px of table depth and pushes one account — Kestrel Analytics, 318px — 28px taller than it was before any of this work, because its ICP Fit line now wraps. 368px is the narrowest column at which nothing is taller than where it started.</li>
+      <li><strong>And then the summary was cut down.</strong> Four changes, all of them trading detail for height: firmographics on one dot-separated line rather than three stacked ones, ICP Fit’s label inline beside its value instead of above it, the rationale clamped to two lines, and <em>Signals</em> capped at three with a <em>+N more</em> count. Full text for every one of them is on the element’s <code>title</code>. The summary went <strong>~456px → 317px</strong> at its tallest and the table <strong>6067px → 5810px</strong> deep.<br>Worth knowing what that did and didn’t fix: on accounts with three or more prospects the cell is now sized by its <em>people</em> rather than by the summary, so Notion’s stays 1051px — ten rows at 105px — and what shrank is the content inside it, not the box. The eight single-prospect accounts are the ones whose boxes actually moved: 210–334px down to 186–306px. Those are still summary-driven by 63–183px, and always will be to some degree, because an account summary is simply richer than one person’s four lines. Next levers if that’s still too tall: cap Signals at two, or drop the block. Note that <em>widening</em> this column is also a lever on depth — the two trade against each other.</li>
+      <li><strong>The one-line firmographics has to wrap, not truncate.</strong> Truncating means <code>white-space: nowrap</code>, and under this table’s auto layout a nowrap line contributes its whole width to the column — the joined string is ~490px, which on the first attempt dragged Company out to 636px. Trading height for width is the opposite of the point, so it wraps, clamped at two lines.</li>
+      <li><strong>Four people per account, at most.</strong> Notion has ten and Datadog seven, and rendering all of them made those two groups 1051px and 736px of a single screen — against a 317px summary beside them, so most of that height was a column of names with the account’s rationale floating in white space next to it. Four is enough to read a buying group and roughly what fits beside the summary. The table goes <strong>44 → 33 rows</strong> and <strong>5810px → 4687px</strong> deep, and the four capped accounts are the four that were driving it.<br>Nobody is dropped from the <em>data</em> — the cell says <em>Showing 4 of 10 prospects</em> rather than claiming Notion has four, and the cap is one number in the template.</li>
+      <li><strong>CRM names the open opportunities</strong> — the deal, with its amount, stage and close date under it, one block per deal. This is <strong>real data</strong>, only structured: the account CSV carries CRM as one prose string, and <code>build_lab_data.py</code> now splits it into the deals it names, so Notion’s <em>“Active GTM Platform opp ($180K Discovery) + Renewal ($145K)”</em> renders as two named deals instead of a sentence. The parsing is the new part, not the content. Two things in those strings make it awkward and are worth knowing about if you edit the CSV: they also carry clauses that aren’t deals (<em>“Peer case study owed”</em>), which is why a <code>$</code> inside the parentheses is what qualifies one; and <code>+</code> means two different things — it separates Notion’s two deals but sits inside Kestrel’s <em>“Enterprise Renewal + Expansion”</em>, so the parser matches name-then-amount pairs rather than splitting on it.<br><strong>Flag:</strong> opportunities belong to the <em>account</em>, so all four of Notion’s people show the same two deals, four times over. That repetition is real and it’s the most visible thing in the table now. If it’s the wrong trade, this content belongs in the merged Company cell, where it would be stated once — say the word and it moves. It costs nothing in height either way: the cell tops out at 104px, exactly matching the prospect’s four lines beside it, so CRM never sets a row’s height.</li>
+      <li><strong>Recommended Pitch is a role-specific angle</strong>, clamped to three lines with the full text on hover: a Sales Dev lead gets ramp time, RevOps gets tool consolidation, Demand Gen gets lead quality. Six angles across the 36 people, which is the argument for holding this at the person grain at all — one account-level pitch was a single string covering ten different jobs.<br>Unlike CRM, this one <strong>is synthesized.</strong> The CSV carries a pitch per account, so these are derived from each person’s job title in <code>build_lab_data.py</code>. Deterministic, so a judgement about width or line count here survives a rebuild — but placeholder copy, meant to be replaced when real per-person text arrives.</li>
+      <li><strong>Signal is dropped as a column.</strong> It was the third empty per-person column and there is no per-person signal in the data; the account’s signals are in the Company cell either way. That takes the table to four columns, down from nine at the port — and with CRM sized to fit its own content (192px, not the 256px the flat table reserves) the table is <strong>1510px → 1187px</strong> wide.</li>
+      <li><strong>Signals moved rather than vanished — flag this one.</strong> Every account carries them, 64 in total, and that merged column was the only place they were on screen. Rather than delete them with the column, they’re now a list in the account summary. This is the one change here that wasn’t asked for; say the word and the block comes out.</li>
+      <li><strong>Source is dropped</strong>, column and cell. The field is still in the data and the shared <code>cellSource</code> macro still renders it on the other two labs — this page just stopped calling it.</li>
+      <li><strong>Source is back, per person</strong> — and it left as a merged account column, so it came back at a different grain. A provenance badge per row, plus a stacked <em>New Contact</em> on the five people here with no trace in their account’s CRM or signals. Across the 25 rendered rows: 9 Report, 5 ZoomInfo, 5 Gong, 3 Salesforce, 3 TechCrunch. The cell is the shared <code>cellSource</code> macro, uncopied — it reads <code>source</code> / <code>isNewContact</code> off whatever it’s handed, so passing it a person rather than an account was the whole change. Blank on the accounts with nobody listed, like CRM and Pitch beside it. Table <strong>1187px → 1339px</strong>; depth doesn’t move, since a badge stack is 44px in rows that are 105px at their shortest.</li>
+      <li><strong>The badges exist again at all</strong> because the data does. Neither CSV has a source column, so every row had been falling to the macro’s <code>n/a</code> branch — on this page and the other two. <code>build_lab_data.py</code> now derives one per person from what the account’s CRM and Signals strings say about them: named on the opportunity reads as Salesforce, named as a new hire in a signal reads as press, an exec at an account whose opp is in Negotiation is on the buying committee, and no trace in either is the closest the data comes to “not in the CRM yet”. Deterministic, and documented there as a judgement rather than as fact.</li>
+      <li><strong>Firmographics and contact details.</strong> Headcount, industry and location are stated once per account; the flat table repeats all three down every row. Email and phone are person-level, so there’s nothing for the merge to save there — and they cost this table the compact row it had, 66px becoming 105px. Four lines per person is the floor for any one-row-per-prospect shape.</li>
+      <li><strong>Prospect is frozen now, not Company.</strong> The account summary scrolls away with everything else, and the Prospect column pins the moment it reaches the left edge — so the person stays with you while you read the per-person columns, and the account narrative is what you scroll past to get there. The reverse of how this page started.</li>
+      <li><strong>The changeover is Company’s width, and that’s why nothing overlaps.</strong> Prospect only pins once you’ve scrolled past 320px, which is exactly how wide Company is, so by the time Prospect reaches the edge Company has fully left the viewport. Narrow that column and the changeover comes sooner, still without an overlap. The cells that <em>do</em> pass underneath it are CRM and Pitch, which is what the opaque background is for. Sticking Prospect by class rather than by position is what makes it work on a group’s first row, where it’s the second cell rather than the first — <code>left: 0</code> measures from the scroll container’s edge, not from the cell’s own slot.</li>
+      <li><strong>A 2px rule opens each group</strong> (<code>is-pivot-group-start</code>) — the only cue for where one account ends and the next begins, now that hover is gone.</li>
+      <li><strong>No hover or selection highlight.</strong> Both are removed. A merged cell is as tall as its group, so a row tint has to cover the whole group to look coherent — the paired hover this started with lit all ten of Notion’s rows, which read as a selection rather than a pointer hint. Tinting just the row under the pointer is worse: it leaves the account cells cold. The focus outline stays for keyboard users, and rejected rows still dim, because that encodes data rather than pointer position.</li>
+      <li><strong>Rejecting dims the prospect in place.</strong> BB has to hop a rowspan onto the next row when the lead row disappears; nothing is removed from the DOM here, so nothing has to hop.</li>
+    </ul>
+    -#}
+
+    {{ groupTable(table) }}
+
+    <p class="ptl-sub" style="margin-top: 0.75rem;">
+      <span data-pgl-tally></span>
+      No hover or selection highlight on this table — with the account’s
+      cell spanning its whole group, any row tint had to wash the entire
+      group to look right. Use the X to remove a prospect, and again to
+      put it back. Truncated fields still reveal on hover.
+    </p>
+
+    {% if not table or not table.rows %}
+    <p class="ptl-missing">
+      Couldn’t read <code>table.rows</code> from
+      <code>src/views/data/prospect_pivot_lab.json</code>. Re-generate it
+      with <code>python3 tools/lab-data/build_lab_data.py</code>.
+    </p>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
+
+
+{% block scripts_extra %}
+{#
+  Per-prospect reject, and nothing else.
+
+  This used to also carry BB's paired group hover, which lit every row of
+  an account at once. That was necessary given the shape — a merged cell
+  belongs to the group's FIRST row, so a plain `tr:hover` lights one
+  prospect and leaves the account cells cold — but it read badly in
+  practice: with Notion's cell over 1000px tall, hovering one person
+  washed a thousand pixels of the table, which looked like a selection
+  rather than a pointer hint.
+
+  So hover and selection are both gone. The mouseover/mouseout listeners
+  and the row-selection click branch went with them, along with
+  `slds-hint-parent`, `aria-selected` and `tabindex` in the markup and the
+  `is-pivot-hovered` rule in the stylesheet.
+
+  `data-pgl-group` stays on every row. Nothing reads it now, but it's how
+  the markup records which account a row belongs to, and it's what any
+  future per-account behaviour would key on.
+#}
+<script>
+  (function () {
+    'use strict'
+
+    var table = document.querySelector('[data-sh-conv-table]')
+    if (!table) return
+    var tally = document.querySelector('[data-pgl-tally]')
+
+    function closest (el, sel) {
+      for (; el && el !== document; el = el.parentNode) {
+        if (el.nodeType === 1 && el.matches && el.matches(sel)) return el
+      }
+      return null
+    }
+
+    {#- `total` counts the X buttons, so it's the number of people ON
+        SCREEN — 25 of the 36, since each account is capped at four rows.
+        `listed` is the real total, read off the count lines rather than
+        hardcoded, so the resting message can state both instead of
+        reporting 25 as if that were everyone. -#}
+    var total = table.querySelectorAll('[data-pgl-reject]').length
+    var listed = 0
+    Array.prototype.forEach.call(
+      table.querySelectorAll('.pgl-count'), function (node) {
+        var shown = node.textContent.match(/of (\d+) prospects/)
+        var plain = node.textContent.match(/(\d+) prospects?/)
+        listed += Number(shown ? shown[1] : (plain ? plain[1] : 0))
+      })
+
+    function retally () {
+      if (!tally) return
+      var out = table.querySelectorAll('tr.is-removed').length
+      var accounts = table.querySelectorAll('.is-pivot-group-start').length
+      tally.textContent = out
+        ? out + (out === 1 ? ' prospect removed' : ' prospects removed') +
+          ' \u00b7 ' + (total - out) + ' still in.'
+        : total + ' of ' + listed + ' prospects shown across ' +
+          accounts + ' accounts, four per account.'
+    }
+
+    {#- Only the X does anything now. Clicking a row is inert, which is why
+        the rows no longer advertise themselves as clickable with a pointer
+        cursor. -#}
+    table.addEventListener('click', function (e) {
+      if (!closest(e.target, '[data-pgl-reject]')) return
+      var row = closest(e.target, 'tr')
+      if (!row) return
+      var on = !row.classList.contains('is-removed')
+      row.classList.toggle('is-removed', on)
+      var btn = row.querySelector('[data-pgl-reject]')
+      if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false')
+      retally()
+    })
+
+    retally()
+  }())
+</script>
+{% endblock %}

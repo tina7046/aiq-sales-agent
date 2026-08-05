@@ -170,6 +170,61 @@
         data-sh-knowledge-body
       >
         <div class="seller-home__knowledge-body-inner">
+          {# ── Banner ───────────────────────────────────────────────
+             Promo banner at the top of the page content: copy + CTA on
+             the left, illustration on the right.
+
+             Sits inside the 50rem column rather than bleeding to the
+             section's full width so its left edge lines up with the
+             search field, the doc rows, and every other Seller-Home
+             surface — a full-bleed band here would be the only element
+             on the page ignoring that column.
+
+             First child of the scroll area, not a sibling of the
+             header, so it scrolls away with the content instead of
+             pushing the pinned "Knowledge" / "+ New Knowledge" toolbar
+             down the page. Spacing to the search field below comes from
+             the inner column's own 16-px flex gap.
+
+             Class names are `knowledge-banner*` rather than the page's
+             `seller-home__*` prefix because this block came in as
+             standalone markup; keeping its own names means the authored
+             HTML and this template stay diffable against each other.
+
+             The unclassed `<div>` around badge/title/description is
+             load-bearing: it groups the three text nodes as ONE flex
+             child so the button can be pushed away from them.
+
+             `.knowledge-banner__illustration` is deliberately empty —
+             the art arrives as a CSS `background-image` (see home.scss),
+             which is what lets it fill and crop to whatever height the
+             copy beside it ends up needing. Because the art is decided
+             in CSS rather than data, there's no `src` here to guard on;
+             the whole block is guarded on `banner` instead, so removing
+             that object from knowledge.json removes the banner. #}
+          {% if banner %}
+          <div class="knowledge-banner">
+            <div class="knowledge-banner__content">
+              <div>
+                <span class="knowledge-banner__badge">{{ banner.badge }}</span>
+                <p class="knowledge-banner__title">{{ banner.title }}</p>
+                <p class="knowledge-banner__description">{{ banner.description }}</p>
+              </div>
+              {# Stub, same contract as the header's "+ New Knowledge"
+                 button: the `data-sh-*` hook is here so a later phase can
+                 bind routing by attribute without editing this markup. #}
+              <button
+                type="button"
+                class="knowledge-banner__button"
+                data-sh-knowledge-setup
+              >{{ banner.buttonLabel }}</button>
+            </div>
+            <div class="knowledge-banner__illustration-col">
+              <div class="knowledge-banner__illustration"></div>
+            </div>
+          </div>
+          {% endif %}
+
           {# ── Search field ─────────────────────────────────────────
              Figma frame 8931:383736 ("📝 Input - Search", Default /
              Default state). Compact 275×32 pill-adjacent input:

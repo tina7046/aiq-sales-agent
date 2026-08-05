@@ -195,9 +195,15 @@
         <span data-sh-cadence-touches>{{ _firstSeq.steps | length }} touches</span>
         <span class="seller-home__conv-cadence-dot" aria-hidden="true">&middot;</span>
         <span data-sh-cadence-channels>{{ channelSummary(_firstSeq.steps) }}</span>
+        {#
+          Card-level by default, but a sequence can override it — see
+          `data-sh-cadence-seq-summary` below. Needed once one sequence
+          stopped matching the others: an email-only cadence sat under
+          the card's "Multi-channel sequence" line.
+        #}
         {% if cadence.summary %}
         <span class="seller-home__conv-cadence-dot" aria-hidden="true">&middot;</span>
-        <span>{{ cadence.summary }}</span>
+        <span data-sh-cadence-summary>{{ _firstSeq.summary or cadence.summary }}</span>
         {% endif %}
       </p>
     </div>
@@ -270,7 +276,7 @@
     card on the page can't clone this one's sequences.
   #}
   {% for key, seq in cadence.sequences %}
-  <template data-sh-cadence-seq="{{ key }}" data-sh-cadence-seq-touches="{{ seq.steps | length }}" data-sh-cadence-seq-channels="{{ channelSummary(seq.steps) }}">
+  <template data-sh-cadence-seq="{{ key }}" data-sh-cadence-seq-touches="{{ seq.steps | length }}" data-sh-cadence-seq-channels="{{ channelSummary(seq.steps) }}" data-sh-cadence-seq-summary="{{ seq.summary or cadence.summary }}">
     {{ sequenceSteps(seq.steps, null) }}
   </template>
   {% endfor %}

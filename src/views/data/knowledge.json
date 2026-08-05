@@ -28,6 +28,41 @@
 //                                    document list; matches the SLDS
 //                                    Titles/font-scale-3 treatment
 //                                    from the Figma frame 8931:383002.
+//   • banner             (object) copy for the promo banner at the top
+//                        of the scrollable body, above the search field —
+//                        badge, title, description, and CTA label, laid
+//                        out beside the illustration. Omit the whole
+//                        object and the template renders nothing — no
+//                        empty box, no reserved space — so turning the
+//                        banner off is a data-only edit. Fields:
+//                          - badge        (string) small pill above the
+//                                         title. Short: it's a label, not
+//                                         a sentence, and it does not
+//                                         wrap.
+//                          - title        (string) banner headline.
+//                                         Rendered as a `<p>`, NOT a
+//                                         heading — the page already has
+//                                         exactly one H1 ("Knowledge"),
+//                                         and a promo headline shouldn't
+//                                         compete with it in the document
+//                                         outline or a screen reader's
+//                                         heading list.
+//                          - description  (string) supporting paragraph.
+//                          - buttonLabel  (string) CTA label. The button
+//                                         is a stub — it carries a
+//                                         `data-sh-knowledge-setup` hook
+//                                         for a later phase to bind, and
+//                                         does nothing when clicked
+//                                         today.
+//
+//                        The illustration itself is NOT configured here.
+//                        It's a CSS `background-image` on
+//                        `.knowledge-banner__illustration` in home.scss,
+//                        because the authored markup for that element is
+//                        an empty div — which is also what lets the art
+//                        fill and crop to whatever height this copy
+//                        happens to need. Swapping the art is a one-line
+//                        change in home.scss, not a data edit.
 //   • search             (object) copy for the doc-list search field
 //                        (Figma frame 8931:383736 → "Input - Search").
 //                        Filtering is client-only (see home.js →
@@ -109,7 +144,33 @@
 //                                       Must be one of the sprites SLDS
 //                                       ships; unknown values render a
 //                                       blank <use> and swallow the
-//                                       icon visually.
+//                                       icon visually. Ignored when
+//                                       `iconSrc` is set, but keep it
+//                                       populated anyway — see below.
+//                          - iconSrc    (string, optional) path under
+//                                       /assets to a bitmap icon that
+//                                       REPLACES the `fileType` sprite
+//                                       glyph on this row. For doc kinds
+//                                       SLDS ships no glyph for; the
+//                                       Auto-Learning documents use it
+//                                       to render the purple "AI" file
+//                                       icon instead of a generic TXT
+//                                       page. Painted into the same
+//                                       24-px box as the sprite, so
+//                                       rows stay aligned whichever
+//                                       branch renders.
+//
+//                                       Source art should be square and
+//                                       at least 48×48 so it survives
+//                                       retina; the AI icon is 96×96.
+//                                       Non-square art letterboxes
+//                                       rather than stretching.
+//
+//                                       Set BOTH this and `fileType`:
+//                                       deleting `iconSrc` then falls
+//                                       straight back to the sprite
+//                                       instead of rendering an empty
+//                                       icon box.
 //                          - updatedAt  (string, required) preformatted
 //                                       "MMM D, YYYY" date shown after
 //                                       the type on the metadata line.
@@ -180,6 +241,12 @@
   "newKnowledgeLabel": "New Knowledge",
   "header": {
     "heading": "Knowledge"
+  },
+  "banner": {
+    "badge": "Auto-Learning On",
+    "title": "Here's what I learned",
+    "description": "Your agent learns from your product docs, call transcripts, and site content to build a shared knowledge base — then keeps auto-learning as new material lands.",
+    "buttonLabel": "Got it"
   },
   "search": {
     "label": "Search knowledge",
@@ -344,6 +411,7 @@
       "name": "Auto-Learning: Your ICP",
       "type": "Document",
       "fileType": "txt",
+      "iconSrc": "/assets/images/doctype-icons/ai.png",
       "updatedAt": "Jul 28, 2026",
       "updatedBy": "Issa Mao",
       "sourceGroupId": "auto-learning-customer-interactions",
@@ -355,6 +423,7 @@
       "name": "Auto-Learning: Customer Business Problem",
       "type": "Document",
       "fileType": "txt",
+      "iconSrc": "/assets/images/doctype-icons/ai.png",
       "updatedAt": "Jul 28, 2026",
       "updatedBy": "Issa Mao",
       "sourceGroupId": "auto-learning-customer-interactions",
@@ -366,6 +435,7 @@
       "name": "Auto-Learning: Why Now Urgency",
       "type": "Document",
       "fileType": "txt",
+      "iconSrc": "/assets/images/doctype-icons/ai.png",
       "updatedAt": "Jul 28, 2026",
       "updatedBy": "Issa Mao",
       "sourceGroupId": "auto-learning-customer-interactions",
@@ -377,6 +447,7 @@
       "name": "Auto-Learning: Use Cases",
       "type": "Document",
       "fileType": "txt",
+      "iconSrc": "/assets/images/doctype-icons/ai.png",
       "updatedAt": "Jul 28, 2026",
       "updatedBy": "Issa Mao",
       "sourceGroupId": "auto-learning-customer-interactions",
@@ -388,6 +459,7 @@
       "name": "Auto-Learning: Value Props",
       "type": "Document",
       "fileType": "txt",
+      "iconSrc": "/assets/images/doctype-icons/ai.png",
       "updatedAt": "Jul 28, 2026",
       "updatedBy": "Issa Mao",
       "sourceGroupId": "auto-learning-customer-interactions",
@@ -405,6 +477,7 @@
       "name": "Auto-Learning: Your Voice",
       "type": "Document",
       "fileType": "txt",
+      "iconSrc": "/assets/images/doctype-icons/ai.png",
       "updatedAt": "Jul 28, 2026",
       "updatedBy": "Issa Mao",
       "sourceGroupId": "auto-learning-customer-interactions",

@@ -514,48 +514,6 @@ main.app-wrapper {
   }
 }
 
-// Search field — SLDS 2 search input inset within the sidebar's
-// horizontal padding, above the primary nav list. Sits inside the
-// sticky-top region so it stays visible while Recents scrolls.
-//
-// Only structural / spacing rules live here — the input itself keeps
-// SLDS 2 base styling (rounded corners, border color, focus ring,
-// hover state, disabled state) via the `.slds-input` class in the
-// markup. That means the search field automatically stays in sync
-// with any future SLDS 2 token updates, and behavior like the
-// browser's native "clear (x)" affordance on type="search" also
-// works out of the box.
-.seller-home__nav-search {
-  // Inset the field so it aligns with the primary nav rows' text
-  // column edge without hugging the sidebar edge. Uses the same
-  // horizontal padding token the rows use.
-  padding: var(--slds-g-spacing-1, 0.25rem) $sh-nav-row-padding-x
-           var(--slds-g-spacing-2, 0.5rem);
-
-  // Compact 32px input — sits above the primary rows without competing
-  // with them for visual weight. Deliberately shorter than the nav
-  // row height ($sh-nav-row-height, 46px) so the search reads as an
-  // ancillary control rather than a peer of the navigation items.
-  // Kept on a nested `.slds-input` selector (not `& > *`) so future
-  // SLDS 2 markup churn (e.g. an extra wrapping element) won't
-  // silently break the rule.
-  .slds-input {
-    height: 2rem;         // 32px
-    line-height: 2rem;
-    border-radius: var(--slds-g-radius-border-2, 0.5rem);
-
-    // The `slds-input-has-icon_left` scaffold reserves 32px of left
-    // padding for the icon. That value matches SLDS 2 defaults —
-    // don't override it. Right padding stays at SLDS default too so
-    // the browser-native `type="search"` clear affordance stays
-    // clickable when a value is present.
-  }
-  // Icon vertical centering is handled by the SLDS base
-  // (`.slds-input-has-icon .slds-input__icon { top: 50%;
-  // margin-top: -0.4375rem; }`), which is height-agnostic and stays
-  // correct at 32px without an override here.
-}
-
 // Scrollable middle — Recents section. Owns flex: 1 so it absorbs any
 // leftover vertical space. `min-height: 0` is required for the child's
 // overflow-y to actually clip (flex quirk).
@@ -855,15 +813,6 @@ main.app-wrapper {
   // that isn't.
   .seller-home__nav-toggle svg {
     transform: scaleX(-1);
-  }
-
-  // The search input has no icon-only representation and would look
-  // wrong squeezed into a 64px rail, so hide it wholesale in the
-  // collapsed state — same pattern used for `.seller-home__nav-recent`
-  // below (rows that can't be icon-only get hidden rather than
-  // shown as slivers).
-  .seller-home__nav-search {
-    display: none;
   }
 
   .seller-home__nav-item,
@@ -2676,6 +2625,153 @@ main.app-wrapper {
 }
 
 // ══════════════════════════════════════════════════════════════════════
+// Knowledge banner — promo block above the search field
+// ----------------------------------------------------------------------
+// Two columns: copy + CTA on the left, illustration on the right. First
+// child of the 50rem inner column, so it shares the content column's
+// width and left edge instead of bleeding across the section.
+//
+// Height is driven by the copy, not fixed. The illustration column
+// stretches to match whatever height the text lands on and its art
+// crops to fit, so the description can grow a line (longer copy,
+// narrower viewport) without any of these numbers being retuned.
+//
+// Palette is sampled from the artwork rather than invented, so the
+// illustration and the surface it sits on can't drift apart:
+//   • #f5f2fb — the tint of the art's own left panel. Using it as the
+//     whole banner's background is what makes the seam invisible: the
+//     illustration's left edge is that same colour, so the decorative
+//     arc inside the art reads as the boundary between copy and picture
+//     instead of the column edge reading as a hard cut.
+//   • #ece1f9 / #401075 — the light lavender and deep purple from the
+//     AI doctype icon (see the Auto-Learning rows in the list below),
+//     reused for the badge so the two AI surfaces on this page match.
+// ══════════════════════════════════════════════════════════════════════
+.knowledge-banner {
+  display: flex;
+  align-items: stretch; // illustration column matches the copy's height
+
+  overflow: hidden; // clips the art to the rounded corners
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+  background: #f5f2fb; // sampled from the artwork — see above
+}
+
+// ── Copy column ──
+// Takes the leftover width. `min-width: 0` lets the description wrap
+// instead of forcing the flex row wider than the 800-px column.
+// `align-items: flex-start` keeps the button at its intrinsic width —
+// without it, `stretch` would blow the pill out to the full column.
+.knowledge-banner__content {
+  flex: 1 1 auto;
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--slds-g-spacing-5, 1.5rem); // 24px, text group → button
+
+  padding: var(--slds-g-spacing-5, 1.5rem); // 24px
+}
+
+// ── Badge ──
+// `inline-block` (not inline) so the margin below it actually applies
+// and the pill's vertical padding doesn't overlap the title.
+.knowledge-banner__badge {
+  display: inline-block;
+  margin-block-end: var(--slds-g-spacing-2, 0.5rem); // 8px
+
+  padding: 0.125rem var(--slds-g-spacing-2, 0.5rem); // 2px / 8px
+  border-radius: var(--slds-g-radius-border-pill, 15rem);
+  background: #ece1f9;
+
+  color: #401075;
+  font-size: 0.6875rem; // 11px — a label, one step under body text
+  font-weight: 600;
+  line-height: 1rem;
+  white-space: nowrap;
+}
+
+// Margins are set on the text elements themselves rather than on their
+// unclassed wrapper div, so the spacing doesn't depend on a bare
+// element selector that any future markup change could break.
+.knowledge-banner__title {
+  margin: 0 0 var(--slds-g-spacing-1, 0.25rem); // 4px
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  font-size: 1.25rem; // 20px
+  font-weight: 700;
+  line-height: 1.75rem;
+}
+
+.knowledge-banner__description {
+  margin: 0;
+  // ~50 characters per line. The copy would otherwise run the full
+  // width of the column, which reads as a wall of text at this size.
+  max-width: 34rem;
+
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  line-height: 1.125rem; // 18px
+}
+
+// ── CTA ──
+// Deliberately NOT an `.slds-button`: the authored markup carries only
+// its own class, so the SLDS neutral-button treatment (32-px height,
+// pill radius, white surface, brand-blue label) is reproduced here from
+// the same tokens. That keeps it visually identical to the header's
+// "+ New Knowledge" pill while leaving the markup as authored.
+.knowledge-banner__button {
+  flex: 0 0 auto;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem; // 32px, matches SLDS buttons
+  padding-inline: var(--slds-g-spacing-4, 1rem); // 16px
+
+  border: 1px solid var(--slds-g-color-border-2, #5c5c5c);
+  border-radius: var(--slds-g-radius-border-pill, 15rem);
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+
+  color: var(--slds-g-color-accent-2, #0250d9);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  font-weight: 600;
+  line-height: 1.125rem;
+
+  cursor: pointer;
+
+  &:hover {
+    background: var(--slds-g-color-neutral-base-95, #f3f3f3);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-on-surface-3, #001e5b);
+    outline-offset: 2px;
+  }
+}
+
+// ── Illustration column ──
+// Fixed share of the width so the copy gets the rest. `display: flex`
+// is only here to let the empty child stretch to the column's full
+// height without needing absolute positioning.
+.knowledge-banner__illustration-col {
+  flex: 0 0 38%;
+  display: flex;
+}
+
+// The art itself. The authored element is empty, so it arrives as a
+// background: `cover` fills the column at any height the copy dictates,
+// and `left center` anchors the art's decorative arc against the copy
+// column — cropping off the right of the illustration rather than the
+// left, which is the edge that has to line up.
+.knowledge-banner__illustration {
+  flex: 1 1 auto;
+  background-image: url("/assets/images/illustrations/knowledge-banner.png");
+  background-repeat: no-repeat;
+  background-position: left center;
+  background-size: cover;
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // Knowledge search field — Figma frame 8931:383736 ("Input - Search")
 // ----------------------------------------------------------------------
 // Compact, fixed-width text input that filters the doc list below it
@@ -3091,9 +3187,12 @@ main.app-wrapper {
 }
 
 // ── Doctype icon (left) ──
-// 24×24 wrapper for the SLDS `doctype-sprite/*` glyph (`txt` gives
-// the yellow-badge TXT file). `flex-shrink: 0` locks the size so a
-// long doc name can't squeeze the icon at narrow viewports.
+// 24×24 wrapper holding EITHER the SLDS `doctype-sprite/*` glyph (`txt`
+// gives the yellow-badge TXT file) or a bitmap icon when the doc sets
+// `iconSrc` — the box is the same either way, so the text stack beside
+// it lines up regardless of which branch renders. `flex-shrink: 0` locks
+// the size so a long doc name can't squeeze the icon at narrow
+// viewports.
 .seller-home__knowledge-doc-icon {
   flex: 0 0 auto;
   display: inline-flex;
@@ -3106,6 +3205,17 @@ main.app-wrapper {
 .seller-home__knowledge-doc-icon-svg {
   width: 100%;
   height: 100%;
+}
+
+// Bitmap branch (`doc.iconSrc`). Source art is square and larger than
+// the 24-px box it paints into — 96×96 for the AI icon, so it has 4× the
+// pixels it needs and stays crisp on retina. `contain` keeps a
+// non-square replacement from being stretched: it would letterbox inside
+// the 24-px box instead, which is the correct failure mode for an icon.
+.seller-home__knowledge-doc-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 // ── Text stack (center) ──

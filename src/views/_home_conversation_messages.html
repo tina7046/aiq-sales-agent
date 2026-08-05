@@ -552,19 +552,21 @@
    hover states all match the design system without any custom
    overrides.
 
-   Cells come from _home_conversation_prospect_cells.html, a trimmed
-   port of hunter's Approval Required table: avatars, company metadata,
-   clamped rationale, source badges, and Accept / Reject actions. Columns are dispatched by `col.id`, so the
-   JSON decides which of them appear and in what order; an id with no
-   dedicated macro falls back to a plain truncated text cell.
+   Cells come from _home_conversation_prospect_cells.html: avatars,
+   company metadata with the tier badge, clamped rationale, bulleted
+   signals, source badges, and the single reject control. Columns are
+   dispatched by `col.id`, so the JSON decides which of them appear and
+   in what order; an id with no dedicated macro falls back to a plain
+   truncated text cell.
 
    Reduced feature set compared to the prospect list, deliberately:
-     • No sorting controls (12 mock rows; no UX gain from sorting).
+     • No sorting controls.
      • No column resize handles.
-     • No multi-select checkboxes (single-select-only per the ask).
+     • No checkboxes and no row selection at all — see the `<tr>` note
+       below.
      • No row-number gutter.
-     • No side panel — the outreach review below the table is the
-       detail surface, so hunter's `Review` button is dropped.
+     • No side panel — the cadence card below the table is the detail
+       surface, so hunter's `Review` button is dropped.
 
    Layout notes:
      • Wrapped in `.seller-home__conv-prospect-table`, which owns the
@@ -575,12 +577,13 @@
      • `data-sh-conv-lasttouch-iso` on the Last-touch cell carries
        the ISO date for any future formatting callback. The visible
        cell still shows the concise human-readable string.
-     • `<tr aria-selected="false" tabindex="-1">` primes the row
-       for the single-select selection model + roving-tabindex
-       keyboard nav home_conversation.js binds. `data-sh-conv-row`
-       is the JS hook; `data-sh-conv-row-id` carries the prospect
-       id, which is also how a decision made in a row's Actions cell
-       is matched to the outreach review's record.
+     • `<tr>` carries no `aria-selected` and no `tabindex`. Clicking a
+       row used to select it, which drove the cadence card's stepper to
+       the matching prospect; the blue selection went, and the aria
+       state and roving tabindex went with it rather than announcing a
+       selection nothing paints. `data-sh-conv-row` is the JS hook;
+       `data-sh-conv-row-id` carries the prospect id, which is how the
+       X's decision is matched to the cadence card's record.
 
    Data contract:
      {
@@ -593,6 +596,34 @@
 {% import "_home_conversation_prospect_cells.html" as cells %}
 
 {% macro prospectTable(table) %}
+{#- Columns skipped in both the header and the body. This is a RENDERING
+    skip: the JSON still lists every column and every row still carries
+    every field, so a column comes back by deleting one id from this
+    list (and un-commenting its width in home_conversation.scss). The
+    cell macros for the hidden ones are left in place for the same
+    reason.
+
+    Declared inside the macro on purpose: a macro doesn't reliably see a
+    template-level `set` in Nunjucks, so a list defined above would come
+    through empty and silently hide nothing.
+
+    `actions` — the reject control moved into the Prospect cell, so
+    rendering the column too would show the button twice.
+
+    `tier` — the badge moved into the Company cell, top right, so the
+    column would repeat it. Tier and company name are the two things you
+    pair when scanning ("is this account worth the time"), and they were
+    four columns apart.
+
+    The rest — Rank, Themes, Record Type, Record ID and Account ID are
+    account or CRM bookkeeping rather than anything you'd decide from;
+    Last touch and Owner are "n/a" on every row because no source
+    carries them yet. Dropping the nine takes the table from 17 rendered
+    columns to 8. -#}
+{%- set _hidden = [
+  'actions', 'tier', 'rank', 'themes', 'recordType', 'recordId',
+  'accountId', 'lastTouch', 'owner'
+] -%}
 <div
   class="seller-home__conv-prospect-table"
   data-sh-conv-table="{{ table.id }}"
@@ -605,30 +636,45 @@
     <thead>
       <tr class="slds-line-height_reset">
         {% for col in table.columns %}
+          {% if col.id not in _hidden %}
         <th class="slds-cell_action-mode" scope="col" data-sh-conv-col="{{ col.id }}">
           <div class="slds-grid slds-grid_vertical-align-center slds-has-flexi-truncate">
             <span class="slds-truncate" title="{{ col.label }}">{{ col.label }}</span>
           </div>
         </th>
+          {% endif %}
         {% endfor %}
       </tr>
     </thead>
     <tbody>
       {% for row in table.rows %}
+      {#- `slds-hint-parent` stays: it's the hook SLDS's uplift row-hover
+          rule matches on, and hover is still wanted — the neutral tint
+          tracks the row you're reading. It was only the blue click
+          state that went. -#}
       <tr
-        aria-selected="false"
-        tabindex="-1"
         class="slds-hint-parent seller-home__conv-prospect-row"
         data-sh-conv-row
         data-sh-conv-row-id="{{ row.id }}"
       >
         {% for col in table.columns %}
-          {% if col.id == 'prospect' %}{{ cells.cellProspect(row) }}
-          {% elif col.id == 'company' %}{{ cells.cellCompany(row) }}
+          {#- The hidden check comes first so a hidden column can't fall
+              through to a cell branch further down the chain. -#}
+          {% if col.id in _hidden %}
+          {% elif col.id == 'prospect' %}{{ cells.cellProspect(row) }}
+          {% elif col.id == 'company' %}{{ cells.cellCompany(row, true) }}
           {% elif col.id == 'whyProspect' %}{{ cells.cellWhyProspect(row) }}
+          {% elif col.id == 'signal' %}{{ cells.cellSignals(row) }}
           {% elif col.id == 'source' %}{{ cells.cellSource(row) }}
-          {% elif col.id == 'actions' %}{{ cells.cellActions(row) }}
+          {% elif col.id == 'icpFit' or col.id == 'crm' or col.id == 'pitch' %}{{ cells.cellProse(row, col.id) }}
+          {#- Branches kept for the hidden columns, so removing an id
+              from `_hidden` is the only edit needed to bring one back. -#}
+          {% elif col.id == 'tier' %}{{ cells.cellTier(row) }}
+          {% elif col.id == 'rank' %}{{ cells.cellRank(row) }}
+          {% elif col.id == 'themes' %}{{ cells.cellThemes(row) }}
+          {% elif col.id == 'recordType' %}{{ cells.cellRecordType(row) }}
           {% elif col.id == 'lastTouch' %}{{ cells.cellText(row, col.id, row.lastTouchIso) }}
+          {% elif col.id == 'accountId' or col.id == 'recordId' %}{{ cells.cellId(row, col.id) }}
           {% else %}{{ cells.cellText(row, col.id) }}
           {% endif %}
         {% endfor %}

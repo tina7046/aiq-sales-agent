@@ -15,8 +15,9 @@
 //     text over as `?q=`. It titles the thread and is echoed as the
 //     seller's opening message, so a canned conversation reads as an
 //     answer to what they actually asked.
-//   • Prospect table: wire single-select + keyboard nav
-//     (roving-tabindex, Enter/Space, Arrow keys, Home/End). Kept
+//   • Prospect table: wire the X in each row, which takes a prospect
+//     out of the batch and puts it back. Rows are not selectable and
+//     not focusable — see the binder for what that replaced. Kept
 //     independent so the table works as a standalone list even
 //     without a review controller attached.
 //   • Cadence card: mounted from home_conversation_cadence.js, which
@@ -44,13 +45,16 @@
 //
 // Communication model
 // -------------------
-// Table <-> review sync flows through the DOM event
-// `sh:conv-row-select` (payload: { rowId, source: 'table'|'review' }).
-// The table dispatches on click / keyboard-activation; the review
-// dispatches on Prev/Next. Every listener treats the event as
-// authoritative — no direct calls between the two views, so a
-// future third consumer (analytics, detail pane) can subscribe
-// without needing a reference to either module.
+// Selection sync flows through the DOM event `sh:conv-row-select`
+// (payload: { rowId, source: 'table'|'review' }). Both ends of it are
+// currently quiet: the table stopped selecting rows on click, and the
+// review that dispatched on Prev/Next is parked. The cadence card
+// still fires it, and still subscribes, so a restored selection model
+// binds to a live channel rather than a new one.
+//
+// Every listener treats the event as authoritative — no direct calls
+// between views, so a future third consumer (analytics, detail pane)
+// can subscribe without needing a reference to either module.
 //
 // Review-decision changes flow through `sh:review-decision`
 // (payload: { rowId?, decision: 'approve'|'request_changes'|
@@ -78,12 +82,14 @@
     title:        '[data-sh-conv-title]',
     recentLinks:  '[data-sh-recent-conv]',
     // Prospect table (embedded in an agent message):
-    //   `convTable` — the wrapper carrying `data-sh-conv-table`.
-    //   `convRow`   — the <tr> elements that support selection.
+    //   `convTable`  — the wrapper carrying `data-sh-conv-table`.
+    //   `convRow`    — the <tr> elements. Not selectable; the id on each
+    //                  is how a decision finds its prospect.
+    //   `convReject` — the X in the Prospect cell, the row's only
+    //                  control. There was a `convAccept` beside it until
+    //                  the table became opt-out.
     convTable:    '[data-sh-conv-table]',
     convRow:      '[data-sh-conv-row]',
-    // Per-row Accept / Reject in the table's Actions column:
-    convAccept:   '[data-sh-conv-accept]',
     convReject:   '[data-sh-conv-reject]',
     // Outreach review (rendered by _home_outreach_review.html):
     reviewRoot:   '[data-sh-review-root]',
@@ -112,9 +118,6 @@
     // Clickable bullet in a "suggested next steps" message:
     suggestion:       '[data-sh-conv-suggestion]'
   }
-  // Class + ARIA the table row toggles on selection. `.is-selected`
-  // is the visual state; `aria-selected` is the AT-facing state.
-  var SELECTED_CLASS = 'is-selected'
   // Class the review section toggles when the confirmation dialog
   // opens (mirrors SLDS `slds-fade-in-open` semantically).
   var DIALOG_OPEN_CLASS = 'is-open'
@@ -283,13 +286,13 @@
   function bindMessageContent (scope, convMap) {
     if (!scope || !scope.querySelectorAll) return
 
-    // Prospect tables: standalone single-select + keyboard nav.
+    // Prospect tables: the per-row X, and nothing else.
     var tables = scope.querySelectorAll(SELECTORS.convTable)
     for (var t = 0; t < tables.length; t++) bindProspectTable(tables[t])
 
     // Cadence cards: the drafted sequence of touches per prospect.
     // Owns its own file — it subscribes to the same
-    // `sh:conv-row-select` / `sh:review-decision` events the table
+    // `sh:conv-row-decision` / `sh:review-decision` events the table
     // speaks, so nothing here needs to know what it does with them.
     if (window.ShCadence) window.ShCadence.mount(scope)
 
@@ -761,16 +764,25 @@
   // Prospect table binder
   // ──────────────────────────────────────────────────────────────
   // Owns:
-  //   • Roving-tabindex keyboard nav (Arrow / Home / End).
-  //   • Single-select visual state (`.is-selected`, aria-selected).
+  //   • The X in each Prospect cell, which takes a prospect out of the
+  //     batch and puts it back.
   //   • Reflecting review status onto the row (approved /
   //     changes_requested) via `data-sh-review-status`.
-  //   • Dispatching `sh:conv-row-select` on user interaction so a
-  //     review controller (or any other subscriber) can react.
   //
-  // Also subscribes to `sh:conv-row-select` — external senders
-  // (the review's Prev/Next buttons) can drive selection through
-  // the same event, and the table updates its own DOM in response.
+  // What it no longer owns is row selection, and three things went with
+  // it: the roving tabindex and its Arrow / Home / End nav, the
+  // `.is-selected` class, and `aria-selected` on every row. The table's
+  // rows were selectable so the cadence card's stepper could follow the
+  // one you clicked; the blue that painted read as a selection with
+  // nothing on the page to justify it, so the behaviour went rather
+  // than just the paint — a row that announces itself as selected with
+  // nothing on screen to match is worse than either state.
+  //
+  // The consequences, both accepted: clicking a row does nothing at
+  // all, and the cadence card no longer follows the table (its own
+  // Prev / Next still page the roster, and it still fires
+  // `sh:conv-row-select` at nobody — harmless, and what a restored
+  // selection model would bind to again).
   function bindProspectTable (table) {
     if (!table) return
     var rows = table.querySelectorAll(SELECTORS.convRow)
@@ -780,73 +792,14 @@
     var rowList = []
     for (var i = 0; i < rows.length; i++) rowList.push(rows[i])
 
-    // Roving tabindex — the first row is the initial tab stop.
-    setRovingFocus(rowList, 0)
-
-    // One click handler for the whole table so the Actions column can
-    // claim a click before it becomes a row selection. That matters
-    // because selecting a row scrolls the review panel into view —
-    // accepting a prospect shouldn't move the page out from under the
-    // cursor.
+    // One click handler for the whole table, and the X is the only
+    // thing in a row that answers it. The guard that used to let clicks
+    // on the email / phone links through went with selection: with
+    // nothing to select, those links are just links.
     table.addEventListener('click', function (event) {
       var target = event.target
       if (!target || !target.closest) return
-
-      if (handleDecisionClick(target, table)) return
-      // Email / phone links do their own navigating.
-      if (target.closest('a[href]')) return
-
-      var row = target.closest(SELECTORS.convRow)
-      if (!row || !table.contains(row)) return
-      selectRow(rowList, row, { source: 'table' })
-    })
-
-    table.addEventListener('keydown', function (event) {
-      var row = event.target && event.target.closest
-        ? event.target.closest(SELECTORS.convRow)
-        : null
-      if (!row || !table.contains(row)) return
-      var currentIndex = rowList.indexOf(row)
-      if (currentIndex < 0) return
-
-      switch (event.key) {
-        case 'Enter':
-        case ' ':
-        case 'Spacebar':
-          event.preventDefault()
-          selectRow(rowList, row, { source: 'table' })
-          break
-        case 'ArrowDown':
-          event.preventDefault()
-          moveFocus(rowList, currentIndex + 1)
-          break
-        case 'ArrowUp':
-          event.preventDefault()
-          moveFocus(rowList, currentIndex - 1)
-          break
-        case 'Home':
-          event.preventDefault()
-          moveFocus(rowList, 0)
-          break
-        case 'End':
-          event.preventDefault()
-          moveFocus(rowList, rowList.length - 1)
-          break
-      }
-    })
-
-    // External sync — a review's Prev/Next fires the same event.
-    // If the target is a row of THIS table, update our DOM without
-    // re-dispatching (`silent: true` prevents an event loop).
-    document.addEventListener(EVT_ROW_SELECT, function (event) {
-      var d = event.detail || {}
-      if (!d.rowId) return
-      var targetRow = table.querySelector('[data-sh-conv-row][data-sh-conv-row-id="' + d.rowId + '"]')
-      if (!targetRow) return
-      // Skip a re-application when the row is already selected —
-      // avoids gratuitous focus + `.is-selected` toggles.
-      if (targetRow.classList.contains(SELECTED_CLASS)) return
-      selectRow(rowList, targetRow, { silent: true })
+      handleDecisionClick(target, table)
     })
 
     // React to per-prospect decisions by updating the row's
@@ -855,7 +808,8 @@
     document.addEventListener(EVT_DECISION, function (event) {
       var d = event.detail || {}
       if (d.decision === 'approve_all') {
-        // Mark every row as approved.
+        // Mark every row as approved. This is the only way a row
+        // reaches `approved` now that the per-row Accept is gone.
         for (var i = 0; i < rowList.length; i++) {
           rowList[i].setAttribute('data-sh-review-status', 'approved')
         }
@@ -869,88 +823,42 @@
     })
   }
 
-  // ── Row decisions (Actions column) ──────────────────────────────
-  // Accept / Reject write the row's status and announce it. The
-  // review's own Approve / Request-changes buttons take the opposite
-  // path (review → `sh:review-decision` → row), so both surfaces
-  // converge on the same per-prospect state whichever one the seller
-  // uses.
+  // ── Row decisions ───────────────────────────────────────────────
+  // The X writes the row's status and announces it, and the cadence
+  // card's own Request-changes takes the opposite path (card →
+  // `sh:review-decision` → row), so both surfaces converge on the same
+  // per-prospect state whichever one the seller uses.
   //
-  // Returns true when the click was a decision, so the caller knows
-  // not to treat it as a row selection.
+  // It TOGGLES: clicking the X on a row that's already out puts it
+  // back, so a mis-click is recoverable without a second control. That
+  // matters more here than it did with an Accept / Reject pair, where
+  // the other button was the way back.
   function handleDecisionClick (target, table) {
-    var accept = target.closest(SELECTORS.convAccept)
-    var reject = accept ? null : target.closest(SELECTORS.convReject)
-    var button = accept || reject
+    var button = target.closest(SELECTORS.convReject)
     if (!button) return false
 
     var row = button.closest(SELECTORS.convRow)
     if (!row || !table.contains(row)) return false
 
-    var status = accept ? 'approved' : 'changes_requested'
-    paintRowStatus(row, status)
+    var out = row.getAttribute('data-sh-review-status') !== 'changes_requested'
+    paintRowStatus(row, out ? 'changes_requested' : null)
     dispatch(row, EVT_TABLE_DECISION, {
       rowId:  row.getAttribute('data-sh-conv-row-id') || null,
-      status: status
+      status: out ? 'changes_requested' : 'not_reviewed'
     })
     return true
   }
 
   // Reflect a decision in the row's DOM: the status attribute the
-  // SCSS paints the leading stripe from, plus the pressed state of
-  // the two action buttons. Deliberately silent — callers decide
-  // whether the change also needs to be announced.
+  // SCSS paints the leading stripe from, plus the pressed state of the
+  // X. A null status clears both, which is the toggle-back case.
+  // Deliberately silent — callers decide whether the change also needs
+  // to be announced.
   function paintRowStatus (row, status) {
-    row.setAttribute('data-sh-review-status', status)
-    var acceptBtn = row.querySelector(SELECTORS.convAccept)
+    if (status) row.setAttribute('data-sh-review-status', status)
+    else row.removeAttribute('data-sh-review-status')
     var rejectBtn = row.querySelector(SELECTORS.convReject)
-    if (acceptBtn) acceptBtn.setAttribute('aria-pressed', status === 'approved' ? 'true' : 'false')
     if (rejectBtn) rejectBtn.setAttribute('aria-pressed', status === 'changes_requested' ? 'true' : 'false')
-  }
-
-
-  function moveFocus (rowList, nextIndex) {
-    var clamped = Math.max(0, Math.min(rowList.length - 1, nextIndex))
-    setRovingFocus(rowList, clamped)
-    var target = rowList[clamped]
-    if (target && typeof target.focus === 'function') target.focus()
-  }
-
-  function setRovingFocus (rowList, focusIndex) {
-    for (var i = 0; i < rowList.length; i++) {
-      rowList[i].setAttribute('tabindex', i === focusIndex ? '0' : '-1')
-    }
-  }
-
-  // Apply single-select DOM state. Dispatches `sh:conv-row-select`
-  // unless `opts.silent` is set (used when the selection is being
-  // driven by an already-dispatched external event, to prevent a
-  // ping-pong loop).
-  function selectRow (rowList, targetRow, opts) {
-    opts = opts || {}
-    for (var i = 0; i < rowList.length; i++) {
-      var row = rowList[i]
-      var isTarget = row === targetRow
-      if (isTarget) {
-        row.classList.add(SELECTED_CLASS)
-        row.setAttribute('aria-selected', 'true')
-      } else {
-        row.classList.remove(SELECTED_CLASS)
-        row.setAttribute('aria-selected', 'false')
-      }
-    }
-    var idx = rowList.indexOf(targetRow)
-    if (idx >= 0) setRovingFocus(rowList, idx)
-
-    if (!opts.silent) {
-      var table = targetRow.closest(SELECTORS.convTable)
-      dispatch(targetRow, EVT_ROW_SELECT, {
-        rowId:   targetRow.getAttribute('data-sh-conv-row-id') || null,
-        tableId: table ? table.getAttribute('data-sh-conv-table') : null,
-        source:  opts.source || 'table',
-        row:     targetRow
-      })
-    }
   }
 
   // ──────────────────────────────────────────────────────────────
