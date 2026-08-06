@@ -287,88 +287,62 @@
 
 
 {# ── Source ───────────────────────────────────────────────────────
-   Where the prospect came from, plus optional "new record" badges.
-   `row.source` is matched against the known integrations; anything
-   recognized renders its badge.
+   Which prospecting system surfaced the person: a vendor badge with
+   that vendor's own mark.
 
-   Not in either CSV — the generator derives it per person from what
-   the account's CRM and Signals strings say about them (named on the
-   opportunity reads as Salesforce, named as a new hire in a signal
-   reads as press, and so on; the rules are in
-   tools/lab-data/build_lab_data.py). The `n/a` branch is first and
-   deliberate: falling through to a ZoomInfo badge for an unrecognized
-   value would invent provenance the data never claimed.
+   `row.source` is looked up in the registry below rather than run
+   through a branch per vendor, so adding one is a line here plus its
+   SVG in /assets/images/source_icons. Three outcomes:
+
+     • known value   — the vendor's mark and name
+     • unknown value — the name alone, no mark. Deliberately NOT a
+                       fallback vendor: badging an unrecognized value
+                       as ZoomInfo (what this used to do) invents
+                       provenance the data never claimed.
+     • empty / "n/a" — the muted marker, like every other empty cell
+
+   The marks are brand-coloured 14px files, so nothing here sets a
+   colour: `slds-badge__icon` would otherwise tint them. They're
+   referenced by `<use>` at the file itself — no fragment — which is
+   how the whole 14px artboard comes through, patterns included.
+
+   Two dropped badges used to stack under this one, driven by
+   `row.isNewContact` / `row.isNewAccount`. The flags are still on the
+   rows if that pair is ever wanted back; nothing else reads them.
+
+   This is the one macro that no longer round-trips with the lab copy
+   (_prospect_table_lab_cells.html): the labs' data still names
+   Salesforce and Report as sources, so their version keeps the old
+   branch-per-vendor chain and both "new record" badges.
 #}
 {% macro cellSource(row, span=1, merged=false) %}
+{% set SOURCE_ICONS = {
+  "Demandbase": "source_demandbase.svg",
+  "Apollo":     "source_apollo.svg",
+  "Moody’s":    "source_moodys.svg",
+  "6sense":     "source_6sense.svg",
+  "SalesIntel": "source_salesintel.svg",
+  "G2":         "source_g2.svg",
+  "ZoomInfo":   "source_zoominfo.svg",
+  "Gong":       "source_gong.svg",
+  "TechCrunch": "source_web.svg"
+} %}
+{% set sourceIcon = SOURCE_ICONS[row.source] %}
 {{ tdOpen(span, merged) }}
   <div class="slds-td-formatter slds-p-vertical_x-small" style="flex-direction: column">
     {% if not row.source or row.source == 'n/a' %}
     {{ na(row.source) }}
-    {% elif row.source == 'Salesforce' %}
-    <span class="slds-badge slds-badge_lightest slds-truncate">
-      <span class="slds-badge__icon slds-badge__icon_left" style="color:#0176D3">
-        <span class="slds-icon_container slds-current-color" title="Salesforce">
-          <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
-            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#salesforce1"></use>
-          </svg>
-        </span>
-      </span>Salesforce</span>
-    {% elif row.source == 'Report' %}
-    <span class="slds-badge slds-badge_lightest slds-truncate">
-      <span class="slds-badge__icon slds-badge__icon_left">
-        <span class="slds-icon_container slds-icon-standard-report" title="Report">
-          <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
-            <use xlink:href="/assets/icons/standard-sprite/svg/symbols.svg#report"></use>
-          </svg>
-        </span>
-      </span>Report</span>
-    {% elif row.source == 'Gong' %}
-    <span class="slds-badge slds-badge_lightest slds-truncate">
-      <span class="slds-badge__icon slds-badge__icon_left">
-        <span class="slds-icon_container slds-current-color" title="Gong">
-          <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
-            <use xlink:href="/assets/images/source_icons/source_gong.svg"></use>
-          </svg>
-        </span>
-      </span>Gong</span>
-    {% elif row.source == 'TechCrunch' %}
-    <span class="slds-badge slds-badge_lightest slds-truncate">
-      <span class="slds-badge__icon slds-badge__icon_left">
-        <span class="slds-icon_container slds-current-color" title="TechCrunch">
-          <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
-            <use xlink:href="/assets/images/source_icons/source_web.svg"></use>
-          </svg>
-        </span>
-      </span>TechCrunch</span>
     {% else %}
     <span class="slds-badge slds-badge_lightest slds-truncate">
-      <span class="slds-badge__icon slds-badge__icon_left" style="color:#EA1B15">
-        <span class="slds-icon_container slds-current-color" title="ZoomInfo">
-          <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
-            <use xlink:href="/assets/images/source_icons/source_zoominfo.svg"></use>
-          </svg>
-        </span>
-      </span>ZoomInfo</span>
-    {% endif %}
-    {% if row.isNewContact %}
-    <span class="slds-badge slds-badge_lightest slds-m-left_none slds-m-top_x-small slds-truncate">
+      {%- if sourceIcon %}
       <span class="slds-badge__icon slds-badge__icon_left">
-        <span class="slds-icon_container slds-icon-standard-contact" title="New Contact">
+        <span class="slds-icon_container">
           <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
-            <use xlink:href="/assets/icons/standard-sprite/svg/symbols.svg#contact"></use>
+            <use xlink:href="/assets/images/source_icons/{{ sourceIcon }}"></use>
           </svg>
         </span>
-      </span>New Contact</span>
-    {% endif %}
-    {% if row.isNewAccount %}
-    <span class="slds-badge slds-badge_lightest slds-m-left_none slds-m-top_x-small slds-truncate">
-      <span class="slds-badge__icon slds-badge__icon_left">
-        <span class="slds-icon_container slds-icon-standard-account" title="New Account">
-          <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
-            <use xlink:href="/assets/icons/standard-sprite/svg/symbols.svg#account"></use>
-          </svg>
-        </span>
-      </span>New Account</span>
+      </span>
+      {%- endif %}{{ row.source }}</span>
     {% endif %}
   </div>
 </td>

@@ -383,10 +383,13 @@
   // feeds the table, and it's also the roster the cadence card below
   // pages through, so the two can never disagree about who exists.
   //
-  // conv-001's rows are GENERATED — the same dataset the three
+  // conv-001's rows STARTED OUT generated — the same dataset the three
   // prospect-table labs render, built from the account and prospect
-  // CSVs by tools/lab-data/build_lab_data.py. Edit the CSVs and
-  // re-run it rather than editing rows here. Fields:
+  // CSVs by tools/lab-data/build_lab_data.py. They've since been hand
+  // edited here (Alex Bristor added, `source` reassigned), and that
+  // script only writes the labs' own data files, so re-running it will
+  // not touch these rows: edit them here, and treat the labs as a
+  // separate copy that has drifted. Fields:
   //   • Identity   — id, prospect, role, email, phone, icon
   //                  ("contact" | "lead", picks the avatar color),
   //                  recordType, recordId
@@ -396,9 +399,17 @@
   //                  list, rendered as bullets), signal (the first
   //                  one, and what the cadence's {signal} token
   //                  reads), lastTouch + lastTouchIso
-  //   • Provenance — source ("Salesforce" | "Report" | "Gong" |
-  //                  "TechCrunch" | anything else → ZoomInfo),
-  //                  isNewContact, isNewAccount (badges)
+  //   • Provenance — source, the prospecting system that surfaced the
+  //                  person: "Demandbase" | "Apollo" | "Moody’s" |
+  //                  "6sense" | "SalesIntel" | "G2" | "ZoomInfo" |
+  //                  "Gong" | "TechCrunch". Each has a mark in
+  //                  /assets/images/source_icons, registered in
+  //                  `cellSource` (_home_conversation_prospect_cells)
+  //                  — a value that isn't in that registry still
+  //                  badges, just without a mark. Also isNewContact,
+  //                  isNewAccount: kept on the rows, but the "New
+  //                  Contact" / "New Account" badges they drove are
+  //                  gone, so nothing reads them today.
   //   • Qualifying — tier (the badge in the Company cell), rank,
   //                  icpFit, crm + opportunities, pitch, themes
   //   • Owner      — owner. "n/a" here and on lastTouch: no source
@@ -411,11 +422,16 @@
   "conversations": {
     "conv-001": {
       "id": "conv-001",
-      "title": "Prospect outreach review",
+      // Matches the review card that drills in here
+      // (`review.reviewItems[]` with `conversationId: "conv-001"`) so the
+      // card, the page header, and the Recents row all read the same.
+      // Two other copies of this string have to move with it:
+      // `recentLabel` below and `fallbackTitle` in home_conversation.json.
+      "title": "Found new prospects",
       "subtitle": "Buyer Engage",
       "workflow": { "id": "buyer_engage", "label": "Buyer Engage" },
       "status":   "in_progress",
-      "recentLabel": "Prospect outreach review",
+      "recentLabel": "Found new prospects",
       // Thread content, in display order. Which of these paint
       // immediately and which arrive on a timer is decided by
       // `opening` below — a message named there is held back and
@@ -485,10 +501,12 @@
               // whyProspect, signals, rank, tier, icpFit, accountId,
               // themes, crm, pitch) match the other Rippling rows because
               // the doc carries the same account context they were built
-              // from. Two fields the doc does not state are read off it:
-              // `source` is Salesforce because the doc supplies a live
-              // Contact record ID and Lightning link, and `isNewContact`
-              // is false for the same reason.
+              // from. `isNewContact` is false because the doc supplies a
+              // live Contact record ID and Lightning link — he's already
+              // in the CRM. His `source` reads Demandbase like every
+              // other row's now does: a prospecting vendor rather than
+              // the CRM record, since the CRM is what the CRM column
+              // says.
               {
                 "id": "acct-05-p06", "prospect": "Alex Bristor", "role": "VP, Sales", "company": "Rippling",
                 "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YmiRNIAZ",
@@ -498,7 +516,7 @@
                 "whyProspect": "Built internal Dark TAM Engine (ML entity resolution, automated list building)",
                 "signals": ["290+ SDRs", "8+ GTM tools", "$450M Series G at $16.8B", "DACH founding BDR team", "New SDR Director Natalie Ortega"],
                 "signal": "290+ SDRs",
-                "source": "Salesforce", "isNewContact": false, "isNewAccount": false,
+                "source": "Demandbase", "isNewContact": false, "isNewAccount": false,
                 "rank": "5", "tier": "Solid", "icpFit": "Solid — built internal Dark TAM Engine",
                 "accountId": "001Wt00001eZqgwIAC", "themes": "1, 2, 4, 7, 8",
                 "crm": "Active SDR Ramp Acceleration opp ($260K Discovery)",
@@ -532,7 +550,7 @@
                 "whyProspect": "SDR team 5x'd in 2 years (120+ reps), transitioning PLG→outbound, using competitor Common Room, hiring SDRs globally, $500M+ ARR, pre-IPO",
                 "signals": ["Hiring SDRs/BDRs globally", "Active outbound buildout", "Common Room customer", "New Head of Enterprise Americas (Katie Layng)", "Built internal Salestino bot", "6+ GTM tools", "Job posts explicitly mention AI/outbound"],
                 "signal": "Hiring SDRs/BDRs globally",
-                "source": "Report", "isNewContact": false, "isNewAccount": false,
+                "source": "Apollo", "isNewContact": false, "isNewAccount": false,
                 "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
                 "accountId": "001Wt00001eZpBOIA0", "themes": "1, 2, 4, 6, 7, 8",
                 "crm": "Active GTM Platform opp ($180K Discovery) + Renewal ($145K)",
@@ -549,7 +567,7 @@
                 "whyProspect": "SDR team 5x'd in 2 years (120+ reps), transitioning PLG→outbound, using competitor Common Room, hiring SDRs globally, $500M+ ARR, pre-IPO",
                 "signals": ["Hiring SDRs/BDRs globally", "Active outbound buildout", "Common Room customer", "New Head of Enterprise Americas (Katie Layng)", "Built internal Salestino bot", "6+ GTM tools", "Job posts explicitly mention AI/outbound"],
                 "signal": "Hiring SDRs/BDRs globally",
-                "source": "Report", "isNewContact": false, "isNewAccount": false,
+                "source": "6sense", "isNewContact": false, "isNewAccount": false,
                 "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
                 "accountId": "001Wt00001eZpBOIA0", "themes": "1, 2, 4, 6, 7, 8",
                 "crm": "Active GTM Platform opp ($180K Discovery) + Renewal ($145K)",
@@ -566,7 +584,7 @@
                 "whyProspect": "SDR team 5x'd in 2 years (120+ reps), transitioning PLG→outbound, using competitor Common Room, hiring SDRs globally, $500M+ ARR, pre-IPO",
                 "signals": ["Hiring SDRs/BDRs globally", "Active outbound buildout", "Common Room customer", "New Head of Enterprise Americas (Katie Layng)", "Built internal Salestino bot", "6+ GTM tools", "Job posts explicitly mention AI/outbound"],
                 "signal": "Hiring SDRs/BDRs globally",
-                "source": "Report", "isNewContact": false, "isNewAccount": false,
+                "source": "SalesIntel", "isNewContact": false, "isNewAccount": false,
                 "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
                 "accountId": "001Wt00001eZpBOIA0", "themes": "1, 2, 4, 6, 7, 8",
                 "crm": "Active GTM Platform opp ($180K Discovery) + Renewal ($145K)",
@@ -600,7 +618,7 @@
                 "whyProspect": "SDR team 5x'd in 2 years (120+ reps), transitioning PLG→outbound, using competitor Common Room, hiring SDRs globally, $500M+ ARR, pre-IPO",
                 "signals": ["Hiring SDRs/BDRs globally", "Active outbound buildout", "Common Room customer", "New Head of Enterprise Americas (Katie Layng)", "Built internal Salestino bot", "6+ GTM tools", "Job posts explicitly mention AI/outbound"],
                 "signal": "Hiring SDRs/BDRs globally",
-                "source": "Gong", "isNewContact": false, "isNewAccount": false,
+                "source": "G2", "isNewContact": false, "isNewAccount": false,
                 "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
                 "accountId": "001Wt00001eZpBOIA0", "themes": "1, 2, 4, 6, 7, 8",
                 "crm": "Active GTM Platform opp ($180K Discovery) + Renewal ($145K)",
@@ -634,7 +652,7 @@
                 "whyProspect": "SDR team 5x'd in 2 years (120+ reps), transitioning PLG→outbound, using competitor Common Room, hiring SDRs globally, $500M+ ARR, pre-IPO",
                 "signals": ["Hiring SDRs/BDRs globally", "Active outbound buildout", "Common Room customer", "New Head of Enterprise Americas (Katie Layng)", "Built internal Salestino bot", "6+ GTM tools", "Job posts explicitly mention AI/outbound"],
                 "signal": "Hiring SDRs/BDRs globally",
-                "source": "ZoomInfo", "isNewContact": true, "isNewAccount": false,
+                "source": "Demandbase", "isNewContact": true, "isNewAccount": false,
                 "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
                 "accountId": "001Wt00001eZpBOIA0", "themes": "1, 2, 4, 6, 7, 8",
                 "crm": "Active GTM Platform opp ($180K Discovery) + Renewal ($145K)",
@@ -651,7 +669,7 @@
                 "whyProspect": "SDR team 5x'd in 2 years (120+ reps), transitioning PLG→outbound, using competitor Common Room, hiring SDRs globally, $500M+ ARR, pre-IPO",
                 "signals": ["Hiring SDRs/BDRs globally", "Active outbound buildout", "Common Room customer", "New Head of Enterprise Americas (Katie Layng)", "Built internal Salestino bot", "6+ GTM tools", "Job posts explicitly mention AI/outbound"],
                 "signal": "Hiring SDRs/BDRs globally",
-                "source": "ZoomInfo", "isNewContact": true, "isNewAccount": false,
+                "source": "Apollo", "isNewContact": true, "isNewAccount": false,
                 "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
                 "accountId": "001Wt00001eZpBOIA0", "themes": "1, 2, 4, 6, 7, 8",
                 "crm": "Active GTM Platform opp ($180K Discovery) + Renewal ($145K)",
@@ -685,7 +703,7 @@
                 "whyProspect": "Hiring SDRs across 8 offices; Posted GTM StratOps SDR & AI role explicitly seeking AI-driven SDR productivity; $3.67B revenue growing 28-32% YoY",
                 "signals": ["SDR hiring globally", "AI SDR productivity role", "PLG-to-ABM transformation", "Data cleanliness pain acknowledged", "Adaptive ML acquisition", "Active $220K RevOps opp"],
                 "signal": "SDR hiring globally",
-                "source": "ZoomInfo", "isNewContact": true, "isNewAccount": false,
+                "source": "6sense", "isNewContact": true, "isNewAccount": false,
                 "rank": "2", "tier": "Red Hot", "icpFit": "Full match",
                 "accountId": "001Wt00001eZvyNIAS", "themes": "3, 7, 8, 9",
                 "crm": "Active RevOps Enablement opp ($220K Discovery) with VP RevOps Sarah Chen as champion",
@@ -702,7 +720,7 @@
                 "whyProspect": "Hiring SDRs across 8 offices; Posted GTM StratOps SDR & AI role explicitly seeking AI-driven SDR productivity; $3.67B revenue growing 28-32% YoY",
                 "signals": ["SDR hiring globally", "AI SDR productivity role", "PLG-to-ABM transformation", "Data cleanliness pain acknowledged", "Adaptive ML acquisition", "Active $220K RevOps opp"],
                 "signal": "SDR hiring globally",
-                "source": "ZoomInfo", "isNewContact": true, "isNewAccount": false,
+                "source": "Apollo", "isNewContact": true, "isNewAccount": false,
                 "rank": "2", "tier": "Red Hot", "icpFit": "Full match",
                 "accountId": "001Wt00001eZvyNIAS", "themes": "3, 7, 8, 9",
                 "crm": "Active RevOps Enablement opp ($220K Discovery) with VP RevOps Sarah Chen as champion",
@@ -719,7 +737,7 @@
                 "whyProspect": "Hiring SDRs across 8 offices; Posted GTM StratOps SDR & AI role explicitly seeking AI-driven SDR productivity; $3.67B revenue growing 28-32% YoY",
                 "signals": ["SDR hiring globally", "AI SDR productivity role", "PLG-to-ABM transformation", "Data cleanliness pain acknowledged", "Adaptive ML acquisition", "Active $220K RevOps opp"],
                 "signal": "SDR hiring globally",
-                "source": "ZoomInfo", "isNewContact": true, "isNewAccount": false,
+                "source": "SalesIntel", "isNewContact": true, "isNewAccount": false,
                 "rank": "2", "tier": "Red Hot", "icpFit": "Full match",
                 "accountId": "001Wt00001eZvyNIAS", "themes": "3, 7, 8, 9",
                 "crm": "Active RevOps Enablement opp ($220K Discovery) with VP RevOps Sarah Chen as champion",
@@ -753,7 +771,7 @@
                 "whyProspect": "Hiring SDRs across 8 offices; Posted GTM StratOps SDR & AI role explicitly seeking AI-driven SDR productivity; $3.67B revenue growing 28-32% YoY",
                 "signals": ["SDR hiring globally", "AI SDR productivity role", "PLG-to-ABM transformation", "Data cleanliness pain acknowledged", "Adaptive ML acquisition", "Active $220K RevOps opp"],
                 "signal": "SDR hiring globally",
-                "source": "ZoomInfo", "isNewContact": true, "isNewAccount": false,
+                "source": "Demandbase", "isNewContact": true, "isNewAccount": false,
                 "rank": "2", "tier": "Red Hot", "icpFit": "Full match",
                 "accountId": "001Wt00001eZvyNIAS", "themes": "3, 7, 8, 9",
                 "crm": "Active RevOps Enablement opp ($220K Discovery) with VP RevOps Sarah Chen as champion",
@@ -770,7 +788,7 @@
                 "whyProspect": "Hiring SDRs across 8 offices; Posted GTM StratOps SDR & AI role explicitly seeking AI-driven SDR productivity; $3.67B revenue growing 28-32% YoY",
                 "signals": ["SDR hiring globally", "AI SDR productivity role", "PLG-to-ABM transformation", "Data cleanliness pain acknowledged", "Adaptive ML acquisition", "Active $220K RevOps opp"],
                 "signal": "SDR hiring globally",
-                "source": "Gong", "isNewContact": false, "isNewAccount": false,
+                "source": "G2", "isNewContact": false, "isNewAccount": false,
                 "rank": "2", "tier": "Red Hot", "icpFit": "Full match",
                 "accountId": "001Wt00001eZvyNIAS", "themes": "3, 7, 8, 9",
                 "crm": "Active RevOps Enablement opp ($220K Discovery) with VP RevOps Sarah Chen as champion",
@@ -787,7 +805,7 @@
                 "whyProspect": "Hiring SDRs across 8 offices; Posted GTM StratOps SDR & AI role explicitly seeking AI-driven SDR productivity; $3.67B revenue growing 28-32% YoY",
                 "signals": ["SDR hiring globally", "AI SDR productivity role", "PLG-to-ABM transformation", "Data cleanliness pain acknowledged", "Adaptive ML acquisition", "Active $220K RevOps opp"],
                 "signal": "SDR hiring globally",
-                "source": "ZoomInfo", "isNewContact": true, "isNewAccount": false,
+                "source": "Moody’s", "isNewContact": true, "isNewAccount": false,
                 "rank": "2", "tier": "Red Hot", "icpFit": "Full match",
                 "accountId": "001Wt00001eZvyNIAS", "themes": "3, 7, 8, 9",
                 "crm": "Active RevOps Enablement opp ($220K Discovery) with VP RevOps Sarah Chen as champion",
@@ -804,7 +822,7 @@
                 "whyProspect": "120+ SDRs scaled 4x; $300M ARR accelerating; EMEA expansion; Q3 re-engagement window explicitly requested; In-house AI SDR at crossroads",
                 "signals": ["Hiring SDRs globally", "8+ GTM tools (tool sprawl)", "Phone-first outbound transition", "$150M Series D", "New VP Sales Americas & EMEA", "New CFO (IPO readiness)"],
                 "signal": "Hiring SDRs globally",
-                "source": "Salesforce", "isNewContact": false, "isNewAccount": false,
+                "source": "Gong", "isNewContact": false, "isNewAccount": false,
                 "rank": "3", "tier": "Red Hot", "icpFit": "Perfect",
                 "accountId": "001Wt00001eZwETIA0", "themes": "1, 2, 7, 9",
                 "crm": "Active Outbound Motion opp ($120K Qualification); Jordan Reyes requested Q3 re-engagement",
@@ -821,7 +839,7 @@
                 "whyProspect": "120+ SDRs scaled 4x; $300M ARR accelerating; EMEA expansion; Q3 re-engagement window explicitly requested; In-house AI SDR at crossroads",
                 "signals": ["Hiring SDRs globally", "8+ GTM tools (tool sprawl)", "Phone-first outbound transition", "$150M Series D", "New VP Sales Americas & EMEA", "New CFO (IPO readiness)"],
                 "signal": "Hiring SDRs globally",
-                "source": "Report", "isNewContact": false, "isNewAccount": false,
+                "source": "Moody’s", "isNewContact": false, "isNewAccount": false,
                 "rank": "3", "tier": "Red Hot", "icpFit": "Perfect",
                 "accountId": "001Wt00001eZwETIA0", "themes": "1, 2, 7, 9",
                 "crm": "Active Outbound Motion opp ($120K Qualification); Jordan Reyes requested Q3 re-engagement",
@@ -838,7 +856,7 @@
                 "whyProspect": "120+ SDRs scaled 4x; $300M ARR accelerating; EMEA expansion; Q3 re-engagement window explicitly requested; In-house AI SDR at crossroads",
                 "signals": ["Hiring SDRs globally", "8+ GTM tools (tool sprawl)", "Phone-first outbound transition", "$150M Series D", "New VP Sales Americas & EMEA", "New CFO (IPO readiness)"],
                 "signal": "Hiring SDRs globally",
-                "source": "ZoomInfo", "isNewContact": true, "isNewAccount": false,
+                "source": "Apollo", "isNewContact": true, "isNewAccount": false,
                 "rank": "3", "tier": "Red Hot", "icpFit": "Perfect",
                 "accountId": "001Wt00001eZwETIA0", "themes": "1, 2, 7, 9",
                 "crm": "Active Outbound Motion opp ($120K Qualification); Jordan Reyes requested Q3 re-engagement",
@@ -872,7 +890,7 @@
                 "whyProspect": "Built sophisticated in-house outbound engine (5-7 growth engineers, Dark TAM Engine equivalent)",
                 "signals": ["130+ SDRs onboarding 10-12/month", "20+ GTM tools", "$750M Series F at $44B", "Billhop acquisition (UK/EU)", "SVP Sales Max Freeman promoted Jun 2026"],
                 "signal": "130+ SDRs onboarding 10-12/month",
-                "source": "Report", "isNewContact": false, "isNewAccount": false,
+                "source": "6sense", "isNewContact": false, "isNewAccount": false,
                 "rank": "4", "tier": "Solid", "icpFit": "n/a",
                 "accountId": "001Wt00001eZwCrIAK", "themes": "1, 2, 4, 8",
                 "crm": "Active SDR Automation opp ($145K Discovery)",
@@ -889,7 +907,7 @@
                 "whyProspect": "Built sophisticated in-house outbound engine (5-7 growth engineers, Dark TAM Engine equivalent)",
                 "signals": ["130+ SDRs onboarding 10-12/month", "20+ GTM tools", "$750M Series F at $44B", "Billhop acquisition (UK/EU)", "SVP Sales Max Freeman promoted Jun 2026"],
                 "signal": "130+ SDRs onboarding 10-12/month",
-                "source": "Report", "isNewContact": false, "isNewAccount": false,
+                "source": "SalesIntel", "isNewContact": false, "isNewAccount": false,
                 "rank": "4", "tier": "Solid", "icpFit": "n/a",
                 "accountId": "001Wt00001eZwCrIAK", "themes": "1, 2, 4, 8",
                 "crm": "Active SDR Automation opp ($145K Discovery)",
@@ -923,7 +941,7 @@
                 "whyProspect": "Built sophisticated in-house outbound engine (5-7 growth engineers, Dark TAM Engine equivalent)",
                 "signals": ["130+ SDRs onboarding 10-12/month", "20+ GTM tools", "$750M Series F at $44B", "Billhop acquisition (UK/EU)", "SVP Sales Max Freeman promoted Jun 2026"],
                 "signal": "130+ SDRs onboarding 10-12/month",
-                "source": "Gong", "isNewContact": false, "isNewAccount": false,
+                "source": "Demandbase", "isNewContact": false, "isNewAccount": false,
                 "rank": "4", "tier": "Solid", "icpFit": "n/a",
                 "accountId": "001Wt00001eZwCrIAK", "themes": "1, 2, 4, 8",
                 "crm": "Active SDR Automation opp ($145K Discovery)",
@@ -974,7 +992,7 @@
                 "whyProspect": "Built internal Dark TAM Engine (ML entity resolution, automated list building)",
                 "signals": ["290+ SDRs", "8+ GTM tools", "$450M Series G at $16.8B", "DACH founding BDR team", "New SDR Director Natalie Ortega"],
                 "signal": "290+ SDRs",
-                "source": "Report", "isNewContact": false, "isNewAccount": false,
+                "source": "Apollo", "isNewContact": false, "isNewAccount": false,
                 "rank": "5", "tier": "Solid", "icpFit": "Solid — built internal Dark TAM Engine",
                 "accountId": "001Wt00001eZqgwIAC", "themes": "1, 2, 4, 7, 8",
                 "crm": "Active SDR Ramp Acceleration opp ($260K Discovery)",
@@ -991,7 +1009,7 @@
                 "whyProspect": "Built internal Dark TAM Engine (ML entity resolution, automated list building)",
                 "signals": ["290+ SDRs", "8+ GTM tools", "$450M Series G at $16.8B", "DACH founding BDR team", "New SDR Director Natalie Ortega"],
                 "signal": "290+ SDRs",
-                "source": "Report", "isNewContact": false, "isNewAccount": false,
+                "source": "ZoomInfo", "isNewContact": false, "isNewAccount": false,
                 "rank": "5", "tier": "Solid", "icpFit": "Solid — built internal Dark TAM Engine",
                 "accountId": "001Wt00001eZqgwIAC", "themes": "1, 2, 4, 7, 8",
                 "crm": "Active SDR Ramp Acceleration opp ($260K Discovery)",
@@ -1008,7 +1026,7 @@
                 "whyProspect": "Built internal Dark TAM Engine (ML entity resolution, automated list building)",
                 "signals": ["290+ SDRs", "8+ GTM tools", "$450M Series G at $16.8B", "DACH founding BDR team", "New SDR Director Natalie Ortega"],
                 "signal": "290+ SDRs",
-                "source": "Report", "isNewContact": false, "isNewAccount": false,
+                "source": "G2", "isNewContact": false, "isNewAccount": false,
                 "rank": "5", "tier": "Solid", "icpFit": "Solid — built internal Dark TAM Engine",
                 "accountId": "001Wt00001eZqgwIAC", "themes": "1, 2, 4, 7, 8",
                 "crm": "Active SDR Ramp Acceleration opp ($260K Discovery)",
@@ -1025,7 +1043,7 @@
                 "whyProspect": "n/a",
                 "signals": ["New CRO Tyler Bryson (Jun 2026)", "80+ SDRs Americas", "$53B PayPal bid", "Usage-below-plan risk", "Analytics module interest"],
                 "signal": "New CRO Tyler Bryson (Jun 2026)",
-                "source": "Report", "isNewContact": false, "isNewAccount": false,
+                "source": "Moody’s", "isNewContact": false, "isNewAccount": false,
                 "rank": "6", "tier": "Solid", "icpFit": "Existing customer — renewal/expansion",
                 "accountId": "001Wt00001eZj2lIAC", "themes": "1, 5, 7, 13",
                 "crm": "Active Enterprise Renewal ($320K Negotiation, close Sep 3)",
@@ -1042,7 +1060,7 @@
                 "whyProspect": "n/a",
                 "signals": ["New CRO Tyler Bryson (Jun 2026)", "80+ SDRs Americas", "$53B PayPal bid", "Usage-below-plan risk", "Analytics module interest"],
                 "signal": "New CRO Tyler Bryson (Jun 2026)",
-                "source": "Gong", "isNewContact": false, "isNewAccount": false,
+                "source": "6sense", "isNewContact": false, "isNewAccount": false,
                 "rank": "6", "tier": "Solid", "icpFit": "Existing customer — renewal/expansion",
                 "accountId": "001Wt00001eZj2lIAC", "themes": "1, 5, 7, 13",
                 "crm": "Active Enterprise Renewal ($320K Negotiation, close Sep 3)",
@@ -1059,7 +1077,7 @@
                 "whyProspect": "n/a",
                 "signals": ["New CRO Tyler Bryson (Jun 2026)", "80+ SDRs Americas", "$53B PayPal bid", "Usage-below-plan risk", "Analytics module interest"],
                 "signal": "New CRO Tyler Bryson (Jun 2026)",
-                "source": "Gong", "isNewContact": false, "isNewAccount": false,
+                "source": "Demandbase", "isNewContact": false, "isNewAccount": false,
                 "rank": "6", "tier": "Solid", "icpFit": "Existing customer — renewal/expansion",
                 "accountId": "001Wt00001eZj2lIAC", "themes": "1, 5, 7, 13",
                 "crm": "Active Enterprise Renewal ($320K Negotiation, close Sep 3)",
@@ -1093,7 +1111,7 @@
                 "whyProspect": "n/a",
                 "signals": ["$50M Series C (Feb 2026)", "New Head of Sales EMEA David Lee", "Global expansion (London/Singapore/Tokyo)", "Tool consolidation (5→1)", "Active $240K opp"],
                 "signal": "$50M Series C (Feb 2026)",
-                "source": "Salesforce", "isNewContact": false, "isNewAccount": false,
+                "source": "SalesIntel", "isNewContact": false, "isNewAccount": false,
                 "rank": "8", "tier": "Solid", "icpFit": "n/a",
                 "accountId": "001Wt00001eRF6hIAG", "themes": "5, 14",
                 "crm": "Active Platform Expansion opp ($240K Solution Validation)",
@@ -1110,7 +1128,7 @@
                 "whyProspect": "n/a",
                 "signals": ["$50M Series C (Feb 2026)", "New Head of Sales EMEA David Lee", "Global expansion (London/Singapore/Tokyo)", "Tool consolidation (5→1)", "Active $240K opp"],
                 "signal": "$50M Series C (Feb 2026)",
-                "source": "Salesforce", "isNewContact": false, "isNewAccount": false,
+                "source": "G2", "isNewContact": false, "isNewAccount": false,
                 "rank": "8", "tier": "Solid", "icpFit": "n/a",
                 "accountId": "001Wt00001eRF6hIAG", "themes": "5, 14",
                 "crm": "Active Platform Expansion opp ($240K Solution Validation)",
@@ -1418,22 +1436,36 @@
                     ]
                   },
                   // ── Alex Bristor · Rippling ─────────────────────────
-                  // Copy is the three emails written in
-                  // docs/alex-bristor.md, kept close to verbatim — hence
-                  // three touches, all email, where the two sequences
-                  // below run five across three channels. The doc has no
-                  // LinkedIn or call touch and inventing one would be
-                  // writing outreach the author didn't.
+                  // The three EMAILS are the copy written in
+                  // docs/alex-bristor.md, kept close to verbatim.
                   //
-                  // The evidence layer around that copy — popover titles,
-                  // questions and bodies, source labels, the Email
-                  // Type / Reasoning pairs and the alternates — is drafted
-                  // here to match the two sequences below, since the doc
-                  // carries none of it. Every popover body states a fact
-                  // from the doc's Account Context (8+ GTM tools, 290+
-                  // SDRs, the DACH founding BDR team, the Dark TAM
-                  // Engine); only the generic benchmarks are house
-                  // boilerplate, same as in Natalie's and Max's.
+                  // The four other touches — LinkedIn 1 and Calls 1-3 —
+                  // are PLACEHOLDERS drafted here, added on request to
+                  // give this sequence the channel mix the two below
+                  // have. Nothing in the doc backs their wording, so
+                  // they're a starting point to edit, not authored
+                  // outreach. What they do stay inside is the account's
+                  // known facts: each popover cites something from the
+                  // doc's Account Context (8+ GTM tools, 290+ SDRs, the
+                  // DACH founding BDR team, the Dark TAM Engine, the
+                  // $260K SDR Ramp Acceleration opp, Natalie Ortega as
+                  // the new SDR Director), with the same house
+                  // benchmarks the other sequences use.
+                  //
+                  // Running order: Email 1 · LinkedIn 1 · Call 1 ·
+                  // Email 2 · Call 2 · Call 3 · Email 3 — social before
+                  // the first dial, the voicemail paired with the nudge
+                  // it references, and the referral attempt before the
+                  // exit note rather than after it. Reordering is moving
+                  // a step object, but the per-channel ordinals in
+                  // `headerLabel` are hand-written, so renumber those to
+                  // match.
+                  //
+                  // The evidence layer around the doc's own copy —
+                  // popover titles, questions and bodies, source labels,
+                  // the Email Type / Reasoning pairs and the alternates —
+                  // was drafted here on the same basis, since the doc
+                  // carries none of it.
                   //
                   // The doc's copy says "cross-sell SDRs" while this
                   // account's story is the enterprise/DACH motion. Rather
@@ -1441,10 +1473,11 @@
                   // reframes it — so the reconcile is a click in the UI
                   // instead of a silent edit here.
                   "acct-05-p06": {
-                    // Overrides the card's "Multi-channel sequence" line,
-                    // which isn't true of three emails. No pacing claim —
-                    // the doc doesn't state one.
-                    "summary": "Email-only, first touch through exit.",
+                    // No `summary` override: the card's own "Multi-channel
+                    // sequence, paced over three weeks." now describes
+                    // this accurately. It used to read "Email-only, first
+                    // touch through exit.", which the added touches made
+                    // false.
                     "steps": [
                       {
                         "type": "email",
@@ -1479,6 +1512,66 @@
                         ]
                       },
                       {
+                        "type": "linkedin",
+                        "headerLabel": "LinkedIn 1:",
+                        "headerValue": "Connection request",
+                        "body": "Hi Alex — saw Rippling is standing up the <span class='email-highlight' data-link='context' data-popover-title='Trigger' data-popover-question='Is this a good opening line?' data-popover-body='DACH founding BDR team launching; new SDR Director Natalie Ortega.' data-source-label='Web' data-source-icon='/assets/images/source_icons/source_web.svg'>DACH founding BDR team</span>. Curious whether <span class='email-highlight' data-link='context' data-popover-title='Context' data-popover-question='Is this the right thing to ask about?' data-popover-body='Built internal Dark TAM Engine — ML entity resolution, automated list building.' data-source-label='Web' data-source-icon='/assets/images/source_icons/source_web.svg'>the Dark TAM Engine travels to a new geo</span> or gets rebuilt there. Happy to trade notes either way.",
+                        "details": [
+                          { "title": "Message Type", "value": "Connection request" },
+                          { "title": "Reasoning",    "value": "Asks about the thing Alex built rather than pitching against it, which is the version of this a VP accepts from a stranger. Lands before the first dial so the name is familiar when the phone rings, and stays under LinkedIn's 300-character limit." }
+                        ],
+                        "sources": [
+                          { "label": "Web",      "icon": "/assets/images/source_icons/source_web.svg" },
+                          { "label": "ZoomInfo", "icon": "/assets/images/source_icons/source_zoominfo.svg" }
+                        ],
+                        "regenerations": [
+                          {
+                            "type": "linkedin",
+                            "headerLabel": "LinkedIn 1:",
+                            "headerValue": "Connection request",
+                            "body": "Hi Alex — with <span class='email-highlight' data-link='context' data-popover-title='Trigger' data-popover-question='Is this a better hook?' data-popover-body='290+ SDRs across the org; 8+ GTM tools in the current stack.' data-source-label='ZoomInfo' data-source-icon='/assets/images/source_icons/source_zoominfo.svg'>290+ SDRs on eight-plus tools</span>, curious where you've drawn the build-versus-buy line lately. Happy to share where peer teams landed.",
+                            "details": [
+                              { "title": "Message Type", "value": "Connection request (revised)" },
+                              { "title": "Reasoning",    "value": "Trades the DACH trigger for the build-versus-buy question Alex owns personally — the version to send once the launch news has gone stale." }
+                            ],
+                            "sources": [
+                              { "label": "ZoomInfo", "icon": "/assets/images/source_icons/source_zoominfo.svg" }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "call",
+                        "headerLabel": "Call 1:",
+                        "headerValue": "Discovery",
+                        "goal": "Find out whether the DACH launch starts on the internal engine or the vendor stack — and who decides.",
+                        "body": "<strong>Open:</strong> Alex — two minutes on <span class='email-highlight' data-link='context' data-popover-title='Opening Line' data-popover-question='Is this a good opening line?' data-popover-body='DACH founding BDR team launching; new SDR Director Natalie Ortega.' data-source-label='Web' data-source-icon='/assets/images/source_icons/source_web.svg'>the DACH launch</span>, then I'm out of your way.<br><br><strong>Discover:</strong> When the founding BDR team lands, do they start on the Dark TAM Engine or on the vendor stack? Who signs off on that?<br><br><strong>Position:</strong> A peer team replaced <span class='email-highlight' data-link='solution' data-popover-title='Value Prop' data-popover-question='Is this a good value prop?' data-popover-body='8+ GTM tools active in the account tech profile; median Salesforce package install and field mapping under 30 minutes.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>eight vendors with one workflow in a 30-minute Salesforce setup</span> — no new console for the reps.<br><br><strong>CTA:</strong> Worth a working session with whoever owns the stack?",
+                        "details": [
+                          { "title": "Call Type", "value": "Discovery" },
+                          { "title": "Reasoning", "value": "Opens against a date instead of a pitch, then asks the one thing the research can't answer: whether DACH starts on the internal engine. The CTA asks for a working session with the stack owner, not a decision from Alex." }
+                        ],
+                        "sources": [
+                          { "label": "Web",        "icon": "/assets/images/source_icons/source_web.svg" },
+                          { "label": "Salesforce", "icon": "/assets/images/source_icons/source_salesforce.svg" }
+                        ],
+                        "regenerations": [
+                          {
+                            "type": "call",
+                            "headerLabel": "Call 1:",
+                            "headerValue": "Discovery",
+                            "goal": "Find out whether the DACH launch starts on the internal engine or the vendor stack — and who decides.",
+                            "body": "<strong>Open:</strong> Thanks for picking up — ten minutes, and I'll put anything I promise in writing.<br><br><strong>Discover:</strong> Walk me through a cross-sell list build as it runs today. Where does it stall?<br><br><strong>Position:</strong> The stall we usually find is <span class='email-highlight' data-link='pain' data-popover-title='Pain Statement' data-popover-question='Is this the right pain?' data-popover-body='Reps reconcile duplicate records across vendors before a list is usable.' data-source-label='ZoomInfo' data-source-icon='/assets/images/source_icons/source_zoominfo.svg'>reconciling duplicates across vendors</span> before the list is usable.<br><br><strong>CTA:</strong> Want me to map that against your stack on a shared screen?",
+                            "details": [
+                              { "title": "Call Type", "value": "Discovery (revised)" },
+                              { "title": "Reasoning", "value": "Drops the DACH opener for a time-box and an open question — the version to use when the LinkedIn touch already spent the launch." }
+                            ],
+                            "sources": [
+                              { "label": "ZoomInfo", "icon": "/assets/images/source_icons/source_zoominfo.svg" }
+                            ]
+                          }
+                        ]
+                      },
+                      {
                         "type": "email",
                         "headerLabel": "Email 2:",
                         "headerValue": "Nudge",
@@ -1505,6 +1598,68 @@
                             ],
                             "sources": [
                               { "label": "Web", "icon": "/assets/images/source_icons/source_web.svg" }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "call",
+                        "headerLabel": "Call 2:",
+                        "headerValue": "Voicemail",
+                        "goal": "Leave a voicemail the nudge email can point back to. No callback asked for.",
+                        "body": "<strong>Voicemail:</strong> Alex — calling about the note I sent on <span class='email-highlight' data-link='context' data-popover-title='Context' data-popover-question='Is this worth repeating on a voicemail?' data-popover-body='8+ GTM tools active in the account tech profile — ZoomInfo, Apollo, Clay, Outreach, Demandbase and Lusha among them.' data-source-label='ZoomInfo' data-source-icon='/assets/images/source_icons/source_zoominfo.svg'>the eight tools your SDRs touch to build one list</span>. The two-minute walkthrough is in your inbox, and <span class='email-highlight' data-link='solution' data-popover-title='Value Prop' data-popover-question='Is this the right proof point to leave?' data-popover-body='Bluebirds runs natively in Salesforce — 30-minute setup, no separate console for reps.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>everything in it happens inside Salesforce</span>. No need to call back — I'll follow the thread there.<br><br><strong>Then:</strong> forward the nudge the same day, first line “left you a voicemail”.",
+                        "details": [
+                          { "title": "Call Type", "value": "Voicemail" },
+                          { "title": "Reasoning", "value": "Paired with the nudge on purpose: a voicemail that names the email and an email that names the voicemail read as one touch in two places rather than two people chasing. Asks for nothing, so there's nothing to decline." }
+                        ],
+                        "sources": [
+                          { "label": "ZoomInfo",   "icon": "/assets/images/source_icons/source_zoominfo.svg" },
+                          { "label": "Salesforce", "icon": "/assets/images/source_icons/source_salesforce.svg" }
+                        ],
+                        "regenerations": [
+                          {
+                            "type": "call",
+                            "headerLabel": "Call 2:",
+                            "headerValue": "Voicemail",
+                            "goal": "Leave a voicemail the nudge email can point back to. No callback asked for.",
+                            "body": "<strong>Voicemail:</strong> Alex — one reason for the call: <span class='email-highlight' data-link='context' data-popover-title='Trigger' data-popover-question='Is this a sharper hook for a voicemail?' data-popover-body='DACH founding BDR team launching; new SDR Director Natalie Ortega.' data-source-label='Web' data-source-icon='/assets/images/source_icons/source_web.svg'>the DACH team starts soon</span>, and in a new geo every tool in the stack is another week of their ramp. The walkthrough is in your inbox if that's worth twenty minutes.<br><br><strong>Then:</strong> no paired email — let the nudge stand on its own.",
+                            "details": [
+                              { "title": "Call Type", "value": "Voicemail (revised)" },
+                              { "title": "Reasoning", "value": "Swaps the tool list for what the stack costs a new geo, and skips the paired email — the version to leave when the nudge already went out earlier in the week." }
+                            ],
+                            "sources": [
+                              { "label": "Web", "icon": "/assets/images/source_icons/source_web.svg" }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "call",
+                        "headerLabel": "Call 3:",
+                        "headerValue": "Last attempt",
+                        "goal": "One live attempt before the file closes. If enrichment isn't Alex's, leave with a name.",
+                        "body": "<strong>Open:</strong> Alex — last try from me before I close the file out.<br><br><strong>Ask:</strong> Is enrichment still yours, or does it sit with <span class='email-highlight' data-link='context' data-popover-title='Context' data-popover-question='Is this the right person to name?' data-popover-body='New SDR Director Natalie Ortega; DACH founding BDR team launching.' data-source-label='Web' data-source-icon='/assets/images/source_icons/source_web.svg'>Natalie's org now</span>?<br><br><strong>Position:</strong> Either way there's <span class='email-highlight' data-link='solution' data-popover-title='Context' data-popover-question='Is naming the open opp useful here?' data-popover-body='Active SDR Ramp Acceleration opp — $260K, Discovery stage.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>an open SDR Ramp Acceleration line on your side</span>, so this doesn't start from zero.<br><br><strong>CTA:</strong> If it isn't you, a name is all I need.",
+                        "details": [
+                          { "title": "Call Type", "value": "Last attempt" },
+                          { "title": "Reasoning", "value": "A referral ask rather than a pitch: six touches in, the likeliest reason for silence is that enrichment moved to the new SDR Director. Naming the open opp gives the call standing without asking Alex to defend it." }
+                        ],
+                        "sources": [
+                          { "label": "Web",        "icon": "/assets/images/source_icons/source_web.svg" },
+                          { "label": "Salesforce", "icon": "/assets/images/source_icons/source_salesforce.svg" }
+                        ],
+                        "regenerations": [
+                          {
+                            "type": "call",
+                            "headerLabel": "Call 3:",
+                            "headerValue": "Last attempt",
+                            "goal": "One live attempt before the file closes. If enrichment isn't Alex's, leave with a name.",
+                            "body": "<strong>Open:</strong> Alex — thirty seconds, then I'll stop.<br><br><strong>Ask:</strong> Did the stack question ever reach finance? That's usually where <span class='email-highlight' data-link='pain' data-popover-title='Future Trigger' data-popover-question='Is this the right reason to try once more?' data-popover-body='Stack consolidation most often re-enters the agenda as a finance-led cost review.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>consolidation comes back as a cost review</span>.<br><br><strong>CTA:</strong> Name the quarter to call back in and I'll hold it there.",
+                            "details": [
+                              { "title": "Call Type", "value": "Last attempt (revised)" },
+                              { "title": "Reasoning", "value": "Trades the referral ask for a timing one — the better close when the earlier touches drew interest but never surfaced an owner." }
+                            ],
+                            "sources": [
+                              { "label": "G2", "icon": "/assets/images/source_icons/source_g2.svg" }
                             ]
                           }
                         ]
