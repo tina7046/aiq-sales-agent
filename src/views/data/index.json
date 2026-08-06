@@ -306,9 +306,13 @@
   // Icon sourcing rules — same contract renderNavItem enforces:
   //   • `icon`      → SLDS utility-sprite symbol id
   //                   (/assets/icons/utility-sprite/svg/symbols.svg#…)
-  //   • `iconImage` → bespoke raster (used when no suitable sprite
-  //                   exists). Skips the currentColor tint so hover/
-  //                   active states don't re-color the glyph.
+  //   • `iconImage` → bespoke glyph, for when no suitable sprite exists.
+  //                   Rendered as a currentColor fill masked by the
+  //                   asset, so it tints on hover and active like a
+  //                   sprite. Only the asset's alpha channel is used:
+  //                   supply monochrome art on a transparent ground, and
+  //                   don't bother matching the nav's colour in the file
+  //                   — it's discarded either way.
   //
   // Item-by-item notes:
   //   • new_chat — untouched from the previous nav. Sprite `add`.
@@ -321,11 +325,13 @@
   //                 the Home context-bar tab lit on `currentPage ==
   //                 'scheduled'` so drilling in from Home doesn't
   //                 lose the top-level tab.
-  //   • skills   — same "Skills" label the previous nav shipped, but
-  //                 the icon is the raster that used to sit on the
-  //                 combined "Workflows/Scheduled" row. Per spec the
-  //                 Skills row must keep that exact icon; the earlier
-  //                 utility-sprite `education` glyph is dropped.
+  //   • skills   — same "Skills" label the previous nav shipped, on a
+  //                 bespoke raster: nav-icons/skills.png, a scroll with
+  //                 a sparkle. Two earlier icons are retired — the
+  //                 utility-sprite `education` glyph, then
+  //                 nav-icons/workflows.png (the squares raster carried
+  //                 over from the combined "Workflows/Scheduled" row),
+  //                 which is now unreferenced.
   //   • knowledge — untouched. Real route to /knowledge.html; the
   //                 detail page and _template.html's Home-tab rule
   //                 both key off `id: "knowledge"`.
@@ -349,7 +355,7 @@
   "navPrimary": [
     { "id": "new_chat",  "label": "New chat",  "icon": "add", "href": "/index.html" },
     { "id": "schedules", "label": "Scheduled", "icon": "date_time", "href": "/scheduled.html" },
-    { "id": "skills",    "label": "Skills",    "iconImage": "/assets/images/nav-icons/workflows.png" },
+    { "id": "skills",    "label": "Skills",    "iconImage": "/assets/images/nav-icons/skills.png" },
     { "id": "knowledge", "label": "Knowledge", "icon": "knowledge_base", "href": "/knowledge.html" },
     { "id": "tools",     "label": "Tools",     "icon": "custom_apps" }
   ],

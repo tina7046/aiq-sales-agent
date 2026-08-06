@@ -54,17 +54,19 @@
      • Two icon sources are supported:
          - `icon: "<sprite-id>"`      → utility-sprite symbol via <svg><use>
                                         (the default; adapts to currentColor)
-         - `iconImage: "<asset-path>"` → raster image via <img> — used when
-                                        the design ships a bespoke glyph that
-                                        isn't in the SLDS utility sprite.
+         - `iconImage: "<asset-path>"` → bespoke glyph the SLDS utility
+                                        sprite doesn't carry. Painted as a
+                                        currentColor fill masked by the
+                                        asset, NOT as an <img>, so it
+                                        tints with hover and active state
+                                        exactly like a sprite does.
                                         `iconImage` wins if both are set.
-                                        NOTE: <img> icons don't inherit
-                                        `currentColor`, so active/hover
-                                        state color changes won't tint the
-                                        raster. Provide the raster with the
-                                        final rendered color baked in, or
-                                        supply a proper SVG for
-                                        color-adaptive rendering.
+                                        The asset must be MONOCHROME with
+                                        a transparent ground — only its
+                                        alpha channel survives the mask,
+                                        so its own colour is discarded
+                                        and a multi-colour raster would
+                                        flatten to one silhouette.
 #}
 {% macro renderNavItem(item, activeId) %}
 {% set isActive = activeId == item.id %}
@@ -79,19 +81,21 @@
 >
   <span class="seller-home__nav-icon" aria-hidden="true">
     {% if item.iconImage %}
-      {# Raster-image branch. width/height match the SVG branch (20×20)
-         so nav-item vertical rhythm stays identical regardless of icon
-         source. `alt=""` because the wrapper is already aria-hidden and
-         the sibling `.nav-label` (or `title` on the anchor when
-         collapsed) provides the accessible name. #}
-      <img
+      {# Bespoke-glyph branch. An empty span rather than an <img>: the
+         asset arrives as a CSS mask (see `.seller-home__nav-icon-image`
+         in home.scss) over a currentColor fill, which is what lets a
+         raster tint with hover and active state. The path travels as a
+         custom property because it's data, not style — the rule in the
+         stylesheet owns everything else about how it renders.
+
+         No `alt` to lose here: the wrapper is aria-hidden and the
+         sibling `.nav-label` (or `title` on the anchor when collapsed)
+         carries the accessible name. #}
+      <span
         class="seller-home__nav-icon-image"
-        src="{{ item.iconImage }}"
-        alt=""
-        width="20"
-        height="20"
+        style="--sh-nav-icon-image: url('{{ item.iconImage }}')"
         aria-hidden="true"
-      />
+      ></span>
     {% else %}
       {# Sprite branch. width/height presentation attrs mirror the
          Hunter Builder pattern: they pin the intrinsic size to 20×20

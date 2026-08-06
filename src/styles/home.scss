@@ -671,16 +671,32 @@ main.app-wrapper {
     pointer-events: none;
   }
 
-  // Raster-image icons — used when a nav item ships a bespoke glyph
-  // via `iconImage` in home.json (not a utility-sprite symbol). Matches
-  // the SVG branch's 20×20 render box so nav-item vertical rhythm stays
-  // consistent regardless of icon source. `object-fit: contain` protects
-  // against non-square source images. Unlike the SVG branch this
-  // doesn't inherit `currentColor` — the raster's own colors render as-is.
-  img {
+  // Bespoke glyphs — for a nav item carrying `iconImage` in index.json
+  // instead of a utility-sprite `icon`. Same 20×20 render box as the SVG
+  // branch, so vertical rhythm doesn't depend on where the icon came
+  // from.
+  //
+  // The asset is a MASK over a currentColor fill, not an <img>. That's
+  // the whole point: an <img> paints its own pixels, so a raster glyph
+  // sat at its authored colour while every sprite beside it inherited
+  // the nav's navy and darkened on hover. Masking throws the asset's
+  // colour away and keeps only its alpha, so a flat PNG behaves like a
+  // sprite — one source of truth for icon colour, in `color` on the row.
+  //
+  // Consequence worth knowing: this only suits monochrome art on a
+  // transparent ground. A multi-colour raster would collapse into a
+  // single-colour silhouette.
+  //
+  // `contain` rather than a fixed mask-size so a non-square asset scales
+  // instead of cropping. The unprefixed `mask` is enough for current
+  // Chrome and Firefox; the -webkit- line is for Safari, which still
+  // wants it.
+  .seller-home__nav-icon-image {
     width: $sh-nav-icon-size;
     height: $sh-nav-icon-size;
-    object-fit: contain;
+    background-color: currentColor;
+    -webkit-mask: var(--sh-nav-icon-image) center / contain no-repeat;
+    mask: var(--sh-nav-icon-image) center / contain no-repeat;
     pointer-events: none;
   }
 }
