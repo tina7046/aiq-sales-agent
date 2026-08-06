@@ -1145,12 +1145,19 @@
             ]
           }
         },
+        // `expandsTable` is the id of the table above, and it's what
+        // puts the expand button at the right end of this chip's row.
+        // Pressing it moves that table into a large dialog so the
+        // wide column set can be read without the thread's 800px cap;
+        // closing puts it back. Drop the field and the button goes with
+        // it — the chip renders exactly as it did before.
         {
           "id":   "msg-activity",
           "type": "workflow_activity",
           "workflowLabel": "Prospecting workflow completed",
           "workflowIcon":  "apps",
-          "statusText":    "37 prospects \u00b7 7 accounts \u00b7 37 drafts"
+          "statusText":    "37 prospects \u00b7 7 accounts \u00b7 37 drafts",
+          "expandsTable":  "conv-001-prospects"
         },
         // Closing nudge under the list. `text` is the bold heading; each
         // item is a sentence that ends in a clickable CTA. Clicking the

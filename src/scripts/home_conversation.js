@@ -20,6 +20,10 @@
 //     not focusable — see the binder for what that replaced. Kept
 //     independent so the table works as a standalone list even
 //     without a review controller attached.
+//   • Expanding a table: the button on a workflow-activity chip moves
+//     the table it names into the page's expanded-table dialog and back
+//     out again on close. It's a move, not a copy — see
+//     `bindTableExpand` for why that matters.
 //   • Cadence card: mounted from home_conversation_cadence.js, which
 //     owns the drafted sequences. Wired here only so build-time and
 //     runtime-injected messages go through one code path.
@@ -91,6 +95,18 @@
     convTable:    '[data-sh-conv-table]',
     convRow:      '[data-sh-conv-row]',
     convReject:   '[data-sh-conv-reject]',
+    // Expanding a table into the large dialog. The trigger lives
+    // on a workflow-activity chip and carries the id of the table it
+    // opens; the dialog is a page-level singleton whose content area is
+    // the host the table is MOVED into. See `bindTableExpand`.
+    convExpand:      '[data-sh-conv-expand]',
+    tableModal:      '[data-sh-conv-table-modal]',
+    tableModalBack:  '[data-sh-conv-table-modal-backdrop]',
+    tableModalHost:  '[data-sh-conv-table-modal-host]',
+    tableModalTitle: '[data-sh-conv-table-modal-title]',
+    tableModalMeta:  '[data-sh-conv-table-modal-status]',
+    tableModalClose: '[data-sh-conv-table-modal-close]',
+    tableModalDone:  '[data-sh-conv-table-modal-done]',
     // Outreach review (rendered by _home_outreach_review.html):
     reviewRoot:   '[data-sh-review-root]',
     // Confirmation dialog for "Approve all" (sibling of the review):
@@ -121,6 +137,12 @@
   // Class the review section toggles when the confirmation dialog
   // opens (mirrors SLDS `slds-fade-in-open` semantically).
   var DIALOG_OPEN_CLASS = 'is-open'
+  // The real SLDS pair, used by the expanded-table dialog: `.slds-modal`
+  // and `.slds-backdrop` both ship invisible and these are what the
+  // design system expects JS to add. (The review's dialog above predates
+  // it and paints its own open state — hence two spellings of "open".)
+  var MODAL_OPEN_CLASS    = 'slds-fade-in-open'
+  var BACKDROP_OPEN_CLASS = 'slds-backdrop_open'
   // Class the composer carries while a scripted turn is in flight.
   var BUSY_CLASS = 'is-busy'
   // Fallback thinking duration when a turn omits `thinkingMs` (or
@@ -270,6 +292,11 @@
     // function runs again on anything cloned in later, so build-time
     // and runtime content get identical behavior.
     bindMessageContent(document, map)
+
+    // The expand-a-table path. Bound once for the page rather
+    // than per message: there's one dialog, and the trigger is found by
+    // delegation, so a chip cloned in mid-thread needs no re-wiring.
+    bindTableExpand()
 
     // Composer: autosize, Enter-to-send, and the scripted reply queue.
     // It owns the thread mutations and the busy state, so the opening
@@ -859,6 +886,147 @@
     else row.removeAttribute('data-sh-review-status')
     var rejectBtn = row.querySelector(SELECTORS.convReject)
     if (rejectBtn) rejectBtn.setAttribute('aria-pressed', status === 'changes_requested' ? 'true' : 'false')
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // Expand a table into a dialog
+  // ──────────────────────────────────────────────────────────────
+  // A workflow-activity chip can carry a button naming one of the
+  // thread's tables (`expandsTable` in the JSON). Pressing it MOVES that
+  // table out of the thread and into the dialog at the bottom of
+  // home_conversation.html; closing moves it back.
+  //
+  // Moving rather than cloning is the whole design. The table is a live
+  // surface — every row has an X that drops a prospect from the batch,
+  // and the cadence card is listening — so a copy would be a second
+  // list with the same row ids, and a prospect dropped in one would
+  // still be in the other. One node means one truth, and every handler,
+  // attribute, and subscription travels with it for free.
+  //
+  // A comment node holds the table's place in the thread, so it returns
+  // exactly where it was even if messages have been appended in the
+  // meantime. What doesn't survive the round trip is the table's scroll
+  // offset: moving a node resets it. Reading the expanded table top-down
+  // is the point, so that's the right way for it to arrive, and coming
+  // back to the top of a 5.5-row window costs nothing.
+  //
+  // Only one table can be expanded at a time, which is what makes a
+  // single dialog (and a single placeholder) sufficient.
+  function bindTableExpand () {
+    var modal    = document.querySelector(SELECTORS.tableModal)
+    var backdrop = document.querySelector(SELECTORS.tableModalBack)
+    if (!modal || !backdrop) return
+
+    var host  = modal.querySelector(SELECTORS.tableModalHost)
+    var title = modal.querySelector(SELECTORS.tableModalTitle)
+    var meta  = modal.querySelector(SELECTORS.tableModalMeta)
+    if (!host) return
+
+    // Per-open state: the table currently in the dialog, the marker
+    // holding its spot in the thread, the trigger to hand focus back
+    // to, and the trap handler to unbind.
+    var expanded    = null
+    var placeholder = null
+    var lastFocused = null
+    var trapHandler = null
+
+    function open (button) {
+      // Already open — a second trigger would orphan the first table's
+      // placeholder, so it's ignored rather than swapped.
+      if (expanded) return
+
+      var tableId = button.getAttribute('data-sh-conv-expand')
+      // Authored id going into an attribute selector: same rule as
+      // conversation ids, reject anything that isn't a plain slug.
+      if (!tableId || !ID_PATTERN.test(tableId)) return
+
+      var table = document.querySelector('[data-sh-conv-table="' + tableId + '"]')
+      if (!table || !table.parentNode) return
+
+      // Title from the table's own accessible name (`table.ariaLabel`
+      // in the JSON), so the dialog says what it's showing without a
+      // second copy of that string. The count comes from the chip.
+      var inner = table.querySelector('table[aria-label]')
+      var label = inner && inner.getAttribute('aria-label')
+      if (title && label) title.textContent = label
+      if (meta) meta.textContent = button.getAttribute('data-sh-conv-expand-meta') || ''
+
+      placeholder = document.createComment(' expanded: ' + tableId + ' ')
+      table.parentNode.insertBefore(placeholder, table)
+      host.appendChild(table)
+      expanded = table
+
+      lastFocused = button
+      modal.removeAttribute('hidden')
+      modal.classList.add(MODAL_OPEN_CLASS)
+      backdrop.removeAttribute('hidden')
+      backdrop.classList.add(BACKDROP_OPEN_CLASS)
+
+      // setTimeout(0) so the browser's own default focus (the dialog
+      // becoming visible) doesn't land after ours — same reason the
+      // review's dialog defers it.
+      var closeBtn = modal.querySelector(SELECTORS.tableModalClose)
+      setTimeout(function () {
+        if (closeBtn) closeBtn.focus()
+        else modal.focus()
+      }, 0)
+
+      trapHandler = createTrapHandler(modal, close)
+      document.addEventListener('keydown', trapHandler)
+    }
+
+    function close () {
+      modal.setAttribute('hidden', '')
+      modal.classList.remove(MODAL_OPEN_CLASS)
+      backdrop.setAttribute('hidden', '')
+      backdrop.classList.remove(BACKDROP_OPEN_CLASS)
+
+      if (trapHandler) {
+        document.removeEventListener('keydown', trapHandler)
+        trapHandler = null
+      }
+
+      // Home again. If the marker is gone — the thread was rebuilt
+      // under an open dialog — the table stays in the host rather than
+      // being appended somewhere arbitrary, and the next open is still
+      // clean because `expanded` is cleared either way.
+      if (expanded && placeholder && placeholder.parentNode) {
+        placeholder.parentNode.insertBefore(expanded, placeholder)
+        placeholder.parentNode.removeChild(placeholder)
+      }
+      expanded = null
+      placeholder = null
+
+      if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus()
+      lastFocused = null
+    }
+
+    document.addEventListener('click', function (event) {
+      var button = event.target && event.target.closest
+        ? event.target.closest(SELECTORS.convExpand)
+        : null
+      if (!button) return
+      event.preventDefault()
+      open(button)
+    })
+
+    var closeBtn = modal.querySelector(SELECTORS.tableModalClose)
+    var doneBtn  = modal.querySelector(SELECTORS.tableModalDone)
+    if (closeBtn) closeBtn.addEventListener('click', close)
+    if (doneBtn)  doneBtn.addEventListener('click', close)
+
+    // Click-outside-to-dismiss, and the listener that does it is on the
+    // MODAL, not the backdrop. `.slds-modal` is itself a transparent
+    // layer pinned to all four edges at a higher z-index than
+    // `.slds-backdrop`, so a click on the shaded gutter never reaches
+    // the backdrop — it lands on the section. Testing `target === modal`
+    // is what distinguishes the gutter from the dialog inside it. The
+    // backdrop keeps a listener anyway, for the SLDS versions where the
+    // stacking is the other way round.
+    modal.addEventListener('click', function (event) {
+      if (event.target === modal) close()
+    })
+    backdrop.addEventListener('click', close)
   }
 
   // ──────────────────────────────────────────────────────────────

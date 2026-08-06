@@ -43,9 +43,11 @@
 //   • Hover / focus / selected states: SLDS-standard treatments
 //     (surface-container-2 hover, brand focus ring, accent-1 selection).
 //     Figma didn't call out active/hover states for this frame.
-//   • Collapsed nav width: 64px (icon-only rail) — Figma frame is
+//   • Collapsed nav width: 56px (icon-only rail) — Figma frame is
 //     "Expanded Composed"; the collapsed variant lives on a different
-//     Figma frame not attached to this request.
+//     Figma frame not attached to this request. The exact number is
+//     load-bearing for the collapse motion — see
+//     `$sh-nav-width-collapsed`.
 //   • Bottom fade-out on the scroll region: 24px linear-gradient mask
 //     so the last recent item hints at scrollability. The reference
 //     screenshot shows the last row rendered lighter; treating that
@@ -57,12 +59,27 @@
 // downstream customization. Anything that a theme might swap sticks to
 // --slds-g-* tokens below.
 $sh-nav-width-expanded: 18.75rem; // 300px — Figma frame width
-$sh-nav-width-collapsed: 4rem;    // 64px — icon-only rail (assumption)
-$sh-nav-row-height: 2.875rem;     // 46px — nav row height
+// 56px — icon-only rail. Not a spec'd number (the Figma frame is the
+// expanded state), and NOT free to round: it's the width at which a
+// centred icon box sits on exactly the same gutter it occupies when
+// expanded — 16px + 24px + 16px. Any other width rests the icons
+// somewhere else, and the rail can't change width without also sliding
+// every icon sideways. It was 4rem/64px, which put them 4px apart.
+$sh-nav-width-collapsed: 3.5rem;
+$sh-nav-row-height: 2.25rem;     // 36px — nav row height
 $sh-nav-row-padding-x: 1rem;      // 16px
 $sh-nav-icon-box: 1.5rem;         // 24px wrapper (icon 20px + slack)
-$sh-nav-icon-size: 1.25rem;       // 20px
+$sh-nav-icon-size: 14px;       // 14px
 $sh-nav-icon-gap: 0.5rem;         // 8px — --slds-g-spacing-2
+// Row inline padding in the collapsed rail — the value that leaves the
+// icon box centred: (56 - 24) / 2, which by the rail width above lands
+// on 16px, the same gutter the expanded rows use. Derived rather than
+// typed so the two stay tied if either number moves.
+//
+// This exists because rows stay left-aligned at EVERY width and only
+// their padding changes, which is what lets the collapse animate. See
+// `.seller-home--nav-collapsed`.
+$sh-nav-row-padding-x-collapsed: calc((#{$sh-nav-width-collapsed} - #{$sh-nav-icon-box}) / 2);
 
 // God-rays shader host geometry (`.seller-home__god-rays`).
 //
@@ -468,6 +485,16 @@ main.app-wrapper {
                                                // hugs the right edge
                                                // without touching it.
   height: $sh-nav-row-height;
+
+  // The toggle stays flex-end at every width and rides in on the
+  // padding, for the same reason the rows do — see
+  // `.seller-home--nav-collapsed`. With one child, symmetric padding in
+  // the narrow rail centres it without touching `justify-content`.
+  transition: padding 180ms ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 }
 
 .seller-home__nav-toggle {
@@ -577,6 +604,13 @@ main.app-wrapper {
   font-weight: var(--slds-g-font-weight-6, 590);
   line-height: 1.4;
   user-select: none;
+
+  // Travels with the rail on collapse, same as the nav rows above.
+  transition: padding 180ms ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 }
 
 // Sticky footer — Feedback + Settings. `border-top` separates from the
@@ -617,10 +651,21 @@ main.app-wrapper {
   border: 0;
   background: transparent;
 
-  // Active state now relies on background + bolder weight only
-  // (see `&.is-active` below). No left-strip / bottom-underline
-  // accent bar in either the expanded or collapsed nav.
-  transition: background-color 120ms ease, color 120ms ease;
+  // Hover and active both add a 2px accent strip down the left edge —
+  // see the shared block below for why it's a shadow and not a border.
+  //
+  // `padding` is here because it's what carries the icon between the
+  // expanded and collapsed positions, at the rail's own 180ms so the two
+  // read as one movement. Under reduced motion it comes back out: the
+  // rail's width stops animating there, and padding easing on its own
+  // would be an icon drifting inside a row that already finished moving.
+  transition: background-color 120ms ease, color 120ms ease,
+    box-shadow 120ms ease, padding 180ms ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: background-color 120ms ease, color 120ms ease,
+      box-shadow 120ms ease;
+  }
 
   // Base-stylesheet `a:hover, a:focus { text-decoration: underline }`
   // (dist/styles/index.css) beats the resting `text-decoration: none`
@@ -632,24 +677,31 @@ main.app-wrapper {
     text-decoration: none;
   }
 
-  &:hover {
-    background: var(--slds-g-color-surface-container-2, #f3f3f3);
-  }
-
   &:focus-visible {
     outline: 2px solid var(--slds-g-color-accent-2, #0176d3);
     outline-offset: -2px; // inset so the ring stays inside the row
   }
 
+  // Hover and "you are here" are the same treatment on purpose: fill,
+  // accent strip, and the darker label. Grouped rather than duplicated
+  // so hovering an already-active row can't drift into a second look —
+  // and so the strip only has to be described once.
+  //
+  // The strip is an INSET SHADOW, not `border-left`. A border is part of
+  // the box, so adding one on state widened the row by 2px and pushed
+  // the icon and label right on every hover; an inset shadow is painted
+  // inside the padding box and takes up no space, so the row is
+  // identical in both states and only the paint changes. Same reason
+  // it's safe in the collapsed rail, where the row centres its icon and
+  // a 2px border would knock that centring off. This is the pattern the
+  // ready-to-review and scheduled rows already use for their focus
+  // strips — 3px there, 2px here to match the nav spec.
+  &:hover,
   &.is-active {
-    background: var(--slds-g-color-surface-container-2, #f3f3f3);
-
-    // Slightly bolder emphasis on the active label. Falls back to the
-    // semibold weight if font-weight-7 isn't defined by the theme.
-    font-weight: var(--slds-g-font-weight-7, 700);
+    background: var(--slds-g-color-brand-base-90, #D6E6FF);
+    box-shadow: inset 2px 0 0 var(--slds-g-color-border-accent-1, #066AFE);
+    color: var(--slds-g-color-on-surface-3, #001e5b);
   }
-
-  &:visited { color: inherit; }
 }
 
 // Icon wrapper — 24px square (see $sh-nav-icon-box). Keeping the SVG
@@ -713,10 +765,12 @@ main.app-wrapper {
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Recents rows — same 36px height, but regular weight + on-surface-1
-// gray, and no icon column. Left padding matches the primary items'
-// TEXT column (row padding-x + icon box + icon gap) so labels align
-// vertically with the primary item labels above.
+// Recents rows — same 36px height and the same hover / selected
+// treatment as the primary items (brand fill + 2px accent strip), but
+// regular weight + on-surface-1 gray, and no icon column. Left padding
+// matches the primary items' TEXT column (row padding-x + icon box +
+// icon gap) so labels align vertically with the primary item labels
+// above.
 // ──────────────────────────────────────────────────────────────────────
 .seller-home__nav-recent {
   display: flex;
@@ -733,7 +787,8 @@ main.app-wrapper {
 
   text-decoration: none;
   cursor: pointer;
-  transition: background-color 120ms ease, color 120ms ease;
+  transition: background-color 120ms ease, color 120ms ease,
+    box-shadow 120ms ease;
 
   // See `.seller-home__nav-item` — same override needed here because
   // `dist/styles/index.css` promotes `a:hover, a:focus` to underlined.
@@ -743,11 +798,6 @@ main.app-wrapper {
     text-decoration: none;
   }
 
-  &:hover {
-    background: var(--slds-g-color-surface-container-2, #f3f3f3);
-    color: var(--slds-g-color-on-surface-3, #001e5b);
-  }
-
   &:focus-visible {
     outline: 2px solid var(--slds-g-color-accent-2, #0176d3);
     outline-offset: -2px;
@@ -755,47 +805,65 @@ main.app-wrapper {
 
   &:visited { color: var(--slds-g-color-on-surface-1, #5c5c5c); }
 
-  // Selected state — applied by home_conversation.js when the
-  // recent's `data-sh-recent-conv` matches the URL's `?id=`. Mirrors
-  // the primary nav's `.is-active` treatment (background fill +
-  // heavier text weight) so both surfaces communicate "you are here"
-  // with the same visual language. Kept independent of `:hover` so
-  // hovering an already-selected row doesn't re-color; the row just
-  // holds its selected appearance.
+  // Hover and selected, and they're the primary nav's treatment exactly:
+  // the brand-base-90 fill and the 2px accent strip, drawn as an inset
+  // shadow for the reason spelled out on `.seller-home__nav-item` — a
+  // border would widen the row and shove the label sideways on hover.
+  //
+  // What these rows deliberately DON'T copy is that block's type change.
+  // The label holds its regular weight and grey in every state (see
+  // `.seller-home__nav-recent-label`, which is declared on the text so
+  // nothing here can reach it), so a lit recent still reads as a recent
+  // rather than as a second active nav item.
+  //
+  // `.is-active` arrives from home_conversation.js when the recent's
+  // `data-sh-recent-conv` matches the URL's `?id=`. Grouped with hover
+  // because they're one look — hovering the selected row changes
+  // nothing, which is the intent.
   //
   // Not scoped to `--linked` — clients that add active state to
   // unlinked recents later (e.g. an in-app filter) get the same
   // treatment for free. `--linked` is a routing marker, not a style
   // gate.
+  &:hover,
   &.is-active {
-    background: var(--slds-g-color-surface-container-2, #f3f3f3);
-    color: var(--slds-g-color-on-surface-3, #001e5b);
-    font-weight: var(--slds-g-font-weight-6, 590);
-
-    // Hover on the selected row keeps the same fill — no shade
-    // change, no double-emphasis. Matches the primary nav.
-    &:hover {
-      background: var(--slds-g-color-surface-container-2, #f3f3f3);
-      color: var(--slds-g-color-on-surface-3, #001e5b);
-    }
+    background: var(--slds-g-color-brand-base-90, #D6E6FF);
+    box-shadow: inset 2px 0 0 var(--slds-g-color-border-accent-1, #066AFE);
   }
 }
 
+// The text of a Recents row, and the one place its type treatment is
+// decided: regular weight in the mid-tone grey, which is what separates
+// these from the semibold navy primary items above.
+//
+// Set HERE rather than on the row for a specific reason. `color` and
+// `font-weight` inherit, so wherever they're declared on the anchor, any
+// state on that anchor can overrule them — which is what used to happen:
+// the selected recent picked up the primary nav's active treatment and
+// read as bold navy, indistinguishable from an active nav item. A
+// declaration on the text element itself beats anything inherited from
+// an ancestor no matter how specific that ancestor's selector is, so
+// this holds through rest, hover, and selected without a single
+// state-specific override.
 .seller-home__nav-recent-label {
   flex: 1 1 auto;
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-weight: var(--slds-g-font-weight-4, 400);
 }
 
 // ──────────────────────────────────────────────────────────────────────
 // Collapsed nav (assumption — Figma frame is "Expanded Composed"; the
 // collapsed variant isn't attached to this request). Only three visual
 // changes:
-//   1. Width shrinks from 300px → 64px.
+//   1. Width shrinks from 300px → 56px.
 //   2. Labels hide (visually + from AT).
-//   3. Rows re-center around the icon.
+//   3. Rows re-center around the icon — which, at that width, is the
+//      icon's expanded position too, so it doesn't actually move.
 // The toggle button flips its `aria-expanded` and `aria-label` in JS.
 // ──────────────────────────────────────────────────────────────────────
 .seller-home--nav-collapsed {
@@ -813,8 +881,7 @@ main.app-wrapper {
   }
 
   .seller-home__nav-topbar {
-    justify-content: center;
-    padding: 0;
+    padding: 0 $sh-nav-row-padding-x-collapsed;
   }
 
   // Point the arrow the way it will move the rail: inward to collapse,
@@ -831,12 +898,35 @@ main.app-wrapper {
     transform: scaleX(-1);
   }
 
+  // Rows re-centre on their icon by CHANGING PADDING, not by switching
+  // to `justify-content: center` — and by the rail width chosen above,
+  // the padding they change TO is the padding they already had. Two
+  // fixes to the collapse motion are recorded here, because the second
+  // only became visible once the first was in:
+  //
+  // 1. `justify-content` isn't animatable, so it applied the instant the
+  //    class landed while `width` was still easing — the icons snapped to
+  //    the middle of a rail that was still 300px wide (lining up under
+  //    the toggle, which did the same thing) and then slid back left as
+  //    the rail caught up. Padding interpolates, so the position now
+  //    eases over the same 180ms the rail takes. Rows stay left-aligned
+  //    throughout; with the label hidden the icon is the only child, so
+  //    symmetric padding IS centred.
+  //
+  // 2. Smooth still meant moving: centred in the old 64px rail put the
+  //    icons at 20px against an expanded gutter of 16px, so every toggle
+  //    dragged them 4px sideways while the rail went the other way. The
+  //    rail is 56px now, which makes those two numbers the same one, and
+  //    these declarations resolve to the 16px the rows already carry.
+  //    They're kept rather than deleted because they're what holds the
+  //    icons still if either the gutter or the icon box is ever retuned:
+  //    the padding follows the rail width, and nothing has to remember
+  //    that the two were related.
   .seller-home__nav-item,
   .seller-home__nav-section-header,
   .seller-home__nav-recent {
-    padding-left: 0;
-    padding-right: 0;
-    justify-content: center;
+    padding-left: $sh-nav-row-padding-x-collapsed;
+    padding-right: $sh-nav-row-padding-x-collapsed;
   }
 
   .seller-home__nav-recent {
@@ -2398,11 +2488,16 @@ main.app-wrapper {
       display: none;
     }
     .seller-home__nav-recent { display: none; }
+    // Same padding-not-justify-content centring as the toggled collapse
+    // above, so a rail narrowed by the viewport and a rail narrowed by
+    // the button put their icons in the same place.
     .seller-home__nav-item,
     .seller-home__nav-section-header {
-      justify-content: center;
-      padding-left: 0;
-      padding-right: 0;
+      padding-left: $sh-nav-row-padding-x-collapsed;
+      padding-right: $sh-nav-row-padding-x-collapsed;
+    }
+    .seller-home__nav-topbar {
+      padding: 0 $sh-nav-row-padding-x-collapsed;
     }
   }
 }

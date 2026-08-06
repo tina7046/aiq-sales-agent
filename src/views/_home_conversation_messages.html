@@ -442,33 +442,73 @@
    pattern (icon + label + optional secondary text) but with the
    completion palette (on-surface-2 gray).
 
+   The chip sits in a full-width row so a trailing control can be
+   pushed to the far right of the thread column — which is where the
+   expand button lands when `expandsTable` names a table. The row is
+   always emitted, not just when there's a button: an empty right end
+   changes nothing visually (the chip shrink-wraps either way), and one
+   markup shape beats two.
+
+   That button is OUTSIDE the `role="status"` element on purpose. The
+   chip is a live region; a control announced as part of the status
+   text is noise, and worse, some screen readers surface status content
+   as flat text and the button's own name goes missing.
+
    Data contract:
      {
        id: String, type: 'workflow_activity',
        workflowLabel: String,    // primary "Prospecting workflow completed"
        workflowIcon:  String,    // utility sprite id, e.g. "apps"
-       statusText:    String     // secondary "12 prospects · 8 accounts · 12 drafts"
+       statusText:    String,    // secondary "12 prospects · 8 accounts · 12 drafts"
+       expandsTable?: String     // a table `id` in this thread — adds a
+                                 // button that opens it in a dialog.
+                                 // Omit and no button renders.
      }
 #}
 {% macro workflowActivity(msg) %}
-<div
-  class="seller-home__conv-msg seller-home__conv-msg--activity"
-  data-sh-conv-msg="{{ msg.id }}"
-  data-sh-conv-msg-type="workflow_activity"
-  role="status"
-  aria-label="{{ msg.workflowLabel }}"
->
-  <span class="seller-home__conv-msg-activity-icon" aria-hidden="true">
-    <svg class="seller-home__conv-msg-activity-glyph" aria-hidden="true">
-      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ msg.workflowIcon }}"></use>
+<div class="seller-home__conv-msg-activity-row">
+  <div
+    class="seller-home__conv-msg seller-home__conv-msg--activity"
+    data-sh-conv-msg="{{ msg.id }}"
+    data-sh-conv-msg-type="workflow_activity"
+    role="status"
+    aria-label="{{ msg.workflowLabel }}"
+  >
+    <span class="seller-home__conv-msg-activity-icon" aria-hidden="true">
+      <svg class="seller-home__conv-msg-activity-glyph" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ msg.workflowIcon }}"></use>
+      </svg>
+    </span>
+    <span class="seller-home__conv-msg-activity-body">
+      <span class="seller-home__conv-msg-activity-label">{{ msg.workflowLabel }}</span>
+      {% if msg.statusText %}
+      <span class="seller-home__conv-msg-activity-status">{{ msg.statusText }}</span>
+      {% endif %}
+    </span>
+  </div>
+
+  {#- The expand affordance for a table the thread already rendered.
+      It carries the table's id rather than a reference to it, because
+      the handler is delegated and the table may not exist yet: both
+      arrive as a cloned message, in either order.
+
+      `statusText` rides along so the modal can repeat the count under
+      its heading. It's authored copy either way; passing it beats
+      reading it back out of the chip's live region at open time. -#}
+  {% if msg.expandsTable %}
+  <button
+    type="button"
+    class="slds-button slds-button_icon slds-button_icon-border slds-button_icon-small seller-home__conv-msg-activity-expand"
+    title="Expand table"
+    data-sh-conv-expand="{{ msg.expandsTable }}"
+    {% if msg.statusText %}data-sh-conv-expand-meta="{{ msg.statusText }}"{% endif %}
+  >
+    <svg class="slds-button__icon" aria-hidden="true">
+      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#expand"></use>
     </svg>
-  </span>
-  <span class="seller-home__conv-msg-activity-body">
-    <span class="seller-home__conv-msg-activity-label">{{ msg.workflowLabel }}</span>
-    {% if msg.statusText %}
-    <span class="seller-home__conv-msg-activity-status">{{ msg.statusText }}</span>
-    {% endif %}
-  </span>
+    <span class="slds-assistive-text">Expand table</span>
+  </button>
+  {% endif %}
 </div>
 {% endmacro %}
 

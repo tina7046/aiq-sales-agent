@@ -425,6 +425,96 @@
     </div>
   </div>
 
+  {# ── Expanded table dialog ─────────────────────────────────────
+     Where a prospect table goes when its chip's expand button is
+     pressed. The content area is an empty host, not a second copy of
+     the table: the script MOVES the rendered table in here and puts
+     it back on close.
+
+     That's the whole reason this is one page-level dialog rather than
+     one per table. A copy would be a second set of 37 rows with the
+     same row ids and its own reject buttons, so a prospect dropped in
+     the modal would still be in the batch in the thread — two truths
+     about the same list. Moving the node keeps every handler, every
+     decision, and the cadence card's subscription attached to it.
+
+     Outside `.seller-home` because `.slds-modal` is `position: fixed`:
+     any transformed ancestor would become its containing block and the
+     dialog would be sized against the app shell instead of the viewport.
+
+     `slds-modal_large` — 90% of the viewport, so the shaded backdrop
+     stays visible around it and the table underneath still reads as the
+     thread it came from. (`slds-modal_full` was the first cut: SLDS only
+     gives that modifier its edge-to-edge treatment below 30em, so on a
+     desktop viewport it needed enough overriding to cover the backdrop
+     completely — which is the one thing a modal shouldn't do.)
+
+     Ships hidden, in both senses — `hidden` takes it out of the
+     accessibility tree, and SLDS keeps `.slds-modal` invisible until
+     `slds-fade-in-open` is added. home_conversation.js owns both. #}
+  <section
+    class="slds-modal slds-modal_large seller-home__conv-table-modal"
+    role="dialog"
+    tabindex="-1"
+    aria-modal="true"
+    aria-labelledby="sh-conv-table-modal-heading"
+    data-sh-conv-table-modal
+    hidden
+  >
+    <div class="slds-modal__container">
+      <button
+        type="button"
+        class="slds-button slds-button_icon slds-modal__close"
+        data-sh-conv-table-modal-close
+      >
+        <svg class="slds-button__icon slds-button__icon_large" aria-hidden="true">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+        </svg>
+        <span class="slds-assistive-text">Close expanded table</span>
+      </button>
+
+      {# Heading and count are written at open time from the table
+         being expanded — its `aria-label` and the chip's status line
+         — so this dialog stays generic. The placeholder text is what
+         a reader sees only if that write ever fails. #}
+      <div class="slds-modal__header">
+        <h1
+          id="sh-conv-table-modal-heading"
+          class="slds-modal__title slds-hyphenate"
+          tabindex="-1"
+          data-sh-conv-table-modal-title
+        >Expanded table</h1>
+        <p
+          class="seller-home__conv-table-modal-status"
+          data-sh-conv-table-modal-status
+        ></p>
+      </div>
+
+      <div
+        class="slds-modal__content slds-p-around_medium"
+        data-sh-conv-table-modal-host
+      ></div>
+
+      {# One action, and it isn't Save. Every control in the table
+         commits as it's clicked — the X drops a prospect from the
+         batch immediately, here as in the thread — so a Cancel /
+         Save pair would promise a staged edit that doesn't exist. #}
+      <div class="slds-modal__footer">
+        <button
+          type="button"
+          class="slds-button slds-button_neutral"
+          data-sh-conv-table-modal-done
+        >Done</button>
+      </div>
+    </div>
+  </section>
+  <div
+    class="slds-backdrop"
+    role="presentation"
+    data-sh-conv-table-modal-backdrop
+    hidden
+  ></div>
+
 {% endblock %}
 
 {% block scripts_extra %}
