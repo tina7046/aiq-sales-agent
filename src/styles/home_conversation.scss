@@ -1252,6 +1252,89 @@ $sh-conv-table-rows: 5.5;
   background: var(--slds-g-color-surface-container-1, #ffffff);
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// Modal open / close — transitions.dev
+// ----------------------------------------------------------------------
+// Installed from the transitions-dev skill (06-modal.md). The three
+// `.t-modal` rules are verbatim and carry no project naming, so they can
+// move to a global stylesheet the moment a second page wants them. Only
+// the `:root` values and the glue further down are ours.
+//
+// The class goes on `.slds-modal__container` — the dialog box — and NOT
+// on `.slds-modal`. That outer section is a transparent layer pinned to
+// all four viewport edges whose job is catching gutter clicks
+// (home_conversation.js dismisses on `target === modal`). Scaling it
+// would scale the click target along with the box, and the snippet's
+// `pointer-events` toggling would fight the dismiss handler.
+//
+// SLDS already puts `transform: translate(0)` and a 0.1s transition on
+// the container. Both are overridden here — equal specificity, later
+// stylesheet — and that translate was a no-op to begin with.
+:root {
+  --modal-open-dur: 250ms;
+  --modal-close-dur: 150ms;
+  --modal-scale: 0.96;
+  --modal-scale-close: 0.96;
+  --modal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.t-modal {
+  transform-origin: center;
+  transform: scale(var(--modal-scale));
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--modal-open-dur) var(--modal-ease),
+    opacity   var(--modal-open-dur) var(--modal-ease);
+  will-change: transform, opacity;
+}
+.t-modal.is-open {
+  transform: scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+.t-modal.is-closing {
+  transform: scale(var(--modal-scale-close));
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--modal-close-dur) var(--modal-ease),
+    opacity   var(--modal-close-dur) var(--modal-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-modal { transition: none !important; }
+}
+
+// ── Glue: the backdrop ────────────────────────────────────────────
+// A sibling of the dialog, so it can't pick the timing up by
+// inheritance — it gets the same tokens by hand. SLDS ships it at 0.4s
+// in both directions, which trails visibly behind a 250 / 150 dialog.
+//
+// `visibility` belongs in the list even though it isn't a fade. SLDS
+// flips it to `hidden` the moment the open class comes off, and an
+// untransitioned `visibility` applies instantly — the backdrop would
+// disappear on frame one and the opacity fade would never be seen.
+// Transitioning it holds `visible` for the whole duration, then flips.
+[data-sh-conv-table-modal-backdrop] {
+  transition:
+    opacity    var(--modal-close-dur) var(--modal-ease),
+    visibility var(--modal-close-dur) var(--modal-ease);
+
+  &.slds-backdrop_open {
+    transition:
+      opacity    var(--modal-open-dur) var(--modal-ease),
+      visibility var(--modal-open-dur) var(--modal-ease);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &,
+    &.slds-backdrop_open {
+      transition: none;
+    }
+  }
+}
+
 // ── The same table, expanded ──────────────────────────────────────
 // The dialog the expand button moves the table into (see
 // home_conversation.html). It's the SAME element, so the two caps that
@@ -1267,6 +1350,15 @@ $sh-conv-table-rows: 5.5;
   // footer) inset 90% of the viewport, and the content row is the one
   // that grows. That's what the table needs — a box with a definite
   // height — so this block only has to say how the table fills it.
+
+  // The container inside owns all the visible motion now (see the
+  // `.t-modal` block above), and opacity multiplies down the tree — so
+  // this section's own 0.1s SLDS fade would just be a second, faster
+  // curve layered under the first. Snapping it leaves one on screen.
+  // Safe because the open class goes on before the dialog has anything
+  // to show and comes off after it's gone; home_conversation.js
+  // sequences it.
+  transition: none;
 
   // Under the heading, the chip's own count ("37 prospects · …").
   .seller-home__conv-table-modal-status {

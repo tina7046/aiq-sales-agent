@@ -473,7 +473,12 @@
     data-sh-conv-table-modal
     hidden
   >
-    <div class="slds-modal__container">
+    {# `t-modal` is the transitions.dev open/close hook (see the snippet
+       in home_conversation.scss). It belongs on the container rather
+       than the section above so the box scales without the full-viewport
+       click layer scaling with it. home_conversation.js drives the
+       `is-open` / `is-closing` pair. #}
+    <div class="slds-modal__container t-modal">
       <button
         type="button"
         class="slds-button slds-button_icon slds-modal__close"

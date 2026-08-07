@@ -143,6 +143,11 @@
   // it and paints its own open state — hence two spellings of "open".)
   var MODAL_OPEN_CLASS    = 'slds-fade-in-open'
   var BACKDROP_OPEN_CLASS = 'slds-backdrop_open'
+  // transitions.dev's modal hook (06-modal.md), on the dialog container
+  // inside `.slds-modal`. The `is-open` / `is-closing` classes it takes
+  // are only ever used compounded with `.t-modal`, so they don't collide
+  // with DIALOG_OPEN_CLASS above.
+  var MODAL_TRANSITION    = '.t-modal'
   // Class the composer carries while a scripted turn is in flight.
   var BUSY_CLASS = 'is-busy'
   // Fallback thinking duration when a turn omits `thinkingMs` (or
@@ -922,6 +927,19 @@
     var meta  = modal.querySelector(SELECTORS.tableModalMeta)
     if (!host) return
 
+    // The box that actually animates — transitions.dev's `t-modal`
+    // (06-modal.md), on the container rather than the section. See the
+    // snippet in home_conversation.scss for why.
+    var container = modal.querySelector(MODAL_TRANSITION)
+
+    // Read the close duration off the same custom property the CSS
+    // uses, so retuning the token moves both the animation and the
+    // cleanup that waits on it. The fallback matches the snippet's
+    // default in case the stylesheet hasn't loaded.
+    var closeMs = parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue('--modal-close-dur')
+    ) || 150
+
     // Per-open state: the table currently in the dialog, the marker
     // holding its spot in the thread, the trigger to hand focus back
     // to, and the trap handler to unbind.
@@ -929,6 +947,9 @@
     var placeholder = null
     var lastFocused = null
     var trapHandler = null
+    // Non-null only while the close animation is playing. It's both the
+    // handle for the cleanup and the flag that a close is in flight.
+    var closeTimer  = null
 
     function open (button) {
       // Already open — a second trigger would orphan the first table's
@@ -957,10 +978,24 @@
       expanded = table
 
       lastFocused = button
+
+      // Reveal first, animate second. Both surfaces come out of
+      // `display: none`, and a transition can't start from a box that
+      // was never laid out — so the `hidden` removals and the open
+      // classes have to be separated by a forced reflow. Without the
+      // `void` read the browser folds the two style changes into one
+      // recalc and the dialog just appears at full size.
       modal.removeAttribute('hidden')
-      modal.classList.add(MODAL_OPEN_CLASS)
       backdrop.removeAttribute('hidden')
+      // Defensive: if a previous close was cut short, the container
+      // would still be holding the closing scale and this open would
+      // start from there instead of from `--modal-scale`.
+      if (container) container.classList.remove('is-closing')
+      void modal.offsetHeight
+
+      modal.classList.add(MODAL_OPEN_CLASS)
       backdrop.classList.add(BACKDROP_OPEN_CLASS)
+      if (container) container.classList.add('is-open')
 
       // setTimeout(0) so the browser's own default focus (the dialog
       // becoming visible) doesn't land after ours — same reason the
@@ -975,16 +1010,59 @@
       document.addEventListener('keydown', trapHandler)
     }
 
+    // Close runs in two halves, because the dialog is still on screen
+    // for the length of its animation. This half is everything that
+    // must happen at the click: the keyboard goes back to the page, and
+    // the two surfaces start moving.
     function close () {
-      modal.setAttribute('hidden', '')
-      modal.classList.remove(MODAL_OPEN_CLASS)
-      backdrop.setAttribute('hidden', '')
-      backdrop.classList.remove(BACKDROP_OPEN_CLASS)
+      // A second Escape or click while the close is already playing
+      // would queue a second cleanup and restore the table twice.
+      if (closeTimer) return
 
+      // Focus leaves before the animation does. Waiting would strand
+      // the keyboard inside a dialog that's on its way out, and the
+      // trap has to come off with it or Tab would still be captured.
       if (trapHandler) {
         document.removeEventListener('keydown', trapHandler)
         trapHandler = null
       }
+      if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus()
+      lastFocused = null
+
+      // The dialog dips back to `--modal-scale-close` as it fades; the
+      // backdrop fades on the same clock (its open class comes off
+      // here, not in the cleanup, so the two move together).
+      if (container) {
+        container.classList.remove('is-open')
+        container.classList.add('is-closing')
+      }
+      backdrop.classList.remove(BACKDROP_OPEN_CLASS)
+
+      closeTimer = window.setTimeout(finishClose, closeMs)
+    }
+
+    // The other half — everything that would cut the animation short if
+    // it ran at the click instead.
+    //
+    // `hidden` is the obvious one: it resolves to `display: none`, so
+    // setting it up front means there's nothing left to animate. The
+    // table's trip home is the subtler one. Moving it back into the
+    // thread empties the dialog, and the dialog is still visible, so
+    // doing it early would play a 150 ms fade-out of an empty box while
+    // the table reappeared behind it.
+    //
+    // `expanded` deliberately stays set until this runs. It's what
+    // `open` tests to refuse a second trigger, which keeps the table
+    // from being pulled out of a dialog that's mid-close.
+    function finishClose () {
+      closeTimer = null
+
+      modal.setAttribute('hidden', '')
+      modal.classList.remove(MODAL_OPEN_CLASS)
+      backdrop.setAttribute('hidden', '')
+      // Back to the resting scale, or the next open would start from
+      // the closing state and skip its own animation.
+      if (container) container.classList.remove('is-closing')
 
       // Home again. If the marker is gone — the thread was rebuilt
       // under an open dialog — the table stays in the host rather than
@@ -996,9 +1074,6 @@
       }
       expanded = null
       placeholder = null
-
-      if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus()
-      lastFocused = null
     }
 
     document.addEventListener('click', function (event) {

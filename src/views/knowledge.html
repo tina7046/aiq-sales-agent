@@ -203,7 +203,7 @@
              the whole block is guarded on `banner` instead, so removing
              that object from knowledge.json removes the banner. #}
           {% if banner %}
-          <div class="knowledge-banner">
+          <div class="knowledge-banner" data-sh-knowledge-banner>
             <div class="knowledge-banner__content">
               <div>
                 <span class="knowledge-banner__badge">{{ banner.badge }}</span>
@@ -237,19 +237,61 @@
                 </p>
                 {% endif %}
               </div>
-              {# Stub, same contract as the header's "+ New Knowledge"
-                 button: the `data-sh-*` hook is here so a later phase can
-                 bind routing by attribute without editing this markup. #}
+              {# Carries the real SLDS button classes, same as the
+                 header's "+ New Knowledge". It used to wear only its own
+                 class, with home.scss reproducing the neutral treatment
+                 from tokens — which matched at rest but drifted on
+                 hover: SLDS darkens the label to navy and the copy only
+                 changed the background, so the label stayed blue.
+                 Inheriting the real thing is what keeps the two pills
+                 from diverging again.
+
+                 `knowledge-banner__button` survives for the one thing
+                 that IS banner-specific: not shrinking in the flex row.
+
+                 Dismisses the banner for the rest of the session; the
+                 Home tab is what brings it back. See the handler in
+                 home.js and the preload script below. #}
               <button
                 type="button"
-                class="knowledge-banner__button"
-                data-sh-knowledge-setup
+                class="slds-button slds-button_neutral knowledge-banner__button"
+                data-sh-knowledge-banner-dismiss
               >{{ banner.buttonLabel }}</button>
             </div>
             <div class="knowledge-banner__illustration-col">
               <div class="knowledge-banner__illustration"></div>
             </div>
           </div>
+
+          {# Hide the banner before it can paint if it was already
+             dismissed this session. home.js knows the same thing, but it
+             loads at the end of the body — by then the banner has been
+             on screen for a frame or more, and the fix would be a
+             visible flash followed by a 260-px jump as the list settles.
+             Same reason and same shape as the nav-collapse preload in
+             _home_left_nav.html.
+
+             Inline and un-deferred on purpose: it has to run during
+             parse, in the gap between the banner's markup above and the
+             first paint.
+
+             The storage key is duplicated from home.js by necessity —
+             nothing else has loaded yet. Both spellings of
+             `sh:knowledgeBannerDismissed` have to change together. #}
+          <script>
+            (function () {
+              var banner = document.querySelector('[data-sh-knowledge-banner]')
+              if (!banner) return
+              try {
+                if (window.sessionStorage.getItem('sh:knowledgeBannerDismissed') === 'true') {
+                  banner.hidden = true
+                }
+              } catch (e) {
+                // Storage unavailable — fall through to showing it,
+                // which is what the markup already renders.
+              }
+            })()
+          </script>
           {% endif %}
 
           {# ── Search field ─────────────────────────────────────────

@@ -142,6 +142,32 @@
   // off the bottom.
   var RECENTS_MAX = 12
 
+  // Whether the knowledge banner has been dismissed this session.
+  // sessionStorage for the same reason as Recents: the dismissal should
+  // survive moving around the app — drilling into a doc and coming back
+  // is a full page load, and the banner popping up again there reads as
+  // a bug — but a new tab should start clean so the demo can be re-run.
+  //
+  // Duplicated as a literal in the preload script in knowledge.html,
+  // which runs before this file loads. Change one, change both.
+  var KNOWLEDGE_BANNER_KEY = 'sh:knowledgeBannerDismissed'
+
+  function readKnowledgeBannerDismissed () {
+    try {
+      return window.sessionStorage.getItem(KNOWLEDGE_BANNER_KEY) === 'true'
+    } catch (e) {
+      return false
+    }
+  }
+
+  function writeKnowledgeBannerDismissed () {
+    try {
+      window.sessionStorage.setItem(KNOWLEDGE_BANNER_KEY, 'true')
+    } catch (e) {
+      // Silent — the banner still stays gone for this page view.
+    }
+  }
+
   // The global Home tab wipes history and starts the demo over. It
   // lives in _template.html and shows on every page — including ones
   // that never load this script — so the signal travels in the URL
@@ -153,11 +179,17 @@
   // address bar: the reset is a one-shot action, and leaving it in
   // place would fire again on every refresh and read as part of the
   // route. Returns whether it fired.
+  //
+  // This is the ONLY thing that brings the knowledge banner back. It's
+  // grouped with Recents because they're the same idea — the Home tab
+  // is the demo's start-over button, and everything a run-through
+  // accumulated gets cleared together.
   function consumeResetFlag () {
     try {
       var url = new URL(window.location.href)
       if (url.searchParams.get(RESET_PARAM) !== '1') return false
       window.sessionStorage.removeItem(RECENTS_KEY)
+      window.sessionStorage.removeItem(KNOWLEDGE_BANNER_KEY)
       url.searchParams.delete(RESET_PARAM)
       window.history.replaceState({}, '', url.pathname + url.search + url.hash)
       return true
@@ -501,6 +533,12 @@
     var knowledgeSearchField = root.querySelector('[data-sh-knowledge-search-field]')
     if (knowledgeSearchField && knowledgeDocList) {
       bindKnowledgeSearch(knowledgeSearchField, knowledgeDocList)
+    }
+
+    // Phase 5c — Knowledge banner dismiss (also /knowledge.html only).
+    var knowledgeBanner = root.querySelector('[data-sh-knowledge-banner]')
+    if (knowledgeBanner) {
+      bindKnowledgeBanner(knowledgeBanner)
     }
 
     // Phase 6 — Scheduled workflows tab controller (only present on
@@ -2272,6 +2310,204 @@
   // like column controls. The Phase-4 spec explicitly rules those
   // out; this function is intentionally a "flat name-or-type
   // substring filter" and nothing more.
+  // ── Phase 5c — Knowledge banner dismiss ────────────────────────
+  // "Got it" hides the banner for the rest of the session, and the
+  // Home tab is the only thing that brings it back.
+  //
+  // The scope is deliberately in between the two obvious choices.
+  // Forgetting immediately meant the banner returned on every page
+  // load, so drilling into a doc and hitting Back put it right back on
+  // screen — those are full page navigations here, not view swaps.
+  // Remembering forever (localStorage) would mean whoever dismissed it
+  // once never sees it again, and this is a surface people demo
+  // repeatedly. Session scope with a reset on Home gives both: it
+  // stays gone while you move around, and a run-through can start over.
+  //
+  // `hidden` rather than removal so the element can come back without
+  // re-rendering, and so the reason it's gone is legible in the
+  // inspector. It also takes the banner out of the accessibility tree,
+  // which display:none via a class would do too but less obviously.
+  //
+  // It fades and dips in scale on the way out rather than blinking off,
+  // and the rest of the column glides up to meet it. The curves are in
+  // home.scss; what lives here is the scheduling and the measurement.
+  function bindKnowledgeBanner (bannerRoot) {
+    var dismiss = bannerRoot.querySelector('[data-sh-knowledge-banner-dismiss]')
+    if (!dismiss) return
+
+    // Normally the preload script in knowledge.html has already hidden
+    // the banner before this runs — it has to, or there'd be a frame of
+    // banner before the script loaded. This is the fallback for when
+    // that didn't happen (storage threw on the first read but not the
+    // second, markup used without the preload). Nothing to animate: the
+    // banner was dismissed on a previous page, so it just isn't here.
+    if (readKnowledgeBannerDismissed()) {
+      bannerRoot.hidden = true
+      return
+    }
+
+    dismiss.addEventListener('click', function () {
+      // A second click would queue a second cleanup.
+      if (bannerRoot.classList.contains('is-dismissing')) return
+
+      writeKnowledgeBannerDismissed()
+
+      var reduced = window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      if (reduced) {
+        bannerRoot.hidden = true
+        return
+      }
+
+      var timing = readBannerTiming(bannerRoot)
+
+      // Measure BEFORE the fade starts. The measurement briefly sets
+      // `hidden`, which is `display: none`, and taking an element out
+      // of the box tree cancels any transition running on it — doing
+      // this mid-fade snapped the banner straight to invisible at the
+      // exact moment the glide began, which is precisely the overlap
+      // this is trying to create. Nothing is animating yet at click
+      // time, so there's nothing to cancel.
+      var runSettle = planContentSettle(bannerRoot)
+
+      bannerRoot.classList.add('is-dismissing')
+
+      // Start the glide partway into the fade so the two overlap
+      // instead of running back to back. Driven by a timer rather than
+      // the fade's `transitionend`, which by definition can only fire
+      // at the end — there's no event for "partway".
+      window.setTimeout(function () {
+        runSettle(timing.settle)
+      }, timing.delay)
+    })
+  }
+
+  // The timings behind the dismiss, read off the element so the
+  // stylesheet stays the one place they're written down. They're
+  // declared on the column in home.scss and inherit to the banner.
+  //
+  // `delay` is how far into the fade the glide starts, and it's the one
+  // of the three that only the script can act on — there's no CSS way
+  // to say "begin this transition partway through that one".
+  function readBannerTiming (bannerRoot) {
+    var fade = 150
+    var settle = 200
+    var delay = 75
+    try {
+      var cs = window.getComputedStyle(bannerRoot)
+      fade = parseFloat(cs.getPropertyValue('--knowledge-banner-fade')) || fade
+      settle = parseFloat(cs.getPropertyValue('--knowledge-banner-settle')) || settle
+      var raw = parseFloat(cs.getPropertyValue('--knowledge-banner-glide-delay'))
+      delay = isNaN(raw) ? fade / 2 : raw
+    } catch (e) {
+      // Fall through to the defaults, which mirror home.scss.
+    }
+    return { fade: fade, settle: settle, delay: delay }
+  }
+
+  // Plans the second half of the dismiss: everything below the banner
+  // sliding up into the space the banner is about to vacate. Returns
+  // the function that runs it, so the measuring and the moving can sit
+  // at different points on the clock.
+  //
+  // The split is what makes the overlap possible. The straightforward
+  // version hides the banner and eases the resulting jump, but hiding
+  // is `display: none` — it collapses the layout AND cancels the fade,
+  // so the glide could only ever start once the banner was gone. Here
+  // the banner stays in flow at full height while the siblings move
+  // over it, and the distance comes from a measurement taken earlier,
+  // at click time, before there was any transition to disturb.
+  //
+  // That measurement is itself a hide-read-unhide, all in one
+  // synchronous block so the browser computes the collapsed layout
+  // without painting it. Cheap and exact — it accounts for the column's
+  // gap and any margins without this needing to know about them.
+  //
+  // The siblings are then translated UP by that distance, which lands
+  // them exactly where the layout will put them once the banner goes.
+  // That's what makes the final handoff invisible: dropping the
+  // transform and hiding the banner in the same frame cancel out to
+  // zero net movement. Either one alone would jump the full distance.
+  function planContentSettle (bannerRoot) {
+    // Everything after the banner that actually renders. The filter
+    // isn't hypothetical: the banner's immediate next sibling in
+    // knowledge.html is the inline preload script, and a `<script>`
+    // generates no box, so measuring it yields zeroes.
+    var movers = []
+    var next = bannerRoot.nextElementSibling
+    while (next) {
+      if (next.getClientRects().length) movers.push(next)
+      next = next.nextElementSibling
+    }
+
+    var i
+    var shifted = []
+    var deltas = []
+
+    if (movers.length) {
+      var before = []
+      for (i = 0; i < movers.length; i++) {
+        before.push(movers[i].getBoundingClientRect().top)
+      }
+
+      bannerRoot.hidden = true
+      for (i = 0; i < movers.length; i++) {
+        var delta = before[i] - movers[i].getBoundingClientRect().top
+        if (!delta) continue
+        shifted.push(movers[i])
+        deltas.push(delta)
+      }
+      bannerRoot.hidden = false
+
+      // Unhiding isn't enough on its own. The reads above forced a
+      // style recalc while the banner was `display: none`, so that's
+      // the last state the browser has on record for it — and an
+      // element coming back from `display: none` doesn't transition.
+      // Without this read, the caller's `is-dismissing` class would
+      // apply opacity 0 with no fade at all. Forcing layout here puts
+      // "displayed, opaque" on the record first, so the class that
+      // follows has something to animate away from.
+      void bannerRoot.offsetHeight
+    }
+
+    return function runSettle (settleMs) {
+      function dropBanner () {
+        bannerRoot.hidden = true
+        bannerRoot.classList.remove('is-dismissing')
+      }
+
+      // Banner is the last rendered thing in the column, or nothing
+      // moved — no glide to run, so just let it go.
+      if (!shifted.length) {
+        dropBanner()
+        return
+      }
+
+      // Arm the transition before the offset, with a reflow between
+      // them. A property can only animate if its `transition` was
+      // already in effect on the previous style computation — set both
+      // at once and the elements teleport.
+      var j
+      for (j = 0; j < shifted.length; j++) shifted[j].classList.add('is-settling')
+      void shifted[0].offsetHeight
+      for (j = 0; j < shifted.length; j++) {
+        shifted[j].style.transform = 'translateY(' + (-deltas[j]) + 'px)'
+      }
+
+      // The handoff. All of this has to land in the same frame: drop
+      // the transition first so clearing the transform doesn't animate
+      // back, then clear it, then take the banner out of flow. The
+      // elements are left exactly as they were found.
+      window.setTimeout(function () {
+        for (var k = 0; k < shifted.length; k++) {
+          shifted[k].classList.remove('is-settling')
+          shifted[k].style.transform = ''
+        }
+        dropBanner()
+      }, settleMs)
+    }
+  }
+
   function bindKnowledgeSearch (fieldRoot, listRoot) {
     var input = fieldRoot.querySelector('[data-sh-knowledge-search]')
     var clearBtn = fieldRoot.querySelector('[data-sh-knowledge-search-clear]')

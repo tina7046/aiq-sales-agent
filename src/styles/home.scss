@@ -2831,6 +2831,48 @@ main.app-wrapper {
   display: flex;
   flex-direction: column;
   gap: var(--slds-g-spacing-4, 1rem); // 16px
+
+  // ── Knowledge banner dismiss timings ──────────────────────────────
+  // Declared here, on the column, rather than on the banner, because
+  // both halves of the gesture need them and they live on different
+  // elements: the banner fades, its siblings glide. Custom properties
+  // inherit, so one declaration reaches both.
+  //
+  // home.js reads these two off the DOM instead of repeating the
+  // numbers, because it has to schedule the glide against the fade —
+  // retuning either value here moves the script's clock with it.
+  --knowledge-banner-fade: 150ms;
+  --knowledge-banner-settle: 350ms;
+  --knowledge-banner-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  // How far into the fade the glide starts — the overlap between the
+  // two halves of the gesture.
+  //
+  // 30ms rather than the obvious "half the fade". The ease above is
+  // steep: measured, the banner is at 34% opacity at 20% of the fade,
+  // 4% at the halfway mark, and fully gone by 60%. Starting at half
+  // would overlap them in time but not visibly, because there'd be
+  // nothing left to see. 30ms is early enough that the content is
+  // moving while the banner is still legible, which is what reads as
+  // a cross-fade.
+  --knowledge-banner-glide-delay: 30ms;
+
+  // Carried only for the moment after the knowledge banner is
+  // dismissed, while the rest of the column glides up into the space it
+  // is about to leave. `settleContentBelow` in home.js adds this class,
+  // then offsets the elements; this is the curve that carries them.
+  //
+  // It starts partway into the fade rather than after it, so the two
+  // overlap — see the scheduling note in home.js. Deliberately more
+  // than twice the fade's own duration: the banner leaves quickly, the
+  // page reflows slowly behind it.
+  > .is-settling {
+    transition: transform var(--knowledge-banner-settle) var(--knowledge-banner-ease);
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -2857,12 +2899,56 @@ main.app-wrapper {
 //     reused for the badge so the two AI surfaces on this page match.
 // ══════════════════════════════════════════════════════════════════════
 .knowledge-banner {
+  // "Got it" dismisses the banner by setting the `hidden` attribute
+  // (see bindKnowledgeBanner in home.js). The UA rule for `[hidden]` is
+  // `display: none`, but it's weaker than the class below, so without
+  // this the attribute would be set and the banner would stay visible.
+  &[hidden] {
+    display: none;
+  }
+
   display: flex;
   align-items: stretch; // illustration column matches the copy's height
 
   overflow: hidden; // clips the art to the rounded corners
   border-radius: var(--slds-g-radius-border-3, 0.75rem);
   background: #f5f2fb; // sampled from the artwork — see above
+
+  // ── Dismiss ──
+  // Transform and opacity only — the banner never changes size. An
+  // earlier version collapsed its height so the list below could rise
+  // into the gap, but animating a layout property means the box is
+  // being shortened while you can still see it, and `overflow: hidden`
+  // above turns that into the copy getting visibly guillotined. Scaling
+  // moves the whole thing as one piece instead.
+  //
+  // Values are the modal close from transitions.dev (06-modal.md) —
+  // same 150ms, same 0.96, same easing — because it's the same gesture:
+  // a surface dipping back and fading rather than going anywhere. They
+  // aren't `var(--modal-*)` because that block lives in
+  // home_conversation.scss, which this page doesn't load, and a banner
+  // borrowing a modal's tokens would be a lie about what it is.
+  //
+  // The space the banner occupies closes when home.js sets `hidden`, in
+  // one step, after the fade has finished. See the note there.
+  transform-origin: center;
+  transition:
+    transform var(--knowledge-banner-fade) var(--knowledge-banner-ease),
+    opacity   var(--knowledge-banner-fade) var(--knowledge-banner-ease);
+  will-change: transform, opacity;
+
+  &.is-dismissing {
+    transform: scale(0.96);
+    opacity: 0;
+    pointer-events: none; // nothing clickable while it's on its way out
+  }
+
+  // No transition means no `transitionend`, so home.js checks this same
+  // query and hides the banner outright rather than waiting on an event
+  // that will never arrive.
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 }
 
 // ── Copy column ──
@@ -2968,39 +3054,22 @@ main.app-wrapper {
 }
 
 // ── CTA ──
-// Deliberately NOT an `.slds-button`: the authored markup carries only
-// its own class, so the SLDS neutral-button treatment (32-px height,
-// pill radius, white surface, brand-blue label) is reproduced here from
-// the same tokens. That keeps it visually identical to the header's
-// "+ New Knowledge" pill while leaving the markup as authored.
+// The markup carries `slds-button slds-button_neutral`, so everything
+// visual — 32-px height, pill radius, white surface, brand-blue label,
+// and the hover that darkens that label to navy — comes from SLDS.
+//
+// This used to reproduce all of it here from the same tokens, on the
+// reasoning that the authored markup only had its own class. It matched
+// at rest and drifted on hover: the copy changed the background but not
+// the label colour, so the pill sat next to an identical-looking
+// "+ New Knowledge" that behaved differently under the cursor. Nothing
+// is reproduced now, so there is nothing left to drift.
+//
+// One declaration remains, and it's the only genuinely banner-specific
+// one: the button shares a flex row with the copy column, and without
+// this it gets squeezed as that column grows.
 .knowledge-banner__button {
   flex: 0 0 auto;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 2rem; // 32px, matches SLDS buttons
-  padding-inline: var(--slds-g-spacing-4, 1rem); // 16px
-
-  border: 1px solid var(--slds-g-color-border-2, #5c5c5c);
-  border-radius: var(--slds-g-radius-border-pill, 15rem);
-  background: var(--slds-g-color-surface-container-1, #ffffff);
-
-  color: var(--slds-g-color-accent-2, #0250d9);
-  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
-  font-weight: 600;
-  line-height: 1.125rem;
-
-  cursor: pointer;
-
-  &:hover {
-    background: var(--slds-g-color-neutral-base-95, #f3f3f3);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--slds-g-color-on-surface-3, #001e5b);
-    outline-offset: 2px;
-  }
 }
 
 // ── Illustration column ──
