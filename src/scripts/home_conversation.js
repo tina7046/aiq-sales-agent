@@ -95,6 +95,12 @@
     convTable:    '[data-sh-conv-table]',
     convRow:      '[data-sh-conv-row]',
     convReject:   '[data-sh-conv-reject]',
+    // Signal cells. The template renders every signal as a badge and
+    // `fitSignalBadges` decides how many survive; `signalMore` is the
+    // "+N more" that reports the rest.
+    signalCell:   '[data-sh-signal-fit]',
+    signalBadge:  '.ptl-signal-badge',
+    signalMore:   '[data-sh-signal-more]',
     // Expanding a table into the large dialog. The trigger lives
     // on a workflow-activity chip and carries the id of the table it
     // opens; the dialog is a page-level singleton whose content area is
@@ -853,6 +859,103 @@
       if (d.decision === 'approve') paintRowStatus(row, 'approved')
       else if (d.decision === 'request_changes') paintRowStatus(row, 'changes_requested')
     })
+
+    fitSignalBadges(table)
+  }
+
+  // ── Signal badges ───────────────────────────────────────────────
+  // Shows as many signal badges as the cell's line budget allows and
+  // collapses the rest into "+N more".
+  //
+  // Runtime rather than template because it's a question about rendered
+  // width: "290+ SDRs" and "New Head of Enterprise Americas (Katie
+  // Layng)" are one badge each and four times apart in size, so no
+  // count decided up front is right for both. A fixed cap made every
+  // row as sparse as the wordiest one. The template renders all of
+  // them; this decides which stay.
+  function fitSignalBadges (scope) {
+    var cells = (scope || document).querySelectorAll(SELECTORS.signalCell)
+    for (var i = 0; i < cells.length; i++) fitOneSignalCell(cells[i])
+  }
+
+  // The Signal column is a fixed 18rem, so the fit doesn't actually
+  // move with the window today — this is here for when it isn't, and
+  // because the alternative failure is silent and wrong rather than
+  // visibly broken. Debounced: a drag fires this continuously and each
+  // pass measures every cell.
+  var refitTimer = null
+  window.addEventListener('resize', function () {
+    if (refitTimer) window.clearTimeout(refitTimer)
+    refitTimer = window.setTimeout(function () {
+      refitTimer = null
+      fitSignalBadges()
+    }, 150)
+  })
+
+  function fitOneSignalCell (cell) {
+    var badges = cell.querySelectorAll(SELECTORS.signalBadge)
+    if (!badges.length) return
+    var more = cell.querySelector(SELECTORS.signalMore)
+
+    // Start from everything showing, so a re-fit isn't biased by what
+    // the last one hid — on a re-fit the cell may have got wider, and
+    // a badge hidden at the old width has to be allowed back.
+    var i
+    for (i = 0; i < badges.length; i++) badges[i].hidden = false
+    if (more) more.hidden = true
+
+    // Put the clip back, because the budget is read off it below and a
+    // re-fit arrives with `is-fitted` already set from the first pass —
+    // at which point `max-height` computes to `none`, the budget parses
+    // as NaN, and the fitter bails having just un-hidden everything.
+    // Silent and wrong: the cell keeps every badge and simply grows.
+    // That's every resize and every open of the expand modal.
+    cell.classList.remove('is-fitted')
+
+    // The budget, in pixels, read off the pre-JS clip the stylesheet
+    // put there — which is why this happens BEFORE `is-fitted` drops
+    // it. Taking it from the DOM rather than recomputing it here keeps
+    // `--ptl-signal-lines` the only place the number is written down.
+    var budget = parseFloat(window.getComputedStyle(cell).maxHeight)
+    // The clip is missing or `none`: nothing to fit against, so show
+    // everything rather than guess at a height and hide good content.
+    if (!budget) { cell.classList.add('is-fitted'); return }
+
+    // Drops the clip. From here the fitter is what bounds the height,
+    // and it does it by hiding whole badges — the clip would cut one
+    // in half.
+    cell.classList.add('is-fitted')
+
+    // Height rather than a count of flex lines, because a badge whose
+    // label is too long for the column wraps to two lines inside its
+    // own pill: three such badges are three lines by any count and
+    // twice the height they're supposed to be. Measuring the box is
+    // the only reading that can't be fooled by that.
+    if (cell.getBoundingClientRect().height <= budget) return
+
+    // Over budget, so a counter is coming and it takes room on the last
+    // line. Reveal it BEFORE choosing what to drop, or the last badge
+    // kept would be one the counter then pushes over the edge.
+    //
+    // Reserve it at its widest — every badge but one hidden — so the
+    // width can only shrink as the real count is settled. Sizing it
+    // from a placeholder and growing later would re-wrap the line the
+    // fitter just finished measuring.
+    if (more) {
+      more.hidden = false
+      more.textContent = '+' + (badges.length - 1) + ' more'
+    }
+
+    // Hide from the end until it fits. Re-measured each time rather
+    // than computed, because removing one badge can pull the next line
+    // up whole and change the answer by more than one item.
+    var shown = badges.length
+    while (shown > 1 && cell.getBoundingClientRect().height > budget) {
+      shown--
+      badges[shown].hidden = true
+    }
+
+    if (more) more.textContent = '+' + (badges.length - shown) + ' more'
   }
 
   // ── Row decisions ───────────────────────────────────────────────
@@ -976,6 +1079,13 @@
       table.parentNode.insertBefore(placeholder, table)
       host.appendChild(table)
       expanded = table
+
+      // The Signal column is a fixed 18rem in both places, so the fit
+      // that was computed in the thread still holds here. Re-run anyway:
+      // it's one pass over 37 cells, and it means the dialog can't be
+      // the place where a future width change shows up as a clipped
+      // badge.
+      fitSignalBadges(table)
 
       lastFocused = button
 

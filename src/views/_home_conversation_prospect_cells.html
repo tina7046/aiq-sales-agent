@@ -287,63 +287,67 @@
 
 
 {# ── Source ───────────────────────────────────────────────────────
-   Which prospecting system surfaced the person: a vendor badge with
-   that vendor's own mark.
+   How many systems it took to build the row, as a stack of vendor
+   marks and a count.
 
-   `row.source` is looked up in the registry below rather than run
-   through a branch per vendor, so adding one is a line here plus its
-   SVG in /assets/images/source_icons. Three outcomes:
+   Derived from the signals rather than stored, so this cell cannot
+   disagree with the icons on the badges beside it — it IS those icons,
+   deduped. `row.source` (one vendor per row) is what this used to
+   render and is still on the data; nothing reads it now.
 
-     • known value   — the vendor's mark and name
-     • unknown value — the name alone, no mark. Deliberately NOT a
-                       fallback vendor: badging an unrecognized value
-                       as ZoomInfo (what this used to do) invents
-                       provenance the data never claimed.
-     • empty / "n/a" — the muted marker, like every other empty cell
+   Only the first three marks are drawn. Rows carry five or six
+   sources, and past three the stack costs more column width than the
+   distinction is worth; the count carries the rest and `title` names
+   them all. That's also where the hover popover in the source design
+   went — the names it paged through are the only part worth keeping
+   in a cell this size, and a title says them without a layer.
 
    The marks are brand-coloured 14px files, so nothing here sets a
    colour: `slds-badge__icon` would otherwise tint them. They're
    referenced by `<use>` at the file itself — no fragment — which is
    how the whole 14px artboard comes through, patterns included.
 
+   Three outcomes, matching the rest of the table:
+
+     • sourced signals — the stack, plus "N sources" (or the lone
+                         vendor's name, since "1 sources" doesn't read)
+     • no signals      — the muted marker
+     • unknown vendor  — counted, but no mark. Deliberately NOT a
+                         fallback vendor: badging an unrecognized value
+                         as ZoomInfo (what this used to do) invents
+                         provenance the data never claimed.
+
    Two dropped badges used to stack under this one, driven by
    `row.isNewContact` / `row.isNewAccount`. The flags are still on the
    rows if that pair is ever wanted back; nothing else reads them.
-
-   This is the one macro that no longer round-trips with the lab copy
-   (_prospect_table_lab_cells.html): the labs' data still names
-   Salesforce and Report as sources, so their version keeps the old
-   branch-per-vendor chain and both "new record" badges.
 #}
 {% macro cellSource(row, span=1, merged=false) %}
-{% set SOURCE_ICONS = {
-  "Demandbase": "source_demandbase.svg",
-  "Apollo":     "source_apollo.svg",
-  "Moody’s":    "source_moodys.svg",
-  "6sense":     "source_6sense.svg",
-  "SalesIntel": "source_salesintel.svg",
-  "G2":         "source_g2.svg",
-  "ZoomInfo":   "source_zoominfo.svg",
-  "Gong":       "source_gong.svg",
-  "TechCrunch": "source_web.svg"
-} %}
-{% set sourceIcon = SOURCE_ICONS[row.source] %}
+{% set sources = row.signals | distinctSources %}
 {{ tdOpen(span, merged) }}
   <div class="slds-td-formatter slds-p-vertical_x-small" style="flex-direction: column">
-    {% if not row.source or row.source == 'n/a' %}
+    {%- if not sources | length -%}
     {{ na(row.source) }}
-    {% else %}
-    <span class="slds-badge slds-badge_lightest slds-truncate">
-      {%- if sourceIcon %}
-      <span class="slds-badge__icon slds-badge__icon_left">
-        <span class="slds-icon_container">
-          <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
-            <use xlink:href="/assets/images/source_icons/{{ sourceIcon }}"></use>
+    {%- else -%}
+    {#- A real SLDS badge, same classes as the signal badges beside it,
+        rather than the hand-rolled pill this was: the shape, fill,
+        border and type all come from the component now, and
+        `ptl-source-multi` is left holding only the icon stack. -#}
+    {#- Every source, not the first three behind a "6 sources" count.
+        The marks are the useful part — which providers back the row is
+        what the reader compares across rows, and a number doesn't carry
+        that. The names stay on `title` for the full reading. -#}
+    <span class="slds-badge slds-badge_lightest ptl-source-multi" title="{{ sources | join(', ') }}">
+      <span class="ptl-source-multi__icons">
+        {%- for name in sources %}{% if SOURCE_ICONS[name] %}
+        <span class="ptl-source-multi__icon">
+          <svg aria-hidden="true">
+            <use xlink:href="/assets/images/source_icons/{{ SOURCE_ICONS[name] }}"></use>
           </svg>
         </span>
+        {%- endif %}{% endfor %}
       </span>
-      {%- endif %}{{ row.source }}</span>
-    {% endif %}
+    </span>
+    {%- endif -%}
   </div>
 </td>
 {% endmacro %}
@@ -387,51 +391,74 @@
 
 {# ── Signals ──────────────────────────────────────────────────────
    Semicolon-separated in the CSV, so it arrives as a list, and it
-   renders as one — bulleted, one signal per line.
+   renders as one — a badge per signal, wrapping as a group.
 
-   It used to be joined into a single clamped paragraph, for a real
-   reason: `-webkit-line-clamp` needs one inline flow to place its
-   ellipsis, so block children inside a clamped box get cut off without
-   one. That's why the height is bounded by CAPPING THE ITEMS instead —
-   a clamp cuts mid-signal wherever the third line happens to end,
-   where a cap ends on a whole one and says how many it kept back.
+   EVERY signal is rendered here. How many stay visible is decided at
+   runtime by `fitSignalBadges` in home_conversation.js, which fills the
+   cell's line budget and collapses the remainder into the trailing
+   "+N more". So a row of short signals ("290+ SDRs", "8+ GTM tools")
+   shows more of them than a row of long ones.
 
-   TWO, and the cap is where it is because of height. This cell has
-   about 100px before it becomes the thing that sets the row height —
-   the Prospect cell's four lines set it at ~105px. Measured in the
-   lab, with the items wrapping freely:
+   That's a question about rendered width, which is why it isn't
+   answered here: those two are one badge each but four times apart in
+   size, and only the browser knows where they land.
 
-     2 bullets + "+N more"   ~100px   nothing cut, 2 rows grow
-     3 bullets + "+N more"    144px   nothing cut, table 12% deeper
-     3 bullets, 1 line each   108px   still overshoots, AND 6 of the
-                                      64 signals lose their tail
+   There was a hard cap of two in this macro until badges replaced the
+   bulleted list. The cap was sized against a ~100px height budget that
+   the bullets spent on a line per item plus a hanging indent; badges
+   flow, the same two now cost 24-52px, and the fitter spends what that
+   freed. The budget is `--ptl-signal-lines` in the stylesheet.
 
-   Counts run 2 to 7 per account, so all but one collapse to "+N more".
-   The full list stays on the cell's `title`.
+   Nothing is truncated: the fitter drops whole badges, never part of
+   one — the same principle the old cap existed to protect. A clamp
+   would cut mid-signal wherever the last line happened to end. The
+   full list stays on the cell's `title` either way.
 
-   Falls back to the flat `signal` string if a row has no list.
+   Each badge leads with the mark of the system the signal came from,
+   because a claim like "$450M Series G" is worth a different amount
+   depending on whether it came from press or from a rep's call notes,
+   and that is the difference the reader is actually weighing. Marks
+   only — the vendor name is in the badge's `title`, since a row shows
+   five of these and five names would crowd out the signals.
+
+   Signals are `{ text, source }`; a bare string still renders, without
+   a mark. Falls back to the flat `signal` string if a row has no list.
 #}
 {% macro cellSignals(row, span=1, merged=false) %}
-{#- Inside the macro, not above it. A template-level `set` read from in
-    here has been unreliable in this project before — the `_hidden`
-    list had to move inside `prospectTable` for the same reason. -#}
-{%- set signalCap = 2 -%}
 {{ tdOpen(span, merged) }}
   <div class="slds-td-formatter slds-p-vertical_x-small">
     {%- if row.signals and row.signals | length -%}
-    <div class="ptl-signals" title="{{ row.signals | join('; ') }}">
-      <ul class="ptl-signal-list">
-        {% for signal in row.signals.slice(0, signalCap) %}
-        <li>{{ signal }}</li>
-        {% endfor %}
-      </ul>
-      {% if row.signals | length > signalCap %}
-      <div class="ptl-signal-more">+{{ (row.signals | length) - signalCap }} more</div>
-      {% endif %}
+    {#- `.ptl-signals` is the wrap container itself now — the `<ul>` it
+        used to hold went with the bullets. -#}
+    <div class="ptl-signals" title="{{ row.signals | join('; ', 'text') }}" data-sh-signal-fit>
+      {% for signal in row.signals %}
+      {#- `slds-badge_lightest` is the white-with-grey-border treatment:
+          it sets the badge's background to surface-container-1 (#fff)
+          and its border to border-1 (#c9c9c9), which the stock badge
+          leaves transparent over a grey fill. -#}
+      <span class="slds-badge slds-badge_lightest ptl-signal-badge"{% if signal.source %} title="{{ signal.source }}"{% endif %}>
+        {%- if SOURCE_ICONS[signal.source] -%}
+        <span class="ptl-signal-badge__icon">
+          <svg aria-hidden="true">
+            <use xlink:href="/assets/images/source_icons/{{ SOURCE_ICONS[signal.source] }}"></use>
+          </svg>
+        </span>
+        {%- endif -%}
+        {{ signal.text or signal }}</span>
+      {% endfor %}
+      {#- Empty and hidden until the fitter has something to report. Not
+          a badge: it's a count of what's missing, not one of the things
+          being counted, and the same pill would read as one more signal
+          named "+5 more".
+
+          If the script never runs, this stays hidden and the stylesheet
+          clips the cell to the same line budget — the overflow badges
+          go unannounced rather than the row going seven badges tall. -#}
+      <span class="ptl-signal-more" data-sh-signal-more hidden></span>
     </div>
     {%- else -%}
-    {#- One value, so no list: a lone bullet reads as a broken list
-        rather than as an item. -#}
+    {#- One value, so no list: a lone badge on a row where every other
+        cell shows two reads as a row that lost something. -#}
     <div class="slds-line-clamp_medium" title="{{ row.signal }}">{{ na(row.signal) }}</div>
     {%- endif -%}
   </div>

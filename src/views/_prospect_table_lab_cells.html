@@ -279,67 +279,49 @@
 
 
 {# ── Source ───────────────────────────────────────────────────────
-   Where the prospect came from, plus optional "new record" badges.
-   `row.source` is matched against the known integrations; anything
-   recognized renders its badge.
+   How many systems it took to build the row: a stack of vendor marks
+   and a count, over the optional "new record" badges.
 
-   The `n/a` branch is first and deliberate. Production's version falls
-   through to a ZoomInfo badge for any unrecognized value, which was
-   fine when every row had a real source — but the account CSV has no
-   source column, so that fallback would badge all 15 rows as ZoomInfo
-   and invent provenance the data never claimed.
+   Derived from the signals rather than stored, so this cell cannot
+   disagree with the icons on the badges beside it — it IS those icons,
+   deduped. See the production copy
+   (_home_conversation_prospect_cells.html) for the rest of the
+   reasoning; this is the same macro.
+
+   The empty branch is first and deliberate. This used to fall through
+   to a ZoomInfo badge for any unrecognized `row.source`, which was
+   fine when every row had a real one — but the account CSV has no
+   source column, so that fallback badged all 15 rows as ZoomInfo and
+   invented provenance the data never claimed. Rows with no signals
+   still land there, and still show the muted marker.
 #}
 {% macro cellSource(row, span=1, merged=false) %}
+{% set sources = row.signals | distinctSources %}
 {{ tdOpen(span, merged) }}
   <div class="slds-td-formatter slds-p-vertical_x-small" style="flex-direction: column">
-    {% if not row.source or row.source == 'n/a' %}
+    {%- if not sources | length -%}
     {{ na(row.source) }}
-    {% elif row.source == 'Salesforce' %}
-    <span class="slds-badge slds-badge_lightest slds-truncate">
-      <span class="slds-badge__icon slds-badge__icon_left" style="color:#0176D3">
-        <span class="slds-icon_container slds-current-color" title="Salesforce">
-          <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
-            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#salesforce1"></use>
+    {%- else -%}
+    {#- A real SLDS badge, same classes as the signal badges beside it,
+        rather than the hand-rolled pill this was: the shape, fill,
+        border and type all come from the component now, and
+        `ptl-source-multi` is left holding only the icon stack. -#}
+    {#- Every source, not the first three behind a "6 sources" count.
+        The marks are the useful part — which providers back the row is
+        what the reader compares across rows, and a number doesn't carry
+        that. The names stay on `title` for the full reading. -#}
+    <span class="slds-badge slds-badge_lightest ptl-source-multi" title="{{ sources | join(', ') }}">
+      <span class="ptl-source-multi__icons">
+        {%- for name in sources %}{% if SOURCE_ICONS[name] %}
+        <span class="ptl-source-multi__icon">
+          <svg aria-hidden="true">
+            <use xlink:href="/assets/images/source_icons/{{ SOURCE_ICONS[name] }}"></use>
           </svg>
         </span>
-      </span>Salesforce</span>
-    {% elif row.source == 'Report' %}
-    <span class="slds-badge slds-badge_lightest slds-truncate">
-      <span class="slds-badge__icon slds-badge__icon_left">
-        <span class="slds-icon_container slds-icon-standard-report" title="Report">
-          <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
-            <use xlink:href="/assets/icons/standard-sprite/svg/symbols.svg#report"></use>
-          </svg>
-        </span>
-      </span>Report</span>
-    {% elif row.source == 'Gong' %}
-    <span class="slds-badge slds-badge_lightest slds-truncate">
-      <span class="slds-badge__icon slds-badge__icon_left">
-        <span class="slds-icon_container slds-current-color" title="Gong">
-          <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
-            <use xlink:href="/assets/images/source_icons/source_gong.svg"></use>
-          </svg>
-        </span>
-      </span>Gong</span>
-    {% elif row.source == 'TechCrunch' %}
-    <span class="slds-badge slds-badge_lightest slds-truncate">
-      <span class="slds-badge__icon slds-badge__icon_left">
-        <span class="slds-icon_container slds-current-color" title="TechCrunch">
-          <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
-            <use xlink:href="/assets/images/source_icons/source_web.svg"></use>
-          </svg>
-        </span>
-      </span>TechCrunch</span>
-    {% else %}
-    <span class="slds-badge slds-badge_lightest slds-truncate">
-      <span class="slds-badge__icon slds-badge__icon_left" style="color:#EA1B15">
-        <span class="slds-icon_container slds-current-color" title="ZoomInfo">
-          <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
-            <use xlink:href="/assets/images/source_icons/source_zoominfo.svg"></use>
-          </svg>
-        </span>
-      </span>ZoomInfo</span>
-    {% endif %}
+        {%- endif %}{% endfor %}
+      </span>
+    </span>
+    {%- endif %}
     {% if row.isNewContact %}
     <span class="slds-badge slds-badge_lightest slds-m-left_none slds-m-top_x-small slds-truncate">
       <span class="slds-badge__icon slds-badge__icon_left">
@@ -402,59 +384,83 @@
 
 {# ── Signals ──────────────────────────────────────────────────────
    Semicolon-separated in the CSV, so it arrives as a list, and it renders
-   as one — bulleted, one signal per line.
+   as one — a badge per signal, wrapping as a group.
 
-   It used to be joined with a middot into a single clamped paragraph, for
-   a real reason: `-webkit-line-clamp` needs one inline flow to place its
-   ellipsis, so block children inside a clamped box get cut off without
-   one. That's why the height is bounded by CAPPING THE ITEMS instead — a
-   clamp cuts mid-signal wherever the third line happens to end, where a
-   cap ends on a whole one and says how many it kept back.
+   EVERY signal is rendered here. How many stay visible is decided at
+   runtime by the fitter in this page's inline script (production runs the
+   same thing as `fitSignalBadges` in home_conversation.js), which fills
+   the cell's line budget and collapses the remainder into the trailing
+   "+N more". So a row of short signals ("290+ SDRs", "8+ GTM tools")
+   shows more of them than a row of long ones.
 
-   TWO, where the group lab's company cell shows three, and the difference
-   is height the two cells don't equally have. The Signal cell has about
-   100px before it becomes the thing that sets the row height — the
-   Prospect cell's four lines set it at ~105px today. Measured, with the
-   items wrapping freely:
+   That's a question about rendered width, which is why it isn't answered
+   here: those two are one badge each but four times apart in size, and
+   only the browser knows where they land.
+
+   There was a hard cap of two in this macro until badges replaced the
+   bulleted list. The cap was sized against a ~100px height budget that
+   the bullets spent on a line per item plus a hanging indent — measured
+   at the time:
 
      2 bullets + "+N more"   96-100px   table 4655px deep, nothing cut
      3 bullets + "+N more"      144px   table 5223px deep, nothing cut
      3 bullets, 1 line each     108px   table 5107px deep, 6 of 64
                                         signals lose their tail
 
-   So the third bullet costs 572px of depth, a 12% longer page, and
-   clamping to buy it back still overshoots AND starts truncating. The
-   group lab's cell could take three because it was already the tallest
-   thing in its row.
+   Badges flow instead of stacking, so the same two now cost 24-52px, and
+   the fitter spends what that freed. The budget is `--ptl-signal-lines`
+   in the stylesheet.
 
-   Counts run 2 to 7 per account, so every account but one collapses to
-   "+N more". The full list stays on the cell's `title`.
+   Nothing is truncated: the fitter drops whole badges, never part of one
+   — the same principle the old cap existed to protect, and the reason
+   clamping was rejected above. The full list stays on the cell's `title`.
 
-   Falls back to the flat `signal` string if a row has no list, so this
-   still renders against the old twelve-prospect shape.
+   Each badge leads with the mark of the system the signal came from,
+   because a claim like "$450M Series G" is worth a different amount
+   depending on whether it came from press or from a rep's call notes,
+   and that is the difference the reader is actually weighing. Marks
+   only — the vendor name is in the badge's `title`, since a row shows
+   five of these and five names would crowd out the signals.
+
+   Signals are `{ text, source }`; a bare string still renders, without
+   a mark, so this still works against the old twelve-prospect shape.
+   Falls back to the flat `signal` string if a row has no list.
 #}
 {% macro cellSignals(row, span=1, merged=false) %}
-{#- Inside the macro, not above it. A template-level `set` read from in
-    here has been unreliable in this project before — the flat lab's
-    `_hidden` list had to move inside `prospectTable` for the same
-    reason. -#}
-{%- set signalCap = 2 -%}
 {{ tdOpen(span, merged) }}
   <div class="slds-td-formatter slds-p-vertical_x-small">
     {%- if row.signals and row.signals | length -%}
-    <div class="ptl-signals" title="{{ row.signals | join('; ') }}">
-      <ul class="ptl-signal-list">
-        {% for signal in row.signals.slice(0, signalCap) %}
-        <li>{{ signal }}</li>
-        {% endfor %}
-      </ul>
-      {% if row.signals | length > signalCap %}
-      <div class="ptl-signal-more">+{{ (row.signals | length) - signalCap }} more</div>
-      {% endif %}
+    {#- `.ptl-signals` is the wrap container itself now — the `<ul>` it
+        used to hold went with the bullets. -#}
+    <div class="ptl-signals" title="{{ row.signals | join('; ', 'text') }}" data-sh-signal-fit>
+      {% for signal in row.signals %}
+      {#- `slds-badge_lightest` is the white-with-grey-border treatment:
+          it sets the badge's background to surface-container-1 (#fff)
+          and its border to border-1 (#c9c9c9), which the stock badge
+          leaves transparent over a grey fill. -#}
+      <span class="slds-badge slds-badge_lightest ptl-signal-badge"{% if signal.source %} title="{{ signal.source }}"{% endif %}>
+        {%- if SOURCE_ICONS[signal.source] -%}
+        <span class="ptl-signal-badge__icon">
+          <svg aria-hidden="true">
+            <use xlink:href="/assets/images/source_icons/{{ SOURCE_ICONS[signal.source] }}"></use>
+          </svg>
+        </span>
+        {%- endif -%}
+        {{ signal.text or signal }}</span>
+      {% endfor %}
+      {#- Empty and hidden until the fitter has something to report. Not a
+          badge: it's a count of what's missing, not one of the things
+          being counted, and the same pill would read as one more signal
+          named "+5 more".
+
+          If the script never runs, this stays hidden and the stylesheet
+          clips the cell to the same line budget — the overflow badges go
+          unannounced rather than the row going seven badges tall. -#}
+      <span class="ptl-signal-more" data-sh-signal-more hidden></span>
     </div>
     {%- else -%}
-    {#- One value, so no list: a lone bullet reads as a broken list rather
-        than as an item. -#}
+    {#- One value, so no list: a lone badge on a row where every other
+        cell shows two reads as a row that lost something. -#}
     <div class="slds-line-clamp_medium" title="{{ row.signal }}">{{ na(row.signal) }}</div>
     {%- endif -%}
   </div>

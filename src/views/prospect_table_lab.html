@@ -347,4 +347,102 @@
     })
   }())
 </script>
+
+{#
+  Signal-badge fitter. A COPY of `fitSignalBadges` / `fitOneSignalCell` /
+  `linesUsed` in home_conversation.js, function for function, so the lab
+  and the app pack the cell identically and a change here can be pasted
+  straight back.
+
+  Inline for the same reason the block above is: it's the lab, and this
+  page has no script file of its own. The one difference from production
+  is what calls it — there's no `bindProspectTable` here, so it runs on
+  its own.
+#}
+<script>
+  (function () {
+    'use strict'
+
+    var CELL  = '[data-sh-signal-fit]'
+    var BADGE = '.ptl-signal-badge'
+    var MORE  = '[data-sh-signal-more]'
+
+    // Shows as many signal badges as the cell's line budget allows and
+    // collapses the rest into "+N more".
+    //
+    // Runtime rather than template because it's a question about
+    // rendered width: "290+ SDRs" and "RevOps modernization (Head of
+    // RevOps Priya Nair)" are one badge each and four times apart in
+    // size, so no count decided up front is right for both. A fixed cap
+    // made every row as sparse as the wordiest one.
+    function fitSignalBadges (scope) {
+      var cells = (scope || document).querySelectorAll(CELL)
+      for (var i = 0; i < cells.length; i++) fitOneSignalCell(cells[i])
+    }
+
+    function fitOneSignalCell (cell) {
+      var badges = cell.querySelectorAll(BADGE)
+      if (!badges.length) return
+      var more = cell.querySelector(MORE)
+
+      // Start from everything showing, so a re-fit isn't biased by what
+      // the last one hid.
+      var i
+      for (i = 0; i < badges.length; i++) badges[i].hidden = false
+      if (more) more.hidden = true
+
+      // Put the clip back, because the budget is read off it below and
+      // a re-fit arrives with `is-fitted` already set from the first
+      // pass — at which point `max-height` computes to `none`, the
+      // budget parses as NaN, and the fitter bails having just
+      // un-hidden everything. Silent and wrong: the cell keeps every
+      // badge and simply grows.
+      cell.classList.remove('is-fitted')
+
+      // The budget, in pixels, read off the pre-JS clip the stylesheet
+      // put there — which is why this happens BEFORE `is-fitted` drops
+      // it. Taking it from the DOM rather than recomputing it here
+      // keeps `--ptl-signal-lines` the only place the number is
+      // written down.
+      var budget = parseFloat(window.getComputedStyle(cell).maxHeight)
+      if (!budget) { cell.classList.add('is-fitted'); return }
+
+      cell.classList.add('is-fitted')
+
+      // Height rather than a count of flex lines, because a badge whose
+      // label is too long for the column wraps to two lines inside its
+      // own pill — and this page has three of those. Three such badges
+      // are three lines by any count and twice the height they're
+      // supposed to be.
+      if (cell.getBoundingClientRect().height <= budget) return
+
+      // Reveal the counter BEFORE choosing what to drop — it takes room
+      // on the last line. Reserved at its widest so the width can only
+      // shrink as the real count is settled.
+      if (more) {
+        more.hidden = false
+        more.textContent = '+' + (badges.length - 1) + ' more'
+      }
+
+      var shown = badges.length
+      while (shown > 1 && cell.getBoundingClientRect().height > budget) {
+        shown--
+        badges[shown].hidden = true
+      }
+
+      if (more) more.textContent = '+' + (badges.length - shown) + ' more'
+    }
+
+    fitSignalBadges()
+
+    var refitTimer = null
+    window.addEventListener('resize', function () {
+      if (refitTimer) window.clearTimeout(refitTimer)
+      refitTimer = window.setTimeout(function () {
+        refitTimer = null
+        fitSignalBadges()
+      }, 150)
+    })
+  }())
+</script>
 {% endblock %}

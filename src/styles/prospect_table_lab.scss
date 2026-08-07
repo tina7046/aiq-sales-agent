@@ -474,51 +474,259 @@ $sh-conv-table-rows: 5.5;
 }
 
 
-// ── Signals: a bulleted list, capped in the markup ────────────────
-// SLDS resets list markers globally, so `list-style` has to be asked for
-// back — a bare `<ul>` here renders as unbulleted lines.
+// ── Signals: one badge per signal, as many as fit ─────────────────
+// Badges, where this was a bulleted list. They flow as a group rather than
+// stacking: the list spent a 16px hanging indent on every line and broke
+// after each item however short it was, so the two short signals
+// ("290+ SDRs", "8+ GTM tools") each took a line of their own.
 //
-// The height bound is the item cap in the template, not a line clamp here.
-// That's deliberate: it lets a long signal WRAP rather than truncate, and
-// the longest of these ("RevOps modernization (Head of RevOps Priya Nair)",
-// 48 characters) is one you want whole. The old middot-joined paragraph cut
-// mid-phrase wherever its third line ended.
+// How many show is decided at runtime — the fitter in this page's inline
+// script hides whatever spills past the budget below. The bound is a
+// number of LINES, not of items: two long signals and five short ones are
+// the same height problem and a different count.
 //
-// Which is why there is no `-webkit-line-clamp` on the `li` — it was tried.
-// Clamping each bullet to one line to make room for a third bullet still
-// left the cell at 108px, above the ~105px where it starts setting the row
-// height, AND cost 6 of the 64 signals their tail. Two wrapping bullets
-// are 100px and cost nothing. The cap lives in the template, next to those
-// measurements.
+// There is no `-webkit-line-clamp` here, and it isn't an oversight — it
+// was tried, back when these were bullets. Clamping each item to one line
+// to make room for a third still left the cell at 108px, above the ~105px
+// where it starts setting the row height, AND cost 6 of the 64 signals
+// their tail. Dropping whole items is what this cell does instead.
 //
-// Deliberately the same shape as the group lab's `.pgl-company-signals`,
-// which faced this first when the Signal column moved into its company
-// cell. Not shared as one rule because the two live at different sizes and
-// in different containers; if a third copy ever appears, that's the point
-// to extract it.
-.ptl-signal-list {
-  margin: 0;
-  padding-left: var(--slds-g-spacing-4, 1rem);
-  list-style: disc;
+// The group lab's `.pgl-company-signals` faced this first, when the Signal
+// column moved into its company cell, and is STILL A BULLETED LIST — the
+// two have diverged. Not shared as one rule because they live at different
+// sizes and in different containers.
+.ptl-signals {
+  // Three is what the row already has for free. The Prospect cell's four
+  // lines set the row at ~105px, and three lines of badges plus this
+  // cell's padding come in just under that — so the table stays as tall as
+  // it was back when the cap was a hard two, and the extra badges cost
+  // nothing.
+  --ptl-signal-lines: 3;
 
-  li {
-    white-space: normal;
-  }
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--slds-g-spacing-1, 0.25rem);
 
-  li + li {
-    margin-top: var(--slds-g-spacing-1, 0.25rem);
+  // `flex-start`, not `center`: when a long label wraps its badge to two
+  // lines — and three on this page do — top-aligning the single-line
+  // badges beside it keeps the row of labels reading straight across.
+  align-items: flex-start;
+
+  // Two jobs, which is why the value is a calc rather than a number.
+  //
+  // First, it's the pre-JS clip, so a seven-signal cell can't paint at full
+  // height for the frame before the fitter runs. 1.5rem is a badge, 0.25rem
+  // the gap above it.
+  //
+  // Second, the fitter reads this back off the DOM as its budget in pixels
+  // before dropping it — so the height the cell is allowed is written here,
+  // once, and nothing recomputes it in JS.
+  //
+  // It has to be dropped rather than left as a backstop: a clip cuts a
+  // badge in half, and dropping whole badges instead is the whole point of
+  // the fitter.
+  max-height: calc(
+    var(--ptl-signal-lines) * 1.5rem +
+    (var(--ptl-signal-lines) - 1) * 0.25rem
+  );
+  overflow: hidden;
+
+  &.is-fitted {
+    max-height: none;
+    overflow: visible;
   }
+}
+
+.ptl-signal-badge {
+  // Don't shrink, and this is load-bearing rather than tidiness. Flex items
+  // shrink before they wrap, so with all seven signals in the cell the
+  // default `flex-shrink: 1` squeezed every badge below its text width and
+  // each one wrapped internally into a tall block: rows went from 105px to
+  // 234px while still reporting only three lines in use. At natural width
+  // they move to the next line instead, which is what the fitter counts.
+  flex: none;
+
+  // The exception to the above: a badge whose label is wider than the whole
+  // cell has nowhere to go, so it's allowed to wrap inside itself rather
+  // than run out past the column.
+  max-width: 100%;
+
+  // Overrides the badge default of `nowrap`, which is what makes that wrap
+  // possible — and this page is where it earns its keep. The longest signal
+  // here is 48 characters ("RevOps modernization (Head of RevOps Priya
+  // Nair)") against the ~272px this cell has to spend; left at `nowrap` it
+  // would overflow the column.
+  //
+  // Wrapping rather than truncating because truncating is the one thing
+  // this cell has always refused to do.
+  //
+  // Wrapping is safe here because this theme squares the badge off:
+  // slds2_agentic sets the radius to --slds-g-radius-border-1 (4px) rather
+  // than SLDS's stock 15rem, so a two-line badge reads as a block, not as a
+  // stretched lozenge.
+  white-space: normal;
+  text-align: left;
+}
+
+// The mark of the system the signal came from, leading the badge.
+//
+// Deliberately not `.slds-badge__icon`: that class colours its icon from
+// the badge's text colour, and these are brand artwork — the whole point
+// is that ZoomInfo's red and Gong's purple are telling the reader apart
+// at a glance. Left as-is, tinted by nothing.
+//
+// 14px is the artboard's own size, so the marks paint 1:1 and the
+// patterned ones (most of them are an embedded bitmap in a circle) stay
+// legible. It's shorter than the badge's 18px text line box, so adding it
+// doesn't make the badge taller — which matters, because
+// `--ptl-signal-lines` above budgets the cell in 1.5rem badge-lines and
+// the fitter measures against that.
+.ptl-signal-badge__icon {
+  display: inline-flex;
+  flex: none;
+  margin-right: var(--slds-g-spacing-1, 0.25rem);
+
+  svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+// The fitter hides a badge by setting the `hidden` attribute, and without
+// this that does nothing at all: the UA rule for `[hidden]` is
+// `display: none`, but `.slds-badge` sets `display: inline-flex` and a
+// class beats it. The failure is quiet — every badge stays on screen and
+// the cell runs to 209px, while anything reading the attribute (including
+// the fitter's own line count) believes they're gone.
+.ptl-signal-badge[hidden] {
+  display: none;
+}
+
+// SLDS spaces adjacent badges with a left margin of its own, which adds to
+// the flex gap above and puts the second badge on a line out of step with
+// the first one under it.
+.ptl-signal-badge + .ptl-signal-badge {
+  margin-left: 0;
 }
 
 // "+2 more". Muted, and not a control: there's nowhere to expand to on a
 // prototype page, and the full list is on the cell's `title` — the same
 // reveal every other truncated cell here uses. Give it a real affordance
 // the moment it has somewhere to go.
+//
+// A flex item beside the badges now, so it trails the last one instead of
+// sitting on its own line; the indent and top margin that used to line it
+// up under the bullets went with them.
 .ptl-signal-more {
-  margin-top: var(--slds-g-spacing-1, 0.25rem);
-  padding-left: var(--slds-g-spacing-4, 1rem);
   font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
   color: var(--slds-g-color-neutral-base-50, #747474);
+}
+
+
+// ── Source ────────────────────────────────────────────────────────
+// The row's providers as an overlapping stack of marks plus a count, in
+// place of the single vendor badge this column used to hold.
+//
+// The stack is doing what an avatar group does: it says "several, and
+// here's who" in the width of about one and a half badges, which is all
+// the column has. Five named badges would not fit, and the count alone
+// would drop the part the reader actually uses — that a row backed by
+// Gong and Salesforce is a different kind of row from one backed by
+// press.
+//
+// Ported from the multi-source badge prototype in BB - AOP, minus its
+// hover popover; the source names it paged through are on the badge's
+// `title` instead.
+//
+// It wears `slds-badge slds-badge_lightest` now, which is where the
+// shape, fill, border, type and 4px radius come from. It used to
+// reproduce all of that by hand at a 999px radius, which made it the one
+// oval in a column of rounded boxes — and meant it could drift from the
+// signal badges sitting right beside it. What's left here is only what
+// the component doesn't cover.
+.ptl-source-multi {
+  max-width: 100%;
+
+  // Symmetric and tighter than the badge's own `padding-inline`, now
+  // that the count text is gone: both ends of the badge are a filled
+  // circle running to its own edge, so neither needs the breathing room
+  // the label used to want on the right.
+  padding-inline: 5px;
+}
+
+.ptl-source-multi__icons {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+
+  // Contains the marks' z-indexes below. Without this they resolve
+  // against the page, where the frozen first column is only `z-index: 1`
+  // — so marks 2 and 3 outranked it outright and mark 1 tied and won on
+  // DOM order, and all three painted over the pinned column when the
+  // table scrolled sideways. The stack's own ordering is purely
+  // internal, so it belongs in its own stacking context.
+  //
+  // `isolation` rather than a position/z-index pair because that's all
+  // that's wanted here: a new context, without making the wrapper a
+  // positioned box that then has to be layered against anything.
+  isolation: isolate;
+}
+
+.ptl-source-multi__icon {
+  // `relative` for the z-index below — without it the stack paints in
+  // document order and each mark covers the one before it, which is the
+  // wrong way round: the leftmost should read as the front.
+  position: relative;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--slds-g-color-surface-container-1, #fff);
+
+  // A hairline inside the circle, so two marks of similar colour still
+  // have an edge between them where they overlap.
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+
+  svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+  }
+
+  + .ptl-source-multi__icon {
+    margin-left: -5px;
+    transition: margin-left 200ms ease;
+  }
+
+  // Descending, so the leftmost mark reads as the front of the stack.
+  // Generated rather than written out one by one because the stack is no
+  // longer capped at three — it shows every source a row has, and
+  // SOURCE_ICONS in gulpfile.js defines ten. Any mark past the tenth
+  // simply lands at `auto` and paints in document order, which is the
+  // right degradation: still stacked, just front-to-back.
+  @for $i from 1 through 10 {
+    &:nth-child(#{$i}) { z-index: 11 - $i; }
+  }
+}
+
+// Hover fans the stack out. With the popover gone this is the only way
+// to see a mark the overlap is covering, so it's function rather than
+// flourish.
+//
+// Keyed to the row, not to the badge. The badge is ~40px wide in a
+// full-width table, so hovering it exactly was a small target for a
+// reveal the reader has no way to know is there; the row is already the
+// unit they're pointing at when they're reading across one.
+[data-sh-conv-row]:hover .ptl-source-multi__icon + .ptl-source-multi__icon {
+  margin-left: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ptl-source-multi__icon + .ptl-source-multi__icon {
+    transition: none;
+  }
 }
 
 

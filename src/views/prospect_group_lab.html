@@ -305,11 +305,15 @@
         Delete this block if the summary is still too long; nothing else
         depends on it. -#}
     {% if row.signals and row.signals | length %}
-    <div class="pgl-company-block" title="{{ row.signals | join(' · ') }}">
+    <div class="pgl-company-block" title="{{ row.signals | join(' · ', 'text') }}">
       <div class="pgl-company-label">Signals</div>
       <ul class="pgl-company-signals">
+        {#- Signals carry a source now (see the two table labs, which
+            badge it). This list stays text-only: it's a summary inside
+            an already-dense company cell, and marks on three bullets
+            would read as a second column. -#}
         {% for signal in row.signals.slice(0, _signalCap) %}
-        <li>{{ signal }}</li>
+        <li>{{ signal.text or signal }}</li>
         {% endfor %}
       </ul>
       {% if row.signals | length > _signalCap %}

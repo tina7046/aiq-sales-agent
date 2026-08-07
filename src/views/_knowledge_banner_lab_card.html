@@ -1,0 +1,81 @@
+{#
+  Knowledge banner LAB — the banner markup
+  =====================================================================
+  A COPY of the banner block in knowledge.html, carrying the same class
+  names, the same hooks and the same structure, so a change tried here
+  lands on the same element it would in the real file and porting is a
+  copy of the changed lines rather than a translation.
+
+  Wrapped in a macro, which knowledge.html doesn't do, for one reason:
+  the lab renders the banner more than once — at different widths, and
+  potentially as competing variants side by side — and a macro is what
+  makes that a second call rather than a second copy that drifts.
+
+  What's NOT here, and why: the preload script that sits under the
+  banner in knowledge.html. It reads a sessionStorage flag to hide the
+  banner before first paint on a page where it was already dismissed.
+  The lab doesn't persist dismissal at all (see the header in
+  knowledge_banner_lab.js), so there'd be nothing for it to read.
+
+  To try a second shape beside the current one, copy this file to
+  _knowledge_banner_lab_card_b.html, import it under a second name and
+  render it in its own column. The script binds by
+  `[data-sh-knowledge-banner]` and the page passes it the element, so
+  two banners on one page each get their own dismiss.
+#}
+
+{% macro banner(data) %}
+{# Guarded on the object, same as the real page: dropping `banner` from
+   knowledge_banner_lab.json removes the banner rather than rendering an
+   empty shell. #}
+{% if data %}
+<div class="knowledge-banner" data-sh-knowledge-banner>
+  <div class="knowledge-banner__content">
+    {# The unclassed <div> is load-bearing: it groups the text nodes as
+       ONE flex child so the button can be pushed away from them. #}
+    <div>
+      <span class="knowledge-banner__badge">{{ data.badge }}</span>
+      <p class="knowledge-banner__title">{{ data.title }}</p>
+      <p class="knowledge-banner__description">{{ data.description }}</p>
+
+      {# Run summary. Each separator lives INSIDE the phrase that
+         follows it, making the pair one unbreakable flex item — a
+         wrapped line opens with "∙ Read 10,822 emails" rather than
+         leaving an orphaned "∙" at the end of the line above.
+
+         Separators are aria-hidden so a screen reader gets three facts,
+         not three readings of "bullet operator". Guarded on the array
+         so `stats: []` collapses the line instead of leaving an empty
+         element holding vertical space. #}
+      {% if data.stats and data.stats | length %}
+      <p class="knowledge-banner__stats">
+        {% for stat in data.stats %}
+        <span class="knowledge-banner__stat">
+          {% if not loop.first %}<span class="knowledge-banner__stats-sep" aria-hidden="true">∙</span>{% endif %}
+          {{ stat }}
+        </span>
+        {% endfor %}
+      </p>
+      {% endif %}
+    </div>
+
+    {# Carries the real SLDS button classes so it can't drift from the
+       header's "+ New Knowledge" on hover. `knowledge-banner__button`
+       survives for the one thing that IS banner-specific: not shrinking
+       in the flex row. #}
+    <button
+      type="button"
+      class="slds-button slds-button_neutral knowledge-banner__button"
+      data-sh-knowledge-banner-dismiss
+    >{{ data.buttonLabel }}</button>
+  </div>
+
+  {# Deliberately empty — the art arrives as a CSS background-image,
+     which is what lets it fill and crop to whatever height the copy
+     beside it ends up needing. #}
+  <div class="knowledge-banner__illustration-col">
+    <div class="knowledge-banner__illustration"></div>
+  </div>
+</div>
+{% endif %}
+{% endmacro %}

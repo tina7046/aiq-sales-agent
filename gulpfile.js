@@ -67,6 +67,8 @@ const getData = (file) => {
 //     the suggestion list in a `data-*` attribute.
 //   • `emphasis` — the two inline markdown marks, so authored copy in the
 //     JSON reads as prose instead of as HTML.
+//   • `SOURCE_ICONS` / `distinctSources` — the shared source-to-icon
+//     registry the prospect tables badge their signals with.
 //   • `readData` — read another page's JSON at build time.
 // `noCache` matters for the dev watcher: the loader otherwise caches compiled
 // partials in memory, so editing `_template.html` or any `_*.html` include
@@ -93,6 +95,42 @@ nunjucksEnv.addFilter('emphasis', (input) => {
     .replace(/"/g, '&quot;')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/_([^_]+)_/g, '<em>$1</em>')
+})
+// `SOURCE_ICONS` — the data provider a signal came from, mapped to the
+// brand mark in src/assets/images/source_icons. A global rather than a
+// `{% set %}` per template because three tables render sources now (the
+// conversation table, the table lab, the pivot/group lab) and a row's
+// badge has to agree with the icons on that row's signals. Keys are the
+// exact `source` strings in the data — including Moody's curly
+// apostrophe, which is what the JSON has.
+//
+// TechCrunch has no mark of its own and rides the generic web icon; it
+// stands in for press coverage generally.
+nunjucksEnv.addGlobal('SOURCE_ICONS', {
+  '6sense': 'source_6sense.svg',
+  'Apollo': 'source_apollo.svg',
+  'Demandbase': 'source_demandbase.svg',
+  'G2': 'source_g2.svg',
+  'Gong': 'source_gong.svg',
+  'Moody’s': 'source_moodys.svg',
+  'Salesforce': 'source_salesforce.svg',
+  'SalesIntel': 'source_salesintel.svg',
+  'TechCrunch': 'source_web.svg',
+  'ZoomInfo': 'source_zoominfo.svg'
+})
+// `distinctSources` — the providers behind a row's signals, deduped,
+// first-mention order. Feeds the row's aggregated source badge, so that
+// badge is a summary of the signal list rather than a separate fact
+// that can disagree with it. Tolerates the older shape where a signal
+// was a bare string (no source to report) by skipping it.
+nunjucksEnv.addFilter('distinctSources', (signals) => {
+  if (!Array.isArray(signals)) return []
+  const out = []
+  for (const s of signals) {
+    const name = s && typeof s === 'object' ? s.source : null
+    if (name && !out.includes(name)) out.push(name)
+  }
+  return out
 })
 // `readData("<name>")` — read src/views/data/<name>.json at build time so a
 // template can reach another page's data without copying keys into

@@ -1,0 +1,456 @@
+// ══════════════════════════════════════════════════════════════════════
+// Knowledge banner LAB
+// ══════════════════════════════════════════════════════════════════════
+// Styles for /knowledge_banner_lab.html. Everything below the lab chrome
+// is a COPY of the live banner out of home.scss, carrying the same class
+// names, the same custom properties and the same structure — so a change
+// tried here lands on the same selector it would in the real file, and
+// porting is a copy of the changed lines rather than a translation.
+//
+// The two copied regions and where they came from:
+//
+//   .kb-column          ← .seller-home__knowledge-body-inner
+//                         (the 50rem flex column: its 1rem gap, the four
+//                          --knowledge-banner-* motion tokens, and the
+//                          .is-settling curve the dismiss FLIP uses)
+//   .knowledge-banner*  ← the "Knowledge banner" section of home.scss
+//
+// The column is renamed because it isn't the knowledge page's column —
+// it's a stand-in that reproduces the two things the banner's motion
+// depends on. Everything the banner itself touches keeps its production
+// name, which is the half that gets ported.
+//
+// This page deliberately does NOT load home.css. The copies use
+// production class names, so loading both would make which rule wins
+// depend on link order.
+// ══════════════════════════════════════════════════════════════════════
+
+// ── Lab chrome ────────────────────────────────────────────────────
+// Page furniture, not the component. Prefixed `kb-` so it can never be
+// confused for something portable, and so a global find on
+// `knowledge-banner` doesn't turn it up.
+.kb-page {
+  min-height: 100%;
+  padding: var(--slds-g-spacing-6, 1.5rem) var(--slds-g-spacing-5, 1.25rem)
+    var(--slds-g-spacing-10, 3rem);
+  background: var(--slds-g-color-surface-container-1, #f3f3f3);
+}
+
+.kb-col {
+  max-width: 60rem;
+  margin: 0 auto;
+}
+
+.kb-title {
+  margin-bottom: var(--slds-g-spacing-2, 0.5rem);
+  font-size: var(--slds-g-font-scale-5, 1.5rem);
+  font-weight: 700;
+  color: var(--slds-g-color-on-surface-1, #181818);
+}
+
+.kb-sub {
+  margin-bottom: var(--slds-g-spacing-3, 0.75rem);
+  max-width: 46rem;
+  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);
+  line-height: 1.5;
+  color: var(--slds-g-color-on-surface-2, #5c5c5c);
+
+  code {
+    padding: 0 0.25em;
+    border-radius: 3px;
+    background: var(--slds-g-color-surface-container-2, #e5e5e5);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.95em;
+  }
+}
+
+// ── Toolbar ───────────────────────────────────────────────────────
+// The four motion tokens, as live controls. They're written onto the
+// stage as inline custom properties, which is why the copied rules pick
+// them up without knowing the toolbar exists.
+.kb-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  margin-bottom: var(--slds-g-spacing-4, 1rem);
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  border: 1px solid var(--slds-g-color-border-1, #e5e5e5);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  background: var(--slds-g-color-surface-1, #ffffff);
+}
+
+.kb-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  width: 100%;
+}
+
+.kb-toolbar-label {
+  flex: 0 0 8.5rem;
+  font-size: var(--slds-g-font-scale-neg-2, 0.75rem);
+  font-weight: 600;
+  color: var(--slds-g-color-on-surface-2, #5c5c5c);
+}
+
+.kb-toolbar input[type="range"] {
+  flex: 1 1 auto;
+  max-width: 22rem;
+}
+
+.kb-toolbar-value {
+  flex: 0 0 5rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--slds-g-font-scale-neg-2, 0.75rem);
+  color: var(--slds-g-color-on-surface-1, #181818);
+}
+
+.kb-toolbar select {
+  flex: 1 1 auto;
+  max-width: 22rem;
+  height: 2rem;
+  padding: 0 var(--slds-g-spacing-2, 0.5rem);
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-1, 0.25rem);
+  background: var(--slds-g-color-surface-1, #ffffff);
+  font-size: var(--slds-g-font-scale-neg-2, 0.75rem);
+}
+
+// Replays the dismiss. The banner is put back exactly as it was, so a
+// second run measures the same distances as the first.
+.kb-replay {
+  margin-left: auto;
+}
+
+.kb-readout {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--slds-g-font-scale-neg-2, 0.75rem);
+  color: var(--slds-g-color-on-surface-2, #5c5c5c);
+}
+
+// ── Stage ─────────────────────────────────────────────────────────
+// Stands in for the knowledge page's scroll area. It has a real height
+// and `overflow-y: auto` because the dismiss moves the content below the
+// banner, and how that reads depends on there being content below it and
+// a viewport edge to move against.
+.kb-stage {
+  height: 34rem;
+  overflow-y: auto;
+  padding: var(--slds-g-spacing-4, 1rem);
+  border: 1px solid var(--slds-g-color-border-1, #e5e5e5);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  background: var(--slds-g-color-surface-1, #ffffff);
+}
+
+// Filler rows under the banner, so there's something for the glide to
+// move. Deliberately plain — the doc list's real styling isn't what's
+// being designed here, and copying it would be one more thing to keep
+// in sync for no benefit.
+.kb-filler {
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  border: 1px solid var(--slds-g-color-border-1, #e5e5e5);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);
+  color: var(--slds-g-color-on-surface-2, #5c5c5c);
+}
+
+.kb-missing {
+  padding: var(--slds-g-spacing-4, 1rem);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  background: #fef1ee;
+  color: #8c1d04;
+  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// COPIED — the column the banner sits in
+// ----------------------------------------------------------------------
+// ← .seller-home__knowledge-body-inner in home.scss. Renamed, because
+// this one is a stand-in; what matters is that it reproduces the 1rem
+// flex gap (which the dismiss has to cancel) and carries the motion
+// tokens the banner and its siblings both read.
+// ══════════════════════════════════════════════════════════════════════
+.kb-column {
+  max-width: 50rem; // 800px — Figma cap
+  width: 100%;
+  margin: 0 auto;
+
+  // Vertical rhythm inside the inner column — 16 px between the
+  // search field and the doc list (Figma frame 8931:383008 uses
+  // spacing-5 / 24 px between its two children; we go slightly
+  // tighter here so the compact 32-px search field reads as
+  // part of the list group rather than a distinct region). Kept
+  // as a flex column so the empty state can slot in and out
+  // without a layout jump — every child is a full-width block.
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-4, 1rem); // 16px
+
+  // ── Knowledge banner dismiss timings ──────────────────────────────
+  // Declared here, on the column, rather than on the banner, because
+  // both halves of the gesture need them and they live on different
+  // elements: the banner fades, its siblings glide. Custom properties
+  // inherit, so one declaration reaches both.
+  //
+  // home.js reads these two off the DOM instead of repeating the
+  // numbers, because it has to schedule the glide against the fade —
+  // retuning either value here moves the script's clock with it.
+  --knowledge-banner-fade: 150ms;
+  --knowledge-banner-settle: 350ms;
+  --knowledge-banner-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  // How far into the fade the glide starts — the overlap between the
+  // two halves of the gesture.
+  //
+  // 30ms rather than the obvious "half the fade". The ease above is
+  // steep: measured, the banner is at 34% opacity at 20% of the fade,
+  // 4% at the halfway mark, and fully gone by 60%. Starting at half
+  // would overlap them in time but not visibly, because there'd be
+  // nothing left to see. 30ms is early enough that the content is
+  // moving while the banner is still legible, which is what reads as
+  // a cross-fade.
+  --knowledge-banner-glide-delay: 30ms;
+
+  // Carried only for the moment after the knowledge banner is
+  // dismissed, while the rest of the column glides up into the space it
+  // is about to leave. `settleContentBelow` in home.js adds this class,
+  // then offsets the elements; this is the curve that carries them.
+  //
+  // It starts partway into the fade rather than after it, so the two
+  // overlap — see the scheduling note in home.js. Deliberately more
+  // than twice the fade's own duration: the banner leaves quickly, the
+  // page reflows slowly behind it.
+  > .is-settling {
+    transition: transform var(--knowledge-banner-settle) var(--knowledge-banner-ease);
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// COPIED — the banner itself
+// ----------------------------------------------------------------------
+// ← the "Knowledge banner" section of home.scss, verbatim. This is the
+// half that gets ported: diff it against that section.
+// ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════
+// Knowledge banner — promo block above the search field
+// ----------------------------------------------------------------------
+// Two columns: copy + CTA on the left, illustration on the right. First
+// child of the 50rem inner column, so it shares the content column's
+// width and left edge instead of bleeding across the section.
+//
+// Height is driven by the copy, not fixed. The illustration column
+// stretches to match whatever height the text lands on and its art
+// crops to fit, so the description can grow a line (longer copy,
+// narrower viewport) without any of these numbers being retuned.
+//
+// Palette is sampled from the artwork rather than invented, so the
+// illustration and the surface it sits on can't drift apart:
+//   • #f5f2fb — the tint of the art's own left panel. Using it as the
+//     whole banner's background is what makes the seam invisible: the
+//     illustration's left edge is that same colour, so the decorative
+//     arc inside the art reads as the boundary between copy and picture
+//     instead of the column edge reading as a hard cut.
+//   • #ece1f9 / #401075 — the light lavender and deep purple from the
+//     AI doctype icon (see the Auto-Learning rows in the list below),
+//     reused for the badge so the two AI surfaces on this page match.
+// ══════════════════════════════════════════════════════════════════════
+.knowledge-banner {
+  // "Got it" dismisses the banner by setting the `hidden` attribute
+  // (see bindKnowledgeBanner in home.js). The UA rule for `[hidden]` is
+  // `display: none`, but it's weaker than the class below, so without
+  // this the attribute would be set and the banner would stay visible.
+  &[hidden] {
+    display: none;
+  }
+
+  display: flex;
+  align-items: stretch; // illustration column matches the copy's height
+
+  overflow: hidden; // clips the art to the rounded corners
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+  background: #f5f2fb; // sampled from the artwork — see above
+
+  // ── Dismiss ──
+  // Transform and opacity only — the banner never changes size. An
+  // earlier version collapsed its height so the list below could rise
+  // into the gap, but animating a layout property means the box is
+  // being shortened while you can still see it, and `overflow: hidden`
+  // above turns that into the copy getting visibly guillotined. Scaling
+  // moves the whole thing as one piece instead.
+  //
+  // Values are the modal close from transitions.dev (06-modal.md) —
+  // same 150ms, same 0.96, same easing — because it's the same gesture:
+  // a surface dipping back and fading rather than going anywhere. They
+  // aren't `var(--modal-*)` because that block lives in
+  // home_conversation.scss, which this page doesn't load, and a banner
+  // borrowing a modal's tokens would be a lie about what it is.
+  //
+  // The space the banner occupies closes when home.js sets `hidden`, in
+  // one step, after the fade has finished. See the note there.
+  transform-origin: center;
+  transition:
+    transform var(--knowledge-banner-fade) var(--knowledge-banner-ease),
+    opacity   var(--knowledge-banner-fade) var(--knowledge-banner-ease);
+  will-change: transform, opacity;
+
+  &.is-dismissing {
+    transform: scale(0.96);
+    opacity: 0;
+    pointer-events: none; // nothing clickable while it's on its way out
+  }
+
+  // No transition means no `transitionend`, so home.js checks this same
+  // query and hides the banner outright rather than waiting on an event
+  // that will never arrive.
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+// ── Copy column ──
+// Takes the leftover width. `min-width: 0` lets the description wrap
+// instead of forcing the flex row wider than the 800-px column.
+// `align-items: flex-start` keeps the button at its intrinsic width —
+// without it, `stretch` would blow the pill out to the full column.
+.knowledge-banner__content {
+  flex: 1 1 auto;
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--slds-g-spacing-5, 1.5rem); // 24px, text group → button
+
+  padding: var(--slds-g-spacing-5, 1.5rem); // 24px
+}
+
+// ── Badge ──
+// `inline-block` (not inline) so the margin below it actually applies
+// and the pill's vertical padding doesn't overlap the title.
+// Purple pill. `.seller-home__knowledge-doc-badge` (doc rows, further
+// down) reuses this color pair on purpose — change both together.
+.knowledge-banner__badge {
+  display: inline-block;
+  margin-block-end: var(--slds-g-spacing-2, 0.5rem); // 8px
+
+  padding: 0.125rem var(--slds-g-spacing-2, 0.5rem); // 2px / 8px
+  border-radius: var(--slds-g-radius-border-pill, 15rem);
+  background: #ece1f9;
+
+  color: #401075;
+  font-size: 0.6875rem; // 11px — a label, one step under body text
+  font-weight: 600;
+  line-height: 1rem;
+  white-space: nowrap;
+}
+
+// Margins are set on the text elements themselves rather than on their
+// unclassed wrapper div, so the spacing doesn't depend on a bare
+// element selector that any future markup change could break.
+.knowledge-banner__title {
+  margin: 0 0 var(--slds-g-spacing-1, 0.25rem); // 4px
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  font-size: 1.25rem; // 20px
+  font-weight: 700;
+  line-height: 1.75rem;
+}
+
+.knowledge-banner__description {
+  margin: 0;
+  // ~50 characters per line. The copy would otherwise run the full
+  // width of the column, which reads as a wall of text at this size.
+  max-width: 34rem;
+
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  line-height: 1.125rem; // 18px
+}
+
+// ── Run summary ──
+// One line of facts about the last auto-learning run, under the
+// description. 12px against the description's 13px so it reads as
+// evidence for the sentence above rather than a second claim.
+//
+// Flex + wrap (not inline text) so the line breaks BETWEEN facts
+// instead of splitting "1,468 call recordings" across two lines. No
+// `max-width` here (unlike the description): the line should use every
+// pixel the column has before it wraps.
+//
+// The current copy needs ~436px against the column's ~448px, so it fits
+// on one line — but only by ~12px. Lengthening either phrase wraps it,
+// which is safe: the separators stay attached to the phrase after them
+// (see the template) so none is orphaned at the end of a line, and at
+// narrow widths the facts stack one per line.
+.knowledge-banner__stats {
+  margin: var(--slds-g-spacing-2, 0.5rem) 0 0; // 8px below description
+
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--slds-g-spacing-2, 0.5rem); // 8px between facts
+
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-size: 0.75rem; // 12px
+  line-height: 1.125rem; // 18px — matches the description's leading
+}
+
+// One fact, plus the separator that introduces it. Flex so that
+// separator sits an even 8px from the phrase — matching the gap between
+// facts — without depending on the markup's whitespace.
+.knowledge-banner__stat {
+  display: flex;
+  align-items: baseline;
+  gap: var(--slds-g-spacing-2, 0.5rem); // 8px
+}
+
+// Muted a step below the facts so the line reads as three phrases with
+// quiet dividers, not as one string of equal-weight glyphs.
+.knowledge-banner__stats-sep {
+  color: var(--slds-g-color-on-surface-3, #939393);
+}
+
+// ── CTA ──
+// The markup carries `slds-button slds-button_neutral`, so everything
+// visual — 32-px height, pill radius, white surface, brand-blue label,
+// and the hover that darkens that label to navy — comes from SLDS.
+//
+// This used to reproduce all of it here from the same tokens, on the
+// reasoning that the authored markup only had its own class. It matched
+// at rest and drifted on hover: the copy changed the background but not
+// the label colour, so the pill sat next to an identical-looking
+// "+ New Knowledge" that behaved differently under the cursor. Nothing
+// is reproduced now, so there is nothing left to drift.
+//
+// One declaration remains, and it's the only genuinely banner-specific
+// one: the button shares a flex row with the copy column, and without
+// this it gets squeezed as that column grows.
+.knowledge-banner__button {
+  flex: 0 0 auto;
+}
+
+// ── Illustration column ──
+// Fixed share of the width so the copy gets the rest. `display: flex`
+// is only here to let the empty child stretch to the column's full
+// height without needing absolute positioning.
+.knowledge-banner__illustration-col {
+  flex: 0 0 38%;
+  display: flex;
+}
+
+// The art itself. The authored element is empty, so it arrives as a
+// background: `cover` fills the column at any height the copy dictates,
+// and `left center` anchors the art's decorative arc against the copy
+// column — cropping off the right of the illustration rather than the
+// left, which is the edge that has to line up.
+.knowledge-banner__illustration {
+  flex: 1 1 auto;
+  background-image: url("/assets/images/illustrations/knowledge-banner.png");
+  background-repeat: no-repeat;
+  background-position: left center;
+  background-size: cover;
+}
