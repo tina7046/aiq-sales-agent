@@ -403,7 +403,7 @@
   // conv-001's rows STARTED OUT generated — the same dataset the three
   // prospect-table labs render, built from the account and prospect
   // CSVs by tools/lab-data/build_lab_data.py. They've since been hand
-  // edited here (Alex Bristor added, `source` reassigned), and that
+  // edited here (Alex Bristol added, `source` reassigned), and that
   // script only writes the labs' own data files, so re-running it will
   // not touch these rows: edit them here, and treat the labs as a
   // separate copy that has drifted. Fields:
@@ -457,7 +457,7 @@
         {
           "id":   "msg-response",
           "type": "agent",
-          "text": "I found 37 strong-fit prospects across 7 priority accounts and prepared personalized outreach for each one. They\u2019re ready for your review before sending."
+          "text": "I found 25 strong-fit prospects across 7 priority accounts and prepared personalized outreach for each one. They\u2019re ready for your review before sending."
         },
         {
           "id":   "msg-prospects",
@@ -491,12 +491,55 @@
               { "id": "accountId",   "label": "Account ID" }
             ],
             "rows": [
-              // Generated. 36 of the 37 rows here, across 7 accounts, joined from
+              // Generated. 24 of the 25 rows here, across 7 accounts, joined from
               // accounts_full.csv + prospects_full.csv by
               // tools/lab-data/build_lab_data.py, which writes
-              // data/prospect_table_lab.json — the same rows the three
-              // prospect-table labs render. Ported here wholesale so the
-              // app and the labs can only differ in layout.
+              // data/prospect_table_lab.json — the source the three
+              // prospect-table labs render.
+              //
+              // A SUBSET of that source, not the whole of it, which is
+              // the one way this list and the labs' now differ. Two
+              // rules shape it:
+              //
+              //   • Grouped by account, contiguously. The table has no
+              //     grouping UI, so account order IS the grouping — a
+              //     company's rows split across the list read as two
+              //     unrelated runs of the same name. Rippling leads.
+              //   • At most four prospects per account. Notion had ten,
+              //     which buried every other account below a single
+              //     company's worth of scrolling; four is enough to show
+              //     an account has depth without letting the widest one
+              //     set the length of the table.
+              //
+              // Trimming is safe for the cadence card because the three
+              // authored sequences (acct-05-p06, acct-05-p01, acct-04-p01)
+              // all belong to rows inside the cap. Every other row falls
+              // through to the `default` sequence, as it did before.
+              //
+              // Three fields are hand-written per person and no longer
+              // come from the CSVs: `whyProspect`, `signals` and the
+              // legacy `source`. The generator emits them per ACCOUNT, so
+              // every row of an account carried a byte-identical copy —
+              // four Rippling rows with the same reason, the same five
+              // signals and the same source marks, which made the table
+              // read as one repeated row and made the Signals column
+              // worthless for telling two people apart. They are now
+              // specific to the individual: their team size, their
+              // tenure, their open reqs, what they own.
+              //
+              // Two things are kept in sync by hand as a result, both
+              // checked by eye when this was written:
+              //
+              //   • `signal` (singular) is the first entry of `signals`.
+              //     The cadence card templates its email copy off it.
+              //   • `source` is that first signal's provider. The Source
+              //     column doesn't read it — that's `signals |
+              //     distinctSources` — but it's the fallback for a row
+              //     with no signals, so it shouldn't contradict them.
+              //
+              // Salesforce is deliberately absent from the signal
+              // sources: it's the CRM, and the CRM column is where CRM
+              // facts belong.
               //
               // Rows carry every field the labs have columns for,
               // including the seven this page renders and the eight it
@@ -508,10 +551,10 @@
               // subject / body for the parked outreach review, and these
               // do not. Nothing live reads them — the cadence card
               // templates its own copy from `prospect`, `company` and
-              // `signal` — but unparking that review means writing 37
+              // `signal` — but unparking that review means writing 25
               // drafts or narrowing its roster first.
               //
-              // Alex Bristor is the exception to "generated": hand-added
+              // Alex Bristol is the exception to "generated": hand-added
               // from docs/alex-bristor.md and pinned first by request, so
               // he leads the table and the cadence card's roster. His
               // account-level fields (employees, industry, location,
@@ -525,15 +568,66 @@
               // the CRM record, since the CRM is what the CRM column
               // says.
               {
-                "id": "acct-05-p06", "prospect": "Alex Bristor", "role": "VP, Sales", "company": "Rippling",
+                "id": "acct-05-p06", "prospect": "Alex Bristol", "role": "VP, Sales", "company": "Rippling",
                 "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YmiRNIAZ",
-                "email": "alex.bristor@rippling.com", "phone": "+1 (415) 555-1178",
+                "email": "alex.bristol@rippling.com", "phone": "+1 (415) 555-1178",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/rippling.png",
                 "employees": "~3,500", "industry": "Software / HR & IT Management", "location": "San Francisco, CA",
-                "whyProspect": "Built internal Dark TAM Engine (ML entity resolution, automated list building)",
-                "signals": [{ "text": "290+ SDRs", "source": "ZoomInfo" }, { "text": "8+ GTM tools", "source": "6sense" }, { "text": "$450M Series G at $16.8B", "source": "TechCrunch" }, { "text": "DACH founding BDR team", "source": "Apollo" }, { "text": "New SDR Director Natalie Ortega", "source": "SalesIntel" }],
-                "signal": "290+ SDRs",
-                "source": "Demandbase", "isNewContact": false, "isNewAccount": false,
+                "whyProspect": "Owns the number the in-house Dark TAM Engine was built to hit; ML entity resolution and list building still on the eng roadmap",
+                "signals": [{ "text": "290+ SDRs across 4 regions", "source": "ZoomInfo" }, { "text": "$450M Series G at $16.8B", "source": "TechCrunch" }, { "text": "Dark TAM Engine built in-house", "source": "Gong" }, { "text": "8+ GTM tools in the stack", "source": "G2" }, { "text": "DACH founding BDR team hiring", "source": "Apollo" }],
+                "signal": "290+ SDRs across 4 regions",
+                "source": "ZoomInfo", "isNewContact": false, "isNewAccount": false,
+                "rank": "5", "tier": "Solid", "icpFit": "Solid — built internal Dark TAM Engine",
+                "accountId": "001Wt00001eZqgwIAC", "themes": "1, 2, 4, 7, 8",
+                "crm": "Active SDR Ramp Acceleration opp ($260K Discovery)",
+                "opportunities": [{ "name": "SDR Ramp Acceleration", "amount": "$260K", "stage": "Discovery", "close": "", "meta": "$260K · Discovery" }],
+                "pitch": "Your internal engine is engineering-dependent — Bluebirds gives SDR managers the same power without depending on eng. Time-to-value for DACH launch: days, not quarters",
+                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
+              },
+              {
+                "id": "acct-05-p01", "prospect": "Natalie Ortega", "role": "Director, Sales Dev (Enterprise)", "company": "Rippling",
+                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000Ylfk5IAB",
+                "email": "natalie.ortega@rippling.com", "phone": "+1 (415) 555-0901",
+                "companyLogoUrl": "/assets/images/company-logos/accounts/rippling.png",
+                "employees": "~3,500", "industry": "Software / HR & IT Management", "location": "San Francisco, CA",
+                "whyProspect": "Four months into the enterprise SDR seat, inheriting a 60-rep org and a quota that assumes the Dark TAM Engine works",
+                "signals": [{ "text": "Promoted to SDR Director 4 months ago", "source": "SalesIntel" }, { "text": "60 enterprise SDRs reporting in", "source": "Apollo" }, { "text": "Enterprise pipeline coverage at 2.1x", "source": "Gong" }, { "text": "Hiring 12 enterprise SDRs in NYC", "source": "Demandbase" }, { "text": "Speaking at Pavilion GTM Summit", "source": "TechCrunch" }],
+                "signal": "Promoted to SDR Director 4 months ago",
+                "source": "SalesIntel", "isNewContact": false, "isNewAccount": false,
+                "rank": "5", "tier": "Solid", "icpFit": "Solid — built internal Dark TAM Engine",
+                "accountId": "001Wt00001eZqgwIAC", "themes": "1, 2, 4, 7, 8",
+                "crm": "Active SDR Ramp Acceleration opp ($260K Discovery)",
+                "opportunities": [{ "name": "SDR Ramp Acceleration", "amount": "$260K", "stage": "Discovery", "close": "", "meta": "$260K · Discovery" }],
+                "pitch": "Your internal engine is engineering-dependent — Bluebirds gives SDR managers the same power without depending on eng. Time-to-value for DACH launch: days, not quarters",
+                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
+              },
+              {
+                "id": "acct-05-p02", "prospect": "Alex Netsch", "role": "VP, Revenue Operations", "company": "Rippling",
+                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YlfovIAB",
+                "email": "alex.netsch@rippling.com", "phone": "+1 (415) 555-0954",
+                "companyLogoUrl": "/assets/images/company-logos/accounts/rippling.png",
+                "employees": "~3,500", "industry": "Software / HR & IT Management", "location": "San Francisco, CA",
+                "whyProspect": "Owns the GTM stack the Dark TAM Engine sits on, with a consolidation review open across 8+ overlapping tools",
+                "signals": [{ "text": "8+ overlapping GTM tools under review", "source": "G2" }, { "text": "Owns Clay and Outreach renewals", "source": "Demandbase" }, { "text": "Two RevOps engineers hired this quarter", "source": "Apollo" }, { "text": "Data quality raised on the Q2 earnings call", "source": "Moody’s" }, { "text": "Migrating to a single customer data platform", "source": "6sense" }],
+                "signal": "8+ overlapping GTM tools under review",
+                "source": "G2", "isNewContact": false, "isNewAccount": false,
+                "rank": "5", "tier": "Solid", "icpFit": "Solid — built internal Dark TAM Engine",
+                "accountId": "001Wt00001eZqgwIAC", "themes": "1, 2, 4, 7, 8",
+                "crm": "Active SDR Ramp Acceleration opp ($260K Discovery)",
+                "opportunities": [{ "name": "SDR Ramp Acceleration", "amount": "$260K", "stage": "Discovery", "close": "", "meta": "$260K · Discovery" }],
+                "pitch": "Your internal engine is engineering-dependent — Bluebirds gives SDR managers the same power without depending on eng. Time-to-value for DACH launch: days, not quarters",
+                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
+              },
+              {
+                "id": "acct-05-p03", "prospect": "John Buchman", "role": "Director, Sales Dev", "company": "Rippling",
+                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000Ylh17IAB",
+                "email": "john.buchman@rippling.com", "phone": "+1 (415) 555-1002",
+                "companyLogoUrl": "/assets/images/company-logos/accounts/rippling.png",
+                "employees": "~3,500", "industry": "Software / HR & IT Management", "location": "San Francisco, CA",
+                "whyProspect": "Runs the commercial SDR floor that works whatever the Dark TAM Engine does not prioritise; names list quality as the bottleneck",
+                "signals": [{ "text": "Commercial SDR team of 40", "source": "ZoomInfo" }, { "text": "Ramp time cited as a top-three priority", "source": "Gong" }, { "text": "Backfilling 6 SDR seats after attrition", "source": "SalesIntel" }, { "text": "Posted about list quality on LinkedIn", "source": "6sense" }],
+                "signal": "Commercial SDR team of 40",
+                "source": "ZoomInfo", "isNewContact": false, "isNewAccount": false,
                 "rank": "5", "tier": "Solid", "icpFit": "Solid — built internal Dark TAM Engine",
                 "accountId": "001Wt00001eZqgwIAC", "themes": "1, 2, 4, 7, 8",
                 "crm": "Active SDR Ramp Acceleration opp ($260K Discovery)",
@@ -547,9 +641,9 @@
                 "email": "pravesh.mistry@notion.so", "phone": "+1 (415) 555-0142",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/notion.png",
                 "employees": "~600", "industry": "Software / Productivity", "location": "San Francisco, CA",
-                "whyProspect": "SDR team 5x'd in 2 years (120+ reps), transitioning PLG→outbound, using competitor Common Room, hiring SDRs globally, $500M+ ARR, pre-IPO",
-                "signals": [{ "text": "Hiring SDRs/BDRs globally", "source": "Apollo" }, { "text": "Active outbound buildout", "source": "Demandbase" }, { "text": "Common Room customer", "source": "G2" }, { "text": "New Head of Enterprise Americas (Katie Layng)", "source": "SalesIntel" }, { "text": "Built internal Salestino bot", "source": "TechCrunch" }, { "text": "6+ GTM tools", "source": "6sense" }, { "text": "Job posts explicitly mention AI/outbound", "source": "Apollo" }],
-                "signal": "Hiring SDRs/BDRs globally",
+                "whyProspect": "Owns the PLG-to-outbound transition end to end, with 120+ reps added in two years against a pre-IPO revenue plan",
+                "signals": [{ "text": "SDR team 5x’d to 120+ reps", "source": "ZoomInfo" }, { "text": "$500M+ ARR ahead of IPO", "source": "Moody’s" }, { "text": "PLG to outbound transition underway", "source": "Gong" }, { "text": "Hiring SDRs in 6 countries", "source": "Apollo" }, { "text": "Common Room in the stack", "source": "G2" }],
+                "signal": "SDR team 5x’d to 120+ reps",
                 "source": "ZoomInfo", "isNewContact": true, "isNewAccount": false,
                 "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
                 "accountId": "001Wt00001eZpBOIA0", "themes": "1, 2, 4, 6, 7, 8",
@@ -564,9 +658,9 @@
                 "email": "johnny.defazio@notion.so", "phone": "+1 (415) 555-0187",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/notion.png",
                 "employees": "~600", "industry": "Software / Productivity", "location": "San Francisco, CA",
-                "whyProspect": "SDR team 5x'd in 2 years (120+ reps), transitioning PLG→outbound, using competitor Common Room, hiring SDRs globally, $500M+ ARR, pre-IPO",
-                "signals": [{ "text": "Hiring SDRs/BDRs globally", "source": "Apollo" }, { "text": "Active outbound buildout", "source": "Demandbase" }, { "text": "Common Room customer", "source": "G2" }, { "text": "New Head of Enterprise Americas (Katie Layng)", "source": "SalesIntel" }, { "text": "Built internal Salestino bot", "source": "TechCrunch" }, { "text": "6+ GTM tools", "source": "6sense" }, { "text": "Job posts explicitly mention AI/outbound", "source": "Apollo" }],
-                "signal": "Hiring SDRs/BDRs globally",
+                "whyProspect": "Runs the largest and most outbound-dependent SDR pod; the self-serve motion North America grew on has gone flat",
+                "signals": [{ "text": "50 SDRs in North America", "source": "Apollo" }, { "text": "Self-serve signups flat quarter on quarter", "source": "Demandbase" }, { "text": "Built an internal Salestino bot", "source": "TechCrunch" }, { "text": "Outbound-sourced pipeline up 3x", "source": "Gong" }],
+                "signal": "50 SDRs in North America",
                 "source": "Apollo", "isNewContact": false, "isNewAccount": false,
                 "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
                 "accountId": "001Wt00001eZpBOIA0", "themes": "1, 2, 4, 6, 7, 8",
@@ -581,10 +675,10 @@
                 "email": "erika.ryan@notion.so", "phone": "+1 (415) 555-0231",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/notion.png",
                 "employees": "~600", "industry": "Software / Productivity", "location": "San Francisco, CA",
-                "whyProspect": "SDR team 5x'd in 2 years (120+ reps), transitioning PLG→outbound, using competitor Common Room, hiring SDRs globally, $500M+ ARR, pre-IPO",
-                "signals": [{ "text": "Hiring SDRs/BDRs globally", "source": "Apollo" }, { "text": "Active outbound buildout", "source": "Demandbase" }, { "text": "Common Room customer", "source": "G2" }, { "text": "New Head of Enterprise Americas (Katie Layng)", "source": "SalesIntel" }, { "text": "Built internal Salestino bot", "source": "TechCrunch" }, { "text": "6+ GTM tools", "source": "6sense" }, { "text": "Job posts explicitly mention AI/outbound", "source": "Apollo" }],
-                "signal": "Hiring SDRs/BDRs globally",
-                "source": "6sense", "isNewContact": false, "isNewAccount": false,
+                "whyProspect": "Standing up EMEA outbound from nothing after the Dublin hub opened, with no territory data behind it",
+                "signals": [{ "text": "Dublin SDR hub opened in Q1", "source": "TechCrunch" }, { "text": "18 SDRs hired across EMEA this year", "source": "Apollo" }, { "text": "EMEA territory data flagged as thin", "source": "SalesIntel" }, { "text": "Outbound running in 4 languages", "source": "6sense" }],
+                "signal": "Dublin SDR hub opened in Q1",
+                "source": "TechCrunch", "isNewContact": false, "isNewAccount": false,
                 "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
                 "accountId": "001Wt00001eZpBOIA0", "themes": "1, 2, 4, 6, 7, 8",
                 "crm": "Active GTM Platform opp ($180K Discovery) + Renewal ($145K)",
@@ -598,112 +692,10 @@
                 "email": "bryan.blanquet@notion.so", "phone": "+1 (415) 555-0298",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/notion.png",
                 "employees": "~600", "industry": "Software / Productivity", "location": "San Francisco, CA",
-                "whyProspect": "SDR team 5x'd in 2 years (120+ reps), transitioning PLG→outbound, using competitor Common Room, hiring SDRs globally, $500M+ ARR, pre-IPO",
-                "signals": [{ "text": "Hiring SDRs/BDRs globally", "source": "Apollo" }, { "text": "Active outbound buildout", "source": "Demandbase" }, { "text": "Common Room customer", "source": "G2" }, { "text": "New Head of Enterprise Americas (Katie Layng)", "source": "SalesIntel" }, { "text": "Built internal Salestino bot", "source": "TechCrunch" }, { "text": "6+ GTM tools", "source": "6sense" }, { "text": "Job posts explicitly mention AI/outbound", "source": "Apollo" }],
-                "signal": "Hiring SDRs/BDRs globally",
-                "source": "SalesIntel", "isNewContact": false, "isNewAccount": false,
-                "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
-                "accountId": "001Wt00001eZpBOIA0", "themes": "1, 2, 4, 6, 7, 8",
-                "crm": "Active GTM Platform opp ($180K Discovery) + Renewal ($145K)",
-                "opportunities": [{ "name": "GTM Platform", "amount": "$180K", "stage": "Discovery", "close": "", "meta": "$180K · Discovery" }, { "name": "Renewal", "amount": "$145K", "stage": "", "close": "", "meta": "$145K" }],
-                "pitch": "You've 5x'd your SDR team — Bluebirds collapses Common Room + Clay + ZoomInfo + Outreach into one AI-native layer",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-01-p05", "prospect": "Maximiliano Tommasi", "role": "Manager, Growth Marketing", "company": "Notion",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YmhLdIAJ",
-                "email": "max.tommasi@notion.so", "phone": "+1 (415) 555-0345",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/notion.png",
-                "employees": "~600", "industry": "Software / Productivity", "location": "San Francisco, CA",
-                "whyProspect": "SDR team 5x'd in 2 years (120+ reps), transitioning PLG→outbound, using competitor Common Room, hiring SDRs globally, $500M+ ARR, pre-IPO",
-                "signals": [{ "text": "Hiring SDRs/BDRs globally", "source": "Apollo" }, { "text": "Active outbound buildout", "source": "Demandbase" }, { "text": "Common Room customer", "source": "G2" }, { "text": "New Head of Enterprise Americas (Katie Layng)", "source": "SalesIntel" }, { "text": "Built internal Salestino bot", "source": "TechCrunch" }, { "text": "6+ GTM tools", "source": "6sense" }, { "text": "Job posts explicitly mention AI/outbound", "source": "Apollo" }],
-                "signal": "Hiring SDRs/BDRs globally",
-                "source": "Gong", "isNewContact": false, "isNewAccount": false,
-                "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
-                "accountId": "001Wt00001eZpBOIA0", "themes": "1, 2, 4, 6, 7, 8",
-                "crm": "Active GTM Platform opp ($180K Discovery) + Renewal ($145K)",
-                "opportunities": [{ "name": "GTM Platform", "amount": "$180K", "stage": "Discovery", "close": "", "meta": "$180K · Discovery" }, { "name": "Renewal", "amount": "$145K", "stage": "", "close": "", "meta": "$145K" }],
-                "pitch": "You've 5x'd your SDR team — Bluebirds collapses Common Room + Clay + ZoomInfo + Outreach into one AI-native layer",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-01-p06", "prospect": "Tori Moss", "role": "Global Head of RevOps", "company": "Notion",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YlW5hIAF",
-                "email": "tori.moss@notion.so", "phone": "+1 (415) 555-0412",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/notion.png",
-                "employees": "~600", "industry": "Software / Productivity", "location": "San Francisco, CA",
-                "whyProspect": "SDR team 5x'd in 2 years (120+ reps), transitioning PLG→outbound, using competitor Common Room, hiring SDRs globally, $500M+ ARR, pre-IPO",
-                "signals": [{ "text": "Hiring SDRs/BDRs globally", "source": "Apollo" }, { "text": "Active outbound buildout", "source": "Demandbase" }, { "text": "Common Room customer", "source": "G2" }, { "text": "New Head of Enterprise Americas (Katie Layng)", "source": "SalesIntel" }, { "text": "Built internal Salestino bot", "source": "TechCrunch" }, { "text": "6+ GTM tools", "source": "6sense" }, { "text": "Job posts explicitly mention AI/outbound", "source": "Apollo" }],
-                "signal": "Hiring SDRs/BDRs globally",
-                "source": "G2", "isNewContact": false, "isNewAccount": false,
-                "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
-                "accountId": "001Wt00001eZpBOIA0", "themes": "1, 2, 4, 6, 7, 8",
-                "crm": "Active GTM Platform opp ($180K Discovery) + Renewal ($145K)",
-                "opportunities": [{ "name": "GTM Platform", "amount": "$180K", "stage": "Discovery", "close": "", "meta": "$180K · Discovery" }, { "name": "Renewal", "amount": "$145K", "stage": "", "close": "", "meta": "$145K" }],
-                "pitch": "You've 5x'd your SDR team — Bluebirds collapses Common Room + Clay + ZoomInfo + Outreach into one AI-native layer",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-01-p07", "prospect": "Katie Layng", "role": "Head of Enterprise, Americas", "company": "Notion",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YlWthIAF",
-                "email": "katie.layng@notion.so", "phone": "+1 (415) 555-0478",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/notion.png",
-                "employees": "~600", "industry": "Software / Productivity", "location": "San Francisco, CA",
-                "whyProspect": "SDR team 5x'd in 2 years (120+ reps), transitioning PLG→outbound, using competitor Common Room, hiring SDRs globally, $500M+ ARR, pre-IPO",
-                "signals": [{ "text": "Hiring SDRs/BDRs globally", "source": "Apollo" }, { "text": "Active outbound buildout", "source": "Demandbase" }, { "text": "Common Room customer", "source": "G2" }, { "text": "New Head of Enterprise Americas (Katie Layng)", "source": "SalesIntel" }, { "text": "Built internal Salestino bot", "source": "TechCrunch" }, { "text": "6+ GTM tools", "source": "6sense" }, { "text": "Job posts explicitly mention AI/outbound", "source": "Apollo" }],
-                "signal": "Hiring SDRs/BDRs globally",
-                "source": "TechCrunch", "isNewContact": false, "isNewAccount": false,
-                "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
-                "accountId": "001Wt00001eZpBOIA0", "themes": "1, 2, 4, 6, 7, 8",
-                "crm": "Active GTM Platform opp ($180K Discovery) + Renewal ($145K)",
-                "opportunities": [{ "name": "GTM Platform", "amount": "$180K", "stage": "Discovery", "close": "", "meta": "$180K · Discovery" }, { "name": "Renewal", "amount": "$145K", "stage": "", "close": "", "meta": "$145K" }],
-                "pitch": "You've 5x'd your SDR team — Bluebirds collapses Common Room + Clay + ZoomInfo + Outreach into one AI-native layer",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-01-p08", "prospect": "Susan Dettmar", "role": "GM, Co-AMER (Interim)", "company": "Notion",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YlWqTIAV",
-                "email": "susan.dettmar@notion.so", "phone": "+1 (415) 555-0521",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/notion.png",
-                "employees": "~600", "industry": "Software / Productivity", "location": "San Francisco, CA",
-                "whyProspect": "SDR team 5x'd in 2 years (120+ reps), transitioning PLG→outbound, using competitor Common Room, hiring SDRs globally, $500M+ ARR, pre-IPO",
-                "signals": [{ "text": "Hiring SDRs/BDRs globally", "source": "Apollo" }, { "text": "Active outbound buildout", "source": "Demandbase" }, { "text": "Common Room customer", "source": "G2" }, { "text": "New Head of Enterprise Americas (Katie Layng)", "source": "SalesIntel" }, { "text": "Built internal Salestino bot", "source": "TechCrunch" }, { "text": "6+ GTM tools", "source": "6sense" }, { "text": "Job posts explicitly mention AI/outbound", "source": "Apollo" }],
-                "signal": "Hiring SDRs/BDRs globally",
-                "source": "Demandbase", "isNewContact": true, "isNewAccount": false,
-                "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
-                "accountId": "001Wt00001eZpBOIA0", "themes": "1, 2, 4, 6, 7, 8",
-                "crm": "Active GTM Platform opp ($180K Discovery) + Renewal ($145K)",
-                "opportunities": [{ "name": "GTM Platform", "amount": "$180K", "stage": "Discovery", "close": "", "meta": "$180K · Discovery" }, { "name": "Renewal", "amount": "$145K", "stage": "", "close": "", "meta": "$145K" }],
-                "pitch": "You've 5x'd your SDR team — Bluebirds collapses Common Room + Clay + ZoomInfo + Outreach into one AI-native layer",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-01-p09", "prospect": "Kimberly Graves", "role": "GM, Americas", "company": "Notion",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YlWs5IAF",
-                "email": "kimberly.graves@notion.so", "phone": "+1 (415) 555-0589",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/notion.png",
-                "employees": "~600", "industry": "Software / Productivity", "location": "San Francisco, CA",
-                "whyProspect": "SDR team 5x'd in 2 years (120+ reps), transitioning PLG→outbound, using competitor Common Room, hiring SDRs globally, $500M+ ARR, pre-IPO",
-                "signals": [{ "text": "Hiring SDRs/BDRs globally", "source": "Apollo" }, { "text": "Active outbound buildout", "source": "Demandbase" }, { "text": "Common Room customer", "source": "G2" }, { "text": "New Head of Enterprise Americas (Katie Layng)", "source": "SalesIntel" }, { "text": "Built internal Salestino bot", "source": "TechCrunch" }, { "text": "6+ GTM tools", "source": "6sense" }, { "text": "Job posts explicitly mention AI/outbound", "source": "Apollo" }],
-                "signal": "Hiring SDRs/BDRs globally",
-                "source": "Apollo", "isNewContact": true, "isNewAccount": false,
-                "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
-                "accountId": "001Wt00001eZpBOIA0", "themes": "1, 2, 4, 6, 7, 8",
-                "crm": "Active GTM Platform opp ($180K Discovery) + Renewal ($145K)",
-                "opportunities": [{ "name": "GTM Platform", "amount": "$180K", "stage": "Discovery", "close": "", "meta": "$180K · Discovery" }, { "name": "Renewal", "amount": "$145K", "stage": "", "close": "", "meta": "$145K" }],
-                "pitch": "You've 5x'd your SDR team — Bluebirds collapses Common Room + Clay + ZoomInfo + Outreach into one AI-native layer",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-01-p10", "prospect": "Erica Anderson", "role": "CRO", "company": "Notion",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YlYXJIA3",
-                "email": "erica.anderson@notion.so", "phone": "+1 (415) 555-0634",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/notion.png",
-                "employees": "~600", "industry": "Software / Productivity", "location": "San Francisco, CA",
-                "whyProspect": "SDR team 5x'd in 2 years (120+ reps), transitioning PLG→outbound, using competitor Common Room, hiring SDRs globally, $500M+ ARR, pre-IPO",
-                "signals": [{ "text": "Hiring SDRs/BDRs globally", "source": "Apollo" }, { "text": "Active outbound buildout", "source": "Demandbase" }, { "text": "Common Room customer", "source": "G2" }, { "text": "New Head of Enterprise Americas (Katie Layng)", "source": "SalesIntel" }, { "text": "Built internal Salestino bot", "source": "TechCrunch" }, { "text": "6+ GTM tools", "source": "6sense" }, { "text": "Job posts explicitly mention AI/outbound", "source": "Apollo" }],
-                "signal": "Hiring SDRs/BDRs globally",
-                "source": "ZoomInfo", "isNewContact": true, "isNewAccount": false,
+                "whyProspect": "Funds the top of the enterprise funnel and is measured on the MQL-to-SQL conversion the SDR team keeps missing",
+                "signals": [{ "text": "Enterprise demand gen budget up 40%", "source": "Moody’s" }, { "text": "MQL to SQL conversion under review", "source": "Gong" }, { "text": "Job posts explicitly mention AI outbound", "source": "Apollo" }, { "text": "Evaluating intent data vendors", "source": "6sense" }, { "text": "Common Room renewal lands in Q4", "source": "G2" }],
+                "signal": "Enterprise demand gen budget up 40%",
+                "source": "Moody’s", "isNewContact": false, "isNewAccount": false,
                 "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
                 "accountId": "001Wt00001eZpBOIA0", "themes": "1, 2, 4, 6, 7, 8",
                 "crm": "Active GTM Platform opp ($180K Discovery) + Renewal ($145K)",
@@ -717,10 +709,10 @@
                 "email": "petra.sommerville@datadoghq.com", "phone": "+1 (212) 555-0142",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/datadog.png",
                 "employees": "~7,000", "industry": "Software / Cloud Monitoring & Observability", "location": "New York, NY",
-                "whyProspect": "Hiring SDRs across 8 offices; Posted GTM StratOps SDR & AI role explicitly seeking AI-driven SDR productivity; $3.67B revenue growing 28-32% YoY",
-                "signals": [{ "text": "SDR hiring globally", "source": "Apollo" }, { "text": "AI SDR productivity role", "source": "Apollo" }, { "text": "PLG-to-ABM transformation", "source": "Demandbase" }, { "text": "Data cleanliness pain acknowledged", "source": "Gong" }, { "text": "Adaptive ML acquisition", "source": "TechCrunch" }, { "text": "Active $220K RevOps opp", "source": "Salesforce" }],
-                "signal": "SDR hiring globally",
-                "source": "6sense", "isNewContact": true, "isNewAccount": false,
+                "whyProspect": "Owns SDR productivity across 8 offices and has an open req that names AI-driven SDR productivity as the job",
+                "signals": [{ "text": "SDR hiring across 8 offices", "source": "Apollo" }, { "text": "$3.67B revenue growing 28-32% YoY", "source": "Moody’s" }, { "text": "Open GTM StratOps SDR & AI role", "source": "SalesIntel" }, { "text": "200+ SDRs globally", "source": "ZoomInfo" }, { "text": "Territory coverage gaps in APAC", "source": "6sense" }],
+                "signal": "SDR hiring across 8 offices",
+                "source": "Apollo", "isNewContact": true, "isNewAccount": false,
                 "rank": "2", "tier": "Red Hot", "icpFit": "Full match",
                 "accountId": "001Wt00001eZvyNIAS", "themes": "3, 7, 8, 9",
                 "crm": "Active RevOps Enablement opp ($220K Discovery) with VP RevOps Sarah Chen as champion",
@@ -734,10 +726,10 @@
                 "email": "marshall.hunger@datadoghq.com", "phone": "+1 (212) 555-0187",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/datadog.png",
                 "employees": "~7,000", "industry": "Software / Cloud Monitoring & Observability", "location": "New York, NY",
-                "whyProspect": "Hiring SDRs across 8 offices; Posted GTM StratOps SDR & AI role explicitly seeking AI-driven SDR productivity; $3.67B revenue growing 28-32% YoY",
-                "signals": [{ "text": "SDR hiring globally", "source": "Apollo" }, { "text": "AI SDR productivity role", "source": "Apollo" }, { "text": "PLG-to-ABM transformation", "source": "Demandbase" }, { "text": "Data cleanliness pain acknowledged", "source": "Gong" }, { "text": "Adaptive ML acquisition", "source": "TechCrunch" }, { "text": "Active $220K RevOps opp", "source": "Salesforce" }],
-                "signal": "SDR hiring globally",
-                "source": "Apollo", "isNewContact": true, "isNewAccount": false,
+                "whyProspect": "Runs the AMER commercial floor, the largest rep count in the org and the lowest meetings per rep",
+                "signals": [{ "text": "90 SDRs on the AMER floor", "source": "ZoomInfo" }, { "text": "Meetings per rep down quarter on quarter", "source": "Gong" }, { "text": "Hiring 15 SDRs in Denver", "source": "Apollo" }, { "text": "Running Outreach and Salesloft side by side", "source": "G2" }],
+                "signal": "90 SDRs on the AMER floor",
+                "source": "ZoomInfo", "isNewContact": true, "isNewAccount": false,
                 "rank": "2", "tier": "Red Hot", "icpFit": "Full match",
                 "accountId": "001Wt00001eZvyNIAS", "themes": "3, 7, 8, 9",
                 "crm": "Active RevOps Enablement opp ($220K Discovery) with VP RevOps Sarah Chen as champion",
@@ -751,10 +743,10 @@
                 "email": "zuzana.estokova@datadoghq.com", "phone": "+1 (212) 555-0231",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/datadog.png",
                 "employees": "~7,000", "industry": "Software / Cloud Monitoring & Observability", "location": "New York, NY",
-                "whyProspect": "Hiring SDRs across 8 offices; Posted GTM StratOps SDR & AI role explicitly seeking AI-driven SDR productivity; $3.67B revenue growing 28-32% YoY",
-                "signals": [{ "text": "SDR hiring globally", "source": "Apollo" }, { "text": "AI SDR productivity role", "source": "Apollo" }, { "text": "PLG-to-ABM transformation", "source": "Demandbase" }, { "text": "Data cleanliness pain acknowledged", "source": "Gong" }, { "text": "Adaptive ML acquisition", "source": "TechCrunch" }, { "text": "Active $220K RevOps opp", "source": "Salesforce" }],
-                "signal": "SDR hiring globally",
-                "source": "SalesIntel", "isNewContact": true, "isNewAccount": false,
+                "whyProspect": "Owns EMEA sales development from Dublin and Paris, opening two more markets on flat headcount",
+                "signals": [{ "text": "Dublin and Paris SDR teams", "source": "Demandbase" }, { "text": "Opening Milan and Madrid", "source": "TechCrunch" }, { "text": "EMEA SDR headcount held flat", "source": "SalesIntel" }, { "text": "GDPR-constrained data sourcing", "source": "6sense" }],
+                "signal": "Dublin and Paris SDR teams",
+                "source": "Demandbase", "isNewContact": true, "isNewAccount": false,
                 "rank": "2", "tier": "Red Hot", "icpFit": "Full match",
                 "accountId": "001Wt00001eZvyNIAS", "themes": "3, 7, 8, 9",
                 "crm": "Active RevOps Enablement opp ($220K Discovery) with VP RevOps Sarah Chen as champion",
@@ -768,61 +760,10 @@
                 "email": "sandy.hwang@datadoghq.com", "phone": "+1 (212) 555-0298",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/datadog.png",
                 "employees": "~7,000", "industry": "Software / Cloud Monitoring & Observability", "location": "New York, NY",
-                "whyProspect": "Hiring SDRs across 8 offices; Posted GTM StratOps SDR & AI role explicitly seeking AI-driven SDR productivity; $3.67B revenue growing 28-32% YoY",
-                "signals": [{ "text": "SDR hiring globally", "source": "Apollo" }, { "text": "AI SDR productivity role", "source": "Apollo" }, { "text": "PLG-to-ABM transformation", "source": "Demandbase" }, { "text": "Data cleanliness pain acknowledged", "source": "Gong" }, { "text": "Adaptive ML acquisition", "source": "TechCrunch" }, { "text": "Active $220K RevOps opp", "source": "Salesforce" }],
-                "signal": "SDR hiring globally",
-                "source": "Gong", "isNewContact": false, "isNewAccount": false,
-                "rank": "2", "tier": "Red Hot", "icpFit": "Full match",
-                "accountId": "001Wt00001eZvyNIAS", "themes": "3, 7, 8, 9",
-                "crm": "Active RevOps Enablement opp ($220K Discovery) with VP RevOps Sarah Chen as champion",
-                "opportunities": [{ "name": "RevOps Enablement", "amount": "$220K", "stage": "Discovery", "close": "", "meta": "$220K · Discovery" }],
-                "pitch": "You're actively building an AI-powered SDR productivity function — Bluebirds delivers this out of the box in 30 minutes",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-02-p05", "prospect": "Sean Walters", "role": "CRO", "company": "Datadog",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YmhrtIAB",
-                "email": "sean.walters@datadoghq.com", "phone": "+1 (212) 555-0345",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/datadog.png",
-                "employees": "~7,000", "industry": "Software / Cloud Monitoring & Observability", "location": "New York, NY",
-                "whyProspect": "Hiring SDRs across 8 offices; Posted GTM StratOps SDR & AI role explicitly seeking AI-driven SDR productivity; $3.67B revenue growing 28-32% YoY",
-                "signals": [{ "text": "SDR hiring globally", "source": "Apollo" }, { "text": "AI SDR productivity role", "source": "Apollo" }, { "text": "PLG-to-ABM transformation", "source": "Demandbase" }, { "text": "Data cleanliness pain acknowledged", "source": "Gong" }, { "text": "Adaptive ML acquisition", "source": "TechCrunch" }, { "text": "Active $220K RevOps opp", "source": "Salesforce" }],
-                "signal": "SDR hiring globally",
-                "source": "Demandbase", "isNewContact": true, "isNewAccount": false,
-                "rank": "2", "tier": "Red Hot", "icpFit": "Full match",
-                "accountId": "001Wt00001eZvyNIAS", "themes": "3, 7, 8, 9",
-                "crm": "Active RevOps Enablement opp ($220K Discovery) with VP RevOps Sarah Chen as champion",
-                "opportunities": [{ "name": "RevOps Enablement", "amount": "$220K", "stage": "Discovery", "close": "", "meta": "$220K · Discovery" }],
-                "pitch": "You're actively building an AI-powered SDR productivity function — Bluebirds delivers this out of the box in 30 minutes",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-02-p06", "prospect": "Shane Phair", "role": "VP Marketing - Growth & Demand Gen", "company": "Datadog",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YlcStIAJ",
-                "email": "shane.phair@datadoghq.com", "phone": "+1 (212) 555-0412",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/datadog.png",
-                "employees": "~7,000", "industry": "Software / Cloud Monitoring & Observability", "location": "New York, NY",
-                "whyProspect": "Hiring SDRs across 8 offices; Posted GTM StratOps SDR & AI role explicitly seeking AI-driven SDR productivity; $3.67B revenue growing 28-32% YoY",
-                "signals": [{ "text": "SDR hiring globally", "source": "Apollo" }, { "text": "AI SDR productivity role", "source": "Apollo" }, { "text": "PLG-to-ABM transformation", "source": "Demandbase" }, { "text": "Data cleanliness pain acknowledged", "source": "Gong" }, { "text": "Adaptive ML acquisition", "source": "TechCrunch" }, { "text": "Active $220K RevOps opp", "source": "Salesforce" }],
-                "signal": "SDR hiring globally",
-                "source": "G2", "isNewContact": false, "isNewAccount": false,
-                "rank": "2", "tier": "Red Hot", "icpFit": "Full match",
-                "accountId": "001Wt00001eZvyNIAS", "themes": "3, 7, 8, 9",
-                "crm": "Active RevOps Enablement opp ($220K Discovery) with VP RevOps Sarah Chen as champion",
-                "opportunities": [{ "name": "RevOps Enablement", "amount": "$220K", "stage": "Discovery", "close": "", "meta": "$220K · Discovery" }],
-                "pitch": "You're actively building an AI-powered SDR productivity function — Bluebirds delivers this out of the box in 30 minutes",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-02-p07", "prospect": "Kunal Arya", "role": "Director, Demand Gen", "company": "Datadog",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000Ymhv7IAB",
-                "email": "kunal.arya@datadoghq.com", "phone": "+1 (212) 555-0478",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/datadog.png",
-                "employees": "~7,000", "industry": "Software / Cloud Monitoring & Observability", "location": "New York, NY",
-                "whyProspect": "Hiring SDRs across 8 offices; Posted GTM StratOps SDR & AI role explicitly seeking AI-driven SDR productivity; $3.67B revenue growing 28-32% YoY",
-                "signals": [{ "text": "SDR hiring globally", "source": "Apollo" }, { "text": "AI SDR productivity role", "source": "Apollo" }, { "text": "PLG-to-ABM transformation", "source": "Demandbase" }, { "text": "Data cleanliness pain acknowledged", "source": "Gong" }, { "text": "Adaptive ML acquisition", "source": "TechCrunch" }, { "text": "Active $220K RevOps opp", "source": "Salesforce" }],
-                "signal": "SDR hiring globally",
-                "source": "Moody’s", "isNewContact": true, "isNewAccount": false,
+                "whyProspect": "Wrote the GTM StratOps SDR & AI charter and controls the budget line any SDR tooling would come out of",
+                "signals": [{ "text": "Authored the SDR & AI charter", "source": "SalesIntel" }, { "text": "Owns the GTM tooling budget", "source": "Demandbase" }, { "text": "Consolidating 3 data vendors into 1", "source": "G2" }, { "text": "Quarterly GTM efficiency review", "source": "Moody’s" }],
+                "signal": "Authored the SDR & AI charter",
+                "source": "SalesIntel", "isNewContact": false, "isNewAccount": false,
                 "rank": "2", "tier": "Red Hot", "icpFit": "Full match",
                 "accountId": "001Wt00001eZvyNIAS", "themes": "3, 7, 8, 9",
                 "crm": "Active RevOps Enablement opp ($220K Discovery) with VP RevOps Sarah Chen as champion",
@@ -836,9 +777,9 @@
                 "email": "jordan.reyes@vanta.com", "phone": "+1 (415) 555-0701",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/vanta.png",
                 "employees": "~800", "industry": "Software / Security & Compliance", "location": "San Francisco, CA",
-                "whyProspect": "120+ SDRs scaled 4x; $300M ARR accelerating; EMEA expansion; Q3 re-engagement window explicitly requested; In-house AI SDR at crossroads",
-                "signals": [{ "text": "Hiring SDRs globally", "source": "Apollo" }, { "text": "8+ GTM tools (tool sprawl)", "source": "6sense" }, { "text": "Phone-first outbound transition", "source": "Gong" }, { "text": "$150M Series D", "source": "TechCrunch" }, { "text": "New VP Sales Americas & EMEA", "source": "SalesIntel" }, { "text": "New CFO (IPO readiness)", "source": "Moody’s" }],
-                "signal": "Hiring SDRs globally",
+                "whyProspect": "Asked for the Q3 re-engagement window himself, and owns the AE org the in-house AI SDR is meant to feed",
+                "signals": [{ "text": "Requested a Q3 re-engagement", "source": "Gong" }, { "text": "In-house AI SDR at a crossroads", "source": "TechCrunch" }, { "text": "$300M ARR and accelerating", "source": "Moody’s" }, { "text": "120+ SDRs after a 4x scale-up", "source": "ZoomInfo" }],
+                "signal": "Requested a Q3 re-engagement",
                 "source": "Gong", "isNewContact": false, "isNewAccount": false,
                 "rank": "3", "tier": "Red Hot", "icpFit": "Perfect",
                 "accountId": "001Wt00001eZwETIA0", "themes": "1, 2, 7, 9",
@@ -853,10 +794,10 @@
                 "email": "jessica.farrell@vanta.com", "phone": "+1 (415) 555-0756",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/vanta.png",
                 "employees": "~800", "industry": "Software / Security & Compliance", "location": "San Francisco, CA",
-                "whyProspect": "120+ SDRs scaled 4x; $300M ARR accelerating; EMEA expansion; Q3 re-engagement window explicitly requested; In-house AI SDR at crossroads",
-                "signals": [{ "text": "Hiring SDRs globally", "source": "Apollo" }, { "text": "8+ GTM tools (tool sprawl)", "source": "6sense" }, { "text": "Phone-first outbound transition", "source": "Gong" }, { "text": "$150M Series D", "source": "TechCrunch" }, { "text": "New VP Sales Americas & EMEA", "source": "SalesIntel" }, { "text": "New CFO (IPO readiness)", "source": "Moody’s" }],
-                "signal": "Hiring SDRs globally",
-                "source": "Moody’s", "isNewContact": false, "isNewAccount": false,
+                "whyProspect": "Building the EMEA SDR team the expansion depends on, against compliance-buyer data US vendors cover poorly",
+                "signals": [{ "text": "EMEA expansion underway", "source": "TechCrunch" }, { "text": "Hiring 20 SDRs in London", "source": "Apollo" }, { "text": "Compliance-buyer coverage gaps", "source": "SalesIntel" }, { "text": "ISO 27001 buyer intent spiking", "source": "6sense" }],
+                "signal": "EMEA expansion underway",
+                "source": "TechCrunch", "isNewContact": false, "isNewAccount": false,
                 "rank": "3", "tier": "Red Hot", "icpFit": "Perfect",
                 "accountId": "001Wt00001eZwETIA0", "themes": "1, 2, 7, 9",
                 "crm": "Active Outbound Motion opp ($120K Qualification); Jordan Reyes requested Q3 re-engagement",
@@ -870,10 +811,10 @@
                 "email": "roger.benson@vanta.com", "phone": "+1 (415) 555-0812",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/vanta.png",
                 "employees": "~800", "industry": "Software / Security & Compliance", "location": "San Francisco, CA",
-                "whyProspect": "120+ SDRs scaled 4x; $300M ARR accelerating; EMEA expansion; Q3 re-engagement window explicitly requested; In-house AI SDR at crossroads",
-                "signals": [{ "text": "Hiring SDRs globally", "source": "Apollo" }, { "text": "8+ GTM tools (tool sprawl)", "source": "6sense" }, { "text": "Phone-first outbound transition", "source": "Gong" }, { "text": "$150M Series D", "source": "TechCrunch" }, { "text": "New VP Sales Americas & EMEA", "source": "SalesIntel" }, { "text": "New CFO (IPO readiness)", "source": "Moody’s" }],
-                "signal": "Hiring SDRs globally",
-                "source": "Apollo", "isNewContact": true, "isNewAccount": false,
+                "whyProspect": "Runs the highest-volume, lowest-ACV segment, where the in-house AI SDR either pays for itself or does not",
+                "signals": [{ "text": "Startups segment carries the most volume", "source": "Demandbase" }, { "text": "Redesigning the self-serve to sales handoff", "source": "Gong" }, { "text": "SOC 2 buyer cohort growing", "source": "6sense" }, { "text": "Hiring 10 growth SDRs", "source": "Apollo" }],
+                "signal": "Startups segment carries the most volume",
+                "source": "Demandbase", "isNewContact": true, "isNewAccount": false,
                 "rank": "3", "tier": "Red Hot", "icpFit": "Perfect",
                 "accountId": "001Wt00001eZwETIA0", "themes": "1, 2, 7, 9",
                 "crm": "Active Outbound Motion opp ($120K Qualification); Jordan Reyes requested Q3 re-engagement",
@@ -887,10 +828,10 @@
                 "email": "max.freeman@ramp.com", "phone": "+1 (646) 555-0142",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/ramp.png",
                 "employees": "~1,300", "industry": "Fintech / Corporate Cards & Spend", "location": "New York, NY",
-                "whyProspect": "Built sophisticated in-house outbound engine (5-7 growth engineers, Dark TAM Engine equivalent)",
-                "signals": [{ "text": "130+ SDRs onboarding 10-12/month", "source": "ZoomInfo" }, { "text": "20+ GTM tools", "source": "6sense" }, { "text": "$750M Series F at $44B", "source": "TechCrunch" }, { "text": "Billhop acquisition (UK/EU)", "source": "Moody’s" }, { "text": "SVP Sales Max Freeman promoted Jun 2026", "source": "SalesIntel" }],
-                "signal": "130+ SDRs onboarding 10-12/month",
-                "source": "TechCrunch", "isNewContact": false, "isNewAccount": false,
+                "whyProspect": "Sponsors the in-house outbound engine and the 5-7 growth engineers maintaining it instead of shipping product",
+                "signals": [{ "text": "130+ SDRs onboarding 10-12 a month", "source": "ZoomInfo" }, { "text": "5-7 growth engineers on GTM tooling", "source": "TechCrunch" }, { "text": "Dark TAM equivalent built in-house", "source": "Gong" }, { "text": "Valuation marked up in the latest round", "source": "Moody’s" }],
+                "signal": "130+ SDRs onboarding 10-12 a month",
+                "source": "ZoomInfo", "isNewContact": false, "isNewAccount": false,
                 "rank": "4", "tier": "Solid", "icpFit": "n/a",
                 "accountId": "001Wt00001eZwCrIAK", "themes": "1, 2, 4, 8",
                 "crm": "Active SDR Automation opp ($145K Discovery)",
@@ -904,10 +845,10 @@
                 "email": "kaitlyn.giori@ramp.com", "phone": "+1 (646) 555-0187",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/ramp.png",
                 "employees": "~1,300", "industry": "Fintech / Corporate Cards & Spend", "location": "New York, NY",
-                "whyProspect": "Built sophisticated in-house outbound engine (5-7 growth engineers, Dark TAM Engine equivalent)",
-                "signals": [{ "text": "130+ SDRs onboarding 10-12/month", "source": "ZoomInfo" }, { "text": "20+ GTM tools", "source": "6sense" }, { "text": "$750M Series F at $44B", "source": "TechCrunch" }, { "text": "Billhop acquisition (UK/EU)", "source": "Moody’s" }, { "text": "SVP Sales Max Freeman promoted Jun 2026", "source": "SalesIntel" }],
-                "signal": "130+ SDRs onboarding 10-12/month",
-                "source": "6sense", "isNewContact": false, "isNewAccount": false,
+                "whyProspect": "Onboards 10-12 SDRs a month and owns the ramp curve the in-house engine’s list quality sets",
+                "signals": [{ "text": "Onboarding 10-12 SDRs monthly", "source": "Apollo" }, { "text": "Ramp to quota sitting at 5 months", "source": "Gong" }, { "text": "Running a 3-week SDR bootcamp", "source": "SalesIntel" }, { "text": "Territory reshuffle mid-quarter", "source": "Demandbase" }],
+                "signal": "Onboarding 10-12 SDRs monthly",
+                "source": "Apollo", "isNewContact": false, "isNewAccount": false,
                 "rank": "4", "tier": "Solid", "icpFit": "n/a",
                 "accountId": "001Wt00001eZwCrIAK", "themes": "1, 2, 4, 8",
                 "crm": "Active SDR Automation opp ($145K Discovery)",
@@ -921,10 +862,10 @@
                 "email": "kevin.dzierzawski@ramp.com", "phone": "+1 (646) 555-0231",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/ramp.png",
                 "employees": "~1,300", "industry": "Fintech / Corporate Cards & Spend", "location": "New York, NY",
-                "whyProspect": "Built sophisticated in-house outbound engine (5-7 growth engineers, Dark TAM Engine equivalent)",
-                "signals": [{ "text": "130+ SDRs onboarding 10-12/month", "source": "ZoomInfo" }, { "text": "20+ GTM tools", "source": "6sense" }, { "text": "$750M Series F at $44B", "source": "TechCrunch" }, { "text": "Billhop acquisition (UK/EU)", "source": "Moody’s" }, { "text": "SVP Sales Max Freeman promoted Jun 2026", "source": "SalesIntel" }],
-                "signal": "130+ SDRs onboarding 10-12/month",
-                "source": "SalesIntel", "isNewContact": false, "isNewAccount": false,
+                "whyProspect": "Carries the new-logo number and is the internal skeptic on whether the homegrown engine beats buying",
+                "signals": [{ "text": "New-logo target up 45% YoY", "source": "Moody’s" }, { "text": "Build-versus-buy review on GTM tooling", "source": "G2" }, { "text": "Mid-market push into 3 verticals", "source": "6sense" }, { "text": "Hiring an outbound strategy lead", "source": "Apollo" }],
+                "signal": "New-logo target up 45% YoY",
+                "source": "Moody’s", "isNewContact": false, "isNewAccount": false,
                 "rank": "4", "tier": "Solid", "icpFit": "n/a",
                 "accountId": "001Wt00001eZwCrIAK", "themes": "1, 2, 4, 8",
                 "crm": "Active SDR Automation opp ($145K Discovery)",
@@ -938,117 +879,15 @@
                 "email": "kyle.bastien@ramp.com", "phone": "+1 (646) 555-0298",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/ramp.png",
                 "employees": "~1,300", "industry": "Fintech / Corporate Cards & Spend", "location": "New York, NY",
-                "whyProspect": "Built sophisticated in-house outbound engine (5-7 growth engineers, Dark TAM Engine equivalent)",
-                "signals": [{ "text": "130+ SDRs onboarding 10-12/month", "source": "ZoomInfo" }, { "text": "20+ GTM tools", "source": "6sense" }, { "text": "$750M Series F at $44B", "source": "TechCrunch" }, { "text": "Billhop acquisition (UK/EU)", "source": "Moody’s" }, { "text": "SVP Sales Max Freeman promoted Jun 2026", "source": "SalesIntel" }],
-                "signal": "130+ SDRs onboarding 10-12/month",
+                "whyProspect": "Owns SDR ramp content and is measured on time-to-first-meeting, which the in-house lists keep pushing out",
+                "signals": [{ "text": "Time to first meeting is his top metric", "source": "Gong" }, { "text": "Rebuilding the SDR enablement path", "source": "SalesIntel" }, { "text": "Certification program for 130 reps", "source": "Apollo" }, { "text": "Evaluating conversation intelligence add-ons", "source": "G2" }],
+                "signal": "Time to first meeting is his top metric",
                 "source": "Gong", "isNewContact": false, "isNewAccount": false,
                 "rank": "4", "tier": "Solid", "icpFit": "n/a",
                 "accountId": "001Wt00001eZwCrIAK", "themes": "1, 2, 4, 8",
                 "crm": "Active SDR Automation opp ($145K Discovery)",
                 "opportunities": [{ "name": "SDR Automation", "amount": "$145K", "stage": "Discovery", "close": "", "meta": "$145K · Discovery" }],
                 "pitch": "Your outbound machine is best-in-class but takes an army of GTM engineers. Bluebirds gives you the same output without the custom infrastructure",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-04-p05", "prospect": "Asher Kaplan", "role": "VP, GTM Finance & Ops", "company": "Ramp",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YlgwHIAR",
-                "email": "asher.kaplan@ramp.com", "phone": "+1 (646) 555-0345",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/ramp.png",
-                "employees": "~1,300", "industry": "Fintech / Corporate Cards & Spend", "location": "New York, NY",
-                "whyProspect": "Built sophisticated in-house outbound engine (5-7 growth engineers, Dark TAM Engine equivalent)",
-                "signals": [{ "text": "130+ SDRs onboarding 10-12/month", "source": "ZoomInfo" }, { "text": "20+ GTM tools", "source": "6sense" }, { "text": "$750M Series F at $44B", "source": "TechCrunch" }, { "text": "Billhop acquisition (UK/EU)", "source": "Moody’s" }, { "text": "SVP Sales Max Freeman promoted Jun 2026", "source": "SalesIntel" }],
-                "signal": "130+ SDRs onboarding 10-12/month",
-                "source": "Demandbase", "isNewContact": false, "isNewAccount": false,
-                "rank": "4", "tier": "Solid", "icpFit": "n/a",
-                "accountId": "001Wt00001eZwCrIAK", "themes": "1, 2, 4, 8",
-                "crm": "Active SDR Automation opp ($145K Discovery)",
-                "opportunities": [{ "name": "SDR Automation", "amount": "$145K", "stage": "Discovery", "close": "", "meta": "$145K · Discovery" }],
-                "pitch": "Your outbound machine is best-in-class but takes an army of GTM engineers. Bluebirds gives you the same output without the custom infrastructure",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-05-p01", "prospect": "Natalie Ortega", "role": "Director, Sales Dev (Enterprise)", "company": "Rippling",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000Ylfk5IAB",
-                "email": "natalie.ortega@rippling.com", "phone": "+1 (415) 555-0901",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/rippling.png",
-                "employees": "~3,500", "industry": "Software / HR & IT Management", "location": "San Francisco, CA",
-                "whyProspect": "Built internal Dark TAM Engine (ML entity resolution, automated list building)",
-                "signals": [{ "text": "290+ SDRs", "source": "ZoomInfo" }, { "text": "8+ GTM tools", "source": "6sense" }, { "text": "$450M Series G at $16.8B", "source": "TechCrunch" }, { "text": "DACH founding BDR team", "source": "Apollo" }, { "text": "New SDR Director Natalie Ortega", "source": "SalesIntel" }],
-                "signal": "290+ SDRs",
-                "source": "TechCrunch", "isNewContact": false, "isNewAccount": false,
-                "rank": "5", "tier": "Solid", "icpFit": "Solid — built internal Dark TAM Engine",
-                "accountId": "001Wt00001eZqgwIAC", "themes": "1, 2, 4, 7, 8",
-                "crm": "Active SDR Ramp Acceleration opp ($260K Discovery)",
-                "opportunities": [{ "name": "SDR Ramp Acceleration", "amount": "$260K", "stage": "Discovery", "close": "", "meta": "$260K · Discovery" }],
-                "pitch": "Your internal engine is engineering-dependent — Bluebirds gives SDR managers the same power without depending on eng. Time-to-value for DACH launch: days, not quarters",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-05-p02", "prospect": "Alex Netsch", "role": "VP, Revenue Operations", "company": "Rippling",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YlfovIAB",
-                "email": "alex.netsch@rippling.com", "phone": "+1 (415) 555-0954",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/rippling.png",
-                "employees": "~3,500", "industry": "Software / HR & IT Management", "location": "San Francisco, CA",
-                "whyProspect": "Built internal Dark TAM Engine (ML entity resolution, automated list building)",
-                "signals": [{ "text": "290+ SDRs", "source": "ZoomInfo" }, { "text": "8+ GTM tools", "source": "6sense" }, { "text": "$450M Series G at $16.8B", "source": "TechCrunch" }, { "text": "DACH founding BDR team", "source": "Apollo" }, { "text": "New SDR Director Natalie Ortega", "source": "SalesIntel" }],
-                "signal": "290+ SDRs",
-                "source": "Gong", "isNewContact": false, "isNewAccount": false,
-                "rank": "5", "tier": "Solid", "icpFit": "Solid — built internal Dark TAM Engine",
-                "accountId": "001Wt00001eZqgwIAC", "themes": "1, 2, 4, 7, 8",
-                "crm": "Active SDR Ramp Acceleration opp ($260K Discovery)",
-                "opportunities": [{ "name": "SDR Ramp Acceleration", "amount": "$260K", "stage": "Discovery", "close": "", "meta": "$260K · Discovery" }],
-                "pitch": "Your internal engine is engineering-dependent — Bluebirds gives SDR managers the same power without depending on eng. Time-to-value for DACH launch: days, not quarters",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-05-p03", "prospect": "John Buchman", "role": "Director, Sales Dev", "company": "Rippling",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000Ylh17IAB",
-                "email": "john.buchman@rippling.com", "phone": "+1 (415) 555-1002",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/rippling.png",
-                "employees": "~3,500", "industry": "Software / HR & IT Management", "location": "San Francisco, CA",
-                "whyProspect": "Built internal Dark TAM Engine (ML entity resolution, automated list building)",
-                "signals": [{ "text": "290+ SDRs", "source": "ZoomInfo" }, { "text": "8+ GTM tools", "source": "6sense" }, { "text": "$450M Series G at $16.8B", "source": "TechCrunch" }, { "text": "DACH founding BDR team", "source": "Apollo" }, { "text": "New SDR Director Natalie Ortega", "source": "SalesIntel" }],
-                "signal": "290+ SDRs",
-                "source": "Apollo", "isNewContact": false, "isNewAccount": false,
-                "rank": "5", "tier": "Solid", "icpFit": "Solid — built internal Dark TAM Engine",
-                "accountId": "001Wt00001eZqgwIAC", "themes": "1, 2, 4, 7, 8",
-                "crm": "Active SDR Ramp Acceleration opp ($260K Discovery)",
-                "opportunities": [{ "name": "SDR Ramp Acceleration", "amount": "$260K", "stage": "Discovery", "close": "", "meta": "$260K · Discovery" }],
-                "pitch": "Your internal engine is engineering-dependent — Bluebirds gives SDR managers the same power without depending on eng. Time-to-value for DACH launch: days, not quarters",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-05-p04", "prospect": "Madeline Bria", "role": "Manager, Outbound SDR IT Cloud", "company": "Rippling",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YmfF0IAJ",
-                "email": "madeline.bria@rippling.com", "phone": "+1 (415) 555-1067",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/rippling.png",
-                "employees": "~3,500", "industry": "Software / HR & IT Management", "location": "San Francisco, CA",
-                "whyProspect": "Built internal Dark TAM Engine (ML entity resolution, automated list building)",
-                "signals": [{ "text": "290+ SDRs", "source": "ZoomInfo" }, { "text": "8+ GTM tools", "source": "6sense" }, { "text": "$450M Series G at $16.8B", "source": "TechCrunch" }, { "text": "DACH founding BDR team", "source": "Apollo" }, { "text": "New SDR Director Natalie Ortega", "source": "SalesIntel" }],
-                "signal": "290+ SDRs",
-                "source": "ZoomInfo", "isNewContact": false, "isNewAccount": false,
-                "rank": "5", "tier": "Solid", "icpFit": "Solid — built internal Dark TAM Engine",
-                "accountId": "001Wt00001eZqgwIAC", "themes": "1, 2, 4, 7, 8",
-                "crm": "Active SDR Ramp Acceleration opp ($260K Discovery)",
-                "opportunities": [{ "name": "SDR Ramp Acceleration", "amount": "$260K", "stage": "Discovery", "close": "", "meta": "$260K · Discovery" }],
-                "pitch": "Your internal engine is engineering-dependent — Bluebirds gives SDR managers the same power without depending on eng. Time-to-value for DACH launch: days, not quarters",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-05-p05", "prospect": "Bert Brokaw", "role": "Sr Director, Sales Dev", "company": "Rippling",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YlfnJIAR",
-                "email": "bert.brokaw@rippling.com", "phone": "+1 (415) 555-1123",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/rippling.png",
-                "employees": "~3,500", "industry": "Software / HR & IT Management", "location": "San Francisco, CA",
-                "whyProspect": "Built internal Dark TAM Engine (ML entity resolution, automated list building)",
-                "signals": [{ "text": "290+ SDRs", "source": "ZoomInfo" }, { "text": "8+ GTM tools", "source": "6sense" }, { "text": "$450M Series G at $16.8B", "source": "TechCrunch" }, { "text": "DACH founding BDR team", "source": "Apollo" }, { "text": "New SDR Director Natalie Ortega", "source": "SalesIntel" }],
-                "signal": "290+ SDRs",
-                "source": "G2", "isNewContact": false, "isNewAccount": false,
-                "rank": "5", "tier": "Solid", "icpFit": "Solid — built internal Dark TAM Engine",
-                "accountId": "001Wt00001eZqgwIAC", "themes": "1, 2, 4, 7, 8",
-                "crm": "Active SDR Ramp Acceleration opp ($260K Discovery)",
-                "opportunities": [{ "name": "SDR Ramp Acceleration", "amount": "$260K", "stage": "Discovery", "close": "", "meta": "$260K · Discovery" }],
-                "pitch": "Your internal engine is engineering-dependent — Bluebirds gives SDR managers the same power without depending on eng. Time-to-value for DACH launch: days, not quarters",
                 "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
               },
               {
@@ -1057,10 +896,10 @@
                 "email": "emmy.marty@stripe.com", "phone": "+1 (650) 555-0142",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/stripe.png",
                 "employees": "~8,500", "industry": "Fintech / Payments Infrastructure", "location": "South San Francisco, CA / Dublin",
-                "whyProspect": "n/a",
-                "signals": [{ "text": "New CRO Tyler Bryson (Jun 2026)", "source": "SalesIntel" }, { "text": "80+ SDRs Americas", "source": "ZoomInfo" }, { "text": "$53B PayPal bid", "source": "Moody’s" }, { "text": "Usage-below-plan risk", "source": "Salesforce" }, { "text": "Analytics module interest", "source": "G2" }],
+                "whyProspect": "Enterprise SDR lead under a CRO four months into the job who is rebuilding outbound around named accounts",
+                "signals": [{ "text": "New CRO Tyler Bryson (Jun 2026)", "source": "TechCrunch" }, { "text": "Named-account model being introduced", "source": "Gong" }, { "text": "Enterprise SDR team of 35", "source": "ZoomInfo" }, { "text": "Hiring in New York and London", "source": "Apollo" }],
                 "signal": "New CRO Tyler Bryson (Jun 2026)",
-                "source": "Moody’s", "isNewContact": false, "isNewAccount": false,
+                "source": "TechCrunch", "isNewContact": false, "isNewAccount": false,
                 "rank": "6", "tier": "Solid", "icpFit": "Existing customer — renewal/expansion",
                 "accountId": "001Wt00001eZj2lIAC", "themes": "1, 5, 7, 13",
                 "crm": "Active Enterprise Renewal ($320K Negotiation, close Sep 3)",
@@ -1074,10 +913,10 @@
                 "email": "evan.luthringer@stripe.com", "phone": "+1 (650) 555-0187",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/stripe.png",
                 "employees": "~8,500", "industry": "Fintech / Payments Infrastructure", "location": "South San Francisco, CA / Dublin",
-                "whyProspect": "n/a",
-                "signals": [{ "text": "New CRO Tyler Bryson (Jun 2026)", "source": "SalesIntel" }, { "text": "80+ SDRs Americas", "source": "ZoomInfo" }, { "text": "$53B PayPal bid", "source": "Moody’s" }, { "text": "Usage-below-plan risk", "source": "Salesforce" }, { "text": "Analytics module interest", "source": "G2" }],
-                "signal": "New CRO Tyler Bryson (Jun 2026)",
-                "source": "6sense", "isNewContact": false, "isNewAccount": false,
+                "whyProspect": "Owns financial services GTM, the segment the new CRO named first and the one with the least usable prospect data",
+                "signals": [{ "text": "Financial services named a 2026 priority", "source": "Moody’s" }, { "text": "FS buyer data coverage is thin", "source": "SalesIntel" }, { "text": "Regulated-industry compliance review", "source": "Demandbase" }, { "text": "Two FS enterprise logos closed in Q2", "source": "Gong" }],
+                "signal": "Financial services named a 2026 priority",
+                "source": "Moody’s", "isNewContact": false, "isNewAccount": false,
                 "rank": "6", "tier": "Solid", "icpFit": "Existing customer — renewal/expansion",
                 "accountId": "001Wt00001eZj2lIAC", "themes": "1, 5, 7, 13",
                 "crm": "Active Enterprise Renewal ($320K Negotiation, close Sep 3)",
@@ -1091,9 +930,9 @@
                 "email": "parul.gangwal@stripe.com", "phone": "+1 (650) 555-0231",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/stripe.png",
                 "employees": "~8,500", "industry": "Fintech / Payments Infrastructure", "location": "South San Francisco, CA / Dublin",
-                "whyProspect": "n/a",
-                "signals": [{ "text": "New CRO Tyler Bryson (Jun 2026)", "source": "SalesIntel" }, { "text": "80+ SDRs Americas", "source": "ZoomInfo" }, { "text": "$53B PayPal bid", "source": "Moody’s" }, { "text": "Usage-below-plan risk", "source": "Salesforce" }, { "text": "Analytics module interest", "source": "G2" }],
-                "signal": "New CRO Tyler Bryson (Jun 2026)",
+                "whyProspect": "Redrawing Americas territories for the new CRO’s coverage model, which puts the account data underneath it in play",
+                "signals": [{ "text": "Americas territory redesign underway", "source": "Demandbase" }, { "text": "Account scoring model being rebuilt", "source": "6sense" }, { "text": "CRM data hygiene project funded", "source": "G2" }, { "text": "Reports into the new CRO", "source": "SalesIntel" }],
+                "signal": "Americas territory redesign underway",
                 "source": "Demandbase", "isNewContact": false, "isNewAccount": false,
                 "rank": "6", "tier": "Solid", "icpFit": "Existing customer — renewal/expansion",
                 "accountId": "001Wt00001eZj2lIAC", "themes": "1, 5, 7, 13",
@@ -1108,8 +947,8 @@
                 "email": "david.lee@acmecorp.com", "phone": "+1 (415) 555-1301",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/acme-corp.png",
                 "employees": "~500", "industry": "Software / B2B SaaS (demo)", "location": "San Francisco, CA",
-                "whyProspect": "n/a",
-                "signals": [{ "text": "$50M Series C (Feb 2026)", "source": "TechCrunch" }, { "text": "New Head of Sales EMEA David Lee", "source": "SalesIntel" }, { "text": "Global expansion (London/Singapore/Tokyo)", "source": "Demandbase" }, { "text": "Tool consolidation (5→1)", "source": "6sense" }, { "text": "Active $240K opp", "source": "Salesforce" }],
+                "whyProspect": "Opening EMEA on Series C money with no local pipeline and a number that starts this quarter",
+                "signals": [{ "text": "$50M Series C (Feb 2026)", "source": "TechCrunch" }, { "text": "EMEA entry planned for Q3", "source": "Demandbase" }, { "text": "First 5 EMEA roles posted", "source": "Apollo" }, { "text": "No local pipeline coverage yet", "source": "6sense" }],
                 "signal": "$50M Series C (Feb 2026)",
                 "source": "TechCrunch", "isNewContact": false, "isNewAccount": false,
                 "rank": "8", "tier": "Solid", "icpFit": "n/a",
@@ -1125,10 +964,10 @@
                 "email": "alice.johnson@acmecorp.com", "phone": "+1 (415) 555-1345",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/acme-corp.png",
                 "employees": "~500", "industry": "Software / B2B SaaS (demo)", "location": "San Francisco, CA",
-                "whyProspect": "n/a",
-                "signals": [{ "text": "$50M Series C (Feb 2026)", "source": "TechCrunch" }, { "text": "New Head of Sales EMEA David Lee", "source": "SalesIntel" }, { "text": "Global expansion (London/Singapore/Tokyo)", "source": "Demandbase" }, { "text": "Tool consolidation (5→1)", "source": "6sense" }, { "text": "Active $240K opp", "source": "Salesforce" }],
-                "signal": "$50M Series C (Feb 2026)",
-                "source": "SalesIntel", "isNewContact": false, "isNewAccount": false,
+                "whyProspect": "Owns the demand number the Series C was raised against, with pipeline targets tripled and no matching team",
+                "signals": [{ "text": "Pipeline target tripled after the raise", "source": "Moody’s" }, { "text": "Marketing headcount doubled", "source": "Apollo" }, { "text": "First brand campaign in market", "source": "TechCrunch" }, { "text": "Evaluating an ABM platform", "source": "G2" }],
+                "signal": "Pipeline target tripled after the raise",
+                "source": "Moody’s", "isNewContact": false, "isNewAccount": false,
                 "rank": "8", "tier": "Solid", "icpFit": "n/a",
                 "accountId": "001Wt00001eRF6hIAG", "themes": "5, 14",
                 "crm": "Active Platform Expansion opp ($240K Solution Validation)",
@@ -1142,10 +981,10 @@
                 "email": "jane.doe@acmecorp.com", "phone": "+1 (415) 555-1389",
                 "companyLogoUrl": "/assets/images/company-logos/accounts/acme-corp.png",
                 "employees": "~500", "industry": "Software / B2B SaaS (demo)", "location": "San Francisco, CA",
-                "whyProspect": "n/a",
-                "signals": [{ "text": "$50M Series C (Feb 2026)", "source": "TechCrunch" }, { "text": "New Head of Sales EMEA David Lee", "source": "SalesIntel" }, { "text": "Global expansion (London/Singapore/Tokyo)", "source": "Demandbase" }, { "text": "Tool consolidation (5→1)", "source": "6sense" }, { "text": "Active $240K opp", "source": "Salesforce" }],
-                "signal": "$50M Series C (Feb 2026)",
-                "source": "G2", "isNewContact": false, "isNewAccount": false,
+                "whyProspect": "Set the Series C growth plan personally and reviews pipeline weekly; the buyer for anything that changes the top of funnel",
+                "signals": [{ "text": "Set a 3x growth plan after the raise", "source": "Moody’s" }, { "text": "Weekly pipeline review with the board", "source": "Gong" }, { "text": "$50M Series C (Feb 2026)", "source": "TechCrunch" }, { "text": "Hiring a first CRO", "source": "SalesIntel" }],
+                "signal": "Set a 3x growth plan after the raise",
+                "source": "Moody’s", "isNewContact": false, "isNewAccount": false,
                 "rank": "8", "tier": "Solid", "icpFit": "n/a",
                 "accountId": "001Wt00001eRF6hIAG", "themes": "5, 14",
                 "crm": "Active Platform Expansion opp ($240K Solution Validation)",
@@ -1167,7 +1006,7 @@
           "type": "workflow_activity",
           "workflowLabel": "Prospecting workflow completed",
           "workflowIcon":  "apps",
-          "statusText":    "37 prospects \u00b7 7 accounts \u00b7 37 drafts",
+          "statusText":    "25 prospects \u00b7 7 accounts \u00b7 25 drafts",
           "expandsTable":  "conv-001-prospects"
         },
         // Closing nudge under the list. `text` is the bold heading; each
@@ -1274,7 +1113,7 @@
             {
               "id":   "turn-01-cadence",
               "type": "agent",
-              "text": "Here are the drafted sequences, one per prospect across email, LinkedIn, and call. Step through a prospect's touches below, or approve all 37 at once.",
+              "text": "Here are the drafted sequences, one per prospect across email, LinkedIn, and call. Step through a prospect's touches below, or approve all 25 at once.",
               "rowsFrom": "msg-prospects",
               // ── Cadence ───────────────────────────────────────────
               // One drafted sequence of touches per prospect, shown one
@@ -1319,13 +1158,13 @@
                 "name": "High Touch Prospects",
                 "summary": "Multi-channel sequence, paced over three weeks.",
                 "confirmDialog": {
-                  "title": "Approve all 37 sequences?",
-                  "body": "Every touch in all 37 sequences will be released to the configured outreach workflow.",
-                  "primary": "Approve 37 sequences",
+                  "title": "Approve all 25 sequences?",
+                  "body": "Every touch in all 25 sequences will be released to the configured outreach workflow.",
+                  "primary": "Approve 25 sequences",
                   "secondary": "Cancel"
                 },
                 "completed": {
-                  "heading": "All 37 sequences approved",
+                  "heading": "All 25 sequences approved",
                   "body": "The approved sequences will be released to the configured outreach workflow."
                 },
 
@@ -1367,7 +1206,7 @@
                         "headerValue": "First touch",
                         "day": 1,
                         "subject": "A faster path for the {company} team",
-                        "body": "Hi {firstName},<br><br>I've been tracking <span class='email-highlight' data-link='context' data-popover-title='Opening Line' data-popover-question='Is this a good opening line?' data-popover-body='Account signal on file: {signal}.' data-source-label='ZoomInfo' data-source-icon='/assets/images/source_icons/source_zoominfo.svg'>what's shifting at {company} this quarter</span>, and the timing looked worth a note.<br><br>Teams at your stage usually lose <span class='email-highlight' data-link='pain' data-popover-title='Pain Statement' data-popover-question='Is this a good pain statement?' data-popover-body='Median rep spends 11.4 hours a week on list building and research spread across fragmented tools.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>eleven hours a week per rep to list building</span> before a single conversation starts.<br><br>We got that under two for a peer team by <span class='email-highlight' data-link='solution' data-popover-title='Value Prop' data-popover-question='Is this a good value prop?' data-popover-body='Enrichment consolidated across 15 vendors into one workflow, inside the CRM the reps already use.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>consolidating enrichment into one workflow</span>.<br><br>Worth fifteen minutes to see whether the same math holds at {company}?",
+                        "body": "Hi {firstName},<br><br>I've been tracking <span class='email-highlight' data-link='context' data-popover-title='Opening Line' data-popover-question='Is this a good opening line?' data-popover-body='Signal on file: {signal}.' data-source-label='ZoomInfo' data-source-icon='/assets/images/source_icons/source_zoominfo.svg'>what's shifting at {company} this quarter</span>, and the timing looked worth a note.<br><br>Teams at your stage usually lose <span class='email-highlight' data-link='pain' data-popover-title='Pain Statement' data-popover-question='Is this a good pain statement?' data-popover-body='Median rep spends 11.4 hours a week on list building and research spread across fragmented tools.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>eleven hours a week per rep to list building</span> before a single conversation starts.<br><br>We got that under two for a peer team by <span class='email-highlight' data-link='solution' data-popover-title='Value Prop' data-popover-question='Is this a good value prop?' data-popover-body='Enrichment consolidated across 15 vendors into one workflow, inside the CRM the reps already use.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>consolidating enrichment into one workflow</span>.<br><br>Worth fifteen minutes to see whether the same math holds at {company}?",
                         "details": [
                           { "title": "Email Type", "value": "Cold outbound" },
                           { "title": "Reasoning",  "value": "Opens on the account signal rather than a generic introduction, quantifies what the current workflow costs, and closes with an ask sized to a first touch." }
@@ -1399,7 +1238,7 @@
                         "headerLabel": "LinkedIn 1",
                         "headerValue": "Connection request",
                         "day": 2,
-                        "body": "Hi {firstName} — saw <span class='email-highlight' data-link='context' data-popover-title='Trigger' data-popover-question='Is this a good opening line?' data-popover-body='Account signal on file: {signal}.' data-source-label='ZoomInfo' data-source-icon='/assets/images/source_icons/source_zoominfo.svg'>what's happening at {company}</span> and thought it was worth connecting. We've helped teams in the same spot <span class='email-highlight' data-link='solution' data-popover-title='Social Proof' data-popover-question='Is this good social proof?' data-popover-body='Peer team cut list-building time from 11 hours a week to under 2.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>cut list-building time by 80%</span>. Open to swapping notes?",
+                        "body": "Hi {firstName} — saw <span class='email-highlight' data-link='context' data-popover-title='Trigger' data-popover-question='Is this a good opening line?' data-popover-body='Signal on file: {signal}.' data-source-label='ZoomInfo' data-source-icon='/assets/images/source_icons/source_zoominfo.svg'>what's happening at {company}</span> and thought it was worth connecting. We've helped teams in the same spot <span class='email-highlight' data-link='solution' data-popover-title='Social Proof' data-popover-question='Is this good social proof?' data-popover-body='Peer team cut list-building time from 11 hours a week to under 2.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>cut list-building time by 80%</span>. Open to swapping notes?",
                         "details": [
                           { "title": "Message Type", "value": "Connection request" },
                           { "title": "Reasoning",    "value": "Stays under LinkedIn's 300-character limit, leads with the signal, and asks for a conversation rather than a meeting." }
@@ -1489,7 +1328,7 @@
                       }
                     ]
                   },
-                  // ── Alex Bristor · Rippling ─────────────────────────
+                  // ── Alex Bristol · Rippling ─────────────────────────
                   // The three EMAILS are the copy written in
                   // docs/alex-bristor.md, kept close to verbatim.
                   //
@@ -2104,7 +1943,7 @@
       // One thing changed under it while it was parked: this card reads
       // `subject` / `body` off each prospect ROW, and the rows are now
       // the labs' generated dataset, which has no drafts. Unparking it
-      // means authoring 37 or cutting the roster down first — the
+      // means authoring 25 or cutting the roster down first — the
       // cadence card that replaced it doesn't care, because it templates
       // its own copy from the identity fields.
       "_reviewParked": {
@@ -2112,13 +1951,13 @@
         "channel": "email",
         "heading": "Outreach review",
         "confirmDialog": {
-          "title": "Approve outreach to 37 prospects?",
+          "title": "Approve outreach to 25 prospects?",
           "body": "The approved drafts will be released to the configured outreach workflow.",
-          "primary": "Approve 37 drafts",
+          "primary": "Approve 25 drafts",
           "secondary": "Cancel"
         },
         "completed": {
-          "heading": "All 37 drafts approved",
+          "heading": "All 25 drafts approved",
           "body": "The approved drafts will be released to the configured outreach workflow."
         }
       }
@@ -2399,7 +2238,7 @@
         // for the prospecting run, not a distinct review artifact.
         "outputs":  [
           { "icon": "table",   "label": "7 accounts imported" },
-          { "icon": "message", "label": "37 prospects"    }
+          { "icon": "message", "label": "25 prospects"    }
         ],
         "workflow": { "id":     "",         "label": "" }
       },
