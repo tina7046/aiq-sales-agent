@@ -240,6 +240,40 @@
         {{ lookups.cadenceField(cadences, cadence.name) }}
       </div>
 
+      {#- Voice attribution, directly under the two fields. It answers
+          the question the fields raise — the agent picked the cadence
+          and wrote the drafts, so whose words are these — before the
+          first draft is read rather than after.
+
+          `role="status"` and not `alert`: this is a standing fact about
+          every draft below, not something that just happened, so it
+          should be picked up on the next natural pause rather than
+          interrupting. It never changes, so nothing re-announces it.
+
+          Purple rather than SLDS's default grey, and `sparkles` rather
+          than `info`, because purple is this app's agent colour — the
+          same pairing the knowledge page's Auto-learned badge and
+          banner use. `slds-scoped-notification_light` is what gives it
+          a plain fill for that purple to replace; the base class ships
+          a white card with a shadow. -#}
+      <div class="slds-scoped-notification slds-media slds-media_center slds-scoped-notification_light seller-home__conv-cadence-voice" role="status">
+        <div class="slds-media__figure">
+          <span class="slds-icon_container slds-icon-utility-sparkles" title="information">
+            <svg class="slds-icon slds-icon_x-small slds-icon-text-default" aria-hidden="true">
+              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#sparkles"></use>
+            </svg>
+            <span class="slds-assistive-text">information</span>
+          </span>
+        </div>
+        {#- The link is a SIBLING of the sentence, not inside it, so it
+            can be pushed to the far edge. Inline in the paragraph it
+            would sit wherever the text ended. -#}
+        <div class="slds-media__body">
+          <p>Written in your voice.</p>
+          <a href="/knowledge.html">View Knowledge</a>
+        </div>
+      </div>
+
       {#- A summary line stood here: touch count, channel mix, and the
           cadence's own sentence, run together with middots
           (`data-sh-cadence-touches` / `-channels` / `-summary`, all

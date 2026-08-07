@@ -2363,6 +2363,76 @@ $sh-conv-table-rows: 5.5;
   gap: var(--slds-g-spacing-2, 0.5rem);
 }
 
+// ── Voice attribution ───────────────────────────────────────────
+// The scoped notification under the two lookups, recoloured onto the
+// purple the rest of the app uses for agent output.
+//
+// Three tokens, one per layer, all from the same ramp so the contrast
+// is inherited rather than eyeballed: 95 is the tint, 20 the darkest
+// readable text on it (12.9:1), and 30 sits between them so the icon
+// reads as a mark rather than competing with the sentence.
+//
+// `slds-scoped-notification_light` sets its own background, and this
+// rule is a single class like SLDS's, so it only wins on being later
+// in the cascade. That holds because home_conversation.scss loads
+// after index.css — if this file is ever loaded first, the background
+// needs the compound selector the way the footer's docked override
+// does.
+.seller-home__conv-cadence-voice {
+  background-color: var(--slds-g-color-palette-purple-95, #f6f2fb);
+  color: var(--slds-g-color-palette-purple-20, #401075);
+
+  // The notification's own padding is sized for a page-width banner.
+  // Inside an 800px card it reads as a slab, so it comes down to the
+  // step rows' rhythm.
+  padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+
+  // Sentence left, link hard right. The link is a sibling of the <p>
+  // rather than inside it, so an auto margin can push it to the edge.
+  .slds-media__body {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-2, 0.5rem);
+  }
+
+  p {
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    color: inherit;
+  }
+
+  // SLDS paints the glyph with `fill` on the <svg>, not `color`, so
+  // inheriting the text purple isn't enough — and the icon wants to be
+  // a step lighter than the text anyway.
+  .slds-icon {
+    fill: var(--slds-g-color-palette-purple-30, #5a1ba9);
+  }
+
+  // Same purple as the sentence, so the two read as one line rather
+  // than as a message with an accent stuck on the end. The underline is
+  // what carries the affordance instead of a colour change, which is
+  // why it's permanent here rather than hover-only.
+  //
+  // Qualified with the variant class to match the specificity of
+  // `.slds-scoped-notification_light a` exactly — a bare `a` here is
+  // one class short and loses to the grey SLDS sets. Tied, this wins on
+  // load order, the same way the background above does.
+  &.slds-scoped-notification_light a {
+    margin-inline-start: auto;
+    flex: 0 0 auto;
+
+    color: var(--slds-g-color-palette-purple-20, #401075);
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    text-decoration: underline;
+
+    &:hover,
+    &:active,
+    &:focus-visible {
+      color: var(--slds-g-color-palette-purple-20, #401075);
+    }
+  }
+}
+
 .seller-home__conv-cadence-name {
   margin: 0;
   font-size: var(--slds-g-font-scale-2, 1rem);         // 16 px
