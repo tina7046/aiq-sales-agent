@@ -13,7 +13,8 @@
 // Responsibilities
 // ----------------
 //   • Prospect switching. Selection arrives from the table (a row
-//     click) or this card's own pager, and swaps which sequence shows.
+//     click) or the card's own Prospect lookup, which dispatches the
+//     same event the row does, and swaps which sequence shows.
 //     Sequences are cloned out of the inert <template> per prospect
 //     that Nunjucks rendered, with `{firstName}`-style tokens filled
 //     in on the way.
@@ -65,7 +66,6 @@
     prev:        '[data-sh-cadence-prev]',
     next:        '[data-sh-cadence-next]',
     approve:     '[data-sh-cadence-approve]',
-    request:     '[data-sh-cadence-request-changes]',
     approveAll:  '[data-sh-cadence-approve-all]',
     actions:     '.seller-home__conv-cadence-actions',
     batch:       '.seller-home__conv-cadence-batch',
@@ -123,23 +123,25 @@
     changes_requested: { label: 'Changes requested', modifier: 'changes-requested' }
   }
 
-  // Per-status action-button configuration, same shape (and same
-  // reasoning) as the outreach review's: approving is idempotent so
-  // the button locks, requesting changes stays available so the
-  // seller can course-correct either way.
+  // Per-status action-button configuration. Approving is idempotent,
+  // so the button locks once it's done.
+  //
+  // One button's worth, where this used to carry two. Request Changes
+  // came out of the footer, so its `requestDisabled` / `requestLabel`
+  // pair went with it. `changes_requested` still has a row because the
+  // status is still reachable — a table row's reject sets it — and
+  // reaching it has to leave Approve live so the seller can change
+  // their mind.
+  //
+  // `approveSelected` where this used to carry `approveLabel`: the
+  // button is an SLDS stateful button now, so both labels are in the
+  // markup and the state class picks which one shows. Writing
+  // `textContent` here — what the label version did — would delete the
+  // spans and the checkmark with them.
   var ACTION_STATE = {
-    not_reviewed: {
-      approveDisabled: false, approveLabel: 'Approve Cadence',
-      requestDisabled: false, requestLabel: 'Request Changes'
-    },
-    approved: {
-      approveDisabled: true,  approveLabel: 'Approved',
-      requestDisabled: false, requestLabel: 'Request Changes'
-    },
-    changes_requested: {
-      approveDisabled: false, approveLabel: 'Approve Cadence',
-      requestDisabled: true,  requestLabel: 'Changes requested'
-    }
+    not_reviewed:      { approveDisabled: false, approveSelected: false },
+    approved:          { approveDisabled: true,  approveSelected: true },
+    changes_requested: { approveDisabled: false, approveSelected: false }
   }
 
   // Unique enough for one page, and readable in the inspector.
@@ -222,6 +224,68 @@
     for (var r = 0; r < roots.length; r++) bindCadence(roots[r])
   }
 
+  // ── The header's two lookups ────────────────────────────────────
+  // home_conversation_lookups.js is generic and knows nothing about
+  // this card: it reads its records off `window` under the key each
+  // field names in `data-slds-lookup`, and announces a pick as
+  // `lookup-selection-change`. Both halves of that are joined up here,
+  // because the card is where the records and the card's own event
+  // vocabulary both live.
+  //
+  // Why at mount and not at load: the card is usually injected into the
+  // thread by a scripted reply, long after any script has run, so
+  // there's no earlier moment when both the fields and their data
+  // exist. Init is idempotent on the lookup side, so a second mount is
+  // harmless.
+  function bindLookups (root, metaList) {
+    if (!window.ShLookups) return
+
+    // The Prospect field speaks name / title / account; the roster
+    // speaks prospect / role / company. Translated here rather than
+    // shipped twice, so there is one list of who exists. The id rides
+    // along so a pick resolves to a row rather than to a name — two
+    // people called Jane Doe would otherwise land on whichever came
+    // first.
+    var records = []
+    for (var i = 0; i < metaList.length; i++) {
+      var p = metaList[i]
+      if (!p || !p.id) continue
+      records.push({ id: p.id, name: p.prospect, title: p.role, account: p.company })
+    }
+
+    window.SH_PROSPECT_DATA = records
+    window.SH_CADENCE_DATA  = parseJSONBlock(root, '[data-sh-cadence-list]', [])
+    window.ShLookups.init()
+
+    // A prospect pick is the same statement a table row click makes, so
+    // it's re-announced as one and the card's existing listener does the
+    // rest — which also means the table row highlights to match. Tagged
+    // `lookup` so that listener knows not to scroll the card into view;
+    // it's already on screen, being the thing that was just clicked.
+    //
+    // Nothing translates the other way. The field seeds its chip from
+    // `data-lookup-default` at init and is not rewritten when selection
+    // changes elsewhere, so choosing a row in the table moves the card
+    // but leaves the field showing the previous name.
+    if (root.dataset.lookupBridged === 'true') return
+    root.dataset.lookupBridged = 'true'
+
+    document.addEventListener('lookup-selection-change', function (event) {
+      var d = event.detail || {}
+      if (!d.selected || !d.record || d.entity !== 'Prospect') return
+      if (!d.record.id) return
+      document.dispatchEvent(new CustomEvent(EVT_ROW_SELECT, {
+        detail: { rowId: d.record.id, source: 'lookup' }
+      }))
+    })
+  }
+
+  function parseJSONBlock (root, selector, fallback) {
+    var el = root.querySelector(selector)
+    if (!el) return fallback
+    try { return JSON.parse(el.textContent) } catch (e) { return fallback }
+  }
+
   function bindCadence (root) {
     if (!root || root.dataset.cadenceWired === 'true') return
     root.dataset.cadenceWired = 'true'
@@ -230,14 +294,17 @@
     var ids     = idsAttr.split(',').filter(Boolean)
     if (!ids.length) return
 
-    // Prospect details for the pager, the identity line, and the
-    // token fill — read off the root rather than re-derived from the
-    // table, so the card works wherever it's rendered.
+    // Prospect details for the token fill — read off the root rather
+    // than re-derived from the table, so the card works wherever it's
+    // rendered. The pager and identity line that also read this are
+    // gone; `metaById` still feeds `{firstName}` and friends.
     var metaList = parseJSONAttr(root, 'data-sh-cadence-prospects', [])
     var metaById = Object.create(null)
     for (var m = 0; m < metaList.length; m++) {
       if (metaList[m] && metaList[m].id) metaById[metaList[m].id] = metaList[m]
     }
+
+    bindLookups(root, metaList)
 
     var statuses = readStatusMap(root) || STATUS_FALLBACK
 
@@ -255,7 +322,6 @@
       prev:        root.querySelector(SELECTORS.prev),
       next:        root.querySelector(SELECTORS.next),
       approve:     root.querySelector(SELECTORS.approve),
-      request:     root.querySelector(SELECTORS.request),
       approveAll:  root.querySelector(SELECTORS.approveAll),
       actions:     root.querySelector(SELECTORS.actions),
       batch:       root.querySelector(SELECTORS.batch),
@@ -368,15 +434,17 @@
       if (info) els.status.classList.add('seller-home__conv-review-status--' + info.modifier)
     }
 
+    // Both classes get set explicitly rather than toggling one: the
+    // two are opposites in SLDS's sheet, and leaving the stale one on
+    // would show both labels at once. This runs on every render, so
+    // switching to a different prospect resets the button to "Approve".
     function applyActions (statusKey) {
       var conf = ACTION_STATE[statusKey] || ACTION_STATE.not_reviewed
       if (els.approve) {
-        els.approve.disabled    = conf.approveDisabled
-        els.approve.textContent = conf.approveLabel
-      }
-      if (els.request) {
-        els.request.disabled    = conf.requestDisabled
-        els.request.textContent = conf.requestLabel
+        els.approve.disabled = conf.approveDisabled
+        els.approve.classList.toggle('slds-is-selected',  conf.approveSelected)
+        els.approve.classList.toggle('slds-not-selected', !conf.approveSelected)
+        els.approve.setAttribute('aria-pressed', conf.approveSelected ? 'true' : 'false')
       }
     }
 
@@ -394,8 +462,9 @@
       if (id === state.selectedId) return
       state.selectedId = id
       render({ rerender: true })
-      // Selecting from the table means the card may be off-screen;
-      // from the pager it's already in view, so don't jump the page.
+      // Selecting from the table means the card may be off-screen.
+      // From the card's own Prospect lookup it is by definition in
+      // view, so don't jump the page.
       if (source === 'table') scrollIntoView(root)
     }
 
@@ -442,24 +511,29 @@
         if (els.approve.disabled) return
         setReview(state.selectedId, 'approved')
       })
-      if (els.request) els.request.addEventListener('click', function () {
-        if (els.request.disabled) return
-        setReview(state.selectedId, 'changes_requested')
-      })
       if (els.approveAll) els.approveAll.addEventListener('click', function () {
         openDialog(els.approveAll)
       })
 
       // Selection from the table (or any other subscriber). Our own
       // echo is tagged `cadence` and ignored.
+      //
+      // The source is passed through rather than hardcoded to 'table'
+      // because the Prospect lookup fires this event too, tagged
+      // `lookup`, and it sits INSIDE the card — scrolling the card into
+      // view on a pick made from within it would yank the page under
+      // the dropdown that was just used. Anything untagged is treated
+      // as the table, which is where this event came from originally.
       document.addEventListener(EVT_ROW_SELECT, function (event) {
         var d = event.detail || {}
         if (!d.rowId || d.source === 'cadence') return
-        setSelected(d.rowId, 'table')
+        setSelected(d.rowId, d.source || 'table')
       })
 
-      // A row's Accept / Reject is the same decision as this card's
-      // Approve / Request Changes, so it lands in the same state.
+      // A row's Accept / Reject lands in the same state the card's own
+      // buttons set. Since Request Changes came out of the footer, this
+      // is now the ONLY way `changes_requested` gets set — and with the
+      // status pill gone too, nothing in the card renders it.
       document.addEventListener(EVT_TABLE_DECISION, function (event) {
         var d = event.detail || {}
         if (!d.rowId || ids.indexOf(d.rowId) < 0) return

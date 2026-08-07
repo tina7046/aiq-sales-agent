@@ -18,9 +18,21 @@
                           text appended as `?q=`. Omit it and Send stays
                           local: the event fires, nothing navigates.
         actions:
-          start        — Array<{ id, label, icon }> left-anchored icons.
-          end          — Array<{ id, label, icon }> right-anchored icons
-                          (Voice sits here; Send is emitted separately).
+          start        — Array<{ id, label, icon | iconImage }> left-anchored
+                          icons.
+          end          — Array<{ id, label, icon | iconImage }> right-anchored
+                          icons. Empty today — Send is emitted separately,
+                          below, and the mic that used to sit here is gone.
+
+  Two icon sources per action, same contract the left nav's `renderNavItem`
+  uses so a glyph can move between the two without being re-authored:
+    • `icon`      — SLDS utility-sprite symbol id.
+    • `iconImage` — asset path, for a glyph the sprite doesn't carry.
+                    Painted as a currentColor fill masked by the asset, so
+                    it takes the button's colour and its hover / disabled
+                    states like a sprite does. Only the alpha channel is
+                    read: supply monochrome art on a transparent ground.
+  Give an action both and `iconImage` wins.
 
   Consumers pass their `composer` config through as a template variable
   (Nunjucks includes inherit the caller's context by default, so no
@@ -72,38 +84,53 @@
         </span>
       </div>
 
+      {#- One button, either icon source. A macro rather than the same
+          markup twice, because the two slots differed only in which array
+          they walked and the icon branch would otherwise be written four
+          times over. -#}
+      {% macro composerAction(action) %}
+        <button
+          type="button"
+          class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn"
+          data-sh-composer-action="{{ action.id }}"
+          title="{{ action.label }}"
+          aria-label="{{ action.label }}"
+        >
+          {% if action.iconImage %}
+            {#- An empty span, not an <img>: the asset is a mask over a
+                currentColor fill (see `.seller-home__composer-btn-image`
+                in home.scss), which is what lets a flat PNG sit at the
+                same colour as the sprites beside it and dim with the
+                button. The path travels as a custom property because it's
+                data. `slds-button__icon` comes along so SLDS' own icon
+                sizing still applies. -#}
+            <span
+              class="slds-button__icon seller-home__composer-btn-image"
+              style="--sh-composer-icon-image: url('{{ action.iconImage }}')"
+              aria-hidden="true"
+            ></span>
+          {% else %}
+            <svg class="slds-button__icon" aria-hidden="true">
+              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
+            </svg>
+          {% endif %}
+          <span class="slds-assistive-text">{{ action.label }}</span>
+        </button>
+      {% endmacro %}
+
       <div class="seller-home__composer-toolbar" role="toolbar" aria-label="Composer actions">
         <div class="seller-home__composer-slot seller-home__composer-slot--start" role="group" aria-label="Attach and augment">
           {% for action in composer.actions.start %}
-            <button
-              type="button"
-              class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn"
-              data-sh-composer-action="{{ action.id }}"
-              title="{{ action.label }}"
-              aria-label="{{ action.label }}"
-            >
-              <svg class="slds-button__icon" aria-hidden="true">
-                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
-              </svg>
-              <span class="slds-assistive-text">{{ action.label }}</span>
-            </button>
+            {{ composerAction(action) }}
           {% endfor %}
         </div>
 
-        <div class="seller-home__composer-slot seller-home__composer-slot--end" role="group" aria-label="Voice and send">
+        {#- "Send" alone names this group accurately: `actions.end` is
+            empty in every config today. The loop stays because the slot is
+            still the place a trailing action belongs. -#}
+        <div class="seller-home__composer-slot seller-home__composer-slot--end" role="group" aria-label="Send">
           {% for action in composer.actions.end %}
-            <button
-              type="button"
-              class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn"
-              data-sh-composer-action="{{ action.id }}"
-              title="{{ action.label }}"
-              aria-label="{{ action.label }}"
-            >
-              <svg class="slds-button__icon" aria-hidden="true">
-                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
-              </svg>
-              <span class="slds-assistive-text">{{ action.label }}</span>
-            </button>
+            {{ composerAction(action) }}
           {% endfor %}
 
           {# Send — the form's submit control. Starts disabled

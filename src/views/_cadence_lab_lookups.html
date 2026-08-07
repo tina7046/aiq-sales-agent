@@ -1,0 +1,257 @@
+{#
+  Prospect + Cadence lookups — ported from BB - AOP
+  =====================================================================
+  The pair of fields at the top of hunter's Write Messaging step
+  (protos/BB - AOP → src/views/step_04_write_messaging.html, lines
+  29–347). They were the one part of that step the conversation feed
+  deliberately left behind — the thread had the prospect table and this
+  card's pager instead — so this file is where they come back for the
+  lab to try them.
+
+  Two fields, same shell, different dropdowns:
+
+    Prospect   a plain SLDS lookup. Search input, a list of entity rows
+               (icon, name, "Prospect • VP, Sales • Rippling"), and a
+               chip with a clear X once you pick.
+
+    Cadence    the same field, but its dropdown is a popover rather
+               than a list: a three-way mode picker across the top, and
+               under it either a searchable cadence list (Use as-is,
+               Optimize content) or a prompt textarea (Generate
+               cadence).
+
+  What's markup here and what isn't
+  ---------------------------------
+  Only the Cadence popover's contents are authored. Both fields'
+  OPTION LISTS are rendered by cadence_lab_lookups.js at init from
+  `window.CL_PROSPECT_DATA` / `CL_CADENCE_DATA`, which is why the
+  `<ul>` in the Prospect field ships empty. Everything the script needs
+  is on the wrapper as `data-lookup-*`; that contract is documented at
+  the top of the script.
+
+  Hunter hand-wrote the popover's four cadence rows twice, once per
+  panel. Here they come off `cadences` in cadence_lab.json and loop, so
+  a fifth cadence is a line of data rather than sixteen lines of markup
+  in two places.
+
+  Ids: the mode radios are `cadence-mode-*`, and the panel-switching
+  rule in cadence_lab.scss matches them by id (`:has(#… :checked)`).
+  That means ONE popover per page. A second variant card would need
+  both the ids and that rule parameterised.
+#}
+
+
+{# ── Field shell ──────────────────────────────────────────────────
+   Everything both fields share: the label, the combobox container,
+   the search input with its magnifier, and the dropdown wrapper the
+   script fills or the popover occupies.
+
+   `caller()` is what goes inside the dropdown. A plain lookup passes
+   an empty `<ul>` for the script to render into; the cadence field
+   passes the whole popover. #}
+{% macro lookupField(cfg) %}
+<div
+  class="slds-form-element cl-lookup"
+  data-slds-lookup="{{ cfg.dataKey }}"
+  data-lookup-entity="{{ cfg.entity }}"
+  data-lookup-meta="{{ cfg.meta }}"
+  data-lookup-icon-class="{{ cfg.iconClass }}"
+  data-lookup-icon-href="{{ cfg.iconHref }}"
+  {% if cfg.default %}data-lookup-default="{{ cfg.default }}"{% endif %}
+  {% if cfg.popover %}data-lookup-popover="true"{% endif %}
+>
+  <label class="slds-form-element__label" for="{{ cfg.id }}-input" id="{{ cfg.id }}-label">{{ cfg.label }}</label>
+  <div class="slds-form-element__control">
+    <div class="slds-combobox_container">
+      <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click">
+        <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right" role="none">
+          <input
+            type="text"
+            class="slds-input slds-combobox__input"
+            id="{{ cfg.id }}-input"
+            role="combobox"
+            autocomplete="off"
+            aria-autocomplete="list"
+            aria-controls="{{ cfg.id }}-listbox"
+            aria-expanded="false"
+            aria-haspopup="listbox"
+            placeholder="{{ cfg.placeholder }}"
+          />
+          <span class="slds-icon_container slds-icon-utility-search slds-input__icon slds-input__icon_right">
+            <svg class="slds-icon slds-icon_x-small slds-icon-text-default" aria-hidden="true">
+              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#search"></use>
+            </svg>
+          </span>
+        </div>
+
+        {#- Popover dropdowns drop `role="listbox"`: their contents
+            aren't a list of options, and claiming otherwise would
+            promise keyboard semantics the popover doesn't have. The
+            script falls back to finding this element by class. -#}
+        <div
+          id="{{ cfg.id }}-listbox"
+          class="slds-dropdown {% if cfg.popover %}slds-dropdown_left cl-lookup__popover-dropdown{% else %}slds-dropdown_length-with-icon-7 slds-dropdown_fluid{% endif %}"
+          {% if not cfg.popover %}role="listbox"{% endif %}
+          tabindex="0"
+        >
+          {{ caller() }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+
+{# ── Prospect ─────────────────────────────────────────────────────
+   The empty `<ul>` is the render target. `data-lookup-default` seeds
+   the chip on load, and the lab passes the first prospect so the card
+   and the field agree before anything is clicked. #}
+{% macro prospectField(defaultName) %}
+{% call lookupField({
+  id: 'cl-prospect',
+  label: 'Prospect',
+  entity: 'Prospect',
+  meta: 'prospect',
+  dataKey: 'CL_PROSPECT_DATA',
+  iconClass: 'slds-icon-standard-contact',
+  iconHref: '/assets/icons/standard-sprite/svg/symbols.svg#contact',
+  placeholder: 'Search Prospects...',
+  default: defaultName
+}) %}
+  <ul class="slds-listbox slds-listbox_vertical" role="presentation"></ul>
+{% endcall %}
+{% endmacro %}
+
+
+{# ── Cadence ──────────────────────────────────────────────────────
+   Same shell, popover inside. `cadences` is the list from
+   cadence_lab.json; `defaultName` seeds the chip. #}
+{% macro cadenceField(cadences, defaultName) %}
+{% call lookupField({
+  id: 'cl-cadence',
+  label: 'Cadence',
+  entity: 'Cadence',
+  meta: 'cadence',
+  dataKey: 'CL_CADENCE_DATA',
+  iconClass: 'slds-icon-standard-sales-cadence',
+  iconHref: '/assets/icons/standard-sprite/svg/symbols.svg#sales_cadence',
+  placeholder: 'Search Cadences...',
+  default: defaultName,
+  popover: true
+}) %}
+  <div class="cadence-popover slds-theme_default slds-p-around_none">
+
+    {# ── Mode picker ───────────────────────────────────────────
+       Three radios; the panels below switch on `:has(… :checked)`
+       in CSS, so mode changes need no script. Each figure holds two
+       overlapping children — icon + label at rest, the description
+       on hover / focus — which is why they cross-fade rather than
+       the description sitting permanently under the label. #}
+    <fieldset class="slds-form-element cadence-popover__pickers slds-p-bottom_none" role="radiogroup">
+      <legend class="slds-assistive-text">Cadence mode</legend>
+      <div class="cadence-popover__pickers-heading">How do you want to preview the messaging?</div>
+      <div class="slds-form-element__control slds-grid">
+        {% for mode in [
+          { id: 'cadence-mode-use-as-is', label: 'Use as-is',        icon: 'high_velocity_sales', hint: 'Agent populate the merge fields in templates.', checked: true },
+          { id: 'cadence-mode-optimize',  label: 'Optimize content', icon: 'magicwand',           hint: 'Agent rewrite messaging in the cadence.' },
+          { id: 'cadence-mode-generate',  label: 'Generate cadence', icon: 'sparkles',            hint: 'Describe the cadence you\'d like the agent to build.' }
+        ] %}
+        <div class="slds-visual-picker slds-visual-picker_medium">
+          <input type="radio" id="{{ mode.id }}" name="cadence-mode" value="{{ mode.id }}" {% if mode.checked %}checked{% endif %} />
+          <label for="{{ mode.id }}">
+            <span class="slds-visual-picker__figure slds-visual-picker__text slds-align_absolute-center">
+              <span class="slds-grid slds-grid_vertical slds-grid_align-center cadence-popover__picker-default">
+                <span class="slds-icon_container slds-icon-utility-{{ mode.icon }}">
+                  <svg class="slds-icon slds-icon_x-small slds-icon-text-default" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ mode.icon }}"></use>
+                  </svg>
+                </span>
+                <span class="slds-text-heading_small slds-m-top_x-small cadence-popover__picker-label">{{ mode.label }}</span>
+              </span>
+              <span class="cadence-popover__picker-hover">{{ mode.hint }}</span>
+            </span>
+          </label>
+        </div>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <div class="slds-p-around_medium cadence-popover__main">
+      {#- Use as-is and Optimize are the same panel with different
+          copy, so they loop. Hunter wrote both out; the rows inside
+          were identical anyway. -#}
+      {% for panel in [
+        { key: 'cadence-mode-use-as-is', copy: 'Agent populate the merge fields in templates.' },
+        { key: 'cadence-mode-optimize',  copy: 'Agent rewrite messaging in the cadence.' }
+      ] %}
+      <div class="cadence-popover__panel" data-panel="{{ panel.key }}">
+        <header class="cadence-popover__header">
+          <p class="slds-text-body_small">{{ panel.copy }}</p>
+        </header>
+
+        <div class="slds-form-element__control">
+          <div class="slds-combobox_container">
+            <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click">
+              <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right" role="none">
+                <input type="text" class="slds-input slds-combobox__input cadence-popover__search" autocomplete="off" placeholder="Search cadences..." aria-label="Search cadences" />
+                <span class="slds-icon_container slds-icon-utility-search slds-input__icon slds-input__icon_right">
+                  <svg class="slds-icon slds-icon_x-small slds-icon-text-default" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#search"></use>
+                  </svg>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <ul class="slds-listbox slds-listbox_vertical cadence-popover__list" role="presentation">
+          {% for c in cadences %}
+          {#- `data-search-text` is what the panel's typeahead matches
+              against, pre-lowercased so the filter is a plain
+              indexOf. Built from the same three fields the row
+              shows, so nothing is searchable that isn't visible. -#}
+          <li
+            role="presentation"
+            class="slds-listbox__item"
+            data-cadence-name="{{ c.name }}"
+            data-search-text="{{ (c.name ~ ' ' ~ c.type ~ ' ' ~ c.steps ~ ' steps') | lower }}"
+          >
+            <div class="slds-media slds-listbox__option slds-listbox__option_entity slds-listbox__option_has-meta" role="option" aria-selected="false">
+              <span class="slds-media__figure slds-listbox__option-icon">
+                <span class="slds-icon_container slds-icon-standard-sales-cadence">
+                  <svg class="slds-icon slds-icon_small" aria-hidden="true">
+                    <use xlink:href="/assets/icons/standard-sprite/svg/symbols.svg#sales_cadence"></use>
+                  </svg>
+                </span>
+              </span>
+              <span class="slds-media__body">
+                <span class="slds-listbox__option-text slds-listbox__option-text_entity">{{ c.name }}</span>
+                <span class="slds-listbox__option-meta slds-listbox__option-meta_entity">Cadence &bull; {{ c.type }} &bull; {{ c.steps }} steps</span>
+              </span>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        <div class="cadence-popover__empty" hidden>No matches found</div>
+      </div>
+      {% endfor %}
+
+      {# ── Generate ──────────────────────────────────────────────
+         No list — a prompt. Confirm routes through the script's
+         action path, which renders the sparkle chip instead of the
+         entity one, so the field itself says the cadence was
+         generated rather than chosen. #}
+      <div class="cadence-popover__panel" data-panel="cadence-mode-generate">
+        <header class="cadence-popover__header">
+          <p class="slds-text-body_small">Describe the cadence you’d like the agent to build.</p>
+        </header>
+        <textarea class="slds-textarea cadence-popover__prompt" placeholder="e.g. 5-step outbound cadence for VP-level prospects in healthcare..." aria-label="Cadence prompt"></textarea>
+        <div class="slds-grid slds-grid_align-end cadence-popover__prompt-actions">
+          <button type="button" class="slds-button slds-button_brand cadence-popover__prompt-submit">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endcall %}
+{% endmacro %}

@@ -787,8 +787,17 @@ main.app-wrapper {
 
   text-decoration: none;
   cursor: pointer;
+  // `padding` rides along for the same reason it does on
+  // `.seller-home__nav-item`: it's what walks this row's content from the
+  // label column (48px in) to the icon column (16px) as the rail
+  // collapses, and it should take exactly as long as the rail does.
   transition: background-color 120ms ease, color 120ms ease,
-    box-shadow 120ms ease;
+    box-shadow 120ms ease, padding 180ms ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: background-color 120ms ease, color 120ms ease,
+      box-shadow 120ms ease;
+  }
 
   // See `.seller-home__nav-item` — same override needed here because
   // `dist/styles/index.css` promotes `a:hover, a:focus` to underlined.
@@ -856,14 +865,46 @@ main.app-wrapper {
   font-weight: var(--slds-g-font-weight-4, 400);
 }
 
+// The collapsed rail's stand-in for that label: two letters in the icon
+// column. Hidden here, shown by `.seller-home--nav-collapsed` — the pair
+// swap, and exactly one of them is ever on screen.
+//
+// Sized as the icon BOX (24px) rather than the icon (14px) so it lands on
+// the same centre line as every sprite above it: the collapsed row's
+// padding is derived from this box (see $sh-nav-row-padding-x-collapsed),
+// so a 24px child is centred in the rail by construction.
+//
+// Type is deliberately smaller and tighter than the row's 14px — two
+// caps at label size read as a word and crowd the box. Colour comes from
+// `.seller-home__nav-recent-label`'s grey rather than the primary items'
+// navy, keeping the same "these are secondary" hierarchy the expanded
+// rail has.
+.seller-home__nav-recent-mono {
+  display: none;
+  flex: 0 0 $sh-nav-icon-box;
+  width: $sh-nav-icon-box;
+  height: $sh-nav-icon-box;
+  align-items: center;
+  justify-content: center;
+
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-size: 0.75rem; // 12px
+  font-weight: var(--slds-g-font-weight-6, 590);
+  letter-spacing: 0.02em;
+  line-height: 1;
+  user-select: none;
+}
+
 // ──────────────────────────────────────────────────────────────────────
 // Collapsed nav (assumption — Figma frame is "Expanded Composed"; the
-// collapsed variant isn't attached to this request). Only three visual
+// collapsed variant isn't attached to this request). Four visual
 // changes:
 //   1. Width shrinks from 300px → 56px.
 //   2. Labels hide (visually + from AT).
 //   3. Rows re-center around the icon — which, at that width, is the
 //      icon's expanded position too, so it doesn't actually move.
+//   4. Recents rows, which have no icon, show a two-letter monogram in
+//      that same column instead of their label.
 // The toggle button flips its `aria-expanded` and `aria-label` in JS.
 // ──────────────────────────────────────────────────────────────────────
 .seller-home--nav-collapsed {
@@ -929,15 +970,27 @@ main.app-wrapper {
     padding-right: $sh-nav-row-padding-x-collapsed;
   }
 
-  .seller-home__nav-recent {
-    // Without an icon, collapsed recents rows are label-only. Hide the
-    // entire row rather than showing a floating label — matches the
-    // "icon rail" intent of a collapsed nav.
-    display: none;
+  // Recents rows stay, on their monogram. They used to be `display:
+  // none` here — with no icon to fall back on there was nothing to show
+  // but a floating label, so the whole group went — which left the
+  // collapsed rail claiming the seller had no history and no way to see
+  // which thread was open. Two letters is the smallest thing that fixes
+  // both: the row keeps its fill and accent strip, so the open
+  // conversation still reads as selected, and `title` still gives the
+  // full label on hover.
+  .seller-home__nav-recent-mono {
+    display: inline-flex;
   }
 
   .seller-home__nav-label,
   .seller-home__nav-recent-label {
+    display: none;
+  }
+
+  // A running row's progress ring is a second 20px object in a column
+  // with room for one, so it sits out the collapsed state. The monogram
+  // is the row's identity; run status is legible again on expand.
+  .seller-home__nav-recent-ring {
     display: none;
   }
 
@@ -1075,7 +1128,7 @@ main.app-wrapper {
 }
 
 .seller-home__briefing-text {
-      font-size: 18px;
+      font-size: var(--slds-g-font-scale-3, 20px);
       color: var(--slds-g-color-on-surface-2, #03234d);
 }
 
@@ -1591,6 +1644,21 @@ main.app-wrapper {
   // from `.seller-home__composer-content`.
   cursor: pointer;
 
+  // One colour for the whole toolbar, declared once and inherited by
+  // both icon kinds: `currentColor` is what the sprite fills with and
+  // what the masked PNG paints with, so this single line is what makes a
+  // raster glyph indistinguishable from a sprite one.
+  //
+  // `fill` is repeated on the sprite because SLDS sets it explicitly on
+  // `.slds-button__icon` — inheriting `color` isn't enough to beat that.
+  // Both of the rules below (disabled, and Send when enabled) are more
+  // specific, so they still win where they apply.
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+
+  .slds-button__icon {
+    fill: currentColor;
+  }
+
   // SLDS' disabled state uses `--slds-c-button-color-*-disabled`
   // tokens; the send button relies on this + the [disabled]
   // attribute to render in the muted gray Figma shows.
@@ -1608,7 +1676,32 @@ main.app-wrapper {
   &[disabled],
   &:disabled {
     cursor: not-allowed;
+    // The disabled grey again, this time as `color`, which is the only
+    // channel a masked icon has — `fill` above does nothing to one. No
+    // action in the toolbar can be disabled today; this is here so the
+    // first one that can doesn't render bright against a greyed sprite.
+    color: var(--slds-g-color-disabled-container-2, #c9c9c9);
   }
+}
+
+// A toolbar glyph that arrives as an asset instead of a sprite symbol —
+// the Skills mark, which is shared with the left nav and has no utility
+// sprite. Same technique as `.seller-home__nav-icon-image`: the asset is
+// a MASK over a currentColor fill, so its own pixels' colour is thrown
+// away and only its alpha is used. That's what keeps it at the toolbar's
+// on-surface-1 next to the real sprites, and what makes it dim with the
+// button instead of staying bright.
+//
+// Carries `.slds-button__icon` too, so SLDS' 16px sizing already applies
+// and there's no width/height here to keep in sync with it. Consequence
+// of masking: monochrome art on a transparent ground only — a
+// multi-colour asset flattens to a silhouette.
+.seller-home__composer-btn-image {
+  display: inline-block;
+  background-color: currentColor;
+  -webkit-mask: var(--sh-composer-icon-image) center / contain no-repeat;
+  mask: var(--sh-composer-icon-image) center / contain no-repeat;
+  pointer-events: none;
 }
 
 // Send-specific tweak. When the send button becomes enabled (user
@@ -2487,12 +2580,17 @@ main.app-wrapper {
     .seller-home__nav-recent-label {
       display: none;
     }
-    .seller-home__nav-recent { display: none; }
+    // Recents keep their rows and swap to the monogram, exactly as they
+    // do under the toggled collapse — a rail narrowed by the viewport
+    // shouldn't be missing a group the same-width rail has.
+    .seller-home__nav-recent-mono { display: inline-flex; }
+    .seller-home__nav-recent-ring { display: none; }
     // Same padding-not-justify-content centring as the toggled collapse
     // above, so a rail narrowed by the viewport and a rail narrowed by
     // the button put their icons in the same place.
     .seller-home__nav-item,
-    .seller-home__nav-section-header {
+    .seller-home__nav-section-header,
+    .seller-home__nav-recent {
       padding-left: $sh-nav-row-padding-x-collapsed;
       padding-right: $sh-nav-row-padding-x-collapsed;
     }

@@ -14,11 +14,11 @@
 //     max), Send-button empty-state toggle, Enter-to-submit +
 //     Shift+Enter-for-newline keybinds, submit-to-local-mock-state
 //     with a `sh:composer-submit` CustomEvent hook for future chat
-//     services. Attachment upload and voice recording are OUT of
-//     scope for Phase 3 — the Add / Voice / Quick action / Skills
-//     buttons dispatch a generic `sh:composer-action` event so a
-//     future phase can bind file-picker / MediaRecorder handlers
-//     without touching this file.
+//     services. Attachment upload is OUT of scope for Phase 3 — the
+//     Add / Skills / All tools buttons dispatch a generic
+//     `sh:composer-action` event so a future phase can bind a
+//     file-picker without touching this file. (There was a mic here
+//     too; it's been removed from the toolbar.)
 //   • Phase 4: Ready to Review + Tasks — tablist (WAI-ARIA "tabs
 //     with automatic activation": Left/Right + Home/End keyboard
 //     nav, roving tabindex, panels toggled via the `hidden`
@@ -215,6 +215,31 @@
     return list
   }
 
+  // One or two letters standing in for a Recents label in the collapsed
+  // rail, where the label is hidden and these rows have no icon to fall
+  // back on. Word initials when there are two words to take them from,
+  // the first two letters of a single word otherwise, upper-case either
+  // way — the reasoning is written out over `recentMonogram` in
+  // _home_left_nav.html, which is the seed render of the same markup.
+  //
+  // Letters and digits only: a label that opens on punctuation ("$20M of
+  // your quota") would otherwise put a stray "$2" in the icon column.
+  // Returns '' when there's nothing to take, and the caller renders no
+  // monogram at all rather than an empty box.
+  function recentMonogram (label) {
+    var words = String(label || '').trim().split(/\s+/)
+    var out = ''
+
+    for (var i = 0; i < words.length && out.length < 2; i++) {
+      var word = words[i].replace(/[^A-Za-z0-9]/g, '')
+      if (!word) continue
+      // A single word gives both letters; two or more give one each.
+      out += words.length > 1 ? word.charAt(0) : word.slice(0, 2)
+    }
+
+    return out.slice(0, 2).toUpperCase()
+  }
+
   // Paint the rail. Mirrors the linked-recent markup in
   // _home_left_nav.html — keep the two in step. `activeId` gets
   // `.is-active` here rather than waiting for home_conversation.js so
@@ -247,6 +272,18 @@
       if (activeId && r.conversationId === activeId) {
         a.classList.add('is-active')
         a.setAttribute('aria-current', 'page')
+      }
+
+      // Ahead of the label, and only visible when the rail is collapsed.
+      var mono = recentMonogram(r.label || r.conversationId)
+      if (mono) {
+        var monoEl = document.createElement('span')
+        monoEl.className = 'seller-home__nav-recent-mono'
+        // Hidden from AT: the row's accessible name comes from `title`,
+        // which is the whole label — better than reading out "FN".
+        monoEl.setAttribute('aria-hidden', 'true')
+        monoEl.textContent = mono
+        a.appendChild(monoEl)
       }
 
       var label = document.createElement('span')
@@ -886,10 +923,10 @@
   //      restore focus. Future phases can subscribe to the event
   //      and forward to a real chat service.
   //
-  // The extra toolbar buttons (Add / Quick action / Skills / Voice)
-  // are stub actions — they dispatch `sh:composer-action` with the
-  // clicked `data-sh-composer-action` id. Attachment / voice
-  // infrastructure is deliberately not started here.
+  // The extra toolbar buttons (Add / Skills / All tools) are stub
+  // actions — they dispatch `sh:composer-action` with the clicked
+  // `data-sh-composer-action` id. Attachment infrastructure is
+  // deliberately not started here.
   function bindComposer (composerRoot) {
     var form = composerRoot.querySelector('[data-sh-composer-form]')
     var textarea = composerRoot.querySelector('[data-sh-composer-textarea]')

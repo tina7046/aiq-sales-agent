@@ -41,7 +41,9 @@
   home.js persists that state to localStorage under key `sh:navCollapsed`.
   Collapsed styles live in home.scss and simply reduce the width +
   hide labels; the markup below stays identical between states so JS
-  never has to rebuild the DOM.
+  never has to rebuild the DOM. That's why a Recents row ships both its
+  label AND a two-letter monogram (`recentMonogram`) — the collapsed rail
+  has no icon to fall back on, so one of the two is always hidden.
 #}
 
 {# Reusable nav-item macro. Kept parallel to the Hunter Builder
@@ -202,6 +204,51 @@
   {% endif %}
 {% endmacro %}
 
+{# ── recentMonogram(label) ────────────────────────────────────────
+   The collapsed rail's stand-in for a Recents row: one or two letters
+   where the primary items above have their icon.
+
+   Recents have no icon by design — the expanded rail is label-only —
+   which used to mean the collapsed rail dropped the rows entirely and a
+   seller working out of the narrow nav had no sign that history existed,
+   let alone which thread they were in. Initials are the smallest thing
+   that still distinguishes one row from another and still fits the 24px
+   icon column, and the row's `title` carries the full label on hover
+   either way.
+
+   The letters:
+     • two or more words — first letter of the first two ("Found new
+       prospects" → FN), the avatar convention, so a reader who knows the
+       thread recognises it rather than decodes it
+     • one word — its first two letters ("Pipeline" → PI), because a lone
+       letter reads as a bullet more than a name
+   Always upper-case, so every row is the same two-glyph shape and the
+   column doesn't look ragged.
+
+   Emits nothing at all for an empty label — an empty box would take the
+   icon column's space and say less than leaving it blank.
+
+   Mirrored by `recentMonogram` in home.js, which paints these rows from
+   session storage on every load. Change the rule here, change it there.
+   That copy goes further in two ways this one can't cheaply: it splits on
+   runs of whitespace and it skips leading punctuation, so a typed query
+   ("$20M of your quota") gives 2O rather than $O. It's the path that ever
+   sees typed text — this one only renders authored `recents` — so the
+   difference stays there rather than being contorted into Nunjucks, which
+   has no regex and no `select` filter at this version.
+#}
+{% macro recentMonogram(label) %}
+{%- set _words = (label or "") | string | trim -%}
+{%- set _words = _words.split(" ") -%}
+{%- set _mono = "" -%}
+{%- if _words[1] -%}
+  {%- set _mono = (_words[0].slice(0, 1) ~ _words[1].slice(0, 1)) | upper -%}
+{%- elif _words[0] -%}
+  {%- set _mono = _words[0].slice(0, 2) | upper -%}
+{%- endif -%}
+{%- if _mono %}<span class="seller-home__nav-recent-mono" aria-hidden="true">{{ _mono }}</span>{% endif -%}
+{% endmacro %}
+
 {# Default the active id from home.json so pages that include this
    partial without setting anything render the "New chat" landing state
    we want. Pass `navActive` explicitly on any consumer that needs a
@@ -317,6 +364,9 @@
         {# Recents rows have no icon — Figma shows label-only, indented
            under the "Recents" header. Different visual weight from the
            primary nav items (regular vs. semibold, gray vs. dark blue).
+           The monogram ahead of the label is not a second icon: it only
+           renders in the collapsed rail, where the label doesn't. See
+           `recentMonogram` above.
 
            Two variants:
              • Linked   (`r.conversationId` set) — anchor points at the
@@ -344,6 +394,7 @@
           {% if r.runStatus %}data-sh-recent-run-status="{{ r.runStatus }}"{% endif %}
           title="{{ r.label }}"
         >
+          {{ recentMonogram(r.label) }}
           <span class="seller-home__nav-recent-label">{{ r.label }}</span>
           {{ renderRunningRing(r) }}
         </a>
@@ -357,6 +408,7 @@
           {% if r.runStatus %}data-sh-recent-run-status="{{ r.runStatus }}"{% endif %}
           title="{{ r.label }}"
         >
+          {{ recentMonogram(r.label) }}
           <span class="seller-home__nav-recent-label">{{ r.label }}</span>
           {{ renderRunningRing(r) }}
         </a>

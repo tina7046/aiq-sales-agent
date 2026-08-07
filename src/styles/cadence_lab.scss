@@ -1,0 +1,1784 @@
+// ══════════════════════════════════════════════════════════════════════
+// Cadence + email preview LAB   (/cadence_lab.html)
+// ══════════════════════════════════════════════════════════════════════
+// The only stylesheet the lab page loads. Two parts:
+//
+//   1. Page chrome — everything prefixed `cl-`. Owned by the lab and
+//      never ported anywhere: the title, the width stage, the notes.
+//   2. The component itself — every rule below the chrome is a VERBATIM
+//      copy of a region of home_conversation.scss, marked with the line
+//      range it came from. Same selectors, same order, same comments.
+//
+// That second part is the whole point, and it's the prospect lab's
+// convention (see prospect_table_lab.scss): because the copy carries
+// production class names in production order, a change made here is a
+// change to the same rule in the same place in the real file — so
+// porting it is a diff, not a translation. Loading the real stylesheet
+// and overriding it would make every experiment a specificity puzzle
+// and none of it portable.
+//
+// Regenerating: tmp scripts built the first copy out of
+// home_conversation.scss line ranges. Don't re-run anything to re-sync —
+// once you've tweaked this file, a diff against those regions IS the
+// answer to "what did the lab change".
+//
+// What was left behind: the parked outreach-review body (container,
+// draft card, signal line, inline feedback), the prospect table, and the
+// thread shell. The card doesn't use any of it. What came WITH the
+// cadence rules is the handful of `-review-` classes the card borrows —
+// the pager, the status pill, the buttons, the completed block, the
+// approve-all dialog — because the card genuinely renders those class
+// names.
+// ══════════════════════════════════════════════════════════════════════
+
+
+// ──────────────────────────────────────────────────────────────────────
+// Lab chrome
+// ──────────────────────────────────────────────────────────────────────
+// `100vh − 6rem` leaves the global header its space and still paints the
+// page white to the bottom of a short viewport. Same value the prospect
+// lab uses, so the two pages sit at the same height side by side.
+.cl-page {
+  min-height: calc(100vh - 6rem);
+  padding: var(--slds-g-spacing-6, 1.5rem) var(--slds-g-spacing-4, 1rem) var(--slds-g-spacing-10, 4rem);
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+}
+
+// The reading column for the page's own copy. The CARD is not sized by
+// this — it gets `.cl-stage`, which is the variable under test.
+.cl-col {
+  max-width: 60rem;
+  margin: 0 auto;
+}
+
+.cl-title {
+  margin: 0 0 var(--slds-g-spacing-1, 0.25rem);
+  font-size: var(--slds-g-font-scale-3, 1.25rem);          // 20px
+  font-weight: var(--slds-g-font-weight-7, 700);
+  color: var(--slds-g-color-on-surface-3, #181818);
+}
+
+.cl-sub {
+  margin: 0 0 var(--slds-g-spacing-4, 1rem);
+  max-width: 46rem;
+  font-size: var(--slds-g-font-size-base, 0.8125rem);      // 13px
+  line-height: 1.25rem;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+
+  code {
+    font-family: var(--slds-g-font-family-monospace, ui-monospace, "SF Mono", Menlo, monospace);
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    background: var(--slds-g-color-surface-container-2, #f3f3f3);
+    border-radius: 0.25rem;
+    padding: 0 0.25rem;
+  }
+}
+
+// ── Width stage ───────────────────────────────────────────────────
+// The card is a two-column layout inside whatever column the thread
+// gives it, and 800px is a genuinely tight fit for a 7/5 split (the
+// production comment on `.seller-home__conv-cadence` does the
+// arithmetic: ~421px for the draft, ~301px for the details). So width
+// is the first thing any redesign has to be judged at, and the toolbar
+// changes THIS custom property rather than a class — one number, no
+// cascade to reason about.
+//
+// The 12px inline start padding is the agent message's indent in the
+// thread, kept so the card sits where it really sits.
+.cl-stage {
+  --cl-stage-width: 50rem; // 800px — the thread's content column
+
+  width: 100%;
+  max-width: var(--cl-stage-width);
+  padding-inline-start: 0.75rem;
+  margin-bottom: var(--slds-g-spacing-6, 1.5rem);
+
+  // Named so the eye can tell the stage apart from the card's own
+  // border when the two are close in width.
+  border-inline-start: 2px dashed var(--slds-g-color-border-1, #c9c9c9);
+}
+
+.cl-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  margin-bottom: var(--slds-g-spacing-4, 1rem);
+  padding-bottom: var(--slds-g-spacing-3, 0.75rem);
+  border-bottom: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+}
+
+.cl-toolbar-label {
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  margin-inline-end: var(--slds-g-spacing-1, 0.25rem);
+}
+
+.cl-chip {
+  appearance: none;
+  cursor: pointer;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  line-height: 1rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  &:hover {
+    background: var(--slds-g-color-surface-container-2, #f3f3f3);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-border-brand-1, #0176d3);
+    outline-offset: 2px;
+  }
+
+  // The state is on `aria-pressed`, not a class: the button is a
+  // toggle, the attribute is what says so to a screen reader, and
+  // styling off it means the two can't disagree.
+  &[aria-pressed="true"] {
+    background: var(--slds-g-color-brand-base-90, #d8e6fe);
+    border-color: var(--slds-g-color-border-accent-1, #066afe);
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+    font-weight: var(--slds-g-font-weight-6, 590);
+  }
+}
+
+// The list of what's different from production, so the page states its
+// own diff instead of relying on the reader remembering it. Nothing
+// carries this class yet — the change log in cadence_lab.html is inside
+// a Nunjucks comment until there's a first tweak to log.
+.cl-tweaks {
+  margin: 0 0 var(--slds-g-spacing-6, 1.5rem);
+  padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  background: var(--slds-g-color-surface-container-2, #f3f3f3);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  line-height: 1.25rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  list-style: none;
+
+  li + li {
+    margin-top: var(--slds-g-spacing-1, 0.25rem);
+  }
+
+  code {
+    font-family: var(--slds-g-font-family-monospace, ui-monospace, "SF Mono", Menlo, monospace);
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    color: var(--slds-g-color-on-surface-3, #181818);
+  }
+}
+
+// The card's measured width, not the stage's. Monospace so the number
+// doesn't jiggle the line as it changes.
+.cl-measure {
+  margin-inline-start: auto;
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-family: var(--slds-g-font-family-monospace, ui-monospace, "SF Mono", Menlo, monospace);
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+.cl-missing {
+  padding: var(--slds-g-spacing-4, 1rem);
+  border: 1px solid var(--slds-g-color-error-base-60, #ea001e);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  color: var(--slds-g-color-error-base-30, #8e030f);
+  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);
+}
+
+
+// ══════════════════════════════════════════════════════════════════════
+// The component under test — copies of home_conversation.scss
+// ══════════════════════════════════════════════════════════════════════
+
+// ┌─ lifted verbatim: home_conversation.scss 1869–1943
+// └─ Pager + progress
+// ── Inline pager (chevron ⟨  1 of 12  ⟩ chevron) ────────────────
+// Replaces the old bottom-row Previous/Next buttons. Compact enough
+// to sit inline with the reviewed-progress text; large-enough tap
+// target for coarse pointers (WCAG 2.5.5 target size = 24×24 min
+// for AA compact controls, hit here at exactly 24 px).
+.seller-home__conv-review-pager {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);   // 4 px between icon and text
+}
+
+.seller-home__conv-review-pager-btn {
+  // Reset native <button> chrome — the icon does the whole job.
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;    // 24 px
+  height: 1.5rem;
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  transition: background-color 120ms ease, color 120ms ease;
+
+  &:hover {
+    background: var(--slds-g-color-neutral-base-95, #f3f3f3);
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+  }
+
+  // SLDS-style focus ring — a 2 px brand outline offset outside the
+  // button so it stays visible against the neutral hover fill.
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-border-brand-1, #0176d3);
+    outline-offset: 2px;
+  }
+
+  // Disabled state (used when the seller reaches an end of the
+  // roster if wrapping is ever disabled — currently the pager
+  // wraps, so this state doesn't apply in practice yet).
+  &[disabled] {
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+    opacity: 0.5;
+    cursor: not-allowed;
+    &:hover {
+      background: transparent;
+      color: var(--slds-g-color-on-surface-1, #5c5c5c);
+    }
+  }
+}
+
+.seller-home__conv-review-pager-icon {
+  // Sized to sit alongside the 13 px progress text without
+  // overpowering it. 12 px chevrons inside a 24 px button give a
+  // clear tap target with a small, quiet glyph.
+  width: 0.75rem;   // 12 px
+  height: 0.75rem;
+  fill: currentColor;
+}
+
+.seller-home__conv-review-progress-current,
+.seller-home__conv-review-progress-total {
+  font-weight: var(--slds-g-font-weight-6, 590);
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+.seller-home__conv-review-progress-dot {
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+
+// ┌─ lifted verbatim: home_conversation.scss 1978–2010
+// └─ Status pill
+// ── Status pill ─────────────────────────────────────────────────
+// Base pill treatment; per-status color comes from the BEM
+// modifier below (JS swaps `--<status>` on state change).
+.seller-home__conv-review-status {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem var(--slds-g-spacing-2, 0.5rem);   // 2 px vertical, 8 px horizontal
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12 px
+  line-height: 1rem;
+  font-weight: var(--slds-g-font-weight-6, 590);
+  white-space: nowrap;
+}
+
+.seller-home__conv-review-status--not-reviewed {
+  background: var(--slds-g-color-neutral-base-95, #f3f3f3);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+.seller-home__conv-review-status--approved {
+  // Success family — the seller has locally approved; the copy is
+  // "Approved", not "Sent". A companion sent-state (future) would
+  // use a stronger fill or a different token family so the two
+  // don't collapse into "same green".
+  background: var(--slds-g-color-success-base-95, #d5f2dc);
+  color: var(--slds-g-color-success-base-30, #164a24);
+}
+
+.seller-home__conv-review-status--changes-requested {
+  background: var(--slds-g-color-warning-base-95, #fff3d4);
+  color: var(--slds-g-color-warning-base-30, #58390a);
+}
+
+// ┌─ lifted verbatim: home_conversation.scss 2169–2175
+// └─ Decision buttons
+.seller-home__conv-review-btn {
+  // SLDS `slds-button_neutral` + `_brand` own colour + hover +
+  // disabled treatments. This class exists only so a page-level
+  // rule can target review buttons if needed later (e.g. tighter
+  // padding at narrow widths).
+  min-height: 2rem;
+}
+
+// ┌─ lifted verbatim: home_conversation.scss 2177–2190
+// └─ Batch row
+// ── Batch action ────────────────────────────────────────────────
+// `[hidden]` override: JS hides this row in the completed state
+// alongside the actions row above.
+.seller-home__conv-review-batch {
+  &[hidden] {
+    display: none;
+  }
+
+  display: flex;
+  justify-content: flex-end;
+
+  padding-top: var(--slds-g-spacing-3, 0.75rem);
+  border-top: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+}
+
+// ┌─ lifted verbatim: home_conversation.scss 2192–2255
+// └─ Completed state
+// ── Completed state ─────────────────────────────────────────────
+// Replaces the review body / actions / batch when the seller
+// confirms "Approve all". Same container padding + border, but
+// centred content + a success glyph so the transition reads
+// clearly.
+//
+// Explicit `[hidden]` override — `display: flex` here would
+// otherwise overpower the browser UA's default hidden treatment,
+// leaving the completed block visible at first paint before the
+// seller has approved anything. JS `render()` sets `hidden` on
+// initial render + toggles it when `state.completed` flips.
+.seller-home__conv-review-completed {
+  &[hidden] {
+    display: none;
+  }
+
+  display: flex;
+  align-items: flex-start;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  border: 1px solid var(--slds-g-color-success-base-70, #2e844a);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  background: var(--slds-g-color-success-base-95, #d5f2dc);
+}
+
+.seller-home__conv-review-completed-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.125rem;
+  color: var(--slds-g-color-success-base-30, #164a24);
+}
+
+.seller-home__conv-review-completed-glyph {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: currentColor;
+}
+
+.seller-home__conv-review-completed-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.seller-home__conv-review-completed-heading {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  line-height: 1.1875rem;
+  font-weight: var(--slds-g-font-weight-6, 590);
+  color: var(--slds-g-color-success-base-30, #164a24);
+}
+
+.seller-home__conv-review-completed-copy {
+  margin: 0;
+  font-size: var(--slds-g-font-size-base, 0.8125rem);   // 13px
+  line-height: 1.125rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// ┌─ lifted verbatim: home_conversation.scss 2258–2290
+// └─ Approve-all dialog
+// ──────────────────────────────────────────────────────────────────────
+// Approve-all confirmation dialog
+// ──────────────────────────────────────────────────────────────────────
+// SLDS 2 modal reused with page-scoped positioning. The dialog +
+// backdrop live at the end of the review section (outside the
+// `role="region"` so the aria-modal context is a peer, not a
+// nested role). Toggled with `hidden` + the SLDS `_open` classes
+// by JS.
+.seller-home__conv-review-dialog {
+  // Base SLDS styles already set `position: fixed; inset: 0`;
+  // no additional positioning needed. Kept flexible for a future
+  // "smaller confirm modal" variant that might centre a narrower
+  // container.
+  &[hidden] {
+    display: none;
+  }
+
+  // JS adds `is-open` (mirrors SLDS's `slds-fade-in-open` semantic)
+  // so we can hook transitions without depending on SLDS' animation
+  // classes being present in the compiled sheet.
+  &.is-open {
+    display: block;
+  }
+}
+
+.seller-home__conv-review-backdrop {
+  &[hidden] {
+    display: none;
+  }
+  &.is-open {
+    display: block;
+  }
+}
+
+// ┌─ lifted verbatim: home_conversation.scss 2293–3040
+// └─ Cadence, steps, citations
+// ──────────────────────────────────────────────────────────────────────
+// Cadence sequence — one prospect's touches, below the table
+// ──────────────────────────────────────────────────────────────────────
+// Rendered here by `_cadence_lab_card.html` (in the app, by its twin
+// `_home_conversation_cadence.html`). Ported from hunter's Write
+// Messaging step (`cadence-sequence.scss` + the icon-swap block in
+// `step_04.scss`) and re-scoped under `seller-home__conv-` so none of it
+// can reach the prospect table or the parked review.
+//
+// Fitting hunter's design into the thread's 800 px column:
+//   788 px inside the agent message's 12 px indent
+//   −24 px card padding, −30 px rail, −12 px rail gap
+//   = 722 px for the message card, split 7/5 → ~421 / ~301
+// which is why the paddings below run 12 px where hunter used 16 px.
+// If the Details column ever feels too narrow to read, the fix is to
+// drop `.seller-home__conv-step-card` from `slds-grid` to a column
+// stack at a breakpoint — every other rule here is width-agnostic.
+.seller-home__conv-cadence {
+  // Same escape the table and review need: without it a long draft
+  // line sets the intrinsic width and pushes the agent article past
+  // the 800 px column instead of wrapping inside it.
+  min-width: 0;
+  max-width: 100%;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);   // 12 px
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+.seller-home__conv-cadence--empty {
+  align-items: center;
+  text-align: center;
+}
+
+.seller-home__conv-cadence-empty-body {
+  margin: 0;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  line-height: 1.1875rem;
+}
+
+// ── Header: cadence identity + prospect pager ───────────────────
+// LAB — a column, not a row, and holding one thing. Production splits
+// this left/right: the cadence name and summary line one side, the
+// pager the other. All three are gone here — the two lookups replaced
+// the pager and name, and the summary line came out after them — so
+// there is nothing left to spread. The column is what the layout falls
+// back to; put any of the three back and this returns to
+// `justify-content: space-between` on a row.
+.seller-home__conv-cadence-header {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+}
+
+// Both remaining children are out of flow or full-width (the assistive
+// heading and the lookup row), so the gap is inert today. Kept because
+// it's what governs the spacing the moment anything joins them.
+.seller-home__conv-cadence-meta {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.seller-home__conv-cadence-name {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-2, 1rem);         // 16 px
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.5rem;
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+// Touch count, channel mix, and the cadence's own one-liner, run
+// together on one line. Both counts are derived from the steps, so
+// they restate the sequence rather than describing it separately.
+.seller-home__conv-cadence-summary {
+  margin: 0;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);    // 13px
+  line-height: 1.125rem;
+}
+
+.seller-home__conv-cadence-dot {
+  margin-inline: 0.25rem;
+}
+
+.seller-home__conv-cadence-pager {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  // Inherited by the chevron buttons and the "N of M" spans, which set
+  // no size of their own.
+  font-size: var(--slds-g-font-size-base, 0.8125rem);    // 13px
+  line-height: 1.125rem;
+}
+
+// ── Whose sequence ──────────────────────────────────────────────
+.seller-home__conv-cadence-prospect {
+  // `display: flex` outranks the UA's `[hidden] { display: none }`,
+  // so the completed state needs this to actually hide the row.
+  // Same override on the actions and batch rows below.
+  &[hidden] {
+    display: none;
+  }
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  flex-wrap: wrap;
+}
+
+.seller-home__conv-cadence-prospect-headline {
+  margin: 0;
+  min-width: 0;
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  line-height: 1.1875rem;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+.seller-home__conv-cadence-prospect-name {
+  font-weight: var(--slds-g-font-weight-6, 590);
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+.seller-home__conv-cadence-prospect-sep {
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+// ── Step list ───────────────────────────────────────────────────
+// An <ol>: the order is the cadence. Markers off — the numbering is
+// already in each header ("Email 1:"), and the rail carries the
+// sequence visually.
+.seller-home__conv-step-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.seller-home__conv-step-item {
+  list-style: none;
+}
+
+// ── One touch ───────────────────────────────────────────────────
+// Rail column, then content. The bottom margin is what the rail's
+// connector bleeds across to reach the next touch, so changing it
+// means changing `--rail-bleed` below with it.
+.seller-home__conv-step {
+  display: flex;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+  margin-bottom: 1.5rem;
+}
+
+.seller-home__conv-step-item:last-child .seller-home__conv-step {
+  margin-bottom: 0;
+}
+
+.seller-home__conv-step-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.seller-home__conv-step-header {
+  margin: 0.375rem 0 0.5rem;
+
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  // The label and value are separate spans with no whitespace
+  // between them, so the gap is what keeps it from reading as
+  // "Email 1:First touch".
+  gap: 0.25em;
+
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.1875rem;
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+
+  // The header is a collapse trigger alongside the rail button.
+  cursor: pointer;
+
+  // Blue on hover, matching the chevron swap on the chip: both say
+  // "this row responds". Set on the h4 so everything inheriting from
+  // it — the purpose and the two bullets — turns together. The
+  // qualifiers set their own colour, so they repeat the hover for
+  // themselves below.
+  transition: color 150ms cubic-bezier(0.65, 0, 0.35, 1);
+
+  &:hover {
+    color: var(--slds-g-color-accent-3, #0250d9);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+// The qualifiers ("Email 1", "Day 1") drop to regular weight and a
+// step down in size, so the purpose carries the line.
+//
+// The Day part used to be an `slds-badge` pinned to the right edge by
+// an auto margin. It's a plain qualifier now, third in the bulleted
+// run, so both the badge class and that margin are gone — nothing
+// pushes to the right edge any more.
+.seller-home__conv-step-header-label {
+  font-weight: var(--slds-g-font-weight-4, 400);
+  font-size: var(--slds-g-font-scale-neg-1, 12px);
+  color: var(--slds-g-color-on-surface-1);
+
+  // Declaring a colour here opts these spans out of inheriting the
+  // h4's hover blue, so the hover has to be repeated for them. Keyed
+  // off the header rather than the span so the whole line turns as one
+  // — hovering "Email 1" alone shouldn't light up only "Email 1".
+  transition: color 150ms cubic-bezier(0.65, 0, 0.35, 1);
+
+  .seller-home__conv-step-header:hover & {
+    color: var(--slds-g-color-accent-3, #0250d9);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+// ── Channel rail ────────────────────────────────────────────────
+// The vertical line is a `::after` on the rail, not an element:
+// it starts below the chip and bleeds past the row's bottom edge,
+// so consecutive touches join into one continuous line with no
+// per-step bridging markup.
+.seller-home__conv-step-rail {
+  position: relative;
+  flex: 0 0 auto;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 1.875rem;      // clears the 30 px chip
+    bottom: -1.5rem;    // reaches the next touch across the row's margin
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    background-color: var(--slds-g-color-surface-container-3, #e5e5e5);
+  }
+}
+
+// The last touch has nothing to connect to, so its line would hang
+// below the sequence.
+.seller-home__conv-step-item:last-child .seller-home__conv-step-rail::after {
+  display: none;
+}
+
+.seller-home__conv-step-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.875rem;    // 30 px
+  height: 1.875rem;
+  flex-shrink: 0;
+
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
+    outline-offset: 2px;
+    border-radius: 50%;
+  }
+}
+
+// Two chips stacked at the same spot, cross-fading on opacity so
+// the swap costs no layout. Pointer events stay off them: hover
+// detection belongs to the rail, which is a bigger target.
+.seller-home__conv-step-chip {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  transition:
+    opacity 150ms cubic-bezier(0.65, 0, 0.35, 1),
+    transform 200ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.seller-home__conv-step-chip--type {
+  opacity: 1;
+}
+
+// Points down while expanded ("click to collapse"), right when
+// collapsed — the accordion convention.
+.seller-home__conv-step-chip--chevron {
+  opacity: 0;
+  transform: rotate(90deg);
+}
+
+// Three triggers, one per way of reaching the collapse:
+//
+//   the rail on hover          the chip itself
+//   the toggle on focus        keyboard users get the swap too
+//   the header on hover        the full-width "Email 1: First touch"
+//                              row is also a click target (see the
+//                              delegated handler in cadence_lab.js,
+//                              which closes on stepToggle OR
+//                              stepHeader) — it just had no way to
+//                              say so
+//
+// The header needs `:has()` because it sits in
+// `.seller-home__conv-step-content`, a LATER sibling of the rail that
+// owns the chips, and CSS can't select backwards. Scoping to the
+// article keeps a hover on one touch from swapping another's chip.
+//
+// Deliberately the header and not the whole content column: we tried
+// the column, and the chevron then showed over the draft card, which
+// doesn't collapse on click and shouldn't — it holds the tab strip,
+// the feedback textarea, Regenerate, and the evidence highlights,
+// where a collapse would fire out from under the popover the click
+// just opened, and selecting draft text would fold the card. Keep the
+// chevron where the click actually lands.
+.seller-home__conv-step-rail:hover .seller-home__conv-step-chip--type,
+.seller-home__conv-step-toggle:focus-visible .seller-home__conv-step-chip--type,
+.seller-home__conv-step:has(.seller-home__conv-step-header:hover) .seller-home__conv-step-chip--type {
+  opacity: 0;
+}
+
+.seller-home__conv-step-rail:hover .seller-home__conv-step-chip--chevron,
+.seller-home__conv-step-toggle:focus-visible .seller-home__conv-step-chip--chevron,
+.seller-home__conv-step:has(.seller-home__conv-step-header:hover) .seller-home__conv-step-chip--chevron {
+  opacity: 1;
+}
+
+// ── Channel colors ──────────────────────────────────────────────
+// Chip fill + glyph, and the connector line under it, per channel.
+// `slds-current-color` (in the markup) is what makes the glyph
+// inherit `color` here; without it SLDS paints it white on the
+// pastel chip.
+//
+// Email and Call follow the pastel-chip pattern. LinkedIn doesn't —
+// see its block below.
+.seller-home__conv-step--email {
+  .seller-home__conv-step-chip {
+    background-color: var(--slds-g-color-info-container-1, #d8e6fe);
+    color: var(--slds-g-color-accent-1, #066afe);
+  }
+  .seller-home__conv-step-rail::after {
+    background-color: var(--slds-g-color-info-container-1, #d8e6fe);
+  }
+}
+
+.seller-home__conv-step--call {
+  .seller-home__conv-step-chip {
+    background-color: var(--slds-g-color-warning-base-90, #f9e3b6);
+    color: var(--slds-g-color-warning-base-65, #d79304);
+  }
+  .seller-home__conv-step-rail::after {
+    background-color: var(--slds-g-color-warning-base-90, #f9e3b6);
+  }
+}
+
+// LinkedIn breaks the pastel pattern because it's a brand mark, not a
+// glyph: the asset is an opaque #0a66c2 tile with the "in" knocked out
+// in white, so it can't be tinted and a pastel chip behind it would
+// only show as a ring around a blue square.
+//
+// So the logo fills the chip, and the chip itself goes brand blue.
+// That second part is for the hover: the chevron chip is stacked on
+// the same spot, and if it kept the pastel fill the swap would flash
+// the background from blue to lavender instead of just changing the
+// glyph the way Email and Call do. White chevron on the same blue,
+// and only the glyph moves.
+//
+// The connector line stays pastel indigo. It's the one place the old
+// channel colour survives, and it keeps the rail distinguishable from
+// Email's line — brand blue is close enough to Email's accent that a
+// blue line under a blue chip would blur the two channels.
+$sh-linkedin-brand: #0a66c2;
+
+.seller-home__conv-step--linkedin {
+  .seller-home__conv-step-chip {
+    background-color: $sh-linkedin-brand;
+    color: var(--slds-g-color-on-accent-1, #fff);
+  }
+  .seller-home__conv-step-rail::after {
+    background-color: var(--slds-g-color-palette-indigo-90, #e0e5f8);
+  }
+}
+
+// 16px, centred by the chip's own flex, matching the glyph size the
+// sprite channels render at.
+//
+// The tile's square edges don't show because the chip behind it is
+// painted the same #0a66c2 — only the white "in" reads. Repaint that
+// chip and the square will appear, at which point this wants a small
+// border-radius.
+//
+// Two things fight the 16px, both because
+// `slds-icon_container_circle` puts 8px of padding on the chip and
+// leaves a 14px content box: flexbox shrinking the logo to fit, and
+// SLDS's `img { max-width: 100% }` reset resolving 100% against that
+// same 14px. `flex: 0 0 auto` handles the first, `max-width: none` the
+// second — without both the logo renders 14px wide by 16 tall, squashed
+// on one axis only. Overflowing the padding by 1px a side is fine; the
+// chip centres the overflow.
+.seller-home__conv-step-chip-logo {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  max-width: none;
+}
+
+// ── Collapsed ───────────────────────────────────────────────────
+// Only the card hides. The chip stays put at the top of the rail, and
+// the header holds the same spot it occupies when the touch is open,
+// so toggling moves nothing but the card.
+//
+// The header keeps the base rule's `margin-block-start` for that
+// reason. This block used to centre it instead — the content column
+// went `display: flex; align-items: center`, which parked the header
+// in the middle of the 30px row the chip defines, 4px from the top
+// against the 6px the open state gives it. Two pixels, but they were
+// visible as a hop on every expand and collapse.
+//
+// Only the bottom margin goes, and only so the collapsed content
+// (6 + 22 = 28px) stays inside the chip's 30px and the row height
+// doesn't grow.
+.seller-home__conv-step.is-collapsed {
+  .seller-home__conv-step-card {
+    display: none;
+  }
+
+  .seller-home__conv-step-header {
+    margin-block-end: 0;
+  }
+
+  .seller-home__conv-step-chip--chevron {
+    transform: rotate(0deg);
+  }
+}
+
+// ── The card ────────────────────────────────────────────────────
+// Message on the left, meta on the right, sharing one border with a
+// seam down the middle.
+.seller-home__conv-step-card {
+  border: 1px solid var(--slds-g-color-surface-container-3, #e5e5e5);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  overflow: hidden;   // clips the two panels' corners to the radius
+}
+
+.seller-home__conv-step-message {
+  min-width: 0;
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+  border-right: 1px solid var(--slds-g-color-surface-container-3, #e5e5e5);
+}
+
+// The draft itself: a white sheet floating on the panel's grey, so
+// it reads as the artifact under review rather than another panel.
+.seller-home__conv-step-draft {
+  position: relative;
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  background-color: var(--slds-g-color-surface-container-1, #ffffff);
+  border: 1px solid var(--slds-g-color-surface-container-3, #e5e5e5);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+}
+
+.seller-home__conv-step-subject {
+  margin: 0 0 0.5rem;
+  font-size: var(--slds-g-font-size-base, 0.8125rem);   // 13 px
+  line-height: 1.125rem;
+  font-weight: var(--slds-g-font-weight-6, 590);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  .seller-home__conv-step-subject-value {
+    font-weight: var(--slds-g-font-weight-4, 400);
+  }
+}
+
+.seller-home__conv-step-body {
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  line-height: 1.25rem;
+  font-weight: var(--slds-g-font-weight-4, 400);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  // Authored bodies use <br><br> for paragraph breaks and <strong>
+  // for a call script's beats.
+  strong {
+    font-weight: var(--slds-g-font-weight-6, 590);
+  }
+
+  // ── Inline citation ───────────────────────────────────────────
+  // The one hover state in the card. A dashed purple underline at
+  // rest that fills on hover, so the claim reads as sourced without
+  // shouting; the hover card behind it carries the evidence.
+  //
+  // Class name comes from the data (bodies are authored with
+  // `class="email-highlight"`, same as hunter's) — scoped here so
+  // it can't leak out of a draft body.
+  .email-highlight {
+    color: var(--slds-g-color-palette-purple-40, #7526e3);
+    border-bottom: 0.8px dashed var(--slds-g-color-palette-purple-40, #7526e3);
+    border-radius: 3px;
+    // Negative margin cancels the padding so the highlight's fill
+    // extends past the text without moving it.
+    padding: 0 2px;
+    margin: 0 -2px;
+    cursor: pointer;
+    transition: background-color 150ms ease-out;
+  }
+
+  .email-highlight:hover {
+    background-color: var(--slds-g-color-palette-purple-90, #ece1f9);
+    border-bottom-color: transparent;
+  }
+}
+
+// First time the pointer enters a card, pulse every citation once so
+// the seller learns they're there. JS adds the class per card and
+// removes it when the animation ends.
+.seller-home__conv-step-card.is-flashing .email-highlight {
+  animation: sh-conv-cite-pulse 800ms ease-out both;
+}
+
+@keyframes sh-conv-cite-pulse {
+  0%   { background-color: transparent; }
+  25%  { background-color: var(--slds-g-color-palette-purple-90, #ece1f9); }
+  100% { background-color: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seller-home__conv-step-card.is-flashing .email-highlight {
+    animation: none;
+  }
+}
+
+// While a hover card is open, fade the Details column so attention
+// stays on the sentence being explained. Opacity is on the children,
+// so the panel's own background stays solid.
+.seller-home__conv-step-side > * {
+  transition: opacity 200ms ease-out;
+}
+
+.seller-home__conv-step-card.is-citing .seller-home__conv-step-side > * {
+  opacity: 0.25;
+}
+
+// ── Details / Feedback panel ────────────────────────────────────
+.seller-home__conv-step-side {
+  min-width: 0;
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  background-color: var(--slds-g-color-surface-container-1, #ffffff);
+
+  display: flex;
+  flex-direction: column;
+
+  .slds-tabs_default {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  // SLDS ships these tabs at 14 px, which crowds a 300 px column.
+  .slds-tabs_default__link {
+    font-size: var(--slds-g-font-size-base, 0.8125rem);
+    line-height: 1.125rem;
+    height: auto;
+    padding: 0.375rem 0.5rem;
+  }
+
+  .slds-tabs_default__content {
+    padding-top: 0.75rem;
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+.seller-home__conv-step-detail {
+  & + & {
+    margin-top: 0.75rem;
+  }
+}
+
+.seller-home__conv-step-detail-title {
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  line-height: 1.0625rem;
+  font-weight: var(--slds-g-font-weight-6, 590);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  margin-bottom: 0.125rem;
+}
+
+.seller-home__conv-step-detail-value {
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  line-height: 1.0625rem;
+  font-weight: var(--slds-g-font-weight-4, 400);
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+// ── Source pills ────────────────────────────────────────────────
+.seller-home__conv-step-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 0.25rem;
+}
+
+.seller-home__conv-step-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 4px;
+  border-radius: 999px;
+  background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  font-size: 0.625rem;   // 10 px — a provenance marker, not prose
+  white-space: nowrap;
+}
+
+.seller-home__conv-step-source-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+// ── Per-touch feedback ──────────────────────────────────────────
+// Regenerate is gated on the textarea having content: without
+// feedback there's nothing to regenerate FROM, and an empty press
+// would just shuffle drafts.
+.seller-home__conv-step-feedback {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.seller-home__conv-step-feedback-label {
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  line-height: 1.0625rem;
+  font-weight: var(--slds-g-font-weight-6, 590);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  margin-bottom: 0.25rem;
+}
+
+.seller-home__conv-step-feedback-input {
+  flex: 1;
+  min-height: 4.5rem;
+  // Sized by the column, not by the seller — a resize handle here
+  // would break the two panels' shared height.
+  resize: none;
+  width: 100%;
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  line-height: 1.125rem;
+}
+
+.seller-home__conv-step-feedback-actions {
+  margin-top: 0.5rem;
+  text-align: end;
+}
+
+// ── Regenerate banner ───────────────────────────────────────────
+// Breaks out of the draft sheet's padding to touch its top edge, so
+// it reads as a status bar on the draft rather than content inside
+// it. Visibility is JS-owned via `hidden`, which is what lets the
+// success state outlive the swap that produced it.
+.seller-home__conv-step-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  margin: -0.75rem -0.75rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+
+  background-color: var(--slds-g-color-success-base-95, #def9f3);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem) var(--slds-g-radius-border-2, 0.5rem) 0 0;
+
+  color: var(--slds-g-color-on-success-1, #056764);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  line-height: 1.125rem;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+// Spinner while generating, dismiss once the new draft has landed —
+// never both.
+.seller-home__conv-step-banner-dismiss {
+  display: none;
+  margin-inline-start: auto;
+  flex: 0 0 auto;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+
+  .slds-button__icon {
+    fill: var(--slds-g-color-on-success-1, #056764);
+  }
+
+  &:hover,
+  &:focus {
+    background: rgba(0, 0, 0, 0.05);
+  }
+}
+
+.seller-home__conv-step-banner--success {
+  .seller-home__conv-step-banner-spinner {
+    display: none;
+  }
+
+  .seller-home__conv-step-banner-dismiss {
+    display: inline-flex;
+  }
+}
+
+// SLDS's inline spinner drops the base spinner's centring transform,
+// which leaves the dot cluster riding high against the label.
+.seller-home__conv-step-banner .slds-spinner_inline {
+  position: relative;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  transform: translateY(7.5px);
+}
+
+// ── Regenerating stencil ────────────────────────────────────────
+.seller-home__conv-step-stencil {
+  display: none;   // revealed by `.is-regenerating` below
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.seller-home__conv-step-stencil-bar {
+  height: 0.75rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--slds-g-color-surface-container-2, #f3f3f3) 0%,
+    var(--slds-g-color-surface-container-3, #e5e5e5) 50%,
+    var(--slds-g-color-surface-container-2, #f3f3f3) 100%
+  );
+  background-size: 200% 100%;
+  animation: sh-conv-stencil-shimmer 1.4s ease-in-out infinite;
+}
+
+// Blank line in the silhouette, standing in for a paragraph break.
+.seller-home__conv-step-stencil-break {
+  height: 0.5rem;
+}
+
+@keyframes sh-conv-stencil-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seller-home__conv-step-stencil-bar {
+    animation: none;
+  }
+}
+
+// JS pins the draft sheet's height before adding this, so swapping
+// real copy for the stencil doesn't collapse the card and bounce the
+// thread's scroll position.
+.seller-home__conv-step-draft.is-regenerating {
+  overflow: hidden;
+
+  .seller-home__conv-step-subject,
+  .seller-home__conv-step-body {
+    display: none;
+  }
+
+  .seller-home__conv-step-stencil {
+    display: flex;
+  }
+}
+
+// ── Citation hover card ─────────────────────────────────────────
+// Fixed-position so it can escape the thread's `overflow: auto`
+// without being clipped. JS keeps its coordinates current while the
+// thread scrolls and clamps it inside the viewport.
+.seller-home__conv-cite {
+  position: fixed;
+  z-index: 9000;
+  min-width: 12rem;
+  max-width: 20rem;
+  padding: 0.75rem;
+
+  background-color: var(--slds-g-color-surface-container-1, #ffffff);
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  line-height: 1.125rem;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.seller-home__conv-cite-title {
+  font-weight: var(--slds-g-font-weight-6, 590);
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+  margin-bottom: 0.25rem;
+}
+
+.seller-home__conv-cite-body {
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+.seller-home__conv-cite-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 0.5rem;
+  padding: 3px 8px 3px 4px;
+  border-radius: 999px;
+  background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  font-size: 0.625rem;
+  white-space: nowrap;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.seller-home__conv-cite-source-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+// ── Footer ──────────────────────────────────────────────────────
+// LAB — production keeps these apart: an actions row for this
+// prospect's sequence, then a divider, then a batch row for all of
+// them, on the reasoning that the separation is what stops the two
+// being mistaken for each other. Here they're one row, and what keeps
+// them apart is order and weight — Approve is neutral and first,
+// Approve All is brand and last.
+//
+// `.seller-home__conv-cadence-batch` is the footer, and
+// `.-actions` now nests inside it as the button group. Both still
+// carry `[hidden]`: applyCompleted() hides them independently, and
+// hiding the outer one takes the inner with it either way.
+//
+// The markup pairs that class with SLDS's `slds-docked-form-footer`,
+// which is a viewport dock — `position: fixed; bottom: 0; left: 0;
+// width: 100%; z-index: 8000`. We want its layout, not its
+// positioning, so the compound selector below (0,2,0, beating SLDS's
+// 0,1,0 regardless of link order) puts it back in flow.
+//
+// The shadow goes with it. SLDS uses an upward shadow to lift a docked
+// bar off the page behind it; a footer sitting inside a card has
+// nothing to lift off, and the shadow spills over the card's own edge
+// at the two bottom corners. `slds-border_top` in the markup draws the
+// separation instead.
+.seller-home__conv-cadence-batch.slds-docked-form-footer {
+  position: static;
+  inset: auto;
+  width: auto;
+  z-index: auto;
+  box-shadow: none;
+}
+
+.seller-home__conv-cadence-batch {
+  &[hidden] {
+    display: none;
+  }
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+  flex-wrap: wrap;
+
+  // Full-bleed to the card's edges. The card pads itself by
+  // --slds-g-spacing-3 on all four sides, so the footer cancels that
+  // padding with matching negative margins: inline on both sides, and
+  // block-end to sit flush on the bottom.
+  //
+  // Pulling down is only safe because nothing follows it in flow — the
+  // completed panel is [hidden], the sequences are <template>, the
+  // status map is a <script>, and the citation popover is
+  // position: fixed, which takes it out of the card's flex flow. Add a
+  // visible sibling after this and the negative margin will lift it.
+  margin-inline:    calc(-1 * var(--slds-g-spacing-3, 0.75rem));
+  margin-block-end: calc(-1 * var(--slds-g-spacing-3, 0.75rem));
+
+  // Corners have to match the card's own radius or the grey bar squares
+  // off the two bottom corners it now paints. `overflow: hidden` on the
+  // card would do the same job and is NOT an option: it would clip the
+  // Prospect and Cadence dropdowns, which are absolutely positioned
+  // inside it.
+  border-end-start-radius: var(--slds-g-radius-border-3, 0.75rem);
+  border-end-end-radius:   var(--slds-g-radius-border-3, 0.75rem);
+
+  // SLDS ships `padding: 0.5rem 0` — fine vertically, but the sides
+  // need to line up with the card's own padding now that the bar runs
+  // edge to edge.
+  padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
+
+  // Fill and top border are both SLDS utilities in the markup —
+  // `slds-theme_shade` and `slds-border_top`. Neither is set here, so
+  // changing either is a class change rather than a stylesheet edit.
+}
+
+// Pushes the buttons right when the status pill is the only thing to
+// their left, and keeps them right if the pill is ever removed.
+.seller-home__conv-cadence-actions {
+  &[hidden] {
+    display: none;
+  }
+
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  flex-wrap: wrap;
+  margin-inline-start: auto;
+}
+
+
+// ══════════════════════════════════════════════════════════════════════
+// Prospect + Cadence lookups — PORTED from BB - AOP
+// ══════════════════════════════════════════════════════════════════════
+// Styles for the two fields in the card header. Everything below the
+// row layout is a copy of the cadence-popover block in
+// protos/BB - AOP → src/styles/step_04.scss (lines 187–560), so a tweak
+// here ports back to that file as a diff.
+//
+// What isn't here: the combobox, the option rows, the chip, the visual
+// pickers. All of that is stock SLDS and this project already ships it
+// in /styles/index.css — the port only needed the popover, which is
+// hunter's own.
+// ══════════════════════════════════════════════════════════════════════
+
+// Two equal fields. A grid rather than flex because equal is the point:
+// the Cadence value ("Mid-Market Cold Outreach") is longer than most
+// prospect names, and with flex the fields would size to their content
+// and the pair would jog on every selection.
+.cl-lookup-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+  align-items: end;
+}
+
+.cl-lookup {
+  min-width: 0;
+
+  .slds-form-element__label {
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  }
+}
+
+// ── Popover placement ─────────────────────────────────────────────
+// The base SLDS `.slds-dropdown` rule caps max-width and forces both
+// `transform: translate(-50%)` and `left: 50%`, which centres a small
+// dropdown under its trigger. A 32rem popover can't be centred on a
+// half-width field without hanging off one side, so the transform has
+// to go, along with the dropdown's own surface — the `.cadence-popover`
+// inside paints its own border, padding and shadow.
+//
+// DIFFERENT FROM HUNTER, deliberately: his anchors left (`left: -2px`),
+// because his field sat in a page with room to its right. Here the
+// Cadence field is the right half of an 800px card, and a 512px popover
+// opening rightward would hang ~130px past the card's edge. Anchoring
+// right instead keeps the whole surface inside the card, which is what
+// this arrangement has to be judged at.
+.cl-lookup__popover-dropdown {
+  max-width: none;
+  width: max-content;
+  transform: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+
+  right: -2px;
+  left: auto;
+  top: -4px;
+}
+
+// Force the show state when the trigger is open. SLDS already ships
+// `.slds-dropdown-trigger_click.slds-is-open .slds-dropdown { display: block; … }`,
+// but a higher-specificity override removes any chance of a downstream
+// rule keeping the popover surface hidden.
+.slds-dropdown-trigger_click.slds-is-open .cl-lookup__popover-dropdown {
+  display: block;
+  visibility: visible;
+  opacity: 1;
+}
+
+// ┌─ lifted from BB - AOP: step_04.scss 195–296
+// └─ Popover surface, panels, list, empty state, generate prompt
+
+// Cadence popover container — vertical stack (heading + pickers row +
+// active panel). `display: block` overrides any inherited slds-grid
+// behaviour from the wrapping markup; height is intrinsic so the
+// popover only takes the space its content needs. Width fixed at 32rem
+// for a stable surface across mode swaps. Mirrors `.slds-box` (padding
+// + 1px border + radius).
+.cadence-popover {
+  display: block;
+  padding: var(--slds-g-spacing-4);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1);
+  border-radius: var(--slds-g-radius-border-2);
+  width:  32rem;
+  height: auto;
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  /* Shadow/Elevation/4 - down ⬇ */
+  box-shadow: 0 0 10px 0 var(--shadows-level-412, rgba(0, 0, 0, 0.12)), 0 7px 7px 0 var(--shadows-level-412, rgba(0, 0, 0, 0.12)), 0 -1px 3px 0 var(--shadows-level-4-3, rgba(0, 0, 0, 0.07));
+}
+
+// No-JS panel toggle via :has(). Hidden panels are display:none; the
+// visible one becomes display:flex (column) so its sub-sections stack
+// reliably and the prompt textarea + submit anchor at the bottom.
+.cadence-popover .cadence-popover__panel {
+  display: none;
+  flex-direction: column;
+  height: 100%;
+  // Asymmetric vertical spacing between the panel's three children
+  // (header → search/textarea → list/actions). CSS `gap` is uniform
+  // and can't vary by index, so we use sibling margins instead:
+  //   "top gap"    = 1st gap (header → search) = --slds-g-spacing-1
+  //   "bottom gap" = 2nd gap (search → list)   = --slds-g-spacing-3
+}
+
+.cadence-popover .cadence-popover__panel > *:first-child {
+  margin-bottom: var(--slds-g-spacing-1);
+}
+
+.cadence-popover .cadence-popover__panel > *:nth-child(2) {
+  margin-bottom: var(--slds-g-spacing-3);
+}
+
+.cadence-popover:has(#cadence-mode-use-as-is:checked) .cadence-popover__panel[data-panel="cadence-mode-use-as-is"],
+.cadence-popover:has(#cadence-mode-optimize:checked)  .cadence-popover__panel[data-panel="cadence-mode-optimize"],
+.cadence-popover:has(#cadence-mode-generate:checked)  .cadence-popover__panel[data-panel="cadence-mode-generate"] {
+  display: flex;
+}
+
+// Right-side column needs to be a flex container so the panel's
+// `height: 100%` resolves against the full popover height.
+.cadence-popover__main {
+  display: flex;
+  flex-direction: column;
+}
+
+.cadence-popover__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-1);
+}
+
+.cadence-popover__list {
+  margin: 0;
+  padding: 0;
+}
+
+// SLDS already paints padding/media layout/neutral hover via
+// .slds-listbox_vertical .slds-listbox__option — we just add the
+// pointer + radius + accent-tinted selected state.
+.cadence-popover__list .slds-listbox__option {
+  cursor: pointer;
+  border-radius: var(--slds-g-radius-border-2);
+}
+
+.cadence-popover__list .slds-listbox__option.is-selected {
+  background-color: color-mix(in srgb, var(--slds-g-color-accent-1) 14%, transparent);
+}
+
+// Typeahead hides non-matching rows by setting [hidden] on the <li>.
+.cadence-popover__list .slds-listbox__item[hidden] {
+  display: none;
+}
+
+// Empty state — shown when the panel's typeahead matches zero rows.
+// Sits as a sibling of .cadence-popover__list inside the panel; the
+// [hidden] attribute is toggled by cadence_lab_lookups.js based on
+// visible row count.
+.cadence-popover__empty {
+  text-align: center;
+  padding: var(--slds-g-spacing-3);
+  color: var(--slds-g-color-on-surface-1);
+  font-size: var(--slds-g-font-scale-neg-1);
+}
+
+// Generate panel — textarea grows to fill remaining vertical space;
+// submit row sits at the bottom via margin-top:auto inside the flex column.
+.cadence-popover__prompt {
+  min-height: 8rem;
+  flex: 1 1 auto;
+  resize: vertical;
+}
+
+.cadence-popover__prompt-actions {
+  margin-block-start: auto;
+}
+
+// ┌─ lifted from BB - AOP: step_04.scss 298–522
+// └─ Mode picker: layout, states, and the hover copy swap
+
+// Sits above the panels. Padding/gap driven by custom properties so
+// the layout is tunable from one place. We use a real flex `gap` on
+// the form-element__control row instead of SLDS's
+// `slds-gutters_xx-small` + `.slds-visual-picker + .slds-visual-picker
+// { margin-inline-start }` sibling-margin, both of which fight with
+// `flex: 1 1 0` equal-width layout and push the picker row outside
+// the fieldset's padding box.
+.cadence-popover__pickers {
+  --cp-pickers-padding: var(--slds-g-spacing-4);
+  --cp-pickers-gap:     var(--slds-g-spacing-3);
+  padding: var(--cp-pickers-padding);
+}
+
+// Heading above the picker row. Sits inside the fieldset (between
+// <legend> and the row) so it inherits the fieldset's vertical flow.
+.cadence-popover__pickers-heading {
+  font-size: var(--slds-g-font-size-base);
+  text-align: center;
+  font-weight: 590;
+  margin-bottom: 10px;
+}
+
+.cadence-popover__pickers .slds-form-element__control {
+  gap: var(--cp-pickers-gap);
+}
+
+.cadence-popover__pickers .slds-form-element__control > .slds-visual-picker {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+// Neutralize SLDS's sibling-margin spacing between pickers — the
+// `gap` above already handles it, and the inherited margin breaks
+// equal widths because the 2nd/3rd pickers each lose a margin's worth.
+.cadence-popover__pickers .slds-visual-picker + .slds-visual-picker {
+  margin-inline-start: 0;
+}
+
+// ── Visual-picker overrides ────────────────────────────────────────
+// Scoped to `.cadence-popover__pickers` so they only affect the
+// horizontal-mode pickers. Tweak the custom properties below to dial
+// visual treatment per state without editing individual rules. SLDS
+// targets `.slds-visual-picker__figure` (the figure container, not
+// the <label>) for backgrounds/borders/shadows; we mirror that.
+.cadence-popover__pickers {
+  --cp-picker-bg:            var(--slds-g-color-surface-container-1);
+  --cp-picker-border:        var(--slds-g-color-border-1);
+  --cp-picker-fg:            var(--slds-g-color-on-surface-2);
+  --cp-picker-radius:        var(--slds-g-radius-border-2);
+  --cp-picker-padding:       var(--slds-g-spacing-3);
+  --cp-picker-shadow:        none;
+
+  // Width fills the flex parent so 3 pickers share the row width
+  // evenly (combined with `flex: 1 1 0` above). Height is fixed at
+  // 5rem so all pickers are uniform regardless of label length;
+  // propagated through the wrapping <label> via `> label { height: 100% }`.
+  --cp-picker-width:         100%;
+  --cp-picker-height:        5rem;
+
+  --cp-picker-hover-bg:      var(--slds-g-color-neutral-base-95);
+  --cp-picker-hover-border:  var(--slds-g-color-border-1);
+  --cp-picker-hover-shadow:  none;
+
+  --cp-picker-focus-border:  var(--slds-g-color-accent-1);
+  --cp-picker-focus-shadow:  var(--slds-g-shadow-outset-focus-1);
+
+  --cp-picker-active-bg:     color-mix(in srgb, var(--slds-g-color-accent-1) 14%, transparent);
+  --cp-picker-active-border: var(--slds-g-color-accent-1);
+  --cp-picker-active-fg:     var(--slds-g-color-on-surface-1);
+  --cp-picker-active-shadow: 0 0 0 1px var(--slds-g-color-accent-1) inset;
+
+  --cp-picker-icon-fill:     var(--slds-g-color-accent-1);
+}
+
+// Default state — applied to every figure regardless of input state.
+// Width/height beat SLDS's `_medium / _large / _small` size modifiers
+// because this selector adds the .cadence-popover__pickers parent
+// class (specificity 0,3,0 vs SLDS's 0,2,0).
+.cadence-popover__pickers .slds-visual-picker__figure {
+  background-color: var(--cp-picker-bg);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--cp-picker-border);
+  border-radius: var(--cp-picker-radius);
+  color: var(--cp-picker-fg);
+  padding: var(--cp-picker-padding);
+  box-shadow: var(--cp-picker-shadow);
+  width:  var(--cp-picker-width);
+  height: var(--cp-picker-height);
+}
+
+// Make the wrapping <label> fill its .slds-visual-picker so the
+// figure's height resolves against the picker's stretched height
+// (otherwise label is just intrinsic-block-height).
+.cadence-popover__pickers .slds-visual-picker > label {
+  height: 100%;
+}
+
+// Per-picker label text override — match body type instead of the
+// SLDS heading scale that `slds-text-heading_small` applies.
+.cadence-popover__pickers .cadence-popover__picker-label {
+  font-size: var(--slds-g-font-size-base);
+}
+
+// Tint the leading icon of each picker. SLDS svg icons inherit
+// fill from their wrapping container's `color` (or whichever
+// `slds-icon-text-*` class sits on the svg). Setting `fill` on the
+// inner <svg> directly reliably wins.
+.cadence-popover__pickers .slds-visual-picker__figure .slds-icon {
+  fill: var(--cp-picker-icon-fill);
+}
+
+// Hover (only fires when the input isn't disabled).
+.cadence-popover__pickers .slds-visual-picker input:not(:disabled) ~ label:hover .slds-visual-picker__figure {
+  background-color: var(--cp-picker-hover-bg);
+  border-color: var(--cp-picker-hover-border);
+  box-shadow: var(--cp-picker-hover-shadow);
+}
+
+// Keyboard focus (focus-visible — clicks don't trigger this).
+.cadence-popover__pickers .slds-visual-picker input:focus-visible ~ label .slds-visual-picker__figure {
+  border-color: var(--cp-picker-focus-border);
+  box-shadow: var(--cp-picker-focus-shadow);
+  outline: 0;
+}
+
+// Active / selected state — radio :checked.
+.cadence-popover__pickers .slds-visual-picker input:checked ~ label .slds-visual-picker__figure {
+  background-color: var(--cp-picker-active-bg);
+  border-color: var(--cp-picker-active-border);
+  color: var(--cp-picker-active-fg);
+  box-shadow: var(--cp-picker-active-shadow);
+}
+
+// :checked + :hover — preserve the selected state's accent border +
+// inset ring while the user is still hovering the selected picker.
+// Without this, the plain hover rule above wins on specificity and
+// strips the inset shadow, dropping the 2px-looking border down to
+// 1px until the cursor moves away.
+.cadence-popover__pickers .slds-visual-picker input:checked ~ label:hover .slds-visual-picker__figure {
+  background-color: var(--cp-picker-active-bg);
+  border-color: var(--cp-picker-active-border);
+  color: var(--cp-picker-active-fg);
+  box-shadow: var(--cp-picker-active-shadow);
+}
+
+// :checked + :focus-visible (keyboard nav onto a selected picker)
+// — keep the focus ring but preserve the active background.
+.cadence-popover__pickers .slds-visual-picker input:checked:focus-visible ~ label .slds-visual-picker__figure {
+  box-shadow: var(--cp-picker-focus-shadow);
+}
+
+// Suppress SLDS's checked-state corner triangle. SLDS paints a small
+// triangular ribbon via a `:after` pseudo on the figure when the
+// input is :checked. Our accent border + tinted background already
+// convey selection.
+.cadence-popover__pickers .slds-visual-picker input:checked ~ label .slds-visual-picker__text:after {
+  content: none;
+}
+
+// ── Hover/focus swap: default content ↔ description text ─────────
+// Each picker figure ships with two children:
+//   .cadence-popover__picker-default  → icon + label (visible by default)
+//   .cadence-popover__picker-hover    → description text (shown on hover/focus)
+// Figure becomes `display: grid` (overrides the SLDS
+// slds-align_absolute-center flex) so both children land in the same
+// cell and overlap; opacity fades between them. The default keeps its
+// `slds-grid_vertical` flex-direction:column from SLDS (we don't
+// override flex-direction), so icon-over-label still stacks.
+.cadence-popover__pickers .slds-visual-picker__figure {
+  display: grid;
+  overflow: hidden;
+}
+
+.cadence-popover__pickers .cadence-popover__picker-default,
+.cadence-popover__pickers .cadence-popover__picker-hover {
+  grid-row: 1;
+  grid-column: 1;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s ease;
+}
+
+.cadence-popover__pickers .cadence-popover__picker-default {
+  opacity: 1;
+}
+
+.cadence-popover__pickers .cadence-popover__picker-hover {
+  opacity: 0;
+  text-align: center;
+  font-size: var(--slds-g-font-scale-neg-1);
+  line-height: 1.35;
+}
+
+// Trigger the swap on:
+//   - mouse hover on the picker / its label
+//   - keyboard focus (`:focus-visible` on the input) — so Tab users
+//     see the description too. Deliberately focus-visible and not
+//     :focus-within, so a mouse CLICK doesn't leave the description
+//     "stuck" showing after selection.
+.cadence-popover__pickers .slds-visual-picker:hover .cadence-popover__picker-default,
+.cadence-popover__pickers .slds-visual-picker input:not(:disabled) ~ label:hover .cadence-popover__picker-default,
+.cadence-popover__pickers .slds-visual-picker input:focus-visible ~ label .cadence-popover__picker-default {
+  opacity: 0;
+}
+
+.cadence-popover__pickers .slds-visual-picker:hover .cadence-popover__picker-hover,
+.cadence-popover__pickers .slds-visual-picker input:not(:disabled) ~ label:hover .cadence-popover__picker-hover,
+.cadence-popover__pickers .slds-visual-picker input:focus-visible ~ label .cadence-popover__picker-hover {
+  opacity: 1;
+}
+
+// Respect prefers-reduced-motion — the swap still happens, but without
+// the fade, so users sensitive to motion get an instant flip.
+@media (prefers-reduced-motion: reduce) {
+  .cadence-popover__pickers .cadence-popover__picker-default,
+  .cadence-popover__pickers .cadence-popover__picker-hover {
+    transition: none;
+  }
+}

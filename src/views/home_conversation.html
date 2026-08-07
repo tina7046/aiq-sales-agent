@@ -376,26 +376,38 @@
                 role="group"
                 aria-label="Attach and augment"
               >
-                {# Placeholder icon actions — same shape as the
-                   Seller Home composer so styling stays consistent
-                   across both surfaces. Non-functional in Phase 1. #}
+                {# Placeholder icon actions — same three glyphs, same
+                   order, same colour as the Seller Home composer
+                   (_home_composer.html, driven by `composer.actions` in
+                   index.json), because a seller moving from Home into a
+                   thread shouldn't find a different toolbar. Written out
+                   here rather than shared: this composer is a separate
+                   component on purpose (see the note above the form).
+                   Non-functional in Phase 1.
+
+                   The middle glyph is the Skills mark, an asset rather
+                   than a sprite symbol, so it's painted as a mask over
+                   the button's colour — see
+                   `.seller-home__conv-composer-btn-image`. #}
                 <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__conv-composer-btn" title="Add" aria-label="Add">
                   <svg class="slds-button__icon" aria-hidden="true">
                     <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
                   </svg>
                   <span class="slds-assistive-text">Add</span>
                 </button>
-                <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__conv-composer-btn" title="Quick action" aria-label="Quick action">
-                  <svg class="slds-button__icon" aria-hidden="true">
-                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#fallback"></use>
-                  </svg>
-                  <span class="slds-assistive-text">Quick action</span>
+                <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__conv-composer-btn" title="Skills" aria-label="Skills">
+                  <span
+                    class="slds-button__icon seller-home__conv-composer-btn-image"
+                    style="--sh-composer-icon-image: url('/assets/images/nav-icons/skills.png')"
+                    aria-hidden="true"
+                  ></span>
+                  <span class="slds-assistive-text">Skills</span>
                 </button>
-                <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__conv-composer-btn" title="Skills and tools" aria-label="Skills and tools">
+                <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__conv-composer-btn" title="All tools" aria-label="All tools">
                   <svg class="slds-button__icon" aria-hidden="true">
-                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#apps"></use>
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#all"></use>
                   </svg>
-                  <span class="slds-assistive-text">Skills and tools</span>
+                  <span class="slds-assistive-text">All tools</span>
                 </button>
               </div>
 
@@ -523,11 +535,18 @@
      knowledge, scheduled) no-op — each guards on a root that this page
      doesn't render.
 
-     The cadence module before home_conversation.js: the latter calls
-     `ShCadence.mount` as it wires each agent message. All are classic
-     scripts that do their work on DOMContentLoaded, so the order is for
-     readers rather than the parser. #}
+     The lookups module before the cadence module before
+     home_conversation.js, which is the order they call each other in:
+     home_conversation.js calls `ShCadence.mount` as it wires each agent
+     message, and that mount calls `ShLookups.init` for the two fields
+     in the card's header.
+
+     Only the last of those is a real ordering constraint — `ShLookups`
+     has to exist by the time a card mounts. It does either way: all
+     three are classic scripts, so the two globals are assigned before
+     anything runs on DOMContentLoaded. #}
   <script src="/scripts/home.js"></script>
+  <script src="/scripts/home_conversation_lookups.js"></script>
   <script src="/scripts/home_conversation_cadence.js"></script>
   <script src="/scripts/home_conversation.js"></script>
 {% endblock %}

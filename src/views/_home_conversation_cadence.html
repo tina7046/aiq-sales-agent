@@ -1,6 +1,14 @@
 {#
-  Cadence sequence — reusable component
+  Cadence sequence
   =====================================================================
+  There is a lab copy of this file at src/views/_cadence_lab_card.html,
+  rendered on its own by cadence_lab.html. Same macros, same class
+  names, same `data-sh-*` hooks, so a design change tried there ports
+  back here as a diff rather than a translation. If you change this
+  file, the lab copy drifts — that is fine while you are iterating, but
+  the two are worth re-syncing once a design settles.
+
+  ---------------------------------------------------------------------
   Slot: rendered INSIDE an agent message, in place of the single-draft
   outreach review. Consumed by _home_conversation_messages.html when a
   message carries a `cadence` object.
@@ -10,35 +18,35 @@
   the conversation feed. What came across: the vertical channel rail,
   the collapsible steps, the message card with its Details / Feedback
   tabs, the inline citations and their hover card, and the
-  feedback-driven Regenerate. What did not: hunter's Prospect and
-  Cadence comboboxes — the thread already has a prospect switcher (the
-  table above, plus this card's own pager), and the agent has already
-  chosen the cadence, so it reads as header info rather than a picker.
+  feedback-driven Regenerate. Hunter's Prospect and Cadence comboboxes
+  came across late, by way of the cadence lab — they replaced a pager
+  that could only step one prospect at a time, and they let you jump
+  straight to a name in a 37-row roster.
 
   Anatomy
   -------
     ┌─ cadence header ────────────────────────────────────┐
-    │ High Touch Prospects · 5 touches · Email, LinkedIn  │
-    │ Alex Bristor · VP, Sales at Rippling    ‹ 1 of 12 › │
+    │ Prospect  [Alex Bristor ▾]  Cadence  [High Touch ▾] │
     └─────────────────────────────────────────────────────┘
-     ●  Email 1: First touch                    [collapse]
+     ●  First touch · Email 1 · Day 1           [collapse]
      │  ┌─ message ───────────┬─ Details │ Feedback ────┐
      │  │ Subject: …          │ Email Type: …          │
      │  │ Hi Alex, …citation… │ Reasoning: …           │
      │  └─────────────────────┴─ Sources: ZoomInfo ────┘
-     ●  LinkedIn 1: Connection request
-     ●  Email 2: Nudge  ·  ● Call 1  ·  ● Email 3: Exit
-
-     Approve Cadence  ·  Edit      Approve All Cadences
+     ●  Connection request · LinkedIn 1 · Day 2
+     ●  Nudge · Email 2 · Day 6   ·   ● Exit · Email 3 · Day 13
+    ┌─ docked footer ─────────────────────────────────────┐
+    │                            Approve    Approve All   │
+    └─────────────────────────────────────────────────────┘
 
   One prospect at a time
   ----------------------
   The card shows one prospect's sequence. Every OTHER sequence is
   rendered into an inert `<template>` keyed by prospect id, and
   home_conversation_cadence.js swaps the visible one when selection
-  changes — from a table row click, or this card's pager. Sequences are
-  keyed by prospect id with a `default` fallback, so twelve prospects
-  cost three templates rather than twelve.
+  changes — from a table row click, or this card's Prospect lookup.
+  Sequences are keyed by prospect id with a `default` fallback, so 37
+  prospects cost four templates rather than 37.
 
   Tokens
   ------
@@ -49,9 +57,9 @@
 
   Substitution happens TWICE, deliberately: the `fill` macro below
   handles the server-rendered sequence (so the card is correct before
-  any script runs), and `fillTokens` in home_conversation_cadence.js
-  handles a sequence cloned out of a template. Both replace the same
-  four tokens; if you add a fifth, add it in both places.
+  any script runs), and `fillTokens` in home_conversation_cadence.js handles a
+  sequence cloned out of a template. Both replace the same four tokens;
+  if you add a fifth, add it in both places.
 
   Approval
   --------
@@ -61,16 +69,23 @@
   so the row stripe, the reviewed count, and Approve all keep working
   unchanged. Per-touch interaction is feedback and Regenerate.
 
-  Data contract (see src/views/data/index.json → the `cadence` object
-  on an agent message):
+  Data contract — the `cadence` object on an agent message in
+  src/views/data/index.json, which documents every field:
     {
       id: String, name: String, summary: String,
       confirmDialog: { title, body, primary, secondary },
       completed:     { heading, body },
+      cadences:  [ { name, type, steps, owner } ],   // Cadence lookup
       sequences: { default: { steps: [] }, <prospectId>: { steps: [] } }
     }
-  Step fields are documented alongside the data.
+  Step fields are documented alongside the data. `summary` is still read
+  by home_conversation_cadence.js but no longer rendered; see the header
+  below.
 #}
+
+{#- The Prospect and Cadence lookups in the card header, ported from
+    hunter's Write Messaging step by way of the cadence lab. -#}
+{% import "_home_conversation_lookups.html" as lookups %}
 
 
 {#
@@ -140,8 +155,15 @@
 {# ── Cadence card ─────────────────────────────────────────────────
    `prospects` is the SAME row array the sibling prospect table
    renders, so the two can never disagree about who exists or in what
-   order. Each entry needs a stable `id`. #}
+   order. Each entry needs a stable `id`.
+
+   The Cadence lookup in the header is fed by `cadence.cadences`, which
+   rides along on the cadence object rather than arriving as a third
+   argument — that keeps the call site in
+   _home_conversation_messages.html unchanged. The lab copy takes it as
+   an argument instead, because there it comes from a separate file. #}
 {% macro cadenceMessage(cadence, prospects) %}
+{% set cadences = cadence.cadences or [] %}
 
 {#
   An empty roster means there is nothing to sequence. Render the
@@ -187,84 +209,77 @@
   data-sh-cadence-prospect-ids="{{ _prospectIds | trim }}"
   data-sh-cadence-prospects="{{ _meta | tojson | escape }}"
 >
-  {# ── Header: which cadence, and which prospect ───────────────── #}
+  {# ── Header: which cadence, and which prospect ─────────────────
+
+     Two lookups, which is the arrangement hunter's Write Messaging
+     step had before this card was adapted for the thread. They replace
+     a pager — chevrons either side of a live "N of 37" — because both
+     answer the same question ("whose sequence am I looking at") and
+     the lookup can jump to a name instead of walking to it.
+
+     Consequences worth knowing:
+       • home_conversation_cadence.js null-guards `els.prev` / `els.next`
+         / `els.current`, so the missing pager breaks nothing. The
+         Prospect field moves the card by dispatching the same
+         `sh:conv-row-select` the table row click does, which is why
+         picking a name here also highlights the row above.
+       • The cadence name is no longer a visible <h3>: the Cadence
+         field says it, an arm's length above. The heading survives as
+         assistive text because the section is `aria-labelledby` it,
+         and a region that announces itself as "High Touch Prospects"
+         is worth more than one that announces nothing.
+       • The header is the two fields and nothing else, so the rule in
+         home_conversation.scss stacks rather than spreads.
+  #}
   <header class="seller-home__conv-cadence-header">
     <div class="seller-home__conv-cadence-meta">
-      <h3 id="{{ cadence.id }}-heading" class="seller-home__conv-cadence-name">{{ cadence.name }}</h3>
-      <p class="seller-home__conv-cadence-summary">
-        <span data-sh-cadence-touches>{{ _firstSeq.steps | length }} touches</span>
-        <span class="seller-home__conv-cadence-dot" aria-hidden="true">&middot;</span>
-        <span data-sh-cadence-channels>{{ channelSummary(_firstSeq.steps) }}</span>
-        {#
-          Card-level by default, but a sequence can override it — see
-          `data-sh-cadence-seq-summary` below. Added when Alex Bristor's
-          sequence ran three emails under the card's "Multi-channel
-          sequence" line; his has calls and a LinkedIn touch now, so no
-          sequence overrides it today. Kept because the next authored
-          sequence that breaks the pattern needs it.
-        #}
-        {% if cadence.summary %}
-        <span class="seller-home__conv-cadence-dot" aria-hidden="true">&middot;</span>
-        <span data-sh-cadence-summary>{{ _firstSeq.summary or cadence.summary }}</span>
-        {% endif %}
-      </p>
-    </div>
+      <h3 id="{{ cadence.id }}-heading" class="slds-assistive-text">{{ cadence.name }}</h3>
 
-    {#
-      Pager. Same shape (and the same behavior) as the outreach
-      review's: chevrons either side of a live "N of M". The buttons
-      sit outside the live region so only the position is re-announced
-      as the seller steps through prospects.
-    #}
-    <div class="seller-home__conv-cadence-pager" role="group" aria-label="Prospect navigation">
-      <button
-        type="button"
-        class="seller-home__conv-review-pager-btn"
-        data-sh-cadence-prev
-        aria-label="Previous prospect"
-      >
-        <svg class="seller-home__conv-review-pager-icon" aria-hidden="true">
-          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronleft"></use>
-        </svg>
-      </button>
+      <div class="seller-home__conv-cadence-lookups">
+        {{ lookups.prospectField(_first.prospect) }}
+        {{ lookups.cadenceField(cadences, cadence.name) }}
+      </div>
 
-      <span class="seller-home__conv-review-progress" aria-live="polite">
-        <span data-sh-cadence-current>1</span>
-        <span class="seller-home__conv-review-progress-sep"> of </span>
-        <span>{{ prospects | length }}</span>
-      </span>
+      {#- A summary line stood here: touch count, channel mix, and the
+          cadence's own sentence, run together with middots
+          (`data-sh-cadence-touches` / `-channels` / `-summary`, all
+          rewritten from the template on every prospect change).
+          Removed — the Cadence field names the cadence now, and the
+          steps below ARE the touch count and the channel mix.
 
-      <button
-        type="button"
-        class="seller-home__conv-review-pager-btn"
-        data-sh-cadence-next
-        aria-label="Next prospect"
-      >
-        <svg class="seller-home__conv-review-pager-icon" aria-hidden="true">
-          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
-        </svg>
-      </button>
+          Costs nothing at runtime: home_conversation_cadence.js
+          null-guards all three, and the `data-sh-cadence-seq-*`
+          attributes it read them from are still on every sequence
+          template, so putting the line back is this markup and nothing
+          else. -#}
     </div>
   </header>
 
-  {# ── Whose sequence this is ──────────────────────────────────── #}
-  <div class="seller-home__conv-cadence-prospect">
-    <p class="seller-home__conv-cadence-prospect-headline">
-      <span class="seller-home__conv-cadence-prospect-name" data-sh-cadence-name>{{ _first.prospect }}</span>
-      <span class="seller-home__conv-cadence-prospect-sep"> &middot; </span>
-      <span data-sh-cadence-role>{{ _first.role | default('') }}</span>
-      <span> at </span>
-      <span data-sh-cadence-company>{{ _first.company }}</span>
-    </p>
+  {#- ── Whose sequence this is ────────────────────────────────────
+      A prospect row stood here, holding two things:
 
-    <span
-      class="seller-home__conv-review-status seller-home__conv-review-status--not-reviewed"
-      data-sh-cadence-status
-      aria-live="polite"
-    >
-      <span data-sh-cadence-status-label>{{ _cadenceStatuses.not_reviewed.label }}</span>
-    </span>
-  </div>
+        the identity line   "Alex Bristor · VP, Sales at Rippling",
+                            spans hooked as `data-sh-cadence-name` /
+                            `-role` / `-company`, rewritten on every
+                            prospect change. The Prospect lookup in the
+                            header says the name now; role and company
+                            are in its option rows on the way in.
+
+        the status pill     `data-sh-cadence-status`, an aria-live
+                            region carrying Not reviewed / Approved /
+                            Changes requested.
+
+      WHAT THAT COSTS: the card no longer states a prospect's review
+      status in words. Approve is a stateful button that flips to
+      Approved with a check, so the state is legible from it, but it
+      isn't announced as a status and the "Changes requested" value —
+      which a table reject still sets — now has nowhere to show. If the
+      pill should come back, the footer is the place for it.
+
+      Nothing breaks at runtime: home_conversation_cadence.js guards
+      `els.name` / `-role` / `-company`, `applyStatus` returns early
+      with no pill, and `applyCompleted` calls toggleHidden on a null
+      `prospectRow`, which is a no-op. -#}
 
   {# ── The sequence ────────────────────────────────────────────── #}
   <div class="seller-home__conv-cadence-steps" data-sh-cadence-steps>
@@ -283,26 +298,86 @@
   </template>
   {% endfor %}
 
-  {# ── Actions ─────────────────────────────────────────────────── #}
-  <div class="seller-home__conv-cadence-actions" role="group" aria-label="Sequence actions">
-    <button
-      type="button"
-      class="slds-button slds-button_neutral seller-home__conv-review-btn"
-      data-sh-cadence-request-changes
-    >Request Changes</button>
-    <button
-      type="button"
-      class="slds-button slds-button_brand seller-home__conv-review-btn"
-      data-sh-cadence-approve
-    >Approve Cadence</button>
-  </div>
+  {# ── Footer ──────────────────────────────────────────────────────
+     One row. This used to be two: a per-sequence actions row (Request
+     Changes / Approve Cadence) stacked above a batch row (Approve All
+     Cadences), which read as two decisions when it's one decision at
+     two scopes. They share a footer now, both approvals to the right,
+     this sequence before all of them.
 
-  <div class="seller-home__conv-cadence-batch">
-    <button
-      type="button"
-      class="slds-button slds-button_brand seller-home__conv-review-btn seller-home__conv-review-btn--batch"
-      data-sh-cadence-approve-all
-    >Approve All Cadences</button>
+     Request Changes is gone, and so is the status pill. The Approve
+     button says the same thing now that it's stateful — it reads
+     "Approved" behind a checkmark once pressed — so the pill was
+     repeating it.
+
+     The `changes_requested` status survives both removals: it's still
+     in the status map and a table row's reject still sets it over
+     `sh:conv-row-decision`. Nothing in the card paints it any more,
+     though, so that state is currently invisible here — re-add the
+     pill (applyStatus() in home_conversation_cadence.js still drives
+     `[data-sh-cadence-status]` when it exists) if it needs showing.
+
+     Three SLDS classes, each for one thing:
+
+       slds-docked-form-footer  the footer's flex layout and padding.
+                                NOT its positioning: SLDS docks it to
+                                the VIEWPORT (`position: fixed;
+                                bottom: 0; left: 0; width: 100%;
+                                z-index: 8000`), which would pin this
+                                bar to the bottom of the browser window
+                                and float it over the page. The rule in
+                                home_conversation.scss undoes all four and
+                                bleeds the footer to the card's edges
+                                instead. Drop that override and the
+                                footer leaves the card.
+
+       slds-theme_shade         the grey fill. The docked-footer class
+                                sets its own background, but shade is
+                                declared later in the sheet and wins,
+                                so this needs no override.
+
+       slds-border_top          the line above it, in place of the
+                                docked footer's upward shadow, which
+                                home_conversation.scss clears. #}
+  <div class="slds-docked-form-footer slds-theme_shade slds-border_top seller-home__conv-cadence-batch">
+    <div class="seller-home__conv-cadence-actions" role="group" aria-label="Sequence actions">
+      {# Stateful, so approving swaps the label to "Approved" behind a
+         checkmark instead of just greying out. Both labels live here
+         rather than in JS, which now only flips the state classes —
+         see applyActions() in home_conversation_cadence.js.
+
+         `slds-not-selected` (no `is-`) is the resting class SLDS
+         actually keys the span visibility off; `slds-is-selected` is
+         its opposite. The pair is mutually exclusive.
+
+         Two spans, where SLDS's canonical stateful button has three.
+         The third, `slds-text-selected-focus`, is the undo label a
+         Follow button shows as "Unfollow" on hover once selected —
+         there's no un-approve here, the button disables the moment it
+         flips. That case is handled: SLDS ships
+         `.slds-is-selected[disabled]:hover .slds-text-selected`, which
+         keeps "Approved" showing rather than blanking the button on
+         hover the way an enabled selected button with no third span
+         would. #}
+      <button
+        type="button"
+        class="slds-button slds-button_neutral slds-button_stateful slds-not-selected seller-home__conv-review-btn"
+        data-sh-cadence-approve
+        aria-live="assertive"
+        aria-pressed="false"
+      >
+        <span class="slds-text-not-selected">Approve</span>
+        <span class="slds-text-selected">
+          <svg class="slds-button__icon slds-button__icon_small slds-button__icon_left" aria-hidden="true">
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+          </svg>Approved</span>
+      </button>
+      <button
+        type="button"
+        class="slds-button slds-button_brand seller-home__conv-review-btn seller-home__conv-review-btn--batch"
+        data-sh-cadence-approve-all
+      >Approve All</button>
+    </div>
   </div>
 
   {# Replaces the body / actions / batch once every sequence is
@@ -327,6 +402,17 @@
 
   {# Status labels + modifiers for JS, same pattern the review used. #}
   <script type="application/json" data-sh-cadence-statuses="{{ cadence.id }}">{{ _cadenceStatuses | tojson | safe }}</script>
+
+  {# The Cadence lookup's records. A data block rather than an inline
+     assignment so authored strings never land in executable script —
+     the same treatment the status map above gets.
+
+     There is no matching block for the Prospect lookup: its records are
+     the roster, which is already on this section as
+     `data-sh-cadence-prospects`. home_conversation_cadence.js reshapes
+     that one array into the name / title / account the field speaks, so
+     the two can't disagree about who exists. #}
+  <script type="application/json" data-sh-cadence-list>{{ cadences | tojson | safe }}</script>
 </section>
 
 {#
@@ -417,9 +503,27 @@
   {{ stepIconRail(step.type, _collapsed) }}
 
   <div class="seller-home__conv-step-content">
+    {#- Reads "First touch • Email 1 • Day 1": the touch's purpose
+        first, since that's what a reviewer scans for, then the slot
+        and the pacing as bullet-separated qualifiers. The label
+        carries no colon — it separated the two parts when the label
+        led, and now it would trail the row.
+
+        The separators are `-value` spans (the same weight as the
+        purpose) while the qualifiers they introduce are `-label`
+        spans, so the line steps between weights. They're
+        `aria-hidden` because a heading that reads "First touch bullet
+        Email 1 bullet Day 1" is noise; the h4's gap does the visual
+        spacing, so the missing whitespace in the markup is fine.
+
+        The Day part is guarded — a step authored without `day` drops
+        its bullet with it rather than rendering a bare "Day". -#}
     <h4 class="seller-home__conv-step-header" data-sh-step-header>
-      <span class="seller-home__conv-step-header-label">{{ step.headerLabel }}</span>
       <span class="seller-home__conv-step-header-value">{{ step.headerValue }}</span>
+      <span class="seller-home__conv-step-header-value" aria-hidden="true">•</span><span class="seller-home__conv-step-header-label">{{ step.headerLabel }}</span>
+      {%- if step.day %}
+      <span class="seller-home__conv-step-header-value" aria-hidden="true">•</span><span class="seller-home__conv-step-header-label">Day {{ step.day }}</span>
+      {%- endif %}
     </h4>
 
     {{ stepCard(step, p) }}
@@ -548,14 +652,24 @@
    `slds-icon_container_circle` supplies the circular chip and
    `slds-current-color` flips the SVG fill to `currentColor`, without
    which SLDS paints the glyph white on a pastel chip. The chip's own
-   colors come from `--{{ type }}` modifiers in the stylesheet. #}
+   colors come from `--{{ type }}` modifiers in the stylesheet.
+
+   `_brandLogo` is the exception to all of that. LinkedIn ships as a
+   brand mark — a raster tile, opaque #0a66c2 edge to edge with a white
+   glyph knocked out of it — so there's no transparency to tint through
+   and nothing to hand `currentColor`. It can't go through the sprite
+   path, and it can't go through the CSS mask the nav icons use either
+   (masking an opaque square yields a filled square). It fills the chip
+   instead, and home_conversation.scss paints the chip brand blue underneath
+   so the hover chevron sits on the same field. #}
 {# `collapsed` renders the button's resting state to match an article
    that starts collapsed. It matters that the verb here agrees with the
    class on the article: collapseStep() flips the label by rewriting the
    leading verb (`^Collapse` → `Expand` and back), so a button that
    started on the wrong word would keep saying the wrong thing. #}
 {% macro stepIconRail(type, collapsed) %}
-{%- set _icon = { email: 'email', call: 'call', linkedin: 'share_post' } -%}
+{%- set _icon = { email: 'email', call: 'call' } -%}
+{%- set _brandLogo = { linkedin: '/assets/images/channel-icons/linkedin.png' } -%}
 {%- set _label = { email: 'Email', call: 'Call', linkedin: 'LinkedIn' } -%}
 {%- set _name = _label[type] | default(type) -%}
 <div class="seller-home__conv-step-rail seller-home__conv-step-rail--{{ type }}">
@@ -568,9 +682,15 @@
     title="Click to {{ 'expand' if collapsed else 'collapse' }}"
   >
     <span class="slds-icon_container slds-icon_container_circle slds-current-color seller-home__conv-step-chip seller-home__conv-step-chip--type">
+      {%- if _brandLogo[type] %}
+      {# alt="" — the assistive-text span below already names the
+         channel, and the button's own aria-label repeats it. #}
+      <img class="seller-home__conv-step-chip-logo" src="{{ _brandLogo[type] }}" alt="" />
+      {%- else %}
       <svg class="slds-icon slds-icon_x-small" aria-hidden="true">
         <use xlink:href="/assets/icons/action-sprite/svg/symbols.svg#{{ _icon[type] | default('email') }}"></use>
       </svg>
+      {%- endif %}
       <span class="slds-assistive-text">{{ _name }}</span>
     </span>
     <span class="slds-icon_container slds-icon_container_circle slds-current-color seller-home__conv-step-chip seller-home__conv-step-chip--chevron" aria-hidden="true">
