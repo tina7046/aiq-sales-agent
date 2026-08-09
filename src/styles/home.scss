@@ -2878,59 +2878,35 @@ main.app-wrapper {
 // ══════════════════════════════════════════════════════════════════════
 // Knowledge banner — promo block above the search field
 // ----------------------------------------------------------------------
-// Two columns: copy + CTA on the left, illustration on the right. First
-// child of the 50rem inner column, so it shares the content column's
-// width and left edge instead of bleeding across the section.
+// Two columns: copy + CTA on the left, animated illustration over an
+// isometric grid on the right. First child of the 50rem inner column,
+// so it shares the content column's width and left edge.
 //
-// Height is driven by the copy, not fixed. The illustration column
-// stretches to match whatever height the text lands on and its art
-// crops to fit, so the description can grow a line (longer copy,
-// narrower viewport) without any of these numbers being retuned.
+// Height is whichever side needs more. The art is a fixed-ratio box
+// (1:1), so it sets a 400px floor at the 800px cap; the copy is
+// shorter, and centres vertically in the extra height.
 //
-// Palette is sampled from the artwork rather than invented, so the
-// illustration and the surface it sits on can't drift apart:
-//   • #f5f2fb — the tint of the art's own left panel. Using it as the
-//     whole banner's background is what makes the seam invisible: the
-//     illustration's left edge is that same colour, so the decorative
-//     arc inside the art reads as the boundary between copy and picture
-//     instead of the column edge reading as a hard cut.
+// Palette:
+//   • #f5f2fb — the banner surface. The SVG is transparent, so this
+//     tint shows through behind the picture.
 //   • #ece1f9 / #401075 — the light lavender and deep purple from the
 //     AI doctype icon (see the Auto-Learning rows in the list below),
 //     reused for the badge so the two AI surfaces on this page match.
 // ══════════════════════════════════════════════════════════════════════
 .knowledge-banner {
-  // "Got it" dismisses the banner by setting the `hidden` attribute
-  // (see bindKnowledgeBanner in home.js). The UA rule for `[hidden]` is
-  // `display: none`, but it's weaker than the class below, so without
-  // this the attribute would be set and the banner would stay visible.
   &[hidden] {
     display: none;
   }
 
   display: flex;
-  align-items: stretch; // illustration column matches the copy's height
+  align-items: stretch;
 
-  overflow: hidden; // clips the art to the rounded corners
+  position: relative;
+  overflow: hidden;
   border-radius: var(--slds-g-radius-border-3, 0.75rem);
-  background: #f5f2fb; // sampled from the artwork — see above
+  background: #f5f2fb;
 
   // ── Dismiss ──
-  // Transform and opacity only — the banner never changes size. An
-  // earlier version collapsed its height so the list below could rise
-  // into the gap, but animating a layout property means the box is
-  // being shortened while you can still see it, and `overflow: hidden`
-  // above turns that into the copy getting visibly guillotined. Scaling
-  // moves the whole thing as one piece instead.
-  //
-  // Values are the modal close from transitions.dev (06-modal.md) —
-  // same 150ms, same 0.96, same easing — because it's the same gesture:
-  // a surface dipping back and fading rather than going anywhere. They
-  // aren't `var(--modal-*)` because that block lives in
-  // home_conversation.scss, which this page doesn't load, and a banner
-  // borrowing a modal's tokens would be a lie about what it is.
-  //
-  // The space the banner occupies closes when home.js sets `hidden`, in
-  // one step, after the fade has finished. See the note there.
   transform-origin: center;
   transition:
     transform var(--knowledge-banner-fade) var(--knowledge-banner-ease),
@@ -2940,158 +2916,160 @@ main.app-wrapper {
   &.is-dismissing {
     transform: scale(0.96);
     opacity: 0;
-    pointer-events: none; // nothing clickable while it's on its way out
+    pointer-events: none;
   }
 
-  // No transition means no `transitionend`, so home.js checks this same
-  // query and hides the banner outright rather than waiting on an event
-  // that will never arrive.
   @media (prefers-reduced-motion: reduce) {
     transition: none;
   }
 }
 
 // ── Copy column ──
-// Takes the leftover width. `min-width: 0` lets the description wrap
-// instead of forcing the flex row wider than the 800-px column.
-// `align-items: flex-start` keeps the button at its intrinsic width —
-// without it, `stretch` would blow the pill out to the full column.
 .knowledge-banner__content {
+  position: relative; // above the backdrop
   flex: 1 1 auto;
   min-width: 0;
 
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--slds-g-spacing-5, 1.5rem); // 24px, text group → button
+  gap: var(--slds-g-spacing-5, 1.5rem);
 
-  padding: var(--slds-g-spacing-5, 1.5rem); // 24px
+  padding: var(--slds-g-spacing-5, 1.5rem);
 }
 
 // ── Badge ──
-// `inline-block` (not inline) so the margin below it actually applies
-// and the pill's vertical padding doesn't overlap the title.
-// Purple pill. `.seller-home__knowledge-doc-badge` (doc rows, further
-// down) reuses this color pair on purpose — change both together.
 .knowledge-banner__badge {
   display: inline-block;
-  margin-block-end: var(--slds-g-spacing-2, 0.5rem); // 8px
+  margin-block-end: var(--slds-g-spacing-2, 0.5rem);
 
-  padding: 0.125rem var(--slds-g-spacing-2, 0.5rem); // 2px / 8px
+  padding: 0.125rem var(--slds-g-spacing-2, 0.5rem);
   border-radius: var(--slds-g-radius-border-pill, 15rem);
   background: #ece1f9;
 
-  color: #401075;
-  font-size: 0.6875rem; // 11px — a label, one step under body text
+  color: var(--slds-g-color-palette-purple-20, #401075);
+  font-size: 0.6875rem;
   font-weight: 600;
   line-height: 1rem;
   white-space: nowrap;
 }
 
-// Margins are set on the text elements themselves rather than on their
-// unclassed wrapper div, so the spacing doesn't depend on a bare
-// element selector that any future markup change could break.
 .knowledge-banner__title {
-  margin: 0 0 var(--slds-g-spacing-1, 0.25rem); // 4px
-  color: var(--slds-g-color-on-surface-2, #2e2e2e);
-  font-size: 1.25rem; // 20px
+  margin: 0 0 var(--slds-g-spacing-1, 0.25rem);
+  color: var(--slds-g-color-palette-purple-15, #300B60);
+  font-size: 1.25rem;
   font-weight: 700;
   line-height: 1.75rem;
 }
 
 .knowledge-banner__description {
   margin: 0;
-  // ~50 characters per line. The copy would otherwise run the full
-  // width of the column, which reads as a wall of text at this size.
   max-width: 34rem;
 
-  color: var(--slds-g-color-on-surface-1, #5c5c5c);
-  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
-  line-height: 1.125rem; // 18px
+  color: var(--slds-g-color-palette-purple-15, #300B60);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  line-height: 1.125rem;
 }
 
 // ── Run summary ──
-// One line of facts about the last auto-learning run, under the
-// description. 12px against the description's 13px so it reads as
-// evidence for the sentence above rather than a second claim.
-//
-// Flex + wrap (not inline text) so the line breaks BETWEEN facts
-// instead of splitting "1,468 call recordings" across two lines. No
-// `max-width` here (unlike the description): the line should use every
-// pixel the column has before it wraps.
-//
-// The current copy needs ~436px against the column's ~448px, so it fits
-// on one line — but only by ~12px. Lengthening either phrase wraps it,
-// which is safe: the separators stay attached to the phrase after them
-// (see the template) so none is orphaned at the end of a line, and at
-// narrow widths the facts stack one per line.
+// Label over value per fact, side by side.
 .knowledge-banner__stats {
-  margin: var(--slds-g-spacing-2, 0.5rem) 0 0; // 8px below description
+  margin: var(--slds-g-spacing-3, 0.75rem) 0 0;
 
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 var(--slds-g-spacing-2, 0.5rem); // 8px between facts
-
-  color: var(--slds-g-color-on-surface-1, #5c5c5c);
-  font-size: 0.75rem; // 12px
-  line-height: 1.125rem; // 18px — matches the description's leading
+  align-items: flex-start;
+  gap: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-5, 1.5rem);
 }
 
-// One fact, plus the separator that introduces it. Flex so that
-// separator sits an even 8px from the phrase — matching the gap between
-// facts — without depending on the markup's whitespace.
 .knowledge-banner__stat {
   display: flex;
-  align-items: baseline;
-  gap: var(--slds-g-spacing-2, 0.5rem); // 8px
+  flex-direction: column;
 }
 
-// Muted a step below the facts so the line reads as three phrases with
-// quiet dividers, not as one string of equal-weight glyphs.
-.knowledge-banner__stats-sep {
-  color: var(--slds-g-color-on-surface-3, #939393);
+.knowledge-banner__stat-label {
+  color: var(--slds-g-color-palette-purple-15, #300B60);
+  font-size: 0.75rem;
+  font-weight: 590;
+  line-height: 1rem;
+}
+
+.knowledge-banner__stat-value {
+  margin-inline-start: 0;
+
+  color: var(--slds-g-color-palette-purple-15, #300B60);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  font-weight: 400;
+  line-height: 1.125rem;
 }
 
 // ── CTA ──
-// The markup carries `slds-button slds-button_neutral`, so everything
-// visual — 32-px height, pill radius, white surface, brand-blue label,
-// and the hover that darkens that label to navy — comes from SLDS.
-//
-// This used to reproduce all of it here from the same tokens, on the
-// reasoning that the authored markup only had its own class. It matched
-// at rest and drifted on hover: the copy changed the background but not
-// the label colour, so the pill sat next to an identical-looking
-// "+ New Knowledge" that behaved differently under the cursor. Nothing
-// is reproduced now, so there is nothing left to drift.
-//
-// One declaration remains, and it's the only genuinely banner-specific
-// one: the button shares a flex row with the copy column, and without
-// this it gets squeezed as that column grows.
 .knowledge-banner__button {
   flex: 0 0 auto;
 }
 
 // ── Illustration column ──
-// Fixed share of the width so the copy gets the rest. `display: flex`
-// is only here to let the empty child stretch to the column's full
-// height without needing absolute positioning.
 .knowledge-banner__illustration-col {
-  flex: 0 0 38%;
+  flex: 0 0 50%;
   display: flex;
+  align-items: center;
+  justify-content: center;
+
+  position: relative;
+  overflow: hidden;
 }
 
-// The art itself. The authored element is empty, so it arrives as a
-// background: `cover` fills the column at any height the copy dictates,
-// and `left center` anchors the art's decorative arc against the copy
-// column — cropping off the right of the illustration rather than the
-// left, which is the edge that has to line up.
+// The sizing box — 1:1 ratio from the asset's viewBox.
 .knowledge-banner__illustration {
-  flex: 1 1 auto;
-  background-image: url("/assets/images/illustrations/knowledge-banner.png");
-  background-repeat: no-repeat;
-  background-position: left center;
-  background-size: cover;
+  position: relative;
+
+  aspect-ratio: 1 / 1;
+}
+
+.knowledge-banner__illustration-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+// ── Isometric backdrop ──
+// CSS-only grid: two repeating gradients at the projection's angles.
+.iso-grid {
+  --iso-ink: var(--slds-g-color-palette-purple-90, #ece1f9);
+  --iso-cell: 24px;
+  --iso-weight: 1px;
+  --iso-feather: 26%;
+
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  background-image:
+    repeating-linear-gradient( 30deg, var(--iso-ink) 0 var(--iso-weight),
+                               transparent var(--iso-weight) var(--iso-cell)),
+    repeating-linear-gradient(-30deg, var(--iso-ink) 0 var(--iso-weight),
+                               transparent var(--iso-weight) var(--iso-cell));
+
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--iso-feather));
+          mask-image: linear-gradient(to right, transparent 0, #000 var(--iso-feather));
+}
+
+@media (prefers-contrast: more) {
+  .iso-grid {
+    display: none;
+  }
+}
+
+// ── Reduced motion ──
+// The asset's own rule only removes 22 of 502 animations. This blanket
+// pause catches the other 480, holding the picture completely still.
+// Only works because the SVG is inlined — through an <img> this would
+// match nothing.
+@media (prefers-reduced-motion: reduce) {
+  .knowledge-banner__illustration-svg,
+  .knowledge-banner__illustration-svg * {
+    animation-play-state: paused !important;
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════

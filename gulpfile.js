@@ -169,6 +169,81 @@ nunjucksEnv.addGlobal('today', () => {
     .map((p) => p.value)
     .join(' ')
 })
+// `inlineSvg("<path under src/assets>", { attr: value })` — drop an SVG's
+// markup straight into the page instead of pointing an `<img>` at it.
+//
+// Why inline at all, when `<img>` is the simpler embed: an image is its
+// own document. It never learns what the host page was asked for, so
+// neither the page's `@media (prefers-reduced-motion: reduce)` rules nor
+// the SVG's own reach it, and an endlessly looping illustration keeps
+// looping for someone who asked for less motion. Inlined, the file's
+// stylesheet joins this document and the query finally evaluates against
+// the reader's preference. That's the whole reason this exists — an SVG
+// that doesn't animate should stay an `<img>`, which caches as its own
+// request and can't collide with anything on the page.
+//
+// Read at build time rather than pasted into a template, because these
+// files are generated artifacts: a pasted copy is one asset rebuild away
+// from being silently stale, and the source file's own handoff says not
+// to hand-edit it. Same reason the attributes are injected here — adding
+// `role`/`aria-label`/`class` to the root tag at render time leaves the
+// file on disk byte-identical to what its generator produced.
+//
+// Returns a plain string, so callers need `| safe` — the same marker the
+// `emphasis` filter uses to mark "this deliberately renders as markup".
+// Forgetting it escapes the whole SVG into visible text, which is a loud
+// enough failure to catch immediately.
+//
+// One caveat inherited from inlining stays with the caller: the file's
+// `<style>` is document-scoped rather than sandboxed. The other — that
+// an inline SVG brings its ids into the document, so normally only one
+// copy per page — is what `idPrefix` is for. Pass a distinct one per
+// copy and every id, every `url(#…)` and every `#…` in the embedded
+// stylesheet is renamed to match, which is what lets the same artwork
+// appear twice. Without it a second copy duplicates all 29 ids, and the
+// CSS keyed on `#Scan_root` would style both roots from whichever copy
+// the browser saw first.
+nunjucksEnv.addGlobal('inlineSvg', (name, attrs, idPrefix) => {
+  let svg
+  try {
+    svg = fs.readFileSync(path.resolve('./src/assets/' + name), 'utf8')
+  } catch (e) {
+    // Same posture as `readData`: a visible no-op beats failing the build.
+    return '<!-- inlineSvg: could not read src/assets/' + name + ' -->'
+  }
+
+  // An XML prolog is legal in a standalone file and invalid mid-document.
+  svg = svg.replace(/^\uFEFF/, '').replace(/^\s*<\?xml[^>]*\?>\s*/, '')
+
+  // Rename every id the file declares, and every reference to one. The
+  // references live in three places — `url(#x)` in fills, `href="#x"` in
+  // <use>, and bare `#x` selectors in the embedded stylesheet — and all
+  // three are just `#x` in the text, so one pass over `#id` covers them.
+  //
+  // Longest ids first: `#sc-s7` would otherwise match inside `#sc-s7-x`
+  // and rename half of it. Already-renamed text can't be hit twice,
+  // because the prefix lands between the `#` and the old name.
+  if (idPrefix) {
+    const ids = [...svg.matchAll(/\sid="([^"]+)"/g)]
+      .map((m) => m[1])
+      .sort((a, b) => b.length - a.length)
+
+    for (const oldId of ids) {
+      const esc = oldId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      svg = svg
+        .replace(new RegExp(`id="${esc}"`, 'g'), () => `id="${idPrefix}${oldId}"`)
+        .replace(new RegExp(`#${esc}\\b`, 'g'), () => `#${idPrefix}${oldId}`)
+    }
+  }
+
+  const extra = Object.keys(attrs || {})
+    .map((k) => ' ' + k + '="' + String(attrs[k]).replace(/"/g, '&quot;') + '"')
+    .join('')
+
+  // Function replacement, not a string: `$&` and friends in an attribute
+  // value would otherwise be read as replacement patterns.
+  return svg.replace(/<svg\b/, () => '<svg' + extra)
+})
 
 gulp.task('views', () =>
   gulp
@@ -220,7 +295,13 @@ gulp.task('default',
     gulp.watch('src/styles/**/*.scss', gulp.series('styles'))
     gulp.watch([
       'src/views/**/*.html',
-      'src/views/data/*.json'
+      'src/views/data/*.json',
+
+      // `inlineSvg` copies these into the markup at build time, so a
+      // rebuilt illustration only reaches the page if the views rebuild
+      // too — the `assets` watch below refreshes the standalone file and
+      // would otherwise leave the inlined copy stale.
+      'src/assets/images/illustrations/*.svg'
     ], gulp.series('views'))
     gulp.watch('src/assets/**/*.{woff,woff2,txt,jpg,png,gif,svg}', gulp.series('assets'))
     gulp.watch('src/scripts/**/*.js', gulp.series('scripts'))

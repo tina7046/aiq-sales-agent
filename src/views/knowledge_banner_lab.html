@@ -32,23 +32,30 @@
 
   What the page gives you that the Knowledge page doesn't
   -------------------------------------------------------
-  The dismiss, on a loop and with its clock exposed. In the app the
-  gesture is a one-way door — "Got it" hides the banner for the rest of
-  the session, and the only way back is the Home tab, which is a full
-  page load. Here Replay puts it back untouched, so the same gesture can
-  be watched twenty times in a row.
-
-  The four numbers behind it are sliders. They're the custom properties
-  the copied CSS and the copied script both read off the DOM
-  (--knowledge-banner-fade / -settle / -glide-delay / -ease), written
-  live onto the column, so a value can be judged by eye before it's
-  written back into home.scss. Nothing in the component knows the
-  toolbar exists.
+  The banner twice over, as competing backdrop variants, so two
+  treatments can be judged against each other rather than one at a time
+  from memory. Each is a full working copy with its own dismiss.
 
   The glide is the reason for the filler rows and the fixed-height
   scroll area below. Half the gesture is everything under the banner
   moving up into its space; on a page where the banner is the only thing
   there, that half is invisible.
+
+  What it used to have, and doesn't
+  ----------------------------------
+  A toolbar of sliders over the stage, writing the four motion tokens
+  (--knowledge-banner-fade / -settle / -glide-delay / -ease) live onto
+  the column so a timing could be judged by eye, plus a Replay button
+  that put a dismissed banner back without a reload.
+
+  Both are gone from the markup. The machinery behind them is not: the
+  script still binds anything carrying `data-kb-token` and still wires
+  `data-kb-replay` if it finds one, and the styles for `.kb-toolbar*`
+  are still in the stylesheet. Re-adding the markup is all it would take
+  to get either back — see the git history of this file for the block.
+
+  Until then, a dismissed banner comes back on reload, which the lab can
+  afford because it deliberately doesn't persist dismissal (below).
 
   What it doesn't have: the preload script. On the real page a small
   inline script hides the banner during parse if it was dismissed
@@ -79,23 +86,6 @@
   <div class="kb-col">
 
     <h1 class="kb-title">Knowledge banner — lab</h1>
-    <p class="kb-sub">
-      The banner as the Knowledge page renders it today, on its own page
-      with its own copies of the template, styles, script and data.
-      Sandbox only — nothing here affects the demo. Port a change by
-      diffing <code>_knowledge_banner_lab_card.html</code> against the
-      banner block in <code>knowledge.html</code>, and
-      <code>knowledge_banner_lab.scss</code> against the “Knowledge
-      banner” section of <code>home.scss</code>.
-    </p>
-    <p class="kb-sub">
-      Press <strong>Got it</strong> to run the dismiss, then
-      <strong>Replay</strong> to put the banner back and run it again.
-      The sliders write the four motion tokens live, so a timing can be
-      judged by eye before it goes back into the stylesheet. The rows
-      under the banner are filler — they exist so the second half of the
-      gesture, everything below gliding up, has something to move.
-    </p>
 
     {#- ── Change log ────────────────────────────────────────────────
         The other labs keep their list inside a Nunjucks comment so the
@@ -112,64 +102,6 @@
     -#}
 
     {#
-      Motion tokens, as live controls. Each input names the property it
-      writes; the script pairs it with the readout of the same name and
-      sets it on the column. The starting values are the ones currently
-      in home.scss — keep them in step, or the lab opens on a timing the
-      app doesn't have.
-    #}
-    <div class="kb-toolbar" role="group" aria-label="Dismiss motion">
-      <div class="kb-toolbar-row">
-        <label class="kb-toolbar-label" for="kb-fade">Banner fade</label>
-        <input
-          type="range" id="kb-fade"
-          min="0" max="600" step="10" value="150"
-          data-kb-token="--knowledge-banner-fade" data-kb-unit="ms"
-        />
-        <span class="kb-toolbar-value" data-kb-value="--knowledge-banner-fade"></span>
-      </div>
-
-      <div class="kb-toolbar-row">
-        <label class="kb-toolbar-label" for="kb-settle">Content settle</label>
-        <input
-          type="range" id="kb-settle"
-          min="0" max="900" step="10" value="350"
-          data-kb-token="--knowledge-banner-settle" data-kb-unit="ms"
-        />
-        <span class="kb-toolbar-value" data-kb-value="--knowledge-banner-settle"></span>
-      </div>
-
-      {# How far into the fade the glide starts — the overlap between
-         the two halves. Past the fade's own duration they stop
-         overlapping and run back to back, which is the thing this
-         slider exists to let you hear the difference on. #}
-      <div class="kb-toolbar-row">
-        <label class="kb-toolbar-label" for="kb-delay">Glide delay</label>
-        <input
-          type="range" id="kb-delay"
-          min="0" max="300" step="5" value="30"
-          data-kb-token="--knowledge-banner-glide-delay" data-kb-unit="ms"
-        />
-        <span class="kb-toolbar-value" data-kb-value="--knowledge-banner-glide-delay"></span>
-      </div>
-
-      <div class="kb-toolbar-row">
-        <label class="kb-toolbar-label" for="kb-ease">Easing</label>
-        <select id="kb-ease" data-kb-token="--knowledge-banner-ease">
-          <option value="cubic-bezier(0.22, 1, 0.36, 1)" selected>ease-out-quint — current</option>
-          <option value="cubic-bezier(0.4, 0, 0.2, 1)">ease-in-out — material</option>
-          <option value="cubic-bezier(0.16, 1, 0.3, 1)">ease-out-expo</option>
-          <option value="cubic-bezier(0.33, 1, 0.68, 1)">ease-out-cubic</option>
-          <option value="ease">ease</option>
-          <option value="linear">linear</option>
-        </select>
-        <button type="button" class="slds-button slds-button_neutral kb-replay" data-kb-replay>
-          Replay
-        </button>
-      </div>
-    </div>
-
-    {#
       Stands in for the Knowledge page's scroll area. Fixed height and
       its own scrollbar on purpose: how the glide reads depends on there
       being a viewport edge for the content to move against.
@@ -179,7 +111,20 @@
          inline styles, which is the only way to outrank the copied
          rule's own declarations — see the note in the script. #}
       <div class="kb-column" data-kb-tokens>
-        {{ bannerCard.banner(banner) }}
+        {# Two backdrop treatments of the same banner, stacked so they
+           can be judged against each other. They differ ONLY in where
+           the isometric grid is drawn — same copy, same artwork, same
+           dismiss.
+
+           The third argument is the id namespace for the inlined SVG.
+           Two copies of the artwork on one page would otherwise declare
+           the same 29 ids twice; the keys keep each copy referring to
+           its own gradients. They must stay distinct. #}
+        <p class="kb-variant-label">Grid across the full banner</p>
+        {{ bannerCard.banner(banner, 'full', 'a-') }}
+
+        <p class="kb-variant-label">Grid on the illustration column only</p>
+        {{ bannerCard.banner(banner, 'right', 'b-') }}
 
         {% for row in filler %}
         <div class="kb-filler">{{ row }}</div>

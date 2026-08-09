@@ -258,33 +258,44 @@
   // LAB ONLY — never port anything below this line
   // ══════════════════════════════════════════════════════════════════
 
-  var banner = document.querySelector('[data-sh-knowledge-banner]')
-  if (!banner) return
+  // All of them, not one: the page renders the banner once per backdrop
+  // variant so they can be compared, and each needs its own dismiss.
+  // A dismissed banner keeps its place in the DOM — `dropBanner` sets
+  // the `hidden` attribute rather than removing the element — so this
+  // list stays valid for the life of the page.
+  var banners = document.querySelectorAll('[data-sh-knowledge-banner]')
+  if (!banners.length) return
 
-  // Snapshot of the banner as authored, so Replay can put back exactly
-  // what the first run started from — including any classes or inline
-  // styles a half-finished dismiss left behind.
-  var pristine = banner.cloneNode(true)
-
-  bindKnowledgeBanner(banner)
+  // One snapshot per banner, taken as authored, so Replay can put each
+  // back exactly as its first run started — including any classes or
+  // inline styles a half-finished dismiss left behind. `current` tracks
+  // the live element, since Replay swaps in a fresh clone each time.
+  var slots = []
+  for (var i = 0; i < banners.length; i++) {
+    slots.push({ current: banners[i], pristine: banners[i].cloneNode(true) })
+    bindKnowledgeBanner(banners[i])
+  }
 
   var replay = document.querySelector('[data-kb-replay]')
   if (replay) {
     replay.addEventListener('click', function () {
-      var current = document.querySelector('[data-sh-knowledge-banner]')
-      var fresh = pristine.cloneNode(true)
-      current.parentNode.replaceChild(fresh, current)
+      for (var s = 0; s < slots.length; s++) {
+        var slot = slots[s]
+        var fresh = slot.pristine.cloneNode(true)
+        slot.current.parentNode.replaceChild(fresh, slot.current)
+        slot.current = fresh
 
-      // The siblings can still be carrying the glide's transform if
-      // Replay is hit mid-dismiss.
-      var next = fresh.nextElementSibling
-      while (next) {
-        next.classList.remove('is-settling')
-        next.style.transform = ''
-        next = next.nextElementSibling
+        // The siblings can still be carrying the glide's transform if
+        // Replay is hit mid-dismiss.
+        var next = fresh.nextElementSibling
+        while (next) {
+          next.classList.remove('is-settling')
+          next.style.transform = ''
+          next = next.nextElementSibling
+        }
+
+        bindKnowledgeBanner(fresh)
       }
-
-      bindKnowledgeBanner(fresh)
     })
   }
 

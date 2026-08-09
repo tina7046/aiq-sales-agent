@@ -45,7 +45,7 @@
   margin-bottom: var(--slds-g-spacing-2, 0.5rem);
   font-size: var(--slds-g-font-scale-5, 1.5rem);
   font-weight: 700;
-  color: var(--slds-g-color-on-surface-1, #181818);
+  color: var(--slds-g-color-palette-purple-20, #401075);
 }
 
 .kb-sub {
@@ -147,6 +147,18 @@
 // move. Deliberately plain — the doc list's real styling isn't what's
 // being designed here, and copying it would be one more thing to keep
 // in sync for no benefit.
+// Names the backdrop variant sitting under it. Lab furniture, not part
+// of the banner — it isn't in the column's flex flow by accident, it
+// just rides the same 16px gap the filler rows do.
+.kb-variant-label {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-neg-2, 0.75rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--slds-g-color-on-surface-3, #939393);
+}
+
 .kb-filler {
   padding: var(--slds-g-spacing-3, 0.75rem);
   border: 1px solid var(--slds-g-color-border-1, #e5e5e5);
@@ -243,18 +255,19 @@
 // child of the 50rem inner column, so it shares the content column's
 // width and left edge instead of bleeding across the section.
 //
-// Height is driven by the copy, not fixed. The illustration column
-// stretches to match whatever height the text lands on and its art
-// crops to fit, so the description can grow a line (longer copy,
-// narrower viewport) without any of these numbers being retuned.
+// Height is whichever side needs more. The art is a fixed-ratio box
+// now (see the illustration column), so it sets a 296px floor at the
+// 800px cap; the copy currently asks for 290.5px, which is why the two
+// look tuned to each other. They aren't pinned together, though —
+// longer copy or a narrower viewport just makes the text the taller
+// side and the picture centres in the extra height.
 //
-// Palette is sampled from the artwork rather than invented, so the
-// illustration and the surface it sits on can't drift apart:
-//   • #f5f2fb — the tint of the art's own left panel. Using it as the
-//     whole banner's background is what makes the seam invisible: the
-//     illustration's left edge is that same colour, so the decorative
-//     arc inside the art reads as the boundary between copy and picture
-//     instead of the column edge reading as a hard cut.
+// Palette:
+//   • #f5f2fb — the banner surface. Nothing in the art competes with
+//     it: the SVG is transparent (it has no background panel at all),
+//     so this tint shows through behind the picture and the two
+//     columns are literally the same surface. There's no seam to hide
+//     rather than a seam hidden well.
 //   • #ece1f9 / #401075 — the light lavender and deep purple from the
 //     AI doctype icon (see the Auto-Learning rows in the list below),
 //     reused for the badge so the two AI surfaces on this page match.
@@ -269,11 +282,16 @@
   }
 
   display: flex;
-  align-items: stretch; // illustration column matches the copy's height
+  align-items: stretch; // both columns run the full height of the taller
+
+  // The positioning parent for a full-width `.iso-grid`, which pins to
+  // `inset: 0`. `overflow: hidden` below is the other half of what that
+  // backdrop needs — it's what keeps the lattice inside the radius.
+  position: relative;
 
   overflow: hidden; // clips the art to the rounded corners
   border-radius: var(--slds-g-radius-border-3, 0.75rem);
-  background: #f5f2fb; // sampled from the artwork — see above
+  background: #f5f2fb; // shows through the transparent art — see above
 
   // ── Dismiss ──
   // Transform and opacity only — the banner never changes size. An
@@ -318,6 +336,14 @@
 // `align-items: flex-start` keeps the button at its intrinsic width —
 // without it, `stretch` would blow the pill out to the full column.
 .knowledge-banner__content {
+  // Lifts the copy above the backdrop. Set here, on the column itself,
+  // rather than as a blanket `.knowledge-banner > *` — that selector
+  // has the same one-class weight as `.iso-grid` and would win on
+  // source order, turning the backdrop's `position: absolute` back into
+  // `relative` and collapsing it to a nought-high flex item. The grid's
+  // own documentation calls this out as the one way it disappears.
+  position: relative;
+
   flex: 1 1 auto;
   min-width: 0;
 
@@ -342,7 +368,7 @@
   border-radius: var(--slds-g-radius-border-pill, 15rem);
   background: #ece1f9;
 
-  color: #401075;
+  color: var(--slds-g-color-palette-purple-20, #401075);
   font-size: 0.6875rem; // 11px — a label, one step under body text
   font-weight: 600;
   line-height: 1rem;
@@ -354,7 +380,7 @@
 // element selector that any future markup change could break.
 .knowledge-banner__title {
   margin: 0 0 var(--slds-g-spacing-1, 0.25rem); // 4px
-  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  color: var(--slds-g-color-palette-purple-15, #300B60);
   font-size: 1.25rem; // 20px
   font-weight: 700;
   line-height: 1.75rem;
@@ -366,52 +392,66 @@
   // width of the column, which reads as a wall of text at this size.
   max-width: 34rem;
 
-  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  color: var(--slds-g-color-palette-purple-15, #300B60);
   font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
   line-height: 1.125rem; // 18px
 }
 
 // ── Run summary ──
-// One line of facts about the last auto-learning run, under the
-// description. 12px against the description's 13px so it reads as
-// evidence for the sentence above rather than a second claim.
+// Facts about the last auto-learning run, under the description. Each
+// is a quiet label over the value it belongs to, and the pairs sit side
+// by side.
 //
-// Flex + wrap (not inline text) so the line breaks BETWEEN facts
-// instead of splitting "1,468 call recordings" across two lines. No
-// `max-width` here (unlike the description): the line should use every
-// pixel the column has before it wraps.
+// Flex + wrap, so the two pairs stack one above the other rather than
+// squeezing when the column is narrow — the label/value relationship
+// survives that, which is the advantage of pairing them vertically over
+// the single wrapping sentence this used to be.
 //
-// The current copy needs ~436px against the column's ~448px, so it fits
-// on one line — but only by ~12px. Lengthening either phrase wraps it,
-// which is safe: the separators stay attached to the phrase after them
-// (see the template) so none is orphaned at the end of a line, and at
-// narrow widths the facts stack one per line.
+// `align-items: flex-start` keeps each pair its own height instead of
+// stretching the shorter one, which matters once a label wraps. The
+// column gap is 24px: wide enough to read as two groups without a
+// divider, since the stacking already does that job.
+//
+// Resets the UA's <dl> margins — the 8px above is set here, and the
+// space below belongs to the flex gap on the content column.
 .knowledge-banner__stats {
-  margin: var(--slds-g-spacing-2, 0.5rem) 0 0; // 8px below description
+  margin: var(--slds-g-spacing-3, 0.75rem) 0 0; // 8px below description
 
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 var(--slds-g-spacing-2, 0.5rem); // 8px between facts
-
-  color: var(--slds-g-color-on-surface-1, #5c5c5c);
-  font-size: 0.75rem; // 12px
-  line-height: 1.125rem; // 18px — matches the description's leading
+  align-items: flex-start;
+  gap: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-5, 1.5rem); // 8px / 24px
 }
 
-// One fact, plus the separator that introduces it. Flex so that
-// separator sits an even 8px from the phrase — matching the gap between
-// facts — without depending on the markup's whitespace.
+// One label-and-value pair.
 .knowledge-banner__stat {
   display: flex;
-  align-items: baseline;
-  gap: var(--slds-g-spacing-2, 0.5rem); // 8px
+  flex-direction: column;
 }
 
-// Muted a step below the facts so the line reads as three phrases with
-// quiet dividers, not as one string of equal-weight glyphs.
-.knowledge-banner__stats-sep {
-  color: var(--slds-g-color-on-surface-3, #939393);
+// The label — the smaller and bolder of the pair, an eyebrow over the
+// value rather than a caption under it. Both lines share purple-15, so
+// the separation is carried entirely by size and weight; colour stays
+// out of it, which is what keeps a two-line pair reading as one unit
+// instead of as two competing bits of text.
+.knowledge-banner__stat-label {
+  color: var(--slds-g-color-palette-purple-15, #300B60);
+  font-size: 0.75rem; // 12px
+  font-weight: 590;
+  line-height: 1rem; // 16px — tight, so the pair reads as one unit
+}
+
+// The value — 13px regular, a step up in size from its label and a step
+// down in weight. Shares the description's 18px leading, so a value that
+// wraps keeps the banner's rhythm instead of setting its own.
+// `margin-inline-start` resets the UA's 40px indent on <dd>.
+.knowledge-banner__stat-value {
+  margin-inline-start: 0;
+
+  color: var(--slds-g-color-palette-purple-15, #300B60);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  font-weight: 400;
+  line-height: 1.125rem; // 18px
 }
 
 // ── CTA ──
@@ -434,23 +474,140 @@
 }
 
 // ── Illustration column ──
-// Fixed share of the width so the copy gets the rest. `display: flex`
-// is only here to let the empty child stretch to the column's full
-// height without needing absolute positioning.
+// Half the width: the column caps at 800px, so this is the 400px the
+// art is drawn for and the copy column takes the matching 400px. It's
+// a percentage rather than `400px` so the split survives below the cap
+// instead of the art eating a fixed 400 out of a narrower banner.
+//
+// Centred both ways because the art no longer fills the column. It's a
+// fixed-ratio box now, so when the copy beside it is the taller of the
+// two the leftover height shows as background either side of the
+// picture rather than the picture stretching to meet it.
 .knowledge-banner__illustration-col {
-  flex: 0 0 38%;
+  flex: 0 0 50%;
   display: flex;
+  align-items: center;
+  justify-content: center;
+
+  // The positioning parent when the backdrop is scoped to this column
+  // (the `_grid-right` variant). Harmless in the other two cases —
+  // nothing is absolutely positioned inside it then. `overflow: hidden`
+  // stops the lattice from reaching under the copy, which is the only
+  // thing separating this variant from the full-width one.
+  position: relative;
+  overflow: hidden;
 }
 
-// The art itself. The authored element is empty, so it arrives as a
-// background: `cover` fills the column at any height the copy dictates,
-// and `left center` anchors the art's decorative arc against the copy
-// column — cropping off the right of the illustration rather than the
-// left, which is the edge that has to line up.
+// The sizing box. The asset is an animated SVG that ships with a
+// viewBox and no intrinsic width or height, so something has to give it
+// one — this is that something, and the ratio is the viewBox's own
+// (1814.7 × 1814.7). At the 400px this resolves to, it renders 400×400,
+// and the banner is 400 tall because of it.
+//
+// It was 1.351:1 until the stack went to five sheets: taller, not
+// wider, and capped at square. Read the ratio back out of the viewBox
+// after any rebuild rather than assuming it's still 1:1 — the asset's
+// handoff says as much, and the number below is the only place here
+// that would need to change.
+//
+// Above the backdrop. The grid is `position: absolute`, so without this
+// the picture would paint under it.
 .knowledge-banner__illustration {
-  flex: 1 1 auto;
-  background-image: url("/assets/images/illustrations/knowledge-banner.png");
-  background-repeat: no-repeat;
-  background-position: left center;
-  background-size: cover;
+  position: relative;
+  aspect-ratio: 1 / 1;
+}
+
+// The inlined <svg> fills that box exactly. `height: 100%` is safe here
+// only because the box above carries the artwork's own ratio — the two
+// belong together, and changing one without the other letterboxes the
+// picture inside its own frame.
+.knowledge-banner__illustration-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+// ── Isometric backdrop ──
+// The same ground the artwork stands on, re-cut as a page element. It's
+// two repeating gradients and one div: no image, no request, and the
+// line weight and the cell size stay independent lengths, so a 1px line
+// is 1px at any spacing. An image would have to be scaled to respace
+// the grid, and that scales the lines with it.
+//
+// The 30deg/-30deg pair is not styling — a gradient's bands run across
+// its axis, so those two angles ARE the ground axes the scene is drawn
+// on. Change them and the lattice stops agreeing with the picture
+// standing on it. Everything else here is taste.
+//
+// Which box it fills is set by where the markup puts it: the banner for
+// the full-width variant, the illustration column for the other. Both
+// parents carry `position: relative` and `overflow: hidden`.
+//
+// Ink is the one value moved off the asset's default. It ships at
+// #f6f2fb for a white panel, which is within a shade of this banner's
+// own #f5f2fb surface and disappears on it. purple-90 is the next stop
+// down and the lavender the badge already uses.
+.iso-grid {
+  --iso-ink: var(--slds-g-color-palette-purple-90, #ece1f9);
+  --iso-cell: 24px;
+  --iso-weight: 1px;
+  --iso-feather: 26%; // how far in from the left it fades up
+
+  position: absolute;
+  inset: 0;
+  pointer-events: none; // a backdrop, not a surface
+
+  background-image:
+    repeating-linear-gradient( 30deg, var(--iso-ink) 0 var(--iso-weight),
+                               transparent var(--iso-weight) var(--iso-cell)),
+    repeating-linear-gradient(-30deg, var(--iso-ink) 0 var(--iso-weight),
+                               transparent var(--iso-weight) var(--iso-cell));
+
+  // A backdrop with an edge is just a rectangle sitting behind the
+  // content. Feathering the leading edge means the grid arrives rather
+  // than starts. `transparent` is a transparent BLACK and the mask
+  // reads luminance through alpha, so the two stops are what they look
+  // like.
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--iso-feather));
+          mask-image: linear-gradient(to right, transparent 0, #000 var(--iso-feather));
+}
+
+// Decoration that says nothing, so it goes when the reader has asked
+// for a plainer surface.
+@media (prefers-contrast: more) {
+  .iso-grid {
+    display: none;
+  }
+}
+
+// ── Reduced motion ──
+// This rule is what stops the artwork, and it earns its keep.
+//
+// The asset carries its own `@media (prefers-reduced-motion: reduce)`
+// block, but it names three classes — the wand, the stack and the
+// sheets — and the scene now animates far more than that. Measured on
+// the current file: 502 animations running normally, of which the
+// asset's own rule removes 22. The other 480 are paused by the rule
+// below, and the picture then holds completely still.
+//
+// That gap is not a criticism of the asset, it's the predictable result
+// of a generated file growing new animated parts between rebuilds. It's
+// also exactly why this is written as a blanket pause rather than a
+// list of selectors to keep in step with someone else's generator.
+//
+// None of it would fire behind an `<img>`. An image is its own document
+// and never learns what this page was asked for, so neither this rule
+// nor the asset's own can reach it — measured, five distinct frames
+// straight through reduced motion. That's why the illustration is
+// inlined.
+//
+// `!important` and the root alongside its descendants, since `*`
+// wouldn't reach animations declared on the <svg> itself. Scoped by our
+// class rather than the asset's `#Scan_root`, which now also varies per
+// copy because the ids are namespaced.
+@media (prefers-reduced-motion: reduce) {
+  .knowledge-banner__illustration-svg,
+  .knowledge-banner__illustration-svg * {
+    animation-play-state: paused !important;
+  }
 }
