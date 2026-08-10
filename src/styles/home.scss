@@ -154,13 +154,11 @@ main.app-wrapper {
   // Clips the shader host's overscan (`.seller-home__god-rays` is
   // inset -90px, deliberately oversized so its blur halo falls
   // outside the box instead of tapering to transparent at the
-  // edges). Without this, the 90px hanging off the right and bottom
-  // counts as scrollable overflow in `.app-wrapper` — the parent
-  // scroll container — which put a spurious horizontal AND vertical
-  // scrollbar on the shell in addition to `.seller-home__main`'s own.
-  // Nothing else needs to escape this box: main and the briefing
-  // popovers are already clipped by `.seller-home__main`.
-  overflow: hidden;
+  // edges). `clip` instead of `hidden` so the nav's right-edge
+  // box-shadow can still paint past the bottom — `hidden` creates a
+  // scroll container that clips shadows, `clip` just trims overflow
+  // without affecting stacking context or shadow painting.
+  overflow: clip;
 }
 
 // ══════════════════════════════════════════════════════════════════════
