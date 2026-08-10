@@ -326,15 +326,10 @@
   left: 0;
   right: 0;
 
-  // The composer overlays thread content, so say so. Until this was
-  // explicit it only won by DOM order, which loses to ANY positioned
-  // thread content carrying a positive z-index — the prospect table's
-  // frozen column did exactly that and painted over the composer. The
-  // table is isolated now, so 1 is all that's needed; it also keeps any
-  // future sticky element in the thread from reopening the same bug.
-  // Well below the citation hover card (9000), the only layer that
-  // needs to sit above the composer.
-  z-index: 1;
+  // Must beat any positioned thread content — the prospect table's
+  // frozen column, the cadence picklist icons, etc. Well below the
+  // citation hover card (9000).
+  z-index: 10;
 
   margin: 0;
   padding: 0;
@@ -373,7 +368,7 @@
   // wrapper), then 12 px of bottom padding after the toolbar. This
   // padding gives the editor breathing room without adding a border.
   padding-block: 1.625rem var(--slds-g-spacing-3, 0.75rem); // 26px top, 12px bottom
-  padding-inline: var(--slds-g-spacing-4, 1rem);
+  
 }
 
 .seller-home__conv-composer-editor {
@@ -1248,7 +1243,7 @@ $sh-conv-table-rows: 5.5;
   border-width: 1px;
   border-style: solid;
   border-color: var(--slds-g-color-border-1, #c9c9c9);
-  border-radius: var(--slds-g-radius-border-2, 0.5rem);   // 8px
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);   // 12px
   background: var(--slds-g-color-surface-container-1, #ffffff);
 }
 
@@ -2055,7 +2050,7 @@ $sh-conv-table-rows: 5.5;
     box-shadow: inset 3px 0 0 0 var(--slds-g-color-success-base-70, #2e844a);
   }
   &[data-sh-review-status="changes_requested"] td:first-child {
-    box-shadow: inset 3px 0 0 0 var(--slds-g-color-warning-base-60, #c68a00);
+    box-shadow: none;
   }
 
   // On an approved row, removing is the opposite action, so it

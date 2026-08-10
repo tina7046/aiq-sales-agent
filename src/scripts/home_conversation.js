@@ -1553,7 +1553,10 @@
     // Approve.
     if (els.approveBtn) els.approveBtn.addEventListener('click', function () {
       if (els.approveBtn.disabled) return
+      var prospect = prospectsById[state.selectedId]
+      var name = prospect ? (prospect.prospect || prospect.company || '') : ''
       setReview(state.selectedId, { status: 'approved' })
+      showToast('Cadence approved for ' + name)
     })
 
     // Request changes → open inline feedback form.
@@ -1638,6 +1641,7 @@
     if (dialogEls.confirm) dialogEls.confirm.addEventListener('click', function () {
       approveAll()
       closeDialog()
+      showToast('All ' + ids.length + ' cadences approved')
     })
     if (dialogEls.cancel) dialogEls.cancel.addEventListener('click', closeDialog)
     if (dialogEls.close)  dialogEls.close.addEventListener('click', closeDialog)
@@ -1753,6 +1757,48 @@
       }
     }
   }
+
+  // ── Toast notification ─────────────────────────────────────────
+  function showToast (message, duration) {
+    duration = duration || 3000
+    var existing = document.querySelector('.sh-toast-container')
+    if (existing) existing.remove()
+
+    var container = document.createElement('div')
+    container.className = 'slds-notify_container sh-toast-container'
+    container.style.cssText = 'position:fixed;top:1rem;left:50%;transform:translateX(-50%);z-index:9999;'
+    container.innerHTML =
+      '<div class="slds-notify slds-notify_toast slds-theme_success" role="status">' +
+        '<span class="slds-assistive-text">success</span>' +
+        '<span class="slds-icon_container slds-icon-utility-success slds-m-right_small slds-no-flex slds-align-top">' +
+          '<svg class="slds-icon slds-icon_small" aria-hidden="true">' +
+            '<use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#success"></use>' +
+          '</svg>' +
+        '</span>' +
+        '<div class="slds-notify__content">' +
+          '<h2 class="slds-text-heading_small">' + message + '</h2>' +
+        '</div>' +
+        '<div class="slds-notify__close">' +
+          '<button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close">' +
+            '<svg class="slds-button__icon" aria-hidden="true">' +
+              '<use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>' +
+            '</svg>' +
+          '</button>' +
+        '</div>' +
+      '</div>'
+
+    document.body.appendChild(container)
+
+    container.querySelector('.slds-notify__close button').addEventListener('click', function () {
+      container.remove()
+    })
+
+    setTimeout(function () {
+      if (container.parentNode) container.remove()
+    }, duration)
+  }
+
+  window._shShowToast = showToast
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init)

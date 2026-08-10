@@ -145,7 +145,7 @@ main.app-wrapper {
   // (see the DEFAULTS block in home.html) — same value on both
   // means no visible seam between the ray field and the masked-out
   // regions.
-  background-color: #FFFFFF;
+  background-color: #f7fbff;;
 
   // Belt-and-suspenders reset so nothing inside .app-wrapper
   // injects spacing that misaligns the two panes.
@@ -1494,48 +1494,45 @@ main.app-wrapper {
 .seller-home__composer-editor {
   display: flex;
   flex-direction: column;
+  position: relative;
 
   background: var(--slds-g-color-surface-container-1, #ffffff);
   border: 1px solid var(--slds-g-color-neutral-base-60, #939393);
-  border-radius: var(--slds-g-radius-border-3, 0.75rem);
-  overflow: hidden; // clips content to the rounded corners
+  border-radius: 1rem;
+  overflow: visible;
 
-  // Figma "Shadow/Elevation/4 - down ⬇" — three stacked drop-shadows:
-  //   1. `0 0 10 0 shadows/level-4/1+2 (#0000001f)` — soft halo
-  //   2. `0 7 7 0 shadows/level-4/1+2 (#0000001f)` — main downward
-  //      shadow that gives the card its "hovering" feel
-  //   3. `0 -1 3 0 shadows/level-4/3   (#00000012)` — thin bright
-  //      seam above so the top edge doesn't blend into the aurora
-  //      background
-  // Order matches Figma's layer order (bottom-most first per CSS
-  // spec, so paint stacks correctly).
-  box-shadow:
-    0 0 10px 0 rgba(0, 0, 0, 0.12),
-    0 7px 7px 0 rgba(0, 0, 0, 0.12),
-    0 -1px 3px 0 rgba(0, 0, 0, 0.07);
-
-  // Accessible focus indicator on the whole editor when the
-  // textarea (or any toolbar button) is focused. Border shifts to
-  // accent-2, matching the `:focus-visible` treatment used by
-  // `.seller-home__briefing-link` and `.seller-home__nav-item` so
-  // the whole page has one consistent focus color.
-  //
-  // `:focus-within` is used (not `:focus`) so focus on inner
-  // elements — textarea, action buttons — is visualized on the
-  // frame too. Individual buttons still show their own SLDS focus
-  // rings; this is an extra affordance for the container.
   transition: border-color 120ms ease, box-shadow 120ms ease;
 
-  &:focus-within {
-    border-color: var(--slds-g-color-accent-2, #0250d9);
-    // Doubled inner ring to make the focus state unambiguous
-    // without adding an outline that would clip against overflow.
-    box-shadow:
-      0 0 0 1px var(--slds-g-color-accent-2, #0250d9),
-      0 0 10px 0 rgba(0, 0, 0, 0.12),
-      0 7px 7px 0 rgba(0, 0, 0, 0.12),
-      0 -1px 3px 0 rgba(0, 0, 0, 0.07);
+  // Gradient glow behind the editor, visible on focus.
+  &::before {
+    --gradient-shadow: linear-gradient(to right, #b8bbe9, #99defc, #e3bbff, #98bdff, #b8bbe9, #99defc, #e3bbff, #98bdff);
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    width: calc(100% + 4px);
+    height: calc(100% + 4px);
+    border-radius: inherit;
+    background: var(--gradient-shadow);
+    background-size: 400%;
+    animation: composer-glow 6s linear infinite paused;
+    transition: opacity 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    opacity: 0;
+    z-index: -1;
+    filter: blur(6px);
   }
+
+  &:focus-within {
+    &::before {
+      opacity: 1;
+      animation-play-state: running;
+    }
+  }
+}
+
+@keyframes composer-glow {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 400% 50%; }
 }
 
 // Textarea wrapper — matches Figma "Editor content" padding (16
@@ -1545,10 +1542,9 @@ main.app-wrapper {
 // `<label>`).
 .seller-home__composer-content {
   padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
+  border-radius: 1rem 1rem 0 0;
+  overflow: hidden;
 
-  // Clicking the padding should focus the textarea. Native <label>
-  // handles this — the label element wraps the assistive-text and
-  // is `for=""`-tied to the textarea id, so no JS is needed.
   cursor: text;
 }
 
@@ -1619,6 +1615,8 @@ main.app-wrapper {
   gap: var(--slds-g-spacing-2, 0.5rem);
 
   padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
+  border-radius: 0 0 1rem 1rem;
+  overflow: hidden;
   background: var(--slds-g-color-surface-container-1, #ffffff);
 }
 
@@ -1714,6 +1712,113 @@ main.app-wrapper {
   &:not(:disabled) .slds-button__icon {
     fill: var(--slds-g-color-accent-2, #0250d9);
   }
+}
+
+// ── Composer footer ──
+.seller-home__composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+  font-size: var(--slds-g-font-scale-neg-2, 0.625rem);
+  pointer-events: auto;
+  max-width: 50rem;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.seller-home__composer-disclaimer {
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  text-align: center;
+  flex: 1;
+  padding-block: var(--slds-g-spacing-1, 0.25rem);
+}
+
+.seller-home__composer-feedback {
+  white-space: nowrap;
+  font-weight: 400;
+}
+
+// ── Connected sources ──
+// Row of small icons below the composer showing which data sources are
+// active. Mirrors the LWC `connected-sources` component from the
+// production app, stripped to plain HTML.
+.connected-sources {
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.connected-sources__label {
+  color: var(--slds-g-color-neutral-base-20, #2e2e2e);
+  font-size: var(--slds-g-font-scale-neg-2, 0.625rem);
+  white-space: nowrap;
+}
+
+.connected-sources__icon-container {
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.source-icons {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.source-icons__item {
+  display: flex;
+  align-items: center;
+
+  &:not(:first-child) {
+    margin-left: calc(-1 * var(--slds-g-spacing-1, 0.25rem));
+  }
+}
+
+.source-icons__wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--slds-g-sizing-5, 1rem);
+  min-width: var(--slds-g-sizing-5, 1rem);
+  background-color: var(--slds-g-color-surface-1, #fff);
+  border: 1px solid var(--slds-g-color-neutral-base-90, #e0e0e0);
+  border-radius: 4px;
+  box-sizing: border-box;
+  cursor: pointer;
+
+  &:hover .source-icons__tooltip {
+    visibility: visible;
+    opacity: 1;
+  }
+}
+
+.source-icons__tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 120ms ease;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.source-icons__icon {
+  display: block;
+  width: var(--slds-g-sizing-4, 0.75rem);
+  height: var(--slds-g-sizing-4, 0.75rem);
+}
+
+.connected-sources__view-all {
+  font-size: var(--slds-g-font-scale-neg-2, 0.625rem);
+  font-weight: 400;
+  white-space: nowrap;
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -2041,9 +2146,12 @@ main.app-wrapper {
   // affordance.
   &:hover,
   &:focus-within {
+    --shadow-color: 0deg 0% 63%;
     box-shadow:
-      0 0 0 1px var(--slds-g-color-border-1, #c9c9c9),
-      0 2px 6px 0 rgba(0, 0, 0, 0.08);
+        0.2px 0.5px 0.6px hsl(var(--shadow-color) / 0.29),
+        0.6px 1.5px 1.8px -0.8px hsl(var(--shadow-color) / 0.29),
+        1.5px 3.6px 4.4px -1.7px hsl(var(--shadow-color) / 0.29),
+        3.7px 8.7px 10.6px -2.5px hsl(var(--shadow-color) / 0.29);
   }
 }
 
@@ -2429,7 +2537,7 @@ main.app-wrapper {
   min-width: 10rem;
   background: var(--slds-g-color-surface-container-1, #ffffff);
   border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
-  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  border-radius: 1rem;
   box-shadow:
     0 4px 12px 0 rgba(0, 0, 0, 0.12),
     0 1px 3px 0 rgba(0, 0, 0, 0.08);

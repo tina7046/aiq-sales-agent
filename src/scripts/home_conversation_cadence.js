@@ -509,7 +509,21 @@
 
       if (els.approve) els.approve.addEventListener('click', function () {
         if (els.approve.disabled) return
-        setReview(state.selectedId, 'approved')
+        var meta = metaById[state.selectedId] || {}
+        var name = meta.prospect || meta.company || ''
+        var pendingId = state.selectedId
+
+        // Show "Approving..." state
+        els.approve.disabled = true
+        var notSelectedSpan = els.approve.querySelector('.slds-text-not-selected')
+        var origLabel = notSelectedSpan ? notSelectedSpan.textContent : ''
+        if (notSelectedSpan) notSelectedSpan.textContent = 'Approving…'
+
+        setTimeout(function () {
+          if (notSelectedSpan) notSelectedSpan.textContent = origLabel
+          setReview(pendingId, 'approved')
+          if (window._shShowToast) window._shShowToast('Cadence approved for ' + name)
+        }, 800)
       })
       if (els.approveAll) els.approveAll.addEventListener('click', function () {
         openDialog(els.approveAll)
@@ -581,6 +595,9 @@
     if (dialog.confirm) dialog.confirm.addEventListener('click', function () {
       approveAll()
       closeDialog()
+      setTimeout(function () {
+        if (window._shShowToast) window._shShowToast('All ' + ids.length + ' cadences approved')
+      }, 800)
     })
     if (dialog.cancel)   dialog.cancel.addEventListener('click', closeDialog)
     if (dialog.close)    dialog.close.addEventListener('click', closeDialog)
