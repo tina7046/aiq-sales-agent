@@ -169,6 +169,16 @@ nunjucksEnv.addGlobal('today', () => {
     .map((p) => p.value)
     .join(' ')
 })
+nunjucksEnv.addGlobal('todayShort', () => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    month: 'short', day: 'numeric'
+  }).formatToParts(new Date())
+  return parts
+    .filter((p) => p.type === 'month' || p.type === 'day')
+    .map((p) => p.value)
+    .join(' ')
+})
+
 // `inlineSvg("<path under src/assets>", { attr: value })` — drop an SVG's
 // markup straight into the page instead of pointing an `<img>` at it.
 //

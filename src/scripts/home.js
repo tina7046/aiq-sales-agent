@@ -419,6 +419,34 @@
     for (var i = 0; i < nodes.length; i++) {
       if (nodes[i].textContent !== text) nodes[i].textContent = text
     }
+
+    // Short date prefix — "Aug 10" style, for output pills that
+    // carry `data-sh-today-short`.
+    var shortDate = formatTodayShort(new Date())
+    if (!shortDate) return
+    var shortNodes = root.querySelectorAll('[data-sh-today-short]')
+    for (var j = 0; j < shortNodes.length; j++) {
+      var el = shortNodes[j]
+      var current = el.textContent
+      if (current.indexOf(shortDate) !== 0) {
+        var stripped = current.replace(/^[A-Z][a-z]{2}\s\d{1,2}\s/, '')
+        el.textContent = shortDate + ' ' + stripped
+      }
+    }
+  }
+
+  function formatTodayShort (date) {
+    if (!window.Intl || typeof window.Intl.DateTimeFormat !== 'function') return null
+    try {
+      var fmt = new window.Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
+      if (typeof fmt.formatToParts !== 'function') return null
+      var out = []
+      var parts = fmt.formatToParts(date)
+      for (var i = 0; i < parts.length; i++) {
+        if (parts[i].type === 'month' || parts[i].type === 'day') out.push(parts[i].value)
+      }
+      return out.length ? out.join(' ') : null
+    } catch (e) { return null }
   }
 
   // Drop the class that freezes the rail's width transition during
