@@ -193,13 +193,18 @@
           </span>
         </span>
 
-        {# Optional provenance pill. A trailing SIBLING of the text stack
-           (not part of the name line) so it right-aligns to the body's
-           end edge — which the body's reserved right gutter places
-           directly left of the overflow trigger — and centres against
-           both text lines, matching the trigger's own vertical centre.
-           The text stack is the only shrinkable child, so a long name
-           ellipsizes rather than displacing the pill. #}
+        {% if doc.sources and doc.sources | length %}
+        <span class="seller-home__knowledge-doc-sources">
+          <span class="seller-home__knowledge-doc-sources-icons">
+            {% for src in doc.sources %}
+            <span class="seller-home__knowledge-doc-sources-icon">
+              <img src="{{ src.icon }}" alt="{{ src.name }}" />
+            </span>
+            {% endfor %}
+          </span>
+        </span>
+        {% endif %}
+
         {% if doc.badge %}
         <span class="seller-home__knowledge-doc-badge">{{ doc.badge }}</span>
         {% endif %}
