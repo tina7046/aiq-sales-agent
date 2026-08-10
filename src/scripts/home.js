@@ -580,6 +580,49 @@
     if (scheduledRoot) {
       bindScheduled(scheduledRoot)
     }
+
+    // Connections modal — "View all" button in the composer footer.
+    bindConnectionsModal()
+  }
+
+  // ── Connections modal ──────────────────────────────────────────
+  function bindConnectionsModal () {
+    var modal    = document.querySelector('[data-sh-connections-modal]')
+    var backdrop = document.querySelector('[data-sh-connections-backdrop]')
+    if (!modal || !backdrop) return
+
+    var openers = document.querySelectorAll('[data-sh-connections-open]')
+    var closers = modal.querySelectorAll('[data-sh-connections-modal-close]')
+    var lastFocused = null
+
+    function open (returnTo) {
+      lastFocused = returnTo || document.activeElement
+      modal.removeAttribute('hidden')
+      modal.classList.add('slds-fade-in-open')
+      backdrop.removeAttribute('hidden')
+      backdrop.classList.add('slds-backdrop_open')
+      setTimeout(function () { modal.focus() }, 0)
+    }
+
+    function close () {
+      modal.classList.remove('slds-fade-in-open')
+      backdrop.classList.remove('slds-backdrop_open')
+      modal.setAttribute('hidden', '')
+      backdrop.setAttribute('hidden', '')
+      if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus()
+      lastFocused = null
+    }
+
+    for (var i = 0; i < openers.length; i++) {
+      openers[i].addEventListener('click', function () { open(this) })
+    }
+    for (var j = 0; j < closers.length; j++) {
+      closers[j].addEventListener('click', close)
+    }
+    backdrop.addEventListener('click', close)
+    modal.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' || e.keyCode === 27) close()
+    })
   }
 
   // ── Briefing ────────────────────────────────────────────────────
