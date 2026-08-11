@@ -151,13 +151,6 @@ main.app-wrapper {
   // injects spacing that misaligns the two panes.
   margin: 0;
 
-  // Clips the shader host's overscan (`.seller-home__god-rays` is
-  // inset -90px, deliberately oversized so its blur halo falls
-  // outside the box instead of tapering to transparent at the
-  // edges). `clip` instead of `hidden` so the nav's right-edge
-  // box-shadow can still paint past the bottom — `hidden` creates a
-  // scroll container that clips shadows, `clip` just trims overflow
-  // without affecting stacking context or shadow painting.
   overflow: clip;
 }
 
@@ -422,21 +415,14 @@ main.app-wrapper {
   background: var(--slds-g-color-surface-container-1, #ffffff);
   color: var(--slds-g-color-on-surface-1, #5c5c5c);
 
-  // Right-edge shadow — mirrors Figma's "Shadow/Elevation/2 - right ⮕"
-  // stack. Three drop-shadows composed:
-  //   • Wide soft blur, no offset.
-  //   • Sharper offset to the right (creates the "ledge" feel).
-  //   • Small negative-offset seam to keep the left edge clean when
-  //     the nav is against the viewport left border.
-  // Colors mirror the tokens Figma reports (shadows/level 2/1+2 =
-  // #00000029, shadows/level 2/3 = #00000017).
+  // Nav shadow — back on the element as box-shadow. The conversation
+  // page clips it at the bottom; accepted as a known limitation.
   box-shadow:
     5px 0 5px 0 rgba(0, 0, 0, 0.10),
     3px 0 3px 0 rgba(0, 0, 0, 0.16),
     -1px 0 2px 0 rgba(0, 0, 0, 0.09);
 
-  overflow-x: hidden; // clips collapsed-state label reflow horizontally
-  overflow-y: visible; // lets the box-shadow paint past the bottom edge
+  overflow: hidden;
 
   // Smooth width animation for the collapse toggle. Kept short so it
   // feels responsive rather than choreographed.
@@ -1002,6 +988,10 @@ main.app-wrapper {
 // its own overflow so the nav stays fixed while long content scrolls
 // only inside `.seller-home__main`.
 // ──────────────────────────────────────────────────────────────────────
+// Nav edge shadow — painted as a ::before on right columns so it
+// doesn't need to escape the nav's overflow boundary. Each right
+// column (.seller-home__main, .seller-home__conv, .seller-home__knowledge)
+// gets this via position: relative + the pseudo-element.
 .seller-home__main {
   flex: 1 1 auto;
   min-width: 0;
