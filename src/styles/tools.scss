@@ -1,0 +1,499 @@
+// ── Tools page (/tools.html) ──
+// The page borrows Knowledge's shell classes for its header band and
+// scroll body, and the card/icon/banner rules below are shared with the
+// modal, so the page needs no dedicated rules of its own today.
+//
+// The grid is authored for the modal's 900px surface and lands in the
+// page's 50rem column, which is narrower. Both columns are wide enough
+// for the 2-up layout, so no breakpoint override is needed; if the
+// page column ever narrows further, `.tool-container` is the one rule
+// to touch.
+
+.slds-modal .slds-modal__container.morph-modal-container {
+  --slds-c-modal-radius-border: var(--slds-g-radius-border-4);
+  height: auto;
+  max-width: none;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 3rem;
+  margin-bottom: 3rem;
+  overflow: visible;
+  transition: none;
+  border-radius: var(--slds-g-radius-border-4);
+  background: var(--slds-g-color-neutral-base-100, #fff);
+}
+
+.morph-modal-container {
+  .slds-modal__close {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
+    transform: translateY(calc(-100% - 0.5rem));
+  }
+
+  .slds-modal__content {
+    box-shadow: none;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+// Morph panel animation layers
+.morph-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+  max-height: calc(100vh - 6rem);
+  display: flex;
+  flex-direction: column;
+
+  .morph-fade {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  &[aria-hidden="true"] {
+    pointer-events: none;
+
+    .morph-fade {
+      opacity: 0;
+    }
+  }
+}
+
+// Category filter bar. The pills themselves are the global ShTabNav
+// component and are styled in index.scss — nothing here touches their
+// appearance. This owns only where the bar sits and how it behaves as
+// a row.
+.tool-categories {
+  // Suppress SLDS's `slds-has-dividers_right` tick between items and
+  // reuse the space as the gap. Stated here rather than on the global
+  // component because the source scopes it per consumer too — see
+  // `.tool-detail-tabs` below, which is the modal's copy of the same
+  // decision. A pill already has its own edge; a rule between two of
+  // them reads as a stray mark.
+  &.slds-has-dividers_right > .slds-item::after {
+    background-color: transparent;
+    margin: 0;
+    width: 8px;
+  }
+
+  // Six tabs fit the modal's 900px surface on one line but not the
+  // page's narrower column, so the row wraps instead of overflowing.
+  flex-wrap: wrap;
+  row-gap: 0.5rem;
+  margin-block: var(--slds-g-spacing-4, 1rem);
+}
+
+// Shown by tools_filter.js when a category has no cards. Can't happen
+// with the catalog as it stands — every category has members — but a
+// grid that empties to nothing reads as a bug without it.
+.tool-empty {
+  margin: 0;
+  padding-block: var(--slds-g-spacing-6, 1.5rem);
+  text-align: center;
+  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+// Tool cards grid
+.tool-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  border: 0;
+
+  // Every row the same height, not just every card within a row.
+  // Grid already stretches siblings to match their tallest neighbour,
+  // which evens out a row but lets one row differ from the next. `1fr`
+  // on the implicit rows levels the whole grid. With the description
+  // clamped to two lines below, the only thing that can still stretch a
+  // row is a tool name long enough to wrap, and this keeps that from
+  // making one row visibly taller than the others.
+  grid-auto-rows: 1fr;
+}
+
+.tool-card {
+  appearance: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  padding: var(--slds-g-spacing-4);
+  border: 1px solid #e5e5e5;
+  border-radius: var(--slds-g-radius-border-3);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+
+  // Top, not center. Grid rows stretch every card to the tallest one in
+  // the row, so centering leaves a one-line card (ZoomInfo, Bombora)
+  // floating its title halfway down while its multi-line neighbour
+  // starts at the top — the two titles never line up. Anchoring to the
+  // start puts every title on the same baseline across a row regardless
+  // of how long the descriptions are.
+  //
+  // This is why the source got away with `center`: its five cards all
+  // had one-line descriptions, so no row ever had mismatched heights.
+  align-items: start;
+
+  &:hover {
+    box-shadow: var(--slds-g-shadow-3, 0 2px 3px 0 rgba(0, 0, 0, 0.16));
+  }
+}
+
+// The category filter hides cards with the `hidden` attribute, which
+// normally needs no CSS — except the browser's `[hidden] {display:none}`
+// lives in the UA stylesheet, and the `display: grid` above is an
+// author style, so it wins and the "hidden" card stays on screen. This
+// hands the attribute back its meaning. Any rule that sets `display` on
+// an element you intend to toggle with `hidden` needs the same pairing.
+.tool-card[hidden] {
+  display: none;
+}
+
+// Inert variant — rendered by _tools_content.html when `interactive`
+// is false, which today is the Tools page. The card is a <div> there
+// rather than a <button>, so it's already out of the tab order; these
+// rules drop the affordances that would otherwise still promise a
+// click. Suppressing the hover lift matters more than it looks: a card
+// that lifts under the cursor but does nothing on click reads as
+// broken rather than as static.
+.tool-card_static {
+  cursor: default;
+
+  &:hover {
+    box-shadow: none;
+  }
+}
+
+// Icon + text. One gap owns the whole icon-to-text distance, so it's a
+// single number to change rather than the padding-plus-negative-margin
+// arithmetic SLDS's gutter utilities spread across three rules.
+.tool-card__main {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+  min-width: 0;
+}
+
+// Never grow, never shrink. Pinned to the puck's own width so the text
+// beside it starts at the same x on every card in the grid.
+.tool-card__icon {
+  flex: 0 0 2rem;
+}
+
+// `min-width: 0` is what lets the description actually clamp: flex
+// children default to `min-width: auto` and refuse to shrink below
+// their content, so without it a long word widens the card instead of
+// ellipsing.
+.tool-card__text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+// Centred against the card, while the text above stays top-aligned.
+// The badge is a standalone control rather than part of the text
+// block, so hanging it off the title's baseline just makes it look
+// like it belongs to the first line.
+.tool-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: center;
+}
+
+// Tool icon
+.tool-icon-container {
+  background-color: var(--slds-g-color-brand-base-90);
+  display: flex;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  justify-content: center;
+  align-items: center;
+  align-content: center;
+  flex-wrap: wrap;
+}
+
+.tool-icon-fill {
+  fill: var(--slds-g-color-accent-1);
+}
+
+.tool-icon-center {
+  padding: 8px 0 0 8px;
+}
+
+// Bitmap variant — the connection logos are supplied as PNG/SVG art
+// rather than sprite symbols, so they can't take the `fill` treatment
+// above. The brand-tinted puck is swapped for a plain white one with a
+// hairline: a multi-colour vendor mark sitting on brand blue reads as
+// muddy, and these logos already carry their own colour.
+.tool-icon-container_image {
+  background-color: var(--slds-g-color-surface-container-1, #ffffff);
+
+  // The hairline does real work here beyond decoration. Vendor logos
+  // have wildly different aspect ratios, and `object-fit: contain`
+  // letterboxes each one inside its box — so a wide mark reaches the
+  // edges while a narrow one floats with several pixels of slack on
+  // each side. The pucks are all perfectly aligned, but with an almost
+  // invisible edge the eye aligns to the glyphs instead and the
+  // icon-to-text gap reads as inconsistent from card to card. Making
+  // the circle legible gives the eye the edge that IS aligned.
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+// Contained rather than cover so non-square art letterboxes inside the
+// puck instead of being cropped. `max-*` rather than fixed `width` /
+// `height`: a fixed box forces every logo into the same square and
+// leaves the narrow ones looking small, where capping the larger
+// dimension lets each one fill as much of the puck as its shape allows.
+.tool-icon-img {
+  max-width: 1.25rem;
+  max-height: 1.25rem;
+  object-fit: contain;
+}
+
+// Tool card text
+.tool-title {
+  color: var(--slds-g-color-on-surface-3);
+  font-weight: 590;
+  font-size: var(--sds-g-font-scale-1);
+}
+
+// Clamped to exactly two lines — always two, never one or three.
+//
+// Descriptions in the catalog run anywhere from three words to a full
+// sentence, so left alone the block is 1–3 lines tall and every card in
+// a row ends up a different height. Clamping caps the long ones with an
+// ellipsis; `min-height` floors the short ones at the same two lines,
+// which is the half that actually equalises the tiles. Without the
+// floor, a row of one-line cards would still be shorter than its
+// neighbours.
+//
+// 2.8em = 2 × the 1.4 line-height below. The line-height has to be
+// stated explicitly rather than inherited, or the floor and the clamp
+// would be computed from different numbers and the last line would
+// clip mid-glyph.
+.tool-description {
+  font-size: var(--slds-g-font-scale-neg-1);
+  color: var(--slds-g-color-on-surface-1);
+  font-weight: 400;
+  line-height: 1.4;
+  min-height: 2.8em;
+
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tool-badge {
+  border: none;
+}
+
+// Promo banner
+.tool-promo-banner-container {
+  background-color: var(--slds-g-color-palette-purple-95);
+  border-radius: var(--slds-g-radius-border-3);
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: stretch;
+}
+
+.tool-promo-banner-title {
+  font-size: var(--slds-g-font-scale-3);
+  font-weight: 590;
+  color: var(--slds-g-color-palette-purple-15);
+  margin-top: 0.5rem;
+}
+
+.tool-promo-banner-description {
+  font-size: var(--slds-g-font-family-base);
+  margin-bottom: 1.5rem;
+}
+
+.tool-promo-badge {
+  background-color: var(--slds-g-color-palette-purple-90);
+  color: var(--slds-g-color-palette-purple-15);
+}
+
+.tool-promo-illustration-container {
+  width: 100%;
+  height: 228px;
+  background-size: cover;
+  background-position: left;
+  border-top-right-radius: var(--slds-g-radius-border-3);
+  border-bottom-right-radius: var(--slds-g-radius-border-3);
+}
+
+.tool-promo-content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+// Panel 2: Connect ZoomInfo
+.tool-modal-top-col {
+  background-image: url("/assets/images/illustrations/Light-Aurora-1.png");
+  background-size: cover;
+  height: 240px;
+  border-radius: var(--slds-g-radius-border-4) var(--slds-g-radius-border-4) 0 0;
+
+  .morph-fade {
+    align-items: center;
+  }
+}
+
+.tool-modal-bottom-col {
+  padding: var(--slds-g-spacing-7, 2.5rem);
+}
+
+.tool-modal-logo-container {
+  background-color: white;
+  border-radius: var(--slds-g-radius-border-circle, 999px);
+  padding: 0.75rem;
+  box-shadow:
+    0 0 10px 0 var(--shadows-level-412, rgba(0, 0, 0, 0.12)),
+    0 7px 7px 0 var(--shadows-level-412, rgba(0, 0, 0, 0.12)),
+    0 -1px 3px 0 var(--shadows-level-4-3, rgba(0, 0, 0, 0.07));
+}
+
+.tool-modal-logo {
+  width: 32px;
+  height: 32px;
+  background-size: contain;
+}
+
+.tool-modal-title {
+  color: var(--slds-g-color-on-surface-3);
+  text-align: center;
+  font-size: var(--slds-g-font-scale-4);
+  font-style: normal;
+  font-weight: 400;
+  line-height: 32px;
+}
+
+.tool-modal-description {
+  color: var(--slds-g-color-on-surface-2);
+  font-size: var(--slds-g-font-scale-1, 14px);
+  font-style: normal;
+  font-weight: 400;
+  line-height: 19px;
+}
+
+.tool-modal-bullet {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.375rem;
+  margin-bottom: 0.25rem;
+}
+
+.tool-modal-bullet-color {
+  fill: var(--slds-s-link-color);
+}
+
+// Panel 4: Conversations config
+.tools-text-heading {
+  color: var(--slds-g-color-on-surface-3);
+  font-size: var(--slds-g-font-scale-2);
+  font-style: normal;
+  font-weight: 590;
+  line-height: 22px;
+}
+
+.mapping-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.question-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+// Panel 3: Tool detail
+.tool-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+// Tool detail: tabbed use-case layout
+.tool-detail-tabs {
+  .slds-has-dividers_right > .slds-item::after {
+    background-color: transparent;
+    margin: 0;
+    width: 8px;
+  }
+}
+
+.use-case-try-card {
+  &:hover {
+    box-shadow: var(--slds-g-shadow-3, 0 2px 3px 0 rgba(0, 0, 0, 0.16));
+  }
+
+  .use-case-try-card__example {
+    font-size: var(--slds-g-font-scale-neg-1, 12px);
+    color: var(--slds-g-color-on-surface-2);
+    line-height: 1.5;
+  }
+
+  .tool-mention {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 999px;
+    border: 1px solid var(--slds-g-color-neutral-base-90, #e5e5e5);
+    background-color: var(--slds-g-color-neutral-base-95, #f3f3f3);
+    padding: 0.125rem;
+    font-size: var(--slds-g-font-scale-neg-1, 12px);
+    color: var(--slds-g-color-on-surface-2);
+    font-weight: 400;
+    vertical-align: middle;
+    white-space: nowrap;
+    cursor: default;
+    user-select: none;
+
+    .tool-mention-icon-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      border-radius: var(--slds-g-radius-border-circle, 999px);
+      background-color: var(--slds-g-color-brand-base-60);
+      padding: 0;
+      flex-shrink: 0;
+
+      svg {
+        width: 100%;
+        height: 100%;
+        fill: #fff;
+      }
+    }
+
+    .tool-mention-label {
+      line-height: 1.2;
+      padding-right: 0.25rem;
+    }
+  }
+}

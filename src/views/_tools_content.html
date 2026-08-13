@@ -1,0 +1,224 @@
+{#
+  Tools content — featured banner + card grid
+  =====================================================================
+  THE single source for what the Tools surfaces show. Both consumers
+  call `renderToolsContent`, so a change to a card here lands on both
+  at once:
+
+    • _tools_modal.html  → Panel 1 of the morphing dialog, opened by
+                           the composer footer's "View all".
+    • tools.html         → the left-nav Tools page.
+
+  Neither one owns a copy of this markup. If you're changing what a
+  card looks like, this is the only file to edit; if you're changing
+  what the cards SAY, that's `shared.toolsModal` in shared.json.
+
+  Interactive vs inert
+  --------------------
+  The two surfaces differ in exactly one respect, carried by the
+  `interactive` argument:
+
+    interactive = true   Cards are `<button>`s carrying the
+                         `data-tool-id` / `data-panel-type` hooks that
+                         tools_modal.js delegates from. Both the modal
+                         and the Tools page use this today.
+
+    interactive = false  Cards are inert `<div>`s — no hooks, no hover
+                         lift, not in the tab order. Kept for a future
+                         read-only surface; no page passes it now.
+
+  Everything else — icon resolution, title, description, badge — runs
+  through the same code path either way, which is the point.
+
+  Macros are imported WITHOUT context, so every value a card needs
+  arrives as an argument rather than being read off the page's scope.
+  That's what lets the same macro render inside a modal on one page
+  and inside a 50rem column on another.
+#}
+
+{#
+  One card.
+
+  @param tool         Entry from `shared.toolsModal.tools`.
+  @param interactive  See the note above.
+#}
+{% macro renderToolCard(tool, interactive) %}
+  <{% if interactive %}button{% else %}div{% endif %}
+    class="tool-card{% if not interactive %} tool-card_static{% endif %}"
+    {# Carried on both variants — the category filter runs on the page
+       as well as in the modal, so it can't depend on the interactive
+       hooks below. #}
+    data-tool-category="{{ tool.category }}"
+    {% if interactive %}
+    type="button"
+    data-tool-id="{{ tool.id }}"
+    data-panel-type="{{ tool.panelType }}"
+    {% endif %}
+  >
+    {# Plain flex with one explicit gap, rather than SLDS's
+       `slds-grid_vertical-align-start slds-gutters_x-small`. The gutter
+       utilities express icon-to-text spacing as padding on both columns
+       plus a negative margin on the row, so the real number is spread
+       across three rules and two elements. One `gap` is the same result
+       and can be read in one place. #}
+    <div class="tool-card__main">
+      <div class="tool-card__icon">
+        {# Two icon sources, one 2rem circle. `iconSrc` is a standalone
+           image (the connection logos are mostly PNG, which `<use>`
+           can't reference) and wins when present; otherwise `icon`
+           names a sprite symbol. Same precedence the knowledge doc row
+           uses. Bitmap art gets a plain white puck instead of the brand
+           tint, so multi-colour vendor logos stay legible. #}
+        {% if tool.iconSrc %}
+        <span class="tool-icon-container tool-icon-container_image">
+          <img class="tool-icon-img" src="{{ tool.iconSrc }}" alt="" />
+          <span class="slds-assistive-text">{{ tool.iconLabel }}</span>
+        </span>
+        {% else %}
+        <span class="{% if tool.iconExtraClass %}slds-icon_container {% endif %}tool-icon-container{% if tool.iconExtraClass %} {{ tool.iconExtraClass }}{% endif %}">
+          <svg class="slds-icon tool-icon-fill {{ tool.iconSize }}" aria-hidden="true">
+            <use xlink:href="{{ tool.icon }}"></use>
+          </svg>
+          <span class="slds-assistive-text">{{ tool.iconLabel }}</span>
+        </span>
+        {% endif %}
+      </div>
+      <div class="tool-card__text">
+        <p class="tool-title">{{ tool.name }}</p>
+        <p class="tool-description">{{ tool.description }}</p>
+      </div>
+    </div>
+    <div class="tool-card-actions">
+      {% if tool.state == "added" %}
+      <span class="slds-badge slds-theme_default">
+        <span class="slds-badge__icon slds-badge__icon_left">
+          <span class="slds-icon_container slds-icon-utility-check slds-current-color">
+            <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
+              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+            </svg>
+          </span>
+        </span>Added
+      </span>
+      {% elif tool.state == "setup" %}
+      <span class="slds-badge slds-theme_info">
+        <span class="slds-badge__icon slds-badge__icon_left">
+          <span class="slds-icon_container slds-current-color">
+            <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
+              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
+            </svg>
+          </span>
+        </span>Add
+      </span>
+      {% endif %}
+    </div>
+  </{% if interactive %}button{% else %}div{% endif %}>
+{% endmacro %}
+
+
+{#
+  Featured Tool promo banner.
+
+  The Setup button carries `data-panel-type` on the interactive branch
+  because tools_modal.js delegates from `[data-panel-type]` as well as
+  `.tool-card` — that's what lets the banner route to the same panel
+  its matching card does.
+
+  The modal hides this whole block once ZoomInfo is connected (see
+  applyZoomInfoConnectedState in tools_modal.js), which is why the
+  container class has to stay exactly `tool-promo-banner-container`.
+
+  @param featured     `shared.toolsModal.featured`.
+  @param interactive  See the note at the top of this file.
+#}
+{% macro renderToolsPromo(featured, interactive) %}
+  <div class="tool-promo-banner-container">
+    <div class="slds-size_1-of-2 tool-promo-content">
+      <div class="">
+        <span class="slds-badge tool-promo-badge">Featured Tool</span>
+        <p class="tool-promo-banner-title">{{ featured.name }}</p>
+        <p class="tool-promo-banner-description">{{ featured.tagline }}</p>
+      </div>
+      {# `data-tool-id` lets a trigger outside the modal (the Tools page
+         grid) route through the same `openToolsModalForTool` path as a
+         card; `data-panel-type` is what the modal's own panel-1 click
+         delegate reads. Both are harmless on whichever surface doesn't
+         use them. #}
+      <button
+        class="slds-button slds-button_neutral slds-grow-none"
+        {% if interactive %}data-tool-id="{{ featured.id }}" data-panel-type="{{ featured.panelType }}"{% endif %}
+      >Setup</button>
+    </div>
+    <div class="slds-size_1-of-2">
+      <div class="tool-promo-illustration-container"
+        style="background-image: url(/assets/images/tool-promo-illustration.png);"></div>
+    </div>
+  </div>
+{% endmacro %}
+
+
+{#
+  Category filter bar.
+
+  Declarative ShTabNav markup — the global component (tab_nav.js, loaded
+  from _template.html) wires any `[data-sh-tabnav]` on the page, so
+  there's no per-surface init to remember. It emits a bubbling
+  `sh:tabnav-change`; tools_filter.js listens and shows or hides cards
+  by their `data-tool-category`.
+
+  Both surfaces get this, which is why the filter controller is its own
+  script rather than living inside the modal's: the page has no modal
+  controller to hang it off.
+
+  @param categories  `shared.toolsModal.categories`.
+#}
+{% macro renderToolsCategories(categories) %}
+  {% if categories and categories | length %}
+  <ul
+    class="slds-list_horizontal slds-has-dividers_right tab-nav-cycler tool-categories"
+    data-sh-tabnav
+    data-sh-tools-categories
+    aria-label="Filter tools by category"
+  >
+    {# Pills are <div>s, matching the source markup exactly — the
+       component adds role and tabindex for keyboard access rather
+       than relying on a <button>, whose UA box model would shift the
+       pill. See src/scripts/tab_nav.js. #}
+    {% for cat in categories %}
+    <li class="slds-item">
+      <div
+        class="{% if loop.first %}slds-item-active{% else %}slds-item-inactive{% endif %}"
+        data-sh-tabnav-value="{{ cat.id }}"
+      >{{ cat.label }}</div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+{% endmacro %}
+
+
+{#
+  Banner + filter bar + grid — what both surfaces actually call.
+
+  @param featured     `shared.toolsModal.featured`.
+  @param tools        `shared.toolsModal.tools`.
+  @param interactive  See the note at the top of this file.
+  @param categories   `shared.toolsModal.categories`. Omit and the
+                      filter bar is left out, grid renders unfiltered.
+#}
+{% macro renderToolsContent(featured, tools, interactive, categories) %}
+  {{ renderToolsPromo(featured, interactive) }}
+
+  {{ renderToolsCategories(categories) }}
+
+  {# `data-sh-tools-grid` is the filter controller's root; the per-card
+     `data-tool-category` is what it matches against. The empty state is
+     a sibling so the grid can be emptied without losing the bar above
+     it — same arrangement the knowledge list uses. #}
+  <div class="tool-container" data-sh-tools-grid>
+    {% for tool in tools %}
+      {{ renderToolCard(tool, interactive) }}
+    {% endfor %}
+  </div>
+
+  <p class="tool-empty" data-sh-tools-empty hidden>No tools in this category.</p>
+{% endmacro %}

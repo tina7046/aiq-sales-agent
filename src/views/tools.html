@@ -1,0 +1,131 @@
+{% extends "_template.html" %}
+
+{#
+  Seller Home — Tools landing
+  =====================================================================
+  Reached from the Seller Home left nav's "Tools" item (index.json →
+  navPrimary). Shares the `.seller-home` shell (left nav + right
+  column) with /index.html, /knowledge.html, and /scheduled.html so the
+  global header and nav stay pinned as the seller moves between them.
+
+  Same content as the modal — by construction
+  -------------------------------------------
+  The featured banner and card grid are NOT authored here. They come
+  from `_tools_content.html`, the same macro `_tools_modal.html` calls
+  for Panel 1 of the "View all" dialog. Neither surface owns a copy, so
+  a change to a card lands on both at once:
+
+      shared.json → shared.toolsModal        what the cards SAY
+      _tools_content.html                    what a card LOOKS like
+      tools.html / _tools_modal.html         where it gets MOUNTED
+
+  The one difference is the `interactive` flag passed to the macro.
+  The modal passes true, which makes each card a <button> wired to the
+  morph panels. This page passes false, which renders inert <div>s —
+  the detail panels live inside the dialog's morph surface and have
+  nowhere to go on a flat page yet. Flipping that argument is the only
+  edit needed to make these cards live once they do.
+
+  Layout skeleton — mirrors knowledge.html / scheduled.html:
+    ┌──────────────────────────────────────────────────────────┐
+    │  ┌ header (48px, flex-shrink 0) ─────────────────────┐   │
+    │  │ Tools                                             │   │
+    │  ├───────────────────────────────────────────────────┤   │
+    │  │ body <section> (flex: 1 1 auto, scroll surface)   │   │
+    │  │             ┌───────────────────────┐             │   │
+    │  │             │  50rem inner column   │             │   │
+    │  │             │  Featured banner      │             │   │
+    │  │             │  2-col card grid      │             │   │
+    │  │             └───────────────────────┘             │   │
+    │  └───────────────────────────────────────────────────┘   │
+    └──────────────────────────────────────────────────────────┘
+
+  Chrome (page shell, header band, body scroll) reuses Knowledge's
+  already-tuned `.seller-home__knowledge-*` class stack rather than
+  inventing a third layout family — the same borrowing scheduled.html
+  does. Tools-only concerns stay in tools.scss under `.tool-*`, which
+  is also what styles the cards inside the modal.
+
+  No page controller. home.js is loaded for the shared shell (nav
+  collapse and its persisted state); every other controller in it
+  no-ops because this page doesn't render their roots. The modal's
+  script is deliberately absent — there's no dialog here to drive.
+#}
+
+{% import "_tools_content.html" as toolsContent %}
+
+{% set navPrimary = readData("index").navPrimary %}
+{% set navFooter  = readData("index").navFooter %}
+{% set recents    = readData("index").recents %}
+
+{% block styles %}
+  <link rel="stylesheet" href="/styles/home.css" />
+  <link rel="stylesheet" href="/styles/knowledge.css" />
+  <link rel="stylesheet" href="/styles/tools.css" />
+{% endblock %}
+
+{% block content %}
+  {# `.seller-home--knowledge` brings the viewport lock (`overflow:
+     hidden`) plus Knowledge's column widths and body scroll;
+     `.seller-home--tools` is the hook for Tools-only overrides. Without
+     the lock the outer container grows to fit its children and the
+     body section's `overflow-y: auto` never engages. #}
+  <div class="seller-home seller-home--knowledge seller-home--tools" data-sh-root>
+    {% include "_home_left_nav.html" %}
+
+    {# Right column. Not a <main> element — the SLDS `<main
+       class="app-wrapper">` in _template.html keeps that role — so
+       this is the page's ARIA main region via `role="main"`, matching
+       the other Seller Home surfaces. `tabindex="-1"` makes it a
+       programmatic focus target for skip-links without adding it to
+       the tab order. #}
+    <div
+      class="seller-home__knowledge seller-home__tools"
+      role="main"
+      aria-label="{{ pageTitle }}"
+      tabindex="-1"
+    >
+      <header class="seller-home__knowledge-header">
+        <h1 class="seller-home__knowledge-header-title">{{ header.heading }}</h1>
+      </header>
+
+      <section
+        class="seller-home__knowledge-body"
+        aria-label="Tools"
+      >
+        <div class="seller-home__knowledge-body-inner">
+          {# `true` makes the tiles interactive — each becomes a button
+             carrying `data-tool-id`, and the delegated opener in
+             tools_modal.js routes a click into the modal at that tool.
+             Same macro the modal renders, so the page grid and the
+             modal's panel 1 stay identical. #}
+          {{ toolsContent.renderToolsContent(shared.toolsModal.featured, shared.toolsModal.tools, true, shared.toolsModal.categories) }}
+        </div>
+      </section>
+    </div>
+  </div>
+
+  {# The modal the tiles open. Same include + JSON config the composer
+     surfaces use; the controller reads the catalog from the config
+     block rather than from interpolated template values. #}
+  {% include "_tools_modal.html" %}
+  <script type="application/json" id="sh-tools-config">
+    {{ { "tools": shared.toolsModal.tools } | tojson | safe }}
+  </script>
+{% endblock %}
+
+{% block scripts_extra %}
+  {# Shared shell only — nav collapse + persisted state. Every other
+     controller in home.js guards on a root this page doesn't render. #}
+  <script src="/scripts/home.js"></script>
+
+  {# Category filter — binds each ShTabNav bar to its grid. Runs on both
+     the page grid and the modal's panel 1. #}
+  <script src="/scripts/tools_filter.js"></script>
+
+  {# Tools modal. GSAP (vendored) must load before the controller, which
+     reads it off the global. tools_modal.js also wires the delegated
+     opener that the page tiles use. #}
+  <script src="/scripts/vendor/gsap.min.js"></script>
+  <script type="module" src="/scripts/tools_modal.js"></script>
+{% endblock %}

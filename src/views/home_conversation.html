@@ -70,6 +70,7 @@
 {% set navFooter  = _home.navFooter %}
 {% set recents    = _home.recents %}
 {% set navActive  = "__none__" %}
+{% set connections = _home.connections or [] %}
 
 {# ── Which conversation renders ──────────────────────────────────────
    Every entry in the registry is rendered, each into its own set of
@@ -95,6 +96,8 @@
      background in home_conversation.css. #}
   <link rel="stylesheet" href="/styles/home.css" />
   <link rel="stylesheet" href="/styles/home_conversation.css" />
+  {# Styles for the Tools modal opened by the composer's "View all". #}
+  <link rel="stylesheet" href="/styles/tools.css" />
 {% endblock %}
 
 {% block content %}
@@ -457,7 +460,11 @@
               </span>
             </li>
           </ul>
-          <button type="button" class="slds-button connected-sources__view-all">View all</button>
+          {# Opens the Tools modal, same as the Seller Home composer.
+             The old Connections modal is still in the tree but no longer
+             triggered — swap back to `data-sh-connections-open` to reach
+             it. #}
+          <button type="button" class="slds-button connected-sources__view-all" data-sh-tools-open>View all</button>
         </div>
       </div>
 
@@ -564,6 +571,15 @@
     hidden
   ></div>
 
+  {% include "_home_connections_modal.html" %}
+
+  {# Tools modal — opened by the composer's "View all", same as Seller
+     Home. Catalog handed to the controller as JSON. #}
+  {% include "_tools_modal.html" %}
+  <script type="application/json" id="sh-tools-config">
+    {{ { "tools": shared.toolsModal.tools } | tojson | safe }}
+  </script>
+
 {% endblock %}
 
 {% block scripts_extra %}
@@ -586,4 +602,11 @@
   <script src="/scripts/home_conversation_lookups.js"></script>
   <script src="/scripts/home_conversation_cadence.js"></script>
   <script src="/scripts/home_conversation.js"></script>
+
+  {# Tools modal for the composer's "View all". GSAP (vendored) loads
+     before the controller, which reads it off the global; tools_filter
+     wires the category tabs. #}
+  <script src="/scripts/tools_filter.js"></script>
+  <script src="/scripts/vendor/gsap.min.js"></script>
+  <script type="module" src="/scripts/tools_modal.js"></script>
 {% endblock %}

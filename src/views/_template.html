@@ -398,6 +398,11 @@
     {% endblock %}
   </main>
   <script src="/scripts/app.js"></script>
+  {# Shared pill tab bar (window.ShTabNav). Global rather than
+     per-page: it auto-wires any [data-sh-tabnav] markup, and pages
+     that render tabs from JS call ShTabNav.build(). Classic script, so
+     ES modules can read the global too. #}
+  <script src="/scripts/tab_nav.js"></script>
   <script src="/scripts/vendor/svg4everybody.min.js"></script>
   <script>svg4everybody();</script>
   {% block scripts_extra %}{% endblock %}

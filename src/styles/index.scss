@@ -93,6 +93,48 @@ $static-font-path: '/assets/fonts/webfonts';
   }
 }
 
+// ──────────────────────────────────────────────────────────────────────
+// Pill tab bar (ShTabNav)
+// ──────────────────────────────────────────────────────────────────────
+// Global because the control is global — see src/scripts/tab_nav.js,
+// loaded from _template.html so any page can use it. Ported from the
+// BB-AOP prototype (aop.scss), where these rules dressed the pills in
+// the Tools modal's detail panels and on its Knowledge page.
+//
+// These three rules are the entire component in the source — verbatim,
+// no additions. `.tab-nav-cycler` itself carries no styles there, and
+// deliberately carries none here either: the class is only a hook for
+// the script and for consumers that want to scope their own spacing.
+// Suppressing SLDS's `slds-has-dividers_right` tick is likewise left to
+// the consumer, exactly as the source does it (see `.tool-detail-tabs`
+// in tools.scss).
+//
+// Pills are `<div>`s, matching the source, so no button reset is
+// needed and the box model is identical. Keyboard access comes from
+// role + roving tabindex in the script instead of the element.
+.slds-item:hover,
+.slds-item-active:hover {
+  cursor: pointer;
+}
+
+.slds-item-inactive {
+  background-color: white;
+  color: var(--slds-g-color-on-surface-3);
+  font-weight: 400;
+  padding: 4px 8px 4px 8px;
+  border: 1px solid var(--slds-g-color-border-1);
+  border-radius: var(--slds-g-radius-border-2);
+}
+
+.slds-item-active {
+  background-color: var(--slds-g-color-brand-base-95, #eef4ff);
+  border: 1px solid var(--slds-g-color-brand-base-95, #eef4ff);
+  color: var(--slds-g-color-on-surface-3);
+  font-weight: 400;
+  padding: 4px 8px 4px 8px;
+  border-radius: var(--slds-g-radius-border-2);
+}
+
 // Wrap the prototype in a scrollable container
 .app-wrapper {
   overflow: auto;

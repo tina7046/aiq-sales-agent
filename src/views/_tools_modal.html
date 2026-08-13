@@ -1,0 +1,334 @@
+{#
+  Tools modal — four-panel morphing dialog
+  =====================================================================
+  Ported from the BB-AOP prototype (`_tools_morph_modal.html`, reached
+  from its Account Research / Find Prospects steps). The markup is a
+  1:1 port; the only structural change is that BB-AOP's inline
+  `<script type="module">` has been lifted out to
+  /scripts/tools_modal.js, because this modal mounts on more than one
+  page here and an inline script would compile a copy into each.
+
+  Panel 1's contents are NOT authored here. The featured banner and
+  card grid come from `_tools_content.html`, which the Tools page
+  (tools.html) renders from the same macro — so the two surfaces can't
+  drift. Change a card there; change what it says in `shared.toolsModal`
+  (shared.json). This file owns only the dialog chrome and panels 2-4.
+
+  Panels
+  ------
+    1. Tools overview — featured promo + the card grid, via the shared
+       macro. 900px wide.
+    2. Connect ZoomInfo — the one bespoke connect flow. 640px.
+    3. Tool detail — generic, populated by JS from the clicked card's
+       id. Where a new `panelType: "detail"` card lands. 640px.
+    4. Analyze Past Conversations — bespoke config screen with SLDS
+       tabs. 640px.
+
+  The `.slds-modal__container` doubles as the morph surface: GSAP
+  animates its width/height between the panel sizes above while
+  `.morph-fade` children crossfade. Panels are absolutely stacked, so
+  only the active one is visible (`aria-hidden` gates both pointer
+  events and AT).
+
+  Mounting contract
+  -----------------
+    • Include this partial once per page, inside `{% block content %}`.
+    • Load /scripts/vendor/gsap.min.js BEFORE /scripts/tools_modal.js.
+    • Open it with `window.openToolsModal()`, or jump straight to a
+      tool's panel with `window.openToolsModalForTool('<id>')`.
+    • Any button carrying `data-sh-tools-open` is wired automatically.
+
+  IDs here are unnamespaced (`panel1`, `closeBtn`, …) exactly as in the
+  source. Verified collision-free against the rest of this project; if
+  a second instance is ever needed on one page they'd have to change
+  together here and in tools_modal.js.
+#}
+{% import "_tools_content.html" as toolsContent %}
+<!-- Modal shell — the __container is the morph surface -->
+<section role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="morph-modal-heading"
+  class="slds-modal" id="morphModal">
+  <div class="slds-modal__container morph-modal-container" id="morphSurface">
+
+    <button class="slds-button slds-button_icon slds-modal__close" id="closeBtn">
+      <svg class="slds-button__icon slds-button__icon_large" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+      </svg>
+      <span class="slds-assistive-text">Cancel and close</span>
+    </button>
+
+    <!-- Panel 1: Tools overview -->
+    <div class="morph-panel" id="panel1" aria-hidden="false">
+      <div class="slds-modal__header">
+        <h1 id="morph-modal-heading" class="slds-modal__title slds-hyphenate" tabindex="-1">Tools</h1>
+      </div>
+      <div class="morph-fade">
+      <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+        {# Banner + grid come from _tools_content.html, which the Tools
+           page renders too — edit a card there, not here, and both
+           surfaces move together. `interactive` is true so the cards
+           carry the hooks tools_modal.js delegates from. #}
+        {{ toolsContent.renderToolsContent(shared.toolsModal.featured, shared.toolsModal.tools, true, shared.toolsModal.categories) }}
+      </div>
+      <div class="slds-modal__footer">
+        <button class="slds-button slds-button_neutral" id="cancelBtn1" aria-label="Cancel and close">Close</button>
+      </div>
+      </div>
+    </div>
+
+    <!-- Panel 2: Connect ZoomInfo -->
+    <div class="morph-panel" id="panel2" aria-hidden="true" style="opacity:0;">
+      <div class="slds-modal__header tool-modal-top-col" style="padding:0; border:none;">
+        <div class="morph-fade">
+        <div class="slds-grid slds-grid_align-center slds-m-top_large">
+          <div class="tool-modal-logo-container slds-m-around_x-small">
+            <div class="tool-modal-logo" style="background-image: url('/assets/images/tools-logos/salesforce.png');"></div>
+          </div>
+          <div class="tool-modal-logo-container slds-m-around_x-small">
+            {# Second logo is the tool being connected — set per-tool by
+               tools_modal.js (populateConnectPanel). Defaults to the
+               featured tool's mark. #}
+            <div class="tool-modal-logo" id="panel2Logo" style="background-image: url('/assets/images/tools-logos/zoominfo.png');"></div>
+          </div>
+         
+        </div>
+        <div class="tool-modal-title slds-m-top_small slds-m-bottom_large" id="panel2Title">Connect ZoomInfo</div>
+        <button class="slds-button slds-button_brand">Connect Now</button>
+        </div>
+      </div>
+      <div class="morph-fade">
+      <div class="slds-modal__content tool-modal-bottom-col" id="tool-content-id-1">
+        {# Description is set per-tool by tools_modal.js. The default
+           copy here is a fallback if the script hasn't populated it. #}
+        <div class="tool-modal-description slds-m-bottom_medium" id="panel2Desc">Connect this source to your CRM to eliminate data decay and provide your prospecting agent with a comprehensive, real-time
+        intelligence layer. This integration ensures your agent operates on high-fidelity signals, allowing for sophisticated
+        outreach that stays aligned with your latest firmographic and technographic requirements.</div>
+        <div class="tool-modal-description slds-m-bottom_xx-small">Agent can:</div>
+        <div class="tool-modal-bullet">
+          <span class="slds-icon_container slds-icon-utility-check">
+            <svg class="slds-icon slds-icon_xx-small tool-modal-bullet-color" aria-hidden="true">
+              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+            </svg>
+          </span>
+          <span class="tool-modal-description">Reference this source for researching and qualifying prospects.</span>
+        </div>
+        <div class="tool-modal-bullet">
+          <span class="slds-icon_container slds-icon-utility-check">
+            <svg class="slds-icon slds-icon_xx-small tool-modal-bullet-color" aria-hidden="true">
+              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+            </svg>
+          </span>
+          <span class="tool-modal-description">Enrich your CRM data with most current information.</span>
+        </div>
+        <div class="tool-modal-bullet">
+          <span class="slds-icon_container slds-icon-utility-check">
+            <svg class="slds-icon slds-icon_xx-small tool-modal-bullet-color" aria-hidden="true">
+              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+            </svg>
+          </span>
+          <span class="tool-modal-description">Rank and score prospects more accurately</span>
+        </div>
+      </div>
+      <div class="slds-modal__footer slds-grid">
+        <button class="slds-button slds-button_neutral" id="backBtn2">Back</button>
+      </div>
+      </div>
+    </div>
+
+    <!-- Panel 3: Tool detail (populated dynamically via JS) -->
+    <div class="morph-panel" id="panel3" aria-hidden="true" style="opacity:0;">
+      <div class="slds-modal__header">
+        <div class="tool-detail-header">
+          <span class="tool-icon-container" id="panel3Icon">
+            <svg class="slds-icon tool-icon-fill slds-icon_x-small" aria-hidden="true" id="panel3IconSvg">
+              <use xlink:href="" id="panel3IconUse"></use>
+            </svg>
+          </span>
+          <h2 class="slds-modal__title slds-hyphenate" id="panel3Title"></h2>
+        </div>
+      </div>
+      <div class="morph-fade">
+      <div class="slds-modal__content slds-p-around_medium" id="panel3Content">
+        <div class="tool-detail-tabs" id="panel3Tabs"></div>
+      </div>
+      <div class="slds-modal__footer slds-grid">
+        <button class="slds-button slds-button_neutral" id="backBtn3">Back</button>
+        <button class="slds-button slds-button_text-destructive" id="disconnectBtn3" style="display:none">Disconnect</button>
+      </div>
+      </div>
+    </div>
+
+    <!-- Panel 4: Analyze Past Conversations config -->
+    <div class="morph-panel" id="panel4" aria-hidden="true" style="opacity:0;">
+      <div class="slds-modal__header">
+        <div class="tool-detail-header">
+          <span class="tool-icon-container" id="panel4Icon">
+            <svg class="slds-icon tool-icon-fill slds-icon_x-small" aria-hidden="true" id="panel4IconSvg">
+              <use xlink:href="" id="panel4IconUse"></use>
+            </svg>
+          </span>
+          <h2 class="slds-modal__title slds-hyphenate" id="panel4Title"></h2>
+        </div>
+      </div>
+      <div class="morph-fade">
+      <div class="slds-modal__content slds-p-around_medium" id="panel4Content">
+        <div class="slds-tabs_default" id="panel4Nav">
+          <ul class="slds-tabs_default__nav" role="tablist">
+            <li class="slds-tabs_default__item slds-is-active" title="Business Context" role="presentation">
+              <a class="slds-tabs_default__link" href="#" role="tab" tabindex="0" aria-selected="true" aria-controls="conv-panel-0" id="conv-tab-0">Business Context</a>
+            </li>
+            <li class="slds-tabs_default__item" title="Specific Questions" role="presentation">
+              <a class="slds-tabs_default__link" href="#" role="tab" tabindex="-1" aria-selected="false" aria-controls="conv-panel-1" id="conv-tab-1">Specific Questions</a>
+            </li>
+            <li class="slds-tabs_default__item" title="Example Usage" role="presentation">
+              <a class="slds-tabs_default__link" href="#" role="tab" tabindex="-1" aria-selected="false" aria-controls="conv-panel-2" id="conv-tab-2">Example Usage</a>
+            </li>
+          </ul>
+          <!-- Business Context tab -->
+          <div id="conv-panel-0" class="slds-tabs_default__content slds-show" role="tabpanel" aria-labelledby="conv-tab-0">
+            <div class="slds-text-longform">
+              <div class="tools-text-heading">Business Context</div>
+              <p>Tell the agent about your business's pain points and value props so it extracts the most relevant context from past conversations.</p>
+              <div class="mapping-grid">
+                <label class="slds-form-element__label">Pain Point</label>
+                <div></div>
+                <label class="slds-form-element__label">Value Proposition</label>
+                <div></div>
+
+                <div class="slds-form-element">
+                  <div class="slds-form-element__control">
+                    <textarea id="conv-pain-1" placeholder="eg: &ldquo;Hard user onboarding&rdquo;" class="slds-textarea"></textarea>
+                  </div>
+                </div>
+                <span class="slds-icon_container" title="Maps to">
+                  <svg class="slds-icon slds-icon_x-small slds-icon-text-default" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#forward"></use>
+                  </svg>
+                  <span class="slds-assistive-text">maps to</span>
+                </span>
+                <div class="slds-form-element">
+                  <div class="slds-form-element__control">
+                    <textarea id="conv-value-1" placeholder="eg: &ldquo;Quick time to value&rdquo;" class="slds-textarea"></textarea>
+                  </div>
+                </div>
+                <button class="slds-button slds-button_icon slds-button_icon-border-filled" title="Delete row">
+                  <svg class="slds-button__icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#delete"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Delete row</span>
+                </button>
+
+                <div class="slds-form-element">
+                  <div class="slds-form-element__control">
+                    <textarea id="conv-pain-2" placeholder="eg: &ldquo;Poor customer service&rdquo;" class="slds-textarea"></textarea>
+                  </div>
+                </div>
+                <span class="slds-icon_container" title="Maps to">
+                  <svg class="slds-icon slds-icon_x-small slds-icon-text-default" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#forward"></use>
+                  </svg>
+                  <span class="slds-assistive-text">maps to</span>
+                </span>
+                <div class="slds-form-element">
+                  <div class="slds-form-element__control">
+                    <textarea id="conv-value-2" placeholder="eg: &ldquo;Award winning online support&rdquo;" class="slds-textarea"></textarea>
+                  </div>
+                </div>
+                <button class="slds-button slds-button_icon slds-button_icon-border-filled" title="Delete row">
+                  <svg class="slds-button__icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#delete"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Delete row</span>
+                </button>
+
+                <div class="slds-form-element">
+                  <div class="slds-form-element__control">
+                    <textarea id="conv-pain-3" placeholder="eg: &ldquo;Poor integration&rdquo;" class="slds-textarea"></textarea>
+                  </div>
+                </div>
+                <span class="slds-icon_container" title="Maps to">
+                  <svg class="slds-icon slds-icon_x-small slds-icon-text-default" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#forward"></use>
+                  </svg>
+                  <span class="slds-assistive-text">maps to</span>
+                </span>
+                <div class="slds-form-element">
+                  <div class="slds-form-element__control">
+                    <textarea id="conv-value-3" placeholder="eg: &ldquo;Certified platinum partner&rdquo;" class="slds-textarea"></textarea>
+                  </div>
+                </div>
+                <button class="slds-button slds-button_icon slds-button_icon-border-filled" title="Delete row">
+                  <svg class="slds-button__icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#delete"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Delete row</span>
+                </button>
+              </div>
+              <button class="slds-button slds-button_neutral slds-m-top_x-small">
+                <svg class="slds-button__icon slds-button__icon_left" aria-hidden="true">
+                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
+                </svg>Add
+              </button>
+            </div>
+          </div>
+          <!-- Specific Questions tab -->
+          <div id="conv-panel-1" class="slds-tabs_default__content slds-hide" role="tabpanel" aria-labelledby="conv-tab-1">
+            <div class="slds-text-longform">
+              <div class="tools-text-heading">Specific Questions</div>
+              <p>Tell the agent to answer specific questions from conversational data.</p>
+              <div class="question-grid">
+                <div class="slds-form-element">
+                  <div class="slds-form-element__control">
+                    <textarea id="conv-q-1" rows="3" placeholder="Eg: &ldquo;Does this Account use Clay, Common Room, or Unify?&rdquo;" class="slds-textarea"></textarea>
+                  </div>
+                </div>
+                <button class="slds-button slds-button_icon slds-button_icon-border-filled" title="Delete row">
+                  <svg class="slds-button__icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#delete"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Delete row</span>
+                </button>
+                <div class="slds-form-element">
+                  <div class="slds-form-element__control">
+                    <textarea id="conv-q-2" rows="3" placeholder="Eg: &ldquo;Has this Account talked about replatforming in the past year?&rdquo;" class="slds-textarea"></textarea>
+                  </div>
+                </div>
+                <button class="slds-button slds-button_icon slds-button_icon-border-filled" title="Delete row">
+                  <svg class="slds-button__icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#delete"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Delete row</span>
+                </button>
+                <div class="slds-form-element">
+                  <div class="slds-form-element__control">
+                    <textarea id="conv-q-3" rows="3" placeholder="Eg: &ldquo;Has this Account mentioned anything about implementation issues?&rdquo;" class="slds-textarea"></textarea>
+                  </div>
+                </div>
+                <button class="slds-button slds-button_icon slds-button_icon-border-filled" title="Delete row">
+                  <svg class="slds-button__icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#delete"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Delete row</span>
+                </button>
+              </div>
+              <button class="slds-button slds-button_neutral slds-m-top_x-small">
+                <svg class="slds-button__icon slds-button__icon_left" aria-hidden="true">
+                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
+                </svg>Add
+              </button>
+            </div>
+          </div>
+          <!-- Example Usage tab (populated dynamically) -->
+          <div id="conv-panel-2" class="slds-tabs_default__content slds-hide" role="tabpanel" aria-labelledby="conv-tab-2">
+            <div class="tool-detail-tabs" id="panel4Tabs"></div>
+          </div>
+        </div>
+      </div>
+      <div class="slds-modal__footer slds-grid">
+        <button class="slds-button slds-button_neutral" id="backBtn4">Back</button>
+      </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+<div class="slds-backdrop" id="morphBackdrop" role="presentation"></div>

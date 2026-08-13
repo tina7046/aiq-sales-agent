@@ -4,5 +4,414 @@
   // To access this data in a view, you'd write:
   // {{ shared.somedata }}
   "somedata": "somevalue",
-  "builtWith": "Salesforce Lightning Design System Starter Kit"
+  "builtWith": "Salesforce Lightning Design System Starter Kit",
+
+  // Tools modal catalog — ported from the BB-AOP prototype's
+  // Account Research step (`_tools_morph_modal.html`). Lives in
+  // shared.json rather than a page data file because the modal
+  // mounts on more than one surface (Seller Home + the conversation
+  // drill-in), and both have to read one catalog or the card grids
+  // drift apart.
+  //
+  // Fields per tool:
+  //   - id              (string) stable DOM hook + the key the
+  //                     controller uses to look up detail-panel
+  //                     content. Snake_case, matches the ids in
+  //                     src/scripts/tools-data.js.
+  //   - name            (string) card title.
+  //   - description     (string) card subtitle, one line.
+  //   - icon            (string) either a sprite reference
+  //                     ("<sprite>.svg#<symbol>") or a path to a
+  //                     standalone asset under /assets.
+  //   - iconSize        (string) SLDS icon sizing class. Sprite
+  //                     glyphs and bitmap art need different sizes
+  //                     to optically match, hence per-tool.
+  //   - iconExtraClass  (string, optional) extra class on the icon
+  //                     container; "tool-icon-center" for art that
+  //                     needs centering inside the 32px box.
+  //   - iconLabel       (string) assistive-text name for the icon.
+  //   - state           ("added" | "setup") drives the badge — a
+  //                     green check pill or an "Add" pill.
+  //   - panelType       ("detail" | "zoominfo" | "conversations")
+  //                     which panel the card morphs to on click.
+  //                     "detail" is the generic tabbed panel and is
+  //                     the right default for a new card.
+  //   - category        (string) which `categories` entry the card
+  //                     files under. The tab bar above the grid filters
+  //                     on this. A value with no matching category
+  //                     leaves the card reachable only from "All".
+  "toolsModal": {
+    // Filter tabs above the card grid, rendered by the shared
+    // ShTabNav component (src/scripts/tab_nav.js). Order here is the
+    // order on screen. "all" is special-cased by the filter to match
+    // everything; every other `id` is matched against a card's
+    // `category`. Add a tab and a matching category and the grid
+    // picks it up with no code change.
+    "categories": [
+      { "id": "all",      "label": "All" },
+      { "id": "crm",      "label": "CRM & Engagement" },
+      { "id": "contacts", "label": "Contacts & People" },
+      { "id": "intent",   "label": "Intent & Signals" },
+      { "id": "company",  "label": "Company Data" },
+      { "id": "tech",     "label": "Technographics" }
+    ],
+    "featured": {
+      "id": "zoominfo_lookup",
+      "name": "ZoomInfo Lookup",
+      "tagline": "Find the right buyers, engage them faster, close more deals, and grow accounts with the only system of execution purpose - built for GTM and powered by AI.",
+      "panelType": "zoominfo"
+    },
+    "tools": [
+      {
+        "id": "salesforce",
+        "name": "Salesforce",
+        "description": "Accounts, contacts, opportunities, and activity history from your CRM",
+        "category": "crm",
+        "iconSrc": "/assets/images/source_icons/source_salesforce.svg",
+        "iconLabel": "Salesforce",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "gong",
+        "name": "Gong",
+        "description": "Call recordings, transcripts, and conversation insights",
+        "category": "crm",
+        "iconSrc": "/assets/images/source_icons/conn_gong.png",
+        "iconLabel": "Gong",
+        "state": "added",
+        "panelType": "conversations"
+      },
+      {
+        "id": "zoominfo_lookup",
+        "name": "ZoomInfo",
+        "description": "Company, Contacts, Intent, Signals",
+        "category": "contacts",
+        "iconSrc": "/assets/images/source_icons/conn_zoominfo.png",
+        "iconLabel": "ZoomInfo",
+        "state": "setup",
+        "panelType": "zoominfo"
+      },
+      {
+        "id": "6sense",
+        "name": "6sense",
+        "description": "Predictive buying stages, account readiness, keyword intent, and anonymous visitor identification",
+        "category": "intent",
+        "iconSrc": "/assets/images/source_icons/conn_6sense.png",
+        "iconLabel": "6sense",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "demandbase",
+        "name": "Demandbase",
+        "description": "Company, Contacts, Intent, Signals",
+        "category": "intent",
+        "iconSrc": "/assets/images/source_icons/conn_demandbase.png",
+        "iconLabel": "Demandbase",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "apollo",
+        "name": "Apollo",
+        "description": "Company, Contacts, Intent, Signals",
+        "category": "contacts",
+        "iconSrc": "/assets/images/source_icons/conn_apollo.png",
+        "iconLabel": "Apollo",
+        "state": "setup",
+        "panelType": "detail"
+      },
+      {
+        "id": "salesintel",
+        "name": "SalesIntel",
+        "description": "Company, Contacts, Intent, Signals",
+        "category": "contacts",
+        "iconSrc": "/assets/images/source_icons/conn_salesintel.png",
+        "iconLabel": "SalesIntel",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "moody_s",
+        "name": "Moody's",
+        "description": "Private-company financials, ownership, corporate hierarchies, and M&A data",
+        "category": "company",
+        "iconSrc": "/assets/images/source_icons/conn_moodys.png",
+        "iconLabel": "Moody's",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "g2",
+        "name": "G2",
+        "description": "Software category research, product-page views, and competitor-comparison intent",
+        "category": "intent",
+        "iconSrc": "/assets/images/source_icons/conn_g2.png",
+        "iconLabel": "G2",
+        "state": "setup",
+        "panelType": "detail"
+      },
+      {
+        "id": "bombora",
+        "name": "Bombora",
+        "description": "Broad-web B2B topic intent",
+        "category": "intent",
+        "iconSrc": "/assets/images/source_icons/conn_bombora.png",
+        "iconLabel": "Bombora",
+        "state": "setup",
+        "panelType": "detail"
+      },
+      {
+        "id": "cognism",
+        "name": "Cognism",
+        "description": "Phone-verified contacts, European coverage, and compliance controls",
+        "category": "contacts",
+        "iconSrc": "/assets/images/source_icons/conn_cognism.png",
+        "iconLabel": "Cognism",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "crossbeam",
+        "name": "Crossbeam",
+        "description": "Partner overlaps, shared customers, and co-selling signals",
+        "category": "intent",
+        "iconSrc": "/assets/images/source_icons/conn_crossbeam.png",
+        "iconLabel": "Crossbeam",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "boardex",
+        "name": "BoardEx",
+        "description": "Executive and board profiles, leadership changes, and relationship paths",
+        "category": "contacts",
+        "iconSrc": "/assets/images/source_icons/conn_boardex.png",
+        "iconLabel": "BoardEx",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "dow_jones_factiva",
+        "name": "Dow Jones Factiva",
+        "description": "Licensed global news and company-event monitoring",
+        "category": "company",
+        "iconSrc": "/assets/images/source_icons/conn_dow_jones.png",
+        "iconLabel": "Dow Jones Factiva",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "outreach",
+        "name": "Outreach",
+        "description": "Sequences, engagement history, and reply activity",
+        "category": "crm",
+        "iconSrc": "/assets/images/source_icons/conn_outreach.png",
+        "iconLabel": "Outreach",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "builtwith",
+        "name": "BuiltWith",
+        "description": "Website technologies, technology changes, and installation history",
+        "category": "tech",
+        "iconSrc": "/assets/images/source_icons/conn_builtwith.png",
+        "iconLabel": "BuiltWith",
+        "state": "setup",
+        "panelType": "detail"
+      },
+      {
+        "id": "predictleads",
+        "name": "PredictLeads",
+        "description": "Hiring, funding, technology, product, customer, and company-event signals",
+        "category": "intent",
+        "iconSrc": "/assets/images/source_icons/conn_predictleads.png",
+        "iconLabel": "PredictLeads",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "informa_techtarget",
+        "name": "Informa TechTarget",
+        "description": "Named-person enterprise-technology research and purchase intent",
+        "category": "intent",
+        "iconSrc": "/assets/images/source_icons/conn_techtarget.png",
+        "iconLabel": "Informa TechTarget",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "veridion",
+        "name": "Veridion",
+        "description": "Company products, services, locations, and business-model classifications",
+        "category": "company",
+        "iconSrc": "/assets/images/source_icons/conn_veridion.png",
+        "iconLabel": "Veridion",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "harmonic",
+        "name": "Harmonic",
+        "description": "Emerging startups, founders, teams, network paths, and early-growth signals",
+        "category": "company",
+        "iconSrc": "/assets/images/source_icons/conn_harmonic.png",
+        "iconLabel": "Harmonic",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "salesloft",
+        "name": "Salesloft",
+        "description": "Cadences, engagement history, and reply activity",
+        "category": "crm",
+        "iconSrc": "/assets/images/source_icons/conn_salesloft.png",
+        "iconLabel": "Salesloft",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "people_data_labs",
+        "name": "People Data Labs",
+        "description": "People, employment, company, and IP data",
+        "category": "contacts",
+        "iconSrc": "/assets/images/source_icons/conn_people_data_labs.png",
+        "iconLabel": "People Data Labs",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "d_b",
+        "name": "D&B",
+        "description": "Verified business identities, legal entities, subsidiaries, and global corporate hierarchies",
+        "category": "company",
+        "iconSrc": "/assets/images/source_icons/conn_dun_bradstreet.png",
+        "iconLabel": "D&B",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "crunchbase",
+        "name": "Crunchbase",
+        "description": "Private companies, funding, acquisitions, layoffs, and growth signals",
+        "category": "company",
+        "iconSrc": "/assets/images/source_icons/conn_crunchbase.png",
+        "iconLabel": "Crunchbase",
+        "state": "setup",
+        "panelType": "detail"
+      },
+      {
+        "id": "enigma",
+        "name": "Enigma",
+        "description": "US SMB identities, revenue, card transactions, and growth signals",
+        "category": "company",
+        "iconSrc": "/assets/images/source_icons/conn_enigma.png",
+        "iconLabel": "Enigma",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "exa",
+        "name": "Exa",
+        "description": "Live web search, crawling, monitoring, and agent-driven research",
+        "category": "tech",
+        "iconSrc": "/assets/images/source_icons/conn_exa.png",
+        "iconLabel": "Exa",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "pitchbook",
+        "name": "PitchBook",
+        "description": "Private-capital deals, investors, funds, PE ownership, debt, and professionals",
+        "category": "company",
+        "iconSrc": "/assets/images/source_icons/conn_pitchbook.png",
+        "iconLabel": "PitchBook",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "similarweb",
+        "name": "SimilarWeb",
+        "description": "Website and app traffic, audiences, acquisition channels, and digital growth",
+        "category": "tech",
+        "iconSrc": "/assets/images/source_icons/conn_similarweb.png",
+        "iconLabel": "SimilarWeb",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "s_p_global",
+        "name": "S&P Global",
+        "description": "Company financials, transactions, relationships, filings, and earnings transcripts",
+        "category": "company",
+        "iconSrc": "/assets/images/source_icons/conn_sp_global.png",
+        "iconLabel": "S&P Global",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "live_data_technologies",
+        "name": "Live Data Technologies",
+        "description": "Employment verification and real-time job-change data",
+        "category": "intent",
+        "iconSrc": "/assets/images/source_icons/conn_live_data.png",
+        "iconLabel": "Live Data Technologies",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "the_org",
+        "name": "The Org",
+        "description": "Org charts, reporting lines, roles, and positions",
+        "category": "contacts",
+        "iconSrc": "/assets/images/source_icons/conn_the_org.png",
+        "iconLabel": "The Org",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "coresignal",
+        "name": "CoreSignal",
+        "description": "Employee, company, and job-posting data",
+        "category": "contacts",
+        "iconSrc": "/assets/images/source_icons/conn_coresignal.png",
+        "iconLabel": "CoreSignal",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "linkedin_sales_navigator",
+        "name": "LinkedIn Sales Navigator",
+        "description": "Professional profiles, current roles, job changes, mutual connections, and relationship maps",
+        "category": "contacts",
+        "iconSrc": "/assets/images/source_icons/conn_linkedin.png",
+        "iconLabel": "LinkedIn Sales Navigator",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "hg_insights",
+        "name": "HG Insights",
+        "description": "Technographics, cloud usage, IT spending, and technology-contract intelligence",
+        "category": "tech",
+        "iconSrc": "/assets/images/source_icons/conn_hg_insights.png",
+        "iconLabel": "HG Insights",
+        "state": "added",
+        "panelType": "detail"
+      },
+      {
+        "id": "usergems",
+        "name": "UserGems",
+        "description": "Best Context data and signals",
+        "category": "intent",
+        "iconSrc": "/assets/images/source_icons/conn_usergems.png",
+        "iconLabel": "UserGems",
+        "state": "added",
+        "panelType": "detail"
+      }
+    ]
+  }
 }
