@@ -70,7 +70,7 @@
                                         and a multi-colour raster would
                                         flatten to one silhouette.
 #}
-{% macro renderNavItem(item, activeId) %}
+{% macro renderNavItem(item, activeId, badgeCount) %}
 {% set isActive = activeId == item.id %}
 <a
   href="{{ item.href or '#' }}"
@@ -109,6 +109,21 @@
     {% endif %}
   </span>
   <span class="seller-home__nav-label">{{ item.label }}</span>
+  {# Count badge — passed only for the item that wants one (Tools). The
+     element is always emitted when a count is passed, and hidden at
+     zero, so tools_modal.js can update the number and toggle it live as
+     tiles connect/disconnect. `slds-col_bump-left` pushes it to the
+     row's trailing edge. #}
+  {% if badgeCount is defined %}
+  <span
+    class="slds-badge slds-theme_info slds-col_bump-left seller-home__nav-badge"
+    data-sh-tools-nav-badge
+    {% if not badgeCount %}hidden{% endif %}
+  >
+    <span class="slds-assistive-text">: </span><span data-sh-tools-nav-badge-count>{{ badgeCount }}</span>
+    <span class="slds-assistive-text"> not connected</span>
+  </span>
+  {% endif %}
 </a>
 {% endmacro %}
 
@@ -255,6 +270,16 @@
    different active state (e.g. a future Workflows sub-page). #}
 {% set _shNavActive = navActive or "new_chat" %}
 
+{# Seed count for the Tools nav badge: how many tools ship not-added.
+   Loop-set accumulation is supported in this Nunjucks build. This is the
+   authored default; on pages that load the Tools modal, tools_modal.js
+   recomputes it from the persisted connected set and keeps it live as
+   tiles connect and disconnect. #}
+{% set _toolsNotAdded = 0 %}
+{% for _t in (shared.toolsModal.tools or []) %}
+  {% if _t.state != "added" %}{% set _toolsNotAdded = _toolsNotAdded + 1 %}{% endif %}
+{% endfor %}
+
 {# ── Pre-paint nav state ──────────────────────────────────────────────
    The collapsed preference is client state, so the static markup always
    ships the expanded 300px rail. home.js applies the real state, but it
@@ -322,7 +347,11 @@
 
     <div class="seller-home__nav-list seller-home__nav-list--primary" role="list">
       {% for item in navPrimary %}
-        {{ renderNavItem(item, _shNavActive) }}
+        {% if item.id == "tools" %}
+          {{ renderNavItem(item, _shNavActive, _toolsNotAdded) }}
+        {% else %}
+          {{ renderNavItem(item, _shNavActive) }}
+        {% endif %}
       {% endfor %}
     </div>
   </div>

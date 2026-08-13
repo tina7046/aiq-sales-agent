@@ -1,0 +1,127 @@
+{% extends "_template.html" %}
+
+{#
+  Seller Home — Learnings (tabbed Auto-Learning prototype)
+  =====================================================================
+  A prototype variant of /knowledge.html. Where Knowledge lists the
+  documents and drills into /knowledge_document_detail.html?id=<id>,
+  this page turns the six Auto-Learning documents into a pill tab set
+  (the shared ShTabNav component, same control the Tools page uses) and
+  renders the selected document's body in-page underneath — no
+  navigation, no detail route. ICP is open by default.
+
+  Data
+  ----
+  The tabs and their bodies come from the SAME `documents[]` catalog in
+  knowledge.json that the Knowledge list + detail pages read, filtered
+  to the Auto-Learning set (`sourceGroupId ==
+  "auto-learning-customer-interactions"`). Tab labels use each doc's
+  optional `tabLabel` (short) falling back to `name`. The full catalog
+  is inlined as a JSON block so learnings.js can look a doc up by id on
+  tab change without a fetch.
+
+  Rendering
+  ---------
+  learnings.js renders each doc's markdown into a
+  `.hunter-agent-knowledge__article` container so it inherits the same
+  prose styling the detail page uses (defined in knowledge.scss). It's
+  a small self-contained markdown renderer rather than the shared
+  KnowledgeDocumentView module — that module is a full Preview/Edit/TOC
+  editor built around a single doc + textarea, too heavy to reuse for a
+  read-only tabbed reader.
+
+  Layout reuses Knowledge's shell classes (`.seller-home__knowledge-*`)
+  for the header band + scroll body, exactly as scheduled.html does, so
+  this page inherits the tuned column width and scroll behaviour.
+#}
+
+{% set navPrimary = readData("index").navPrimary %}
+{% set navFooter  = readData("index").navFooter %}
+{% set recents    = readData("index").recents %}
+
+{# Full document catalog — the tab loop and the inlined config below both
+   read it and filter to the Auto-Learning set, so the tab order and the
+   JS lookup stay in the same order without a separate filtered var. #}
+{% set _allDocs = readData("knowledge").documents or [] %}
+
+{% block styles %}
+  <link rel="stylesheet" href="/styles/home.css" />
+  <link rel="stylesheet" href="/styles/knowledge.css" />
+  <link rel="stylesheet" href="/styles/learnings.css" />
+{% endblock %}
+
+{% block content %}
+  <div class="seller-home seller-home--knowledge seller-home--learnings" data-sh-root>
+    {% include "_home_left_nav.html" %}
+
+    <div
+      class="seller-home__knowledge seller-home__learnings"
+      role="main"
+      aria-label="{{ pageTitle }}"
+      tabindex="-1"
+    >
+      <header class="seller-home__knowledge-header">
+        <h1 class="seller-home__knowledge-header-title">{{ header.heading }}</h1>
+      </header>
+
+      <section
+        class="seller-home__knowledge-body"
+        aria-label="{{ pageTitle }}"
+      >
+        <div class="seller-home__learnings-inner">
+          {# ── Tab set ─────────────────────────────────────────────────
+             Declarative ShTabNav markup (pills are <div>s, wired by the
+             global component in _template.html). Each pill carries the
+             doc id as its value; learnings.js renders that doc on
+             change. The first Auto-Learning doc (ICP) ships active.
+             `_seen` flips after the first match so exactly one pill is
+             active regardless of the catalog's overall order. #}
+          <ul
+            class="slds-list_horizontal slds-has-dividers_right tab-nav-cycler seller-home__learnings-tabs"
+            data-sh-tabnav
+            data-sh-learnings-tabs
+            aria-label="Documents"
+          >
+            {% set _seen = false %}
+            {% for doc in _allDocs %}
+              {% if doc.sourceGroupId == "auto-learning-customer-interactions" %}
+              <li class="slds-item">
+                <div
+                  class="{% if not _seen %}slds-item-active{% else %}slds-item-inactive{% endif %}"
+                  data-sh-tabnav-value="{{ doc.id }}"
+                >{{ doc.tabLabel or doc.name }}</div>
+              </li>
+              {% set _seen = true %}
+              {% endif %}
+            {% endfor %}
+          </ul>
+
+          {# Two-column layout: the selected document renders into the
+             main column (learnings.js), the "On this page" TOC sits in
+             the sticky right column. The TOC partial is the same shell
+             the Knowledge detail page uses; learnings.js populates and
+             drives it (rail indicator, scroll-spy, collapsible
+             sections). #}
+          <div class="seller-home__learnings-layout" data-sh-learnings-layout>
+            <div class="seller-home__learnings-main" data-sh-learnings-panel></div>
+            {% include "_knowledge_toc.html" %}
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  {# Full catalog for client-side lookup by id. learnings.js filters to
+     the Auto-Learning set itself. #}
+  <script type="application/json" id="sh-learnings-config">
+    {{ _allDocs | tojson | safe }}
+  </script>
+{% endblock %}
+
+{% block scripts_extra %}
+  {# home.js drives the shared shell (nav collapse). Its other
+     controllers no-op on this page. #}
+  <script src="/scripts/home.js"></script>
+  {# Tab → in-page document renderer for this page. #}
+  <script src="/scripts/learnings.js"></script>
+{% endblock %}

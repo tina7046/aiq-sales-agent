@@ -246,10 +246,34 @@ function init() {
     }
   }
 
+  // Left-nav badge: how many tools are still available to add. Only
+  // tools that ship in the "setup" state count — the curated "you could
+  // add these" set. A core tool that shipped "added" and then got
+  // disconnected does NOT inflate the badge (that was the bug: any
+  // disconnect pushed the count up past the original set). So the badge
+  // is bounded by the number of setup tools and only moves as those are
+  // connected/disconnected. Mirrors the server-rendered seed, which
+  // counts the same authored set. Hidden at zero.
+  function updateNavBadge() {
+    let count = 0;
+    for (let i = 0; i < config.tools.length; i++) {
+      const t = config.tools[i];
+      if (t.state === "setup" && !connectedTools.has(t.id)) count++;
+    }
+    const badges = document.querySelectorAll("[data-sh-tools-nav-badge]");
+    for (let i = 0; i < badges.length; i++) {
+      const countEl = badges[i].querySelector("[data-sh-tools-nav-badge-count]");
+      if (countEl) countEl.textContent = String(count);
+      if (count > 0) badges[i].removeAttribute("hidden");
+      else badges[i].setAttribute("hidden", "");
+    }
+  }
+
   // Sync every tile to the current connected set on load — not just the
   // connected ones, since a tool that shipped "added" may have been
   // disconnected in a prior session and must render "Add".
   config.tools.forEach((t) => setCardConnected(t.id, connectedTools.has(t.id)));
+  updateNavBadge();
 
   /** A panel's width, never wider than the viewport allows. */
   function widthFor(key) {
@@ -835,6 +859,7 @@ function init() {
     connectedTools.add(id);
     writeConnected();
     setCardConnected(id, true);
+    updateNavBadge();
     remeasurePanel1();
     // Land on the tool's detail — the conversations config for that
     // panel type, the generic detail otherwise.
@@ -853,6 +878,7 @@ function init() {
     connectedTools.delete(id);
     writeConnected();
     setCardConnected(id, false);
+    updateNavBadge();
     disconnectBtn3.style.display = "none";
     remeasurePanel1();
     // Same rule as Back: close when opened straight onto the tool
