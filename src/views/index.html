@@ -13,8 +13,12 @@
      prototypes on the same host is what lets the tuned numbers mean the same
      thing in both — the focal point is placed relative to that box. */
 
+	/* TEMPORARILY HIDDEN (not deleted) — shader control panel / "Controls"
+	   launcher. Delete this one rule to restore it. */
+	#panel { display: none !important; }
+
 	#panel {
-		display: none;
+		display: block;
 		position: fixed;
 		right: 16px;
 		bottom: 16px;
@@ -33,8 +37,13 @@
 	}
 
 	#panel.closed {
+		/* Only bottom-anchor when collapsed so the box hugs its content
+		   (the "Controls" launcher) instead of being stretched full-height
+		   by the base rule's top:100px + bottom:16px pair. */
+		top: auto;
 		width: auto;
 		padding: 10px 14px;
+		overflow: visible;
 	}
 
 	#panel.closed .body {
@@ -45,6 +54,13 @@
 		display: flex;
 		justify-content: space-between;
 		gap: 10px;
+	}
+
+	/* `all: unset` below resets `display` to `inline`, which overrides the
+	   UA `[hidden] { display: none }` — so restore it for the panel's
+	   buttons, otherwise Copy/Reset stay visible when collapsed. */
+	#panel button[hidden] {
+		display: none;
 	}
 
 	#panel button {
@@ -281,7 +297,7 @@
 		{{ { "tools": shared.toolsModal.tools } | tojson | safe }}
 	</script>
 
-	<div id="panel" class="closed" hidden>
+	<div id="panel" class="closed">
 		<div class="head">
 			<button id="toggle">Controls</button>
 			<button id="copy" class="act" hidden>Copy</button>
@@ -339,8 +355,8 @@
 			colorsCount: 5,          // godRaysMeta.maxColorCount is 5
 			colorBack: '#ffffff',
 			colorBloom: '#ffa8f3',
-			bloom: 0, intensity: 0.65, density: 0.06, spotty: 0.98,
-			midSize: 0.35, midIntensity: 0.24,
+			bloom: 0, intensity: 0, density: 0.06, spotty: 0.98,
+			midSize: 0.51, midIntensity: 0.24,
 			scale: 0.71, rotation: 152, offsetX: 0,
 			// Vertical placement is NOT the shader's `offsetY` — see focalOffsetY.
 			// `focalOffsetPx` is the signed distance from the composer's TOP EDGE
@@ -349,7 +365,7 @@
 			// page. Same keys, same values, same solve as hunter-main-main.
 			focalOffsetPx: 5, focalFallbackPx: 415,
 			speed: 1.09, blur: 5,
-			wedge: 101, feather: 22,  // angular mask, degrees — CSS, not a shader uniform
+			wedge: 90, feather: 22,  // angular mask, degrees — CSS, not a shader uniform
 			hole: 0, holeFeather: 0,  // radial mask hole, vmin — 0 disables the layer
 			north: true, east: false, south: false, west: false,  // cones cleared of rays
 		};

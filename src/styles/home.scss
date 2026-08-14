@@ -1959,6 +1959,306 @@ main.app-wrapper {
   gap: 0;
 }
 
+// Wrapper around the Ready / Running / Scheduled pill tablist. Mirrors
+// the Scheduled page's `.seller-home__scheduled-toolbar`: it owns the
+// bottom hairline that the active tab's 3px underline paints over (the
+// inner `.seller-home__scheduled-tabs` keeps its `-1px` bottom margin so
+// the underline overlaps this line). Adds breathing room before the list.
+.seller-home__ready-tabbar {
+  border-bottom: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  margin-bottom: var(--slds-g-spacing-4, 1rem); // 16px
+}
+
+// Alternate treatment: the Connections "cycler" chips (ShTabNav). No
+// bottom hairline — the chips carry their own edges — just spacing above
+// the list. The base chip visuals come from `.slds-item-active/inactive`
+// (index.css) + `.tool-categories` divider tweaks (tools.css); the rules
+// below scope this card's overrides so the shared Connections chips are
+// untouched.
+.seller-home__ready-tabbar-cycler {
+  margin: 0.25rem 0 var(--slds-g-spacing-4, 1rem); // 4px / 16px
+
+  // Each chip carries a label + a count badge, side by side.
+  .slds-item-active,
+  .slds-item-inactive {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem; // 6px label-to-count
+  }
+
+  // Selected chip: blue-50 fill + white text. Scoped here (not on the
+  // global `.slds-item-active`) so the Connections category chips keep
+  // their light-blue-95 treatment.
+  .slds-item-active {
+    background-color: var(--slds-g-color-palette-blue-50, #0176d3);
+    border-color: var(--slds-g-color-palette-blue-50, #0176d3);
+    color: #fff;
+  }
+}
+
+// Count badge on each cycler chip — neutral pill on the resting chips.
+.seller-home__ready-cycler-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;   // 20px — a single digit still reads as a pill
+  height: 1.125rem;     // 18px
+  padding-inline: 0.375rem;
+  border-radius: 999px;
+
+  background: var(--slds-g-color-surface-container-3, #e5e5e5);
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-family: inherit;
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1;
+}
+
+// On the selected (blue) chip the badge flips to translucent white so it
+// stays legible against the blue-50 fill.
+.seller-home__ready-tabbar-cycler .slds-item-active .seller-home__ready-cycler-count {
+  background: rgba(255, 255, 255, 0.24);
+  color: #fff;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TEMPORARILY HIDDEN (not deleted) — delete THIS block to restore:
+//   • the Ready / Running / Scheduled tab switcher (all 3 treatments)
+//   • the floating A/B/C tab-style control widget
+// All markup + JS stay in place; this only hides the UI.
+.seller-home__ready [data-sh-ready-tabstyle-view],
+.seller-home__ready-abpanel {
+  display: none !important;
+}
+// ═══════════════════════════════════════════════════════════════════
+
+// ── A/B/C comparison scaffolding (prototype) ────────────────────────
+// All tab treatments render; show only the one the section root's
+// `data-ready-tabstyle` selects (set by the floating panel + localStorage).
+.seller-home__ready [data-sh-ready-tabstyle-view] {
+  display: none;
+}
+.seller-home__ready[data-ready-tabstyle="a"] [data-sh-ready-tabstyle-view="a"],
+.seller-home__ready[data-ready-tabstyle="b"] [data-sh-ready-tabstyle-view="b"],
+.seller-home__ready[data-ready-tabstyle="c"] [data-sh-ready-tabstyle-view="c"] {
+  display: block;
+}
+
+// Option C wrapper — spacing before the list, matching A/B.
+.seller-home__ready-tabbar-slider {
+  margin: 0.25rem 0 var(--slds-g-spacing-4, 1rem);
+}
+
+// Floating A/B/C switch — a small control card stacked just above the
+// shader "Controls" launcher in the bottom-right corner (the bottom-left
+// was hidden behind the left nav). z-index sits above the shader panel
+// (z-index: 3) so it stays clickable even when that panel is expanded.
+// Prototype-only; remove alongside the losing treatments once a winner
+// is chosen.
+.seller-home__ready-abpanel {
+  position: fixed;
+  right: 16px;
+  bottom: 64px; // clears the ~40px collapsed "Controls" launcher below it
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  background: var(--slds-g-color-surface-1, #fff);
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  box-shadow:
+    0 4px 12px 0 rgba(0, 0, 0, 0.12),
+    0 1px 3px 0 rgba(0, 0, 0, 0.08);
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+}
+
+.seller-home__ready-abpanel-title {
+  font-size: 0.75rem;
+  font-weight: var(--slds-g-font-weight-6, 590);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  padding-inline-start: 0.25rem;
+}
+
+.seller-home__ready-abpanel-options {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.seller-home__ready-abpanel-btn {
+  appearance: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: var(--slds-g-font-weight-6, 590);
+  padding: 4px 8px;
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  background: #fff;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  &:hover {
+    background: #f3f3f3;
+  }
+
+  // Active button uses the same blue-50 fill as Option B's selected chip.
+  &.is-active {
+    background: var(--slds-g-color-palette-blue-50, #0176d3);
+    border-color: var(--slds-g-color-palette-blue-50, #0176d3);
+    color: #fff;
+  }
+}
+
+// ── Option C: transitions.dev "Tabs sliding" (16-tabs-sliding) ──────
+// Pasted verbatim from the transitions-dev skill. `.t-*` are the portable
+// hooks; JS in `bindReadyToReview` writes the pill's transform + width and
+// the CSS below owns the tween. Prototype-only — remove with the losing
+// treatments once a winner is chosen.
+:root {
+  --tabs-dur: 250ms;
+  --tabs-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --tabs-text-muted: var(--slds-g-color-on-surface-1, #5c5c5c);
+  --tabs-text-active: var(--slds-g-color-on-surface-1, #5c5c5c);
+  --tabs-bar-bg: #ffffff36;
+  --new-2:
+      radial-gradient(at 100% 100%, hsla(0, 0%, 100%, 1) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, hsla(0, 0%, 100%, 1) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(209, 100%, 95%, 1) 0px, transparent 50%),
+      radial-gradient(at 100% 50%, hsla(207, 100%, 98%, 1) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, hsla(286, 100%, 97%, 1) 0px, transparent 50%),
+      radial-gradient(at 0% 0%, hsla(283, 100%, 95%, 1) 0px, transparent 50%);
+  --tabs-pill-bg: var(--slds-g-color-surface-1, #fff);
+
+  // Count badge — inactive (resting) vs active states are defined via
+  // separate hooks so each can be tuned independently. Swap these to
+  // restyle the badge without touching the rules below.
+  --tabs-count-bg: var(--slds-g-color-surface-container-3);
+  --tabs-count-text: var(--slds-g-color-on-surface-1, #5c5c5c);
+  --tabs-count-bg-active: var(--slds-g-color-info-container-1, #d8e6fe);
+  --tabs-count-text-active: var(--slds-g-color-on-info-1, #0b5cab);
+}
+
+// The bar is just a flex container with padding for the pill to sit
+// inside. Tabs sit on z-index: 1, the pill on z-index: 0, so labels read
+// above the pill background.
+.t-tabs {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border-radius: var(--slds-g-radius-border-pill, 15rem);
+
+  // Fill — may be ANY transparency (e.g. #ffffff36). The gradient border
+  // is drawn by the masked `::after` below, NOT the old
+  // `background-clip: padding-box, border-box` trick — that trick needed
+  // an OPAQUE fill to hide the border-box gradient across the middle, so a
+  // see-through fill leaked the gradient over the whole bar.
+  background: var(--tabs-bar-bg);
+}
+
+// Agentic gradient border ring. The color gradient fills the whole pseudo,
+// then a mask (full box XOR the inner content box) keeps only the 1px
+// edge — so `.t-tabs`' translucent fill shows through the middle and just
+// the ring carries the purple → blue → cyan gradient.
+.t-tabs::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px; // ring thickness
+  background: linear-gradient(to right, #e3bbff 5%, #98bdff 25%, #99defc);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.t-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem); // label-to-count only; badge cushion lives on .t-tab-count
+  appearance: none;
+  border: 0;
+  background: transparent;
+  height: 30px;
+  padding: var(--slds-g-spacing-1, 0.25rem) var(--slds-g-spacing-3, 0.75rem); // 4px / 12px
+  color: var(--tabs-text-muted);
+  cursor: pointer;
+  border-radius: var(--slds-g-radius-border-pill, 15rem);
+  z-index: 1;
+  transition: color var(--tabs-dur) var(--tabs-ease);
+}
+.t-tab:not([aria-selected="true"]):hover,
+.t-tab[aria-selected="true"] {
+  color: var(--tabs-text-active);
+}
+
+// Count badge — sits after the label inside each tab. The RESTING /
+// INACTIVE look is defined here; the ACTIVE look is the separate rule
+// below. Both read the `--tabs-count-*` hooks, so you can restyle either
+// state from the `:root` block or override these rules directly.
+.t-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem; // 20px — a single digit still reads as a pill
+  height: 1.125rem; // 18px
+  padding-inline: var(--slds-g-spacing-1, 0.25rem); // 4px
+  border-radius: var(--slds-g-radius-border-pill, 15rem);
+
+  background: var(--tabs-count-bg);
+  color: var(--tabs-count-text);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1;
+
+  // The pill's padding is asymmetric — 4px vertical / 12px horizontal
+  // (`--slds-g-spacing-1` / `--slds-g-spacing-3`) — so the badge ends up
+  // with only 6px above/below but 12px on the sides. Pull it toward the
+  // trailing edge by that 6px difference so its right cushion also reads
+  // 6px, giving the badge even breathing room on top / bottom / right.
+  margin-inline-end: -0.375rem; // -6px
+
+  transition: background-color var(--tabs-dur) var(--tabs-ease), color var(--tabs-dur) var(--tabs-ease);
+}
+
+// ACTIVE tab's count badge.
+.t-tab[aria-selected="true"] .t-tab-count {
+  background: var(--tabs-count-bg-active);
+  color: var(--tabs-count-text-active);
+}
+
+// The pill: width + transform are written inline by JS so the transition
+// tweens between the previous and next measured positions.
+.t-tabs-pill {
+  position: absolute;
+  top: 3px;
+  left: 0;
+  height: 30px;
+  width: 0;
+  background: white;
+  border-radius: 48px;
+  transform: translateX(0);
+  transition:
+    transform var(--tabs-dur) var(--tabs-ease),
+    width var(--tabs-dur) var(--tabs-ease);
+  will-change: transform, width;
+  z-index: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-tabs-pill,
+  .t-tab,
+  .t-tab-count {
+    transition: none !important;
+  }
+}
+
 .seller-home__ready-tab {
   appearance: none;
   background: transparent;

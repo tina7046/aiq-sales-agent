@@ -226,7 +226,9 @@
                through an <img> neither the page's nor the asset's own
                rule reaches it. See home.scss for the full reasoning. #}
             <div class="knowledge-banner__illustration-col">
+              {# iso-grid backdrop hidden (kept for later):
               <div class="iso-grid" aria-hidden="true"></div>
+              #}
               <div class="knowledge-banner__illustration">
                 {{ inlineSvg("images/illustrations/Iso_Scan_bare.svg", {
                   "class": "knowledge-banner__illustration-svg",
@@ -301,53 +303,91 @@
                • The field is a sibling of the doc-list slot below;
                  it stays mounted (never re-rendered) so keyboard
                  focus is preserved across every filter update. #}
-          <div class="seller-home__knowledge-search" data-sh-knowledge-search-field>
-            <label class="slds-assistive-text" for="knowledge-search">{{ search.label }}</label>
-
-            <span class="seller-home__knowledge-search-icon" aria-hidden="true">
-              <svg class="seller-home__knowledge-search-icon-svg" focusable="false">
-                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#search"></use>
-              </svg>
-            </span>
-
-            <input
-              type="search"
-              id="knowledge-search"
-              class="seller-home__knowledge-search-input"
-              placeholder="{{ search.placeholder }}"
-              autocomplete="off"
-              autocorrect="off"
-              autocapitalize="off"
-              spellcheck="false"
-              data-sh-knowledge-search
-            />
-
-            <button
-              type="button"
-              class="seller-home__knowledge-search-clear"
-              data-sh-knowledge-search-clear
-              aria-label="{{ search.clearLabel }}"
-              title="{{ search.clearLabel }}"
-              hidden
+          {# ── Tabs + search toolbar ────────────────────────────────
+             The Learnings / Sources tabs filter the document list; the
+             search field sits on the right of the SAME row. Styling
+             reuses the Scheduled page's toolbar + tab classes so the two
+             surfaces read as one visual family. Like Scheduled, the tabs
+             are a `radiogroup` (they filter one list rather than swap
+             panels). Per-tab counts are rendered server-side by
+             iterating `documents`; `bindKnowledgeTabs` in home.js drives
+             activation + filtering at runtime. #}
+          <div class="seller-home__scheduled-toolbar seller-home__knowledge-toolbar" data-sh-knowledge-toolbar>
+            <div
+              class="seller-home__scheduled-tabs"
+              role="radiogroup"
+              aria-label="Filter knowledge"
+              data-sh-knowledge-tabs
             >
-              <svg class="seller-home__knowledge-search-clear-icon" aria-hidden="true" focusable="false">
-                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
-              </svg>
-              <span class="slds-assistive-text">{{ search.clearLabel }}</span>
-            </button>
+              {% for tab in tabs.items %}
+                {% set count = 0 %}
+                {% for doc in documents %}
+                  {% if not (doc.hidden == true) %}
+                    {% if (doc.tab or "learnings") == tab.id %}{% set count = count + 1 %}{% endif %}
+                  {% endif %}
+                {% endfor %}
+                {% set isActive = (tab.id == tabs.defaultTabId) %}
+                <button
+                  type="button"
+                  class="seller-home__scheduled-tab{% if isActive %} is-active{% endif %}"
+                  role="radio"
+                  aria-checked="{% if isActive %}true{% else %}false{% endif %}"
+                  aria-controls="seller-home-knowledge-list"
+                  data-sh-knowledge-tab="{{ tab.id }}"
+                  tabindex="{% if isActive %}0{% else %}-1{% endif %}"
+                >
+                  <span class="seller-home__scheduled-tab-label">{{ tab.label }}</span>
+                  <span class="seller-home__scheduled-tab-count" aria-hidden="true">{{ count }}</span>
+                  <span class="slds-assistive-text">{{ count }} item{% if count != 1 %}s{% endif %}</span>
+                </button>
+              {% endfor %}
+            </div>
 
-            {# Visually hidden result-count live region. `role="status"` +
-               `aria-live="polite"` means updates are queued and delivered
-               between the user's own typing bursts, so the announcement
-               never talks over the letters they're still entering. The
-               text is set imperatively from home.js after every filter. #}
-            <span
-              class="slds-assistive-text"
-              role="status"
-              aria-live="polite"
-              aria-atomic="true"
-              data-sh-knowledge-search-status
-            ></span>
+            {# Search field — right side of the toolbar row. #}
+            <div class="seller-home__knowledge-search" data-sh-knowledge-search-field>
+              <label class="slds-assistive-text" for="knowledge-search">{{ search.label }}</label>
+
+              <span class="seller-home__knowledge-search-icon" aria-hidden="true">
+                <svg class="seller-home__knowledge-search-icon-svg" focusable="false">
+                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#search"></use>
+                </svg>
+              </span>
+
+              <input
+                type="search"
+                id="knowledge-search"
+                class="seller-home__knowledge-search-input"
+                placeholder="{{ search.placeholder }}"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+                data-sh-knowledge-search
+              />
+
+              <button
+                type="button"
+                class="seller-home__knowledge-search-clear"
+                data-sh-knowledge-search-clear
+                aria-label="{{ search.clearLabel }}"
+                title="{{ search.clearLabel }}"
+                hidden
+              >
+                <svg class="seller-home__knowledge-search-clear-icon" aria-hidden="true" focusable="false">
+                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+                </svg>
+                <span class="slds-assistive-text">{{ search.clearLabel }}</span>
+              </button>
+
+              {# Visually hidden result-count live region. #}
+              <span
+                class="slds-assistive-text"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+                data-sh-knowledge-search-status
+              ></span>
+            </div>
           </div>
 
           {# ── Document list ────────────────────────────────────────

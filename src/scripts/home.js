@@ -563,6 +563,13 @@
       bindKnowledgeSearch(knowledgeSearchField, knowledgeDocList)
     }
 
+    // Knowledge tabs (Learnings / Sources). Bound AFTER the search so its
+    // load-time re-filter finds the search controller's `input` listener
+    // already attached. No-op when the tabs aren't on the page.
+    if (knowledgeDocList) {
+      bindKnowledgeTabs(root)
+    }
+
     // Phase 5c — Knowledge banner dismiss (also /knowledge.html only).
     var knowledgeBanner = root.querySelector('[data-sh-knowledge-banner]')
     if (knowledgeBanner) {
@@ -1345,6 +1352,142 @@
     var panels = toArray(readyRoot.querySelectorAll('[data-sh-ready-panel]'))
     if (tabs.length && panels.length) {
       tablistController(tabs, panels)
+    }
+
+    // Cycler-tab bridge. When the header uses the Connections "cycler"
+    // treatment (`[data-sh-tabnav]`), the global tab_nav.js owns the
+    // active-chip + roving-tabindex + keyboard state and emits a
+    // bubbling `sh:tabnav-change` ({ index, label, value }). Map that
+    // value onto the ready panels so the card swaps content the same way
+    // the `tablistController` (pill treatment) does. Both treatments are
+    // rendered for the A/B comparison; the sync block below mirrors the
+    // active tab across them so flipping the control panel is seamless.
+    var tabnav = readyRoot.querySelector('[data-sh-tabnav]')
+    if (tabnav && panels.length) {
+      tabnav.addEventListener('sh:tabnav-change', function (event) {
+        var value = event.detail && event.detail.value
+        panels.forEach(function (panel) {
+          var on = panel.getAttribute('data-sh-ready-panel') === value
+          panel.classList.toggle('is-visible', on)
+          panel.hidden = !on
+        })
+        document.dispatchEvent(new CustomEvent('sh:review-tab-change', {
+          detail: { tabId: value, source: 'ready' }
+        }))
+      })
+    }
+
+    // ── A/B/C tab-treatment comparison (prototype) ────────────────────
+    // All treatments render at once; a single `sh:review-tab-change`
+    // listener mirrors the active tab across them so the floating control
+    // panel can flip between them without showing a stale selection. This
+    // block only mutates DOM (never dispatches), so there's no feedback
+    // loop. It also rewrites the cycler's `data-sh-tabnav-index` so
+    // ShTabNav's own "already selected" guard stays aligned.
+    var cyclerList = readyRoot.querySelector('[data-sh-tabnav]')
+    var cyclerChips = cyclerList
+      ? toArray(cyclerList.querySelectorAll('[data-sh-tabnav-value]'))
+      : []
+
+    // Option C — transitions.dev sliding pill (16-tabs-sliding). JS writes
+    // the active tab's offsetLeft/offsetWidth onto the pill; CSS tweens it.
+    var sliderBar = readyRoot.querySelector('[data-sh-ready-slider]')
+    var sliderPill = sliderBar ? sliderBar.querySelector('.t-tabs-pill') : null
+    var sliderTabs = sliderBar ? toArray(sliderBar.querySelectorAll('.t-tab')) : []
+    function sliderActiveTab () {
+      return sliderTabs.filter(function (t) {
+        return t.getAttribute('aria-selected') === 'true'
+      })[0] || sliderTabs[0]
+    }
+    // Snap (animate=false: suspend transition + reflow so the pill doesn't
+    // fly in from translateX(0)/width:0) or tween (animate=true) the pill
+    // onto a tab. A `display:none` bar measures as 0, so bail unless
+    // Option C is the shown treatment (see the re-snap in applyTabStyle).
+    function sliderMoveTo (tab, animate) {
+      if (!tab || !sliderPill) return
+      if (readyRoot.getAttribute('data-ready-tabstyle') !== 'c') return
+      if (!animate) {
+        var prev = sliderPill.style.transition
+        sliderPill.style.transition = 'none'
+        sliderPill.style.transform = 'translateX(' + tab.offsetLeft + 'px)'
+        sliderPill.style.width = tab.offsetWidth + 'px'
+        void sliderPill.offsetWidth
+        sliderPill.style.transition = prev
+      } else {
+        sliderPill.style.transform = 'translateX(' + tab.offsetLeft + 'px)'
+        sliderPill.style.width = tab.offsetWidth + 'px'
+      }
+    }
+    sliderTabs.forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        var tabId = tab.getAttribute('data-sh-ready-slidertab')
+        panels.forEach(function (panel) {
+          var on = panel.getAttribute('data-sh-ready-panel') === tabId
+          panel.classList.toggle('is-visible', on)
+          panel.hidden = !on
+        })
+        document.dispatchEvent(new CustomEvent('sh:review-tab-change', {
+          detail: { tabId: tabId, source: 'ready' }
+        }))
+      })
+    })
+    window.addEventListener('resize', function () {
+      sliderMoveTo(sliderActiveTab(), false)
+    })
+
+    // Mirror the active tab across all three treatments on any change.
+    document.addEventListener('sh:review-tab-change', function (event) {
+      if (!event.detail || event.detail.source !== 'ready') return
+      var tabId = event.detail.tabId
+      tabs.forEach(function (pill) {
+        var on = pill.getAttribute('data-sh-ready-tab') === tabId
+        pill.classList.toggle('is-active', on)
+        pill.setAttribute('aria-selected', on ? 'true' : 'false')
+        pill.setAttribute('tabindex', on ? '0' : '-1')
+      })
+      cyclerChips.forEach(function (chip, i) {
+        var on = chip.getAttribute('data-sh-tabnav-value') === tabId
+        chip.classList.toggle('slds-item-active', on)
+        chip.classList.toggle('slds-item-inactive', !on)
+        chip.setAttribute('aria-selected', on ? 'true' : 'false')
+        chip.setAttribute('tabindex', on ? '0' : '-1')
+        if (on && cyclerList) cyclerList.setAttribute('data-sh-tabnav-index', String(i))
+      })
+      sliderTabs.forEach(function (tab) {
+        var on = tab.getAttribute('data-sh-ready-slidertab') === tabId
+        tab.setAttribute('aria-selected', on ? 'true' : 'false')
+      })
+      sliderMoveTo(sliderActiveTab(), true)
+    })
+
+    // Floating A/B/C control panel — flips `data-ready-tabstyle` on the
+    // section root (CSS shows the matching treatment) and remembers the
+    // choice in localStorage. When Option C becomes visible its pill must
+    // be snapped into place (a hidden bar measures as 0). Prototype-only.
+    var abPanel = readyRoot.querySelector('[data-sh-ready-abpanel]')
+    if (abPanel) {
+      var AB_KEY = 'sh-ready-tabstyle'
+      var abButtons = toArray(abPanel.querySelectorAll('[data-sh-ready-abstyle]'))
+      var applyTabStyle = function (style) {
+        if (style !== 'a' && style !== 'b' && style !== 'c') style = 'b'
+        readyRoot.setAttribute('data-ready-tabstyle', style)
+        abButtons.forEach(function (btn) {
+          btn.classList.toggle('is-active', btn.getAttribute('data-sh-ready-abstyle') === style)
+        })
+        try { window.localStorage.setItem(AB_KEY, style) } catch (e) {}
+        // Snap the slider pill once its bar is actually shown + measurable.
+        if (style === 'c') {
+          requestAnimationFrame(function () { sliderMoveTo(sliderActiveTab(), false) })
+        }
+      }
+      var storedStyle = null
+      try { storedStyle = window.localStorage.getItem(AB_KEY) } catch (e) {}
+      applyTabStyle(storedStyle || readyRoot.getAttribute('data-ready-tabstyle') || 'b')
+      abButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          applyTabStyle(btn.getAttribute('data-sh-ready-abstyle'))
+        })
+      })
     }
 
     var overflow = readyRoot.querySelector('[data-sh-ready-overflow]')
@@ -2611,16 +2754,34 @@
       return (value == null ? '' : String(value)).toLowerCase()
     }
 
+    // The active Learnings/Sources tab, if the tabs are present. A row
+    // is only visible when it belongs to the active tab AND matches the
+    // query, so the search box filters WITHIN the selected tab. Returns
+    // null when there are no tabs, in which case the tab check no-ops.
+    function activeKnowledgeTab () {
+      var parent = listRoot.parentNode
+      if (!parent) return null
+      var t = parent.querySelector('[data-sh-knowledge-tab][aria-checked="true"]')
+      return t ? t.getAttribute('data-sh-knowledge-tab') : null
+    }
+
     function applyFilter (rawQuery) {
       // Trim so trailing whitespace never zeroes out results.
       var query = (rawQuery == null ? '' : String(rawQuery)).trim().toLowerCase()
+      var tab = activeKnowledgeTab()
       var visibleCount = 0
 
       for (var i = 0; i < rows.length; i++) {
         var row = rows[i]
+        // Tab gate first: a row outside the active tab is never shown,
+        // regardless of the query.
+        var rowTab = row.getAttribute('data-sh-knowledge-doc-tab')
+        var tabMatch = !tab || !rowTab || rowTab === tab
         var visible
-        if (!query) {
-          // Empty query → restore all documents (spec).
+        if (!tabMatch) {
+          visible = false
+        } else if (!query) {
+          // Empty query → all rows in the active tab (spec).
           visible = true
         } else {
           var name = normalize(row.getAttribute('data-sh-knowledge-doc-name'))
@@ -2706,6 +2867,75 @@
     // driven announcements. Result-count text is set the first
     // time the user actually types.
     lastAnnouncedCount = totalCount
+  }
+
+  // ── Knowledge tabs (Learnings / Sources) ──────────────────────────────
+  // Filter chips over the one doc list — same pattern + styling as the
+  // Scheduled page's tabs (radiogroup, roving tabindex, arrow-key nav).
+  // Rather than toggle rows itself, activating a tab re-runs the search
+  // controller's filter (which reads the active tab), so tab + query
+  // filtering stay in one place and never fight over each row's `hidden`.
+  //
+  // DOM hooks:
+  //   • [data-sh-knowledge-tabs]  → radiogroup wrapper
+  //   • [data-sh-knowledge-tab]   → each chip (radio); its value is the
+  //                                 tab id, matched against each row's
+  //                                 data-sh-knowledge-doc-tab.
+  function bindKnowledgeTabs (root) {
+    var tabsRoot = root.querySelector('[data-sh-knowledge-tabs]')
+    if (!tabsRoot) return
+    var tabs = toArray(tabsRoot.querySelectorAll('[data-sh-knowledge-tab]'))
+    if (!tabs.length) return
+    var searchInput = root.querySelector('[data-sh-knowledge-search]')
+
+    // Nudge the search controller to re-filter. Its listener reads the
+    // active tab, so a plain re-run applies the current tab + query.
+    function reFilter () {
+      if (searchInput) {
+        searchInput.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+    }
+
+    function activeIndex () {
+      for (var i = 0; i < tabs.length; i++) {
+        if (tabs[i].getAttribute('aria-checked') === 'true') return i
+      }
+      return 0
+    }
+
+    function activate (id, focus) {
+      for (var i = 0; i < tabs.length; i++) {
+        var isActive = tabs[i].getAttribute('data-sh-knowledge-tab') === id
+        tabs[i].classList.toggle('is-active', isActive)
+        tabs[i].setAttribute('aria-checked', isActive ? 'true' : 'false')
+        tabs[i].setAttribute('tabindex', isActive ? '0' : '-1')
+        if (isActive && focus && typeof tabs[i].focus === 'function') tabs[i].focus()
+      }
+      reFilter()
+    }
+
+    tabsRoot.addEventListener('click', function (event) {
+      var tab = closest(event.target, '[data-sh-knowledge-tab]')
+      if (!tab) return
+      activate(tab.getAttribute('data-sh-knowledge-tab'))
+    })
+
+    // Arrow / Home / End roving, per the WAI-ARIA radiogroup convention.
+    tabsRoot.addEventListener('keydown', function (event) {
+      var idx = activeIndex()
+      var next = null
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = (idx + 1) % tabs.length
+      else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = (idx - 1 + tabs.length) % tabs.length
+      else if (event.key === 'Home') next = 0
+      else if (event.key === 'End') next = tabs.length - 1
+      else return
+      event.preventDefault()
+      activate(tabs[next].getAttribute('data-sh-knowledge-tab'), true)
+    })
+
+    // Apply the default (server-active) tab's filter on load so the
+    // non-active tab's rows start hidden.
+    reFilter()
   }
 
   // Result-count phrasing for the aria-live region. Kept as a pure

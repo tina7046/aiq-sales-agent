@@ -396,6 +396,10 @@
   class="seller-home__ready"
   aria-labelledby="seller-home-ready-heading"
   data-sh-ready-root
+  {# A/B prototype: which tab treatment shows. Overridden pre-paint from
+     localStorage by the inline script after this section, then managed at
+     runtime by the floating control panel (see bindReadyToReview). #}
+  data-ready-tabstyle="{{ review.defaultTabStyle or 'b' }}"
 >
   <div class="seller-home__ready-header">
     {#
@@ -474,22 +478,140 @@
   </div>
 
   {#
-    Panels — one per entry in `review.tabs`. Today there's only one
-    ("Ready to Review"), so this loop runs once. The panel wrapper is
-    kept as a plain `<div>` (no `role="tabpanel"`) so this markup
-    doesn't imply a tablist while there aren't any tab buttons above.
-    If Tasks comes back and the tablist header is restored, re-add
-    `role="tabpanel"` + `aria-labelledby="seller-home-ready-tab-…"`
-    + the `hidden`/`is-visible` state toggling to this element so the
-    tablistController in home.js can drive it. `<ul role="list">`
+    A/B tab-treatment comparison (prototype scaffolding). BOTH treatments
+    are rendered; the floating control panel below + a `sh-ready-tabstyle`
+    localStorage flag pick which one shows, via `data-ready-tabstyle` on
+    the section root (CSS hides the other). `bindReadyToReview` keeps the
+    two in sync — one `sh:review-tab-change` listener mirrors the active
+    tab across both — so flipping the control is a pure visibility swap
+    with no stale active state.
+
+      • Option A — Scheduled/Knowledge pill tabs (underline + count).
+      • Option B — Connections "cycler" chips (ShTabNav, filled active).
+  #}
+
+  {# Option A — pill tabs. `tablistController` (home.js) drives these via
+     `data-sh-ready-tab` → `data-sh-ready-panel`. #}
+  <div class="seller-home__ready-tabbar" data-sh-ready-tabstyle-view="a">
+    <div
+      class="seller-home__scheduled-tabs"
+      role="tablist"
+      aria-label="Filter reviews by state"
+    >
+      {% for tab in review.tabs %}
+        {% set isActive = (tab.id == review.defaultTabId) %}
+        {% set count = review[tab.dataKey] | length %}
+        <button
+          type="button"
+          class="seller-home__scheduled-tab{% if isActive %} is-active{% endif %}"
+          role="tab"
+          id="seller-home-ready-tab-{{ tab.id }}"
+          aria-selected="{% if isActive %}true{% else %}false{% endif %}"
+          aria-controls="seller-home-ready-panel-{{ tab.id }}"
+          data-sh-ready-tab="{{ tab.id }}"
+          tabindex="{% if isActive %}0{% else %}-1{% endif %}"
+        >
+          <span class="seller-home__scheduled-tab-label">{{ tab.label }}</span>
+          <span class="seller-home__scheduled-tab-count" aria-hidden="true">{{ count }}</span>
+          <span class="slds-assistive-text">{{ count }} item{% if count != 1 %}s{% endif %}</span>
+        </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Option B — cycler chips. ShTabNav (tab_nav.js) auto-wires
+     `[data-sh-tabnav]`; the `sh:tabnav-change` → panel bridge lives in
+     `bindReadyToReview`. Chip ids are namespaced `-chip-` so they don't
+     collide with Option A's `-tab-` ids above. #}
+  <div class="seller-home__ready-tabbar-cycler" data-sh-ready-tabstyle-view="b">
+    <ul
+      class="slds-list_horizontal slds-has-dividers_right tab-nav-cycler tool-categories"
+      data-sh-tabnav
+      data-sh-ready-tablist
+      aria-label="Filter reviews by state"
+    >
+      {% for tab in review.tabs %}
+        {% set isActive = (tab.id == review.defaultTabId) %}
+        {% set count = review[tab.dataKey] | length %}
+        <li class="slds-item">
+          <div
+            class="{% if isActive %}slds-item-active{% else %}slds-item-inactive{% endif %}"
+            id="seller-home-ready-chip-{{ tab.id }}"
+            data-sh-tabnav-value="{{ tab.id }}"
+            aria-controls="seller-home-ready-panel-{{ tab.id }}"
+          >
+            <span class="seller-home__ready-cycler-label">{{ tab.label }}</span>
+            <span class="seller-home__ready-cycler-count" aria-hidden="true">{{ count }}</span>
+            <span class="slds-assistive-text">{{ count }} item{% if count != 1 %}s{% endif %}</span>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  {# Option C — transitions.dev sliding-pill segmented control
+     (transitions-dev skill, 16-tabs-sliding). `.t-tabs` + `.t-tabs-pill`
+     are the skill's verbatim hooks; `bindReadyToReview` writes the active
+     `.t-tab`'s offsetLeft/offsetWidth onto the pill and CSS tweens it. #}
+  <div class="seller-home__ready-tabbar-slider" data-sh-ready-tabstyle-view="c">
+    <div class="t-tabs" role="tablist" aria-label="Filter reviews by state" data-sh-ready-slider>
+      <span class="t-tabs-pill" aria-hidden="true"></span>
+      {% for tab in review.tabs %}
+        {% set isActive = (tab.id == review.defaultTabId) %}
+        {% set count = review[tab.dataKey] | length %}
+        <button
+          type="button"
+          class="t-tab"
+          role="tab"
+          aria-selected="{% if isActive %}true{% else %}false{% endif %}"
+          aria-controls="seller-home-ready-panel-{{ tab.id }}"
+          data-sh-ready-slidertab="{{ tab.id }}"
+        >
+          <span class="t-tab-label">{{ tab.label }}</span>
+          <span class="t-tab-count" aria-hidden="true">{{ count }}</span>
+          <span class="slds-assistive-text">{{ count }} item{% if count != 1 %}s{% endif %}</span>
+        </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Floating A/B/C switch — a mini control panel (à la the shader panel)
+     so all treatments can be polished in parallel before deciding.
+     Fixed, bottom-left; `bindReadyToReview` wires the buttons + persists
+     the choice to localStorage. Prototype-only scaffolding — delete this
+     block (and the losing tab treatments) once a winner is picked. #}
+  <div
+    class="seller-home__ready-abpanel"
+    data-sh-ready-abpanel
+    role="group"
+    aria-label="Ready-to-Review tab style"
+  >
+    <span class="seller-home__ready-abpanel-title">Ready tabs</span>
+    <div class="seller-home__ready-abpanel-options">
+      <button type="button" class="seller-home__ready-abpanel-btn" data-sh-ready-abstyle="a">A · Tabs</button>
+      <button type="button" class="seller-home__ready-abpanel-btn" data-sh-ready-abstyle="b">B · Pills</button>
+      <button type="button" class="seller-home__ready-abpanel-btn" data-sh-ready-abstyle="c">C · Sliding</button>
+    </div>
+  </div>
+
+  {#
+    Panels — one per entry in `review.tabs` (Ready / Running /
+    Scheduled). Only the default tab's panel is visible on first paint;
+    the rest ship `hidden`. `tablistController` in home.js flips the
+    `hidden` + `.is-visible` state as tabs are activated. Each panel is
+    a `role="tabpanel"` labelled by its matching tab; `<ul role="list">`
     still gives AT a "list of N items" announcement.
   #}
   {% for tab in review.tabs %}
     {% set panelId = "seller-home-ready-panel-" ~ tab.id %}
+    {% set isActive = (tab.id == review.defaultTabId) %}
     <div
-      class="seller-home__ready-panel is-visible"
+      class="seller-home__ready-panel{% if isActive %} is-visible{% endif %}"
       id="{{ panelId }}"
+      role="tabpanel"
+      aria-labelledby="seller-home-ready-tab-{{ tab.id }}"
       data-sh-ready-panel="{{ tab.id }}"
+      {% if not isActive %}hidden{% endif %}
     >
       <ul class="seller-home__ready-list" role="list">
         {% for item in review[tab.dataKey] %}
@@ -501,3 +623,19 @@
     </div>
   {% endfor %}
 </section>
+
+{# Pre-paint restore of the A/B tab-style choice, so a saved preference
+   doesn't flash the default treatment first. Runs inline during parse
+   (the section above is already in the DOM). Mirrors the knowledge
+   banner's preload pattern. Prototype-only scaffolding. #}
+<script>
+  (function () {
+    try {
+      var s = window.localStorage.getItem('sh-ready-tabstyle');
+      if (s === 'a' || s === 'b') {
+        var el = document.querySelector('[data-sh-ready-root]');
+        if (el) el.setAttribute('data-ready-tabstyle', s);
+      }
+    } catch (e) {}
+  })();
+</script>
