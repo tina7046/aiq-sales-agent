@@ -1,0 +1,496 @@
+{#
+  "Your agent at work" — PROTOTYPE component
+  =====================================================================
+  A standalone rewrite of `_home_feed.html`, kept in its own file so the
+  shipping Seller Home component can't be broken while this iterates.
+
+  Everything is namespaced `aaw-` (agent at work) and styled by
+  styles/agent_at_work.scss — NOT by home.scss. The prototype therefore
+  inherits nothing from `.seller-home__feed*`, which is the point: a new
+  iteration shouldn't have to fight the old rules.
+
+  Shape today — one flat list, no tabs. Every row is a recurring
+  workflow, and its subline is that workflow's cadence plus what
+  happens next, so a run in flight and a run already finished sit in
+  the same list instead of behind separate filters. What the tabs used
+  to filter is now the sort: completed → running → scheduled → paused
+  (`aaw.stateOrder`).
+
+    ┌──────────────────────────────────────────────────────────────┐
+    │  Your agent at work   Mon Aug 17                           ⋮ │
+    │  ┌────────────────────────────────────────────────────────┐  │
+    │  │ Found new prospects                        [badge]  ⋮  │  │
+    │  │ Weekly · Next run in 3 days                            │  │
+    │  │ ( ▨ 7 accounts imported ) ( ▨ 25 prospects )           │  │
+    │  └────────────────────────────────────────────────────────┘  │
+    └──────────────────────────────────────────────────────────────┘
+
+  Two row treatments are in play, chosen per row by `item.variant`:
+  the v0 card (`aawCard`) and the flat scheduled-task row
+  (`aawTaskRow`). They share the list, the kebab and the click
+  contract, so a row moves between them by editing one data field.
+
+  Data: `aaw.*` in data/agent_at_work.json (see that file for the row
+  contract). Behaviour: scripts/agent_at_work.js, which boots off
+  `[data-aaw-root]`.
+
+  Usage — the whole component is one include, so porting it into
+  index.html later is a one-line swap of `_home_feed.html` for this
+  file (plus moving the styles/JS into home.scss / home.js):
+
+      {% include "_agent_at_work.html" %}
+#}
+
+{#
+  Output pill — one entry from `item.outputs[]`. The glyph is purely
+  the output's own type: the row's run state is the status button's job
+  now, so a running row no longer spends its file-type icons on a
+  spinner. An unknown `output.icon` degrades to a text-only chip rather
+  than failing.
+#}
+{% macro aawOutputPill(output, outputTypes) %}
+{% set typeInfo = outputTypes[output.icon] %}
+<span class="aaw-pill">
+  {% if typeInfo %}
+    {% if typeInfo.iconImage %}
+      <img class="aaw-pill__glyph aaw-pill__glyph--image" src="{{ typeInfo.iconImage }}" alt="" aria-hidden="true" />
+    {% elif typeInfo.sprite %}
+      {% set spriteFamily = typeInfo.spriteFamily or "utility" %}
+      <svg class="aaw-pill__glyph" aria-hidden="true">
+        <use xlink:href="/assets/icons/{{ spriteFamily }}-sprite/svg/symbols.svg#{{ typeInfo.sprite }}"></use>
+      </svg>
+    {% endif %}
+  {% endif %}
+  <span class="aaw-pill__label">{% if output.todayPrefix %}{{ todayShort() }} {% endif %}{{ output.label }}</span>
+</span>
+{% endmacro %}
+
+
+{#
+  Status button — shared by both row treatments. Two jobs in one 
+  control: it shows what the row is doing, and pressing it pauses or
+  resumes the schedule.
+
+    state       at rest    on hover / focus   pressing it
+    ─────────   ────────   ────────────────   ───────────
+    completed   check      pause              pauses
+    running     spinner    pause              pauses
+    scheduled   clock      pause              pauses
+    paused      pause      play               resumes
+    failed      warning    refresh            retries
+
+  A failed row is the one that doesn't offer pause. Pausing a schedule
+  that just errored is the rarer intent by a distance — what the user
+  came to the row for is to run it again — so the hover glyph is the
+  retry arrow and the click starts a new run.
+
+  Every glyph is rendered and CSS picks the visible pair off the row's
+  `data-aaw-state`. That looks wasteful and buys two things: the hover
+  swap is a pure cross-fade that can't lag the pointer, and the
+  state→glyph mapping lives in exactly one place (the stylesheet)
+  rather than being duplicated between this template and the JS that
+  flips the state at runtime.
+
+  Only the accessible name is left for JS to keep in sync, since CSS
+  can't write one.
+#}
+{% macro aawStatusButton(item, modifier) %}
+{% if item.state == "failed" %}{% set verb = "Retry " %}
+{% elif item.state == "paused" %}{% set verb = "Resume " %}
+{% else %}{% set verb = "Pause " %}{% endif %}
+{% set label = verb ~ item.title %}
+<button
+  type="button"
+  class="aaw-status{% if modifier %} aaw-status--{{ modifier }}{% endif %}"
+  data-aaw-run-toggle
+  data-aaw-stop
+  aria-label="{{ label }}"
+  title="{{ label }}"
+>
+  <span class="aaw-status__glyph aaw-status__glyph--spinner sh-spinner" aria-hidden="true"></span>
+  {% for glyph in ["check", "clock", "pause", "play", "warning", "refresh"] %}
+  <svg class="aaw-status__glyph aaw-status__glyph--{{ glyph }}" aria-hidden="true">
+    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ glyph }}"></use>
+  </svg>
+  {% endfor %}
+</button>
+{% endmacro %}
+
+
+{#
+  Card — one row.
+
+  The interactive element is INSIDE the `<h3>` and stretches to fill
+  the card via an ::after overlay, which is what keeps the row to a
+  single announcement ("heading level 3, <title>, link") instead of a
+  heading followed by a separate whole-row button saying the same
+  words.
+
+  Which element it is depends on the row, not the component: a row
+  with a `conversationId` goes somewhere, so it's an `<a>` and keeps
+  command-click, "copy link address" and the status-bar preview. A row
+  with nowhere to go is a `<button>` — previously these rendered as
+  `<a href="#">`, which announced a link, sat in the tab order as a
+  link, and then had its navigation cancelled in JS.
+#}
+{#
+  Subline slots — "<status> · <time>", resolved from the row's state.
+
+  Left is the status word from `aaw.statusLabels`, except on `scheduled`
+  rows, which show the cadence instead: a row that's merely waiting has
+  no status worth naming, and "Daily" also keeps it from reading exactly
+  like a `completed` row, since both name a next run on the right.
+
+  Right is whichever time field that state actually has. They're
+  separate fields rather than one `time` string so a row can change
+  state without a data rewrite — pausing a running row needs its
+  `lastRun` to already be there.
+#}
+{% macro sublineStatus(item, statusLabels) %}{% if item.state == "scheduled" %}{{ item.cadence }}{% else %}{{ statusLabels[item.state] }}{% endif %}{% endmacro %}
+
+{% macro sublineTime(item) %}{% if item.state == "running" %}{{ item.startedAt }}{% elif item.state == "paused" or item.state == "failed" %}{{ item.lastRun }}{% else %}{{ item.nextRun }}{% endif %}{% endmacro %}
+
+
+{#
+  Subline slot — one half of the pair, carrying every string it may ever
+  need to show as `data-aaw-<kind>-<key>` attributes:
+
+    default   the row's own state, as rendered
+    paused    what it says once paused
+    running   what it says once a failed row is retried
+
+  The JS switches slots by key and never composes wording, which is what
+  keeps all the copy in agent_at_work.json.
+#}
+{% macro sublineSlot(kind, klass, rest, paused, running) %}
+<span
+  class="{{ klass }}"
+  data-aaw-{{ kind }}
+  data-aaw-{{ kind }}-default="{{ rest | trim }}"
+  data-aaw-{{ kind }}-paused="{{ paused | trim }}"
+  data-aaw-{{ kind }}-running="{{ running | trim }}"
+>{{ rest | trim }}</span>
+{% endmacro %}
+
+
+{#
+  Third line for a failed row. Two things share it, and CSS shows
+  whichever the row's state calls for:
+
+    failed      the error, as a plain `slds-badge slds-theme_error`.
+                No glyph — the status button already carries a warning
+                icon, and a second one would be saying it twice.
+    retried     a normal output pill standing in for the run now under
+                way, from `item.retryOutput`.
+
+  Both are always in the DOM. Swapping them rather than hiding the badge
+  outright is what keeps the row exactly as tall after a retry as before
+  it — with nothing here the card would drop to the compact two-line
+  height mid-Flip, which reads as the row twitching.
+#}
+{% macro aawErrorLine(item, outputTypes) %}
+<div class="aaw-card__outputs">
+  <span class="slds-badge slds-theme_error aaw-card__error">{{ item.error }}</span>
+  <span class="aaw-card__retry">{{ aawOutputPill(item.retryOutput, outputTypes) }}</span>
+</div>
+{% endmacro %}
+
+
+{% macro aawCard(item, outputTypes, rowActions, statusLabels, retryTime) %}
+{% set descId  = "aaw-" ~ item.id ~ "-desc" %}
+{% set menuId  = "aaw-" ~ item.id ~ "-menu" %}
+{% set isPaused = item.state == "paused" %}
+{% set hasWorkflow = item.workflow and item.workflow.label %}
+{% set linkName = item.title ~ (", workflow: " ~ item.workflow.label if hasWorkflow else "") %}
+{# Where a resumed row returns to. A row that ships paused resumes into
+   the schedule rather than back into "paused". #}
+{% set homeState = "scheduled" if isPaused else item.state %}
+{# A third line under the subline — pills or an error badge — is what
+   turns the compact 56px card into the padded variant. Keyed on either,
+   not just on outputs: a failed row has an error badge instead of pills
+   and needs the same room around it. #}
+{% set hasThirdLine = item.error or (item.outputs and item.outputs|length) %}
+<article
+  class="aaw-card{% if hasThirdLine %} aaw-card--has-outputs{% endif %}"
+  data-aaw-card="{{ item.id }}"
+  data-aaw-state="{{ item.state }}"
+  data-aaw-state-default="{{ homeState }}"
+>
+  <div class="aaw-card__main">
+    {{ aawStatusButton(item, "sm") }}
+
+    <div class="aaw-card__body">
+      <h3 class="aaw-card__title">
+        {% if item.conversationId %}
+        <a
+          href="/home_conversation.html?id={{ item.conversationId }}"
+          class="aaw-card__title-action"
+          data-aaw-card-link="{{ item.id }}"
+          data-aaw-title
+          aria-label="{{ linkName }}"
+          aria-describedby="{{ descId }}"
+        >{{ item.title }}</a>
+        {% else %}
+        <button
+          type="button"
+          class="aaw-card__title-action"
+          data-aaw-title
+          aria-label="{{ linkName }}"
+          aria-describedby="{{ descId }}"
+        >{{ item.title }}</button>
+        {% endif %}
+      </h3>
+
+      {# Subline — "<status> · <time>". #}
+      <p class="aaw-card__desc" id="{{ descId }}">
+        {{ sublineSlot("status", "aaw-card__status", sublineStatus(item, statusLabels), statusLabels.paused, statusLabels.running) }}
+        <span class="aaw-card__sep" aria-hidden="true">·</span>
+        {{ sublineSlot("time", "aaw-card__time", sublineTime(item), item.lastRun, retryTime) }}
+      </p>
+
+      {# Readable, not aria-hidden. These counts are the row's payload
+         and they appear nowhere in its accessible name, so hiding them
+         published the row to a screen reader with its results removed. #}
+      {% if item.error %}
+        {{ aawErrorLine(item, outputTypes) }}
+      {% elif item.outputs and item.outputs|length %}
+        <div class="aaw-card__outputs">
+          {% for output in item.outputs %}{{ aawOutputPill(output, outputTypes) }}{% endfor %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Right rail — fixed width so the hover-revealed badge and kebab
+     never shift the text to their left. #}
+  <div class="aaw-card__rail">
+    {% if hasWorkflow %}
+      <span class="aaw-card__workflow" title="{{ item.workflow.label }}" aria-hidden="true">{{ item.workflow.label }}</span>
+    {% else %}
+      <span aria-hidden="true"></span>
+    {% endif %}
+
+    {# `data-aaw-stop` is the opt-out marker the card click delegate
+       looks for, so menu clicks never select / navigate the card. #}
+    <div class="aaw-menu" data-aaw-menu data-aaw-stop>
+      <button
+        type="button"
+        class="slds-button slds-button_icon slds-button_icon-bare aaw-menu__trigger"
+        data-aaw-menu-trigger
+        aria-haspopup="menu"
+        aria-expanded="false"
+        aria-controls="{{ menuId }}"
+        aria-label="More actions"
+        title="More actions"
+      >
+        <svg class="slds-button__icon" aria-hidden="true">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
+        </svg>
+      </button>
+
+      <div class="aaw-menu__list" id="{{ menuId }}" role="menu" aria-label="More actions" data-aaw-menu-list hidden>
+        <ul class="aaw-menu__items" role="none">
+          {% for action in rowActions %}
+          <li role="none">
+            <button type="button" class="aaw-menu__item" role="menuitem" data-aaw-menu-action="{{ action.id }}">
+              {% if action.icon %}
+              <svg class="aaw-menu__item-icon" aria-hidden="true">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
+              </svg>
+              {% endif %}
+              <span>{{ action.label }}</span>
+            </button>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</article>
+{% endmacro %}
+
+
+{#
+  Task row — the alternate row treatment (`item.variant == "task"`).
+  A flat 72px row instead of a card: no surface of its own, no output
+  pills, a hairline rule between adjacent task rows, and a status glyph
+  on the left that doubles as pause/resume.
+
+    ┌─────────────────────────────────────────────────────────────┐
+    │ ⏱  Daily Global Briefing                            ✎    ⋮  │
+    │    Daily until Aug 20 · Next run in 17 hours                │
+    └─────────────────────────────────────────────────────────────┘
+
+  Three stacking layers, because the whole row is one big hit target
+  with smaller ones sitting on top of it:
+
+    z1  the title button's stretched ::after — the click target for the
+        row, and its single "open this" tab stop
+    z2  __status — sits above that overlay so its own clicks land
+    z3  __rail   — edit + kebab, revealed on hover
+
+  Same skeleton as the card (heading wrapping the interactive element,
+  shared status button, shared data hooks); only the styling differs.
+  That's the whole point of keeping both around — the comparison should
+  be about how the row LOOKS, not about which one was built better.
+#}
+{% macro aawTaskRow(item, rowActions, statusLabels, retryTime) %}
+{% set menuId = "aaw-" ~ item.id ~ "-menu" %}
+{% set descId = "aaw-" ~ item.id ~ "-desc" %}
+{% set isPaused = item.state == "paused" %}
+{% set homeState = "scheduled" if isPaused else item.state %}
+<article
+  class="aaw-task"
+  data-aaw-card="{{ item.id }}"
+  data-aaw-state="{{ item.state }}"
+  data-aaw-state-default="{{ homeState }}"
+>
+  <div class="aaw-task__main">
+    {{ aawStatusButton(item) }}
+
+    <div class="aaw-task__text">
+      <h3 class="aaw-task__title">
+        <button
+          type="button"
+          class="aaw-task__title-action"
+          data-aaw-title
+          aria-label="{{ item.title }}"
+          aria-describedby="{{ descId }}"
+        >{{ item.title }}</button>
+      </h3>
+      {# Same "<status> · <time>" contract as the card. #}
+      <p class="aaw-task__desc" id="{{ descId }}">
+        {{ sublineSlot("status", "aaw-task__status", sublineStatus(item, statusLabels), statusLabels.paused, statusLabels.running) }}
+        <span class="aaw-task__sep" aria-hidden="true">·</span>
+        {{ sublineSlot("time", "aaw-task__time", sublineTime(item), item.lastRun, retryTime) }}
+      </p>
+    </div>
+  </div>
+
+  <div class="aaw-task__rail">
+    <button
+      type="button"
+      class="aaw-task__action"
+      data-aaw-row-action="edit"
+      data-aaw-stop
+      aria-label="Edit {{ item.title }}"
+      title="Edit"
+    >
+      <svg class="aaw-task__action-icon" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#edit"></use>
+      </svg>
+    </button>
+
+    <div class="aaw-menu" data-aaw-menu data-aaw-stop>
+      <button
+        type="button"
+        class="slds-button slds-button_icon slds-button_icon-bare aaw-menu__trigger"
+        data-aaw-menu-trigger
+        aria-haspopup="menu"
+        aria-expanded="false"
+        aria-controls="{{ menuId }}"
+        aria-label="More task actions"
+        title="More task actions"
+      >
+        <svg class="slds-button__icon" aria-hidden="true">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
+        </svg>
+      </button>
+
+      <div class="aaw-menu__list" id="{{ menuId }}" role="menu" aria-label="More task actions" data-aaw-menu-list hidden>
+        <ul class="aaw-menu__items" role="none">
+          {% for action in rowActions %}
+          <li role="none">
+            <button type="button" class="aaw-menu__item" role="menuitem" data-aaw-menu-action="{{ action.id }}">
+              {% if action.icon %}
+              <svg class="aaw-menu__item-icon" aria-hidden="true">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
+              </svg>
+              {% endif %}
+              <span>{{ action.label }}</span>
+            </button>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</article>
+{% endmacro %}
+
+
+{# ── Component ──────────────────────────────────────────────────── #}
+{# `data-aaw-state-order` hands the sort rule to the JS. Pausing a row
+   moves it to the end of the list and resuming puts it back, which
+   means the runtime needs the same ordering the template renders with —
+   and it should come from the data, not a second copy in the script. #}
+<section
+  class="aaw"
+  aria-labelledby="aaw-heading"
+  data-aaw-root
+  data-aaw-state-order="{{ aaw.stateOrder | join(',') }}"
+>
+  <div class="aaw__header">
+    <div class="aaw__title-row">
+      <h2 class="aaw__heading" id="aaw-heading">{{ aaw.heading }}</h2>
+      {# Live by default: `today()` stamps the build date so the markup
+         never ships empty, and `data-aaw-today` lets the JS re-stamp it
+         from the browser clock. Pin `aaw.date` to freeze it. #}
+      <span class="aaw__date"{% if not aaw.date %} data-aaw-today{% endif %}>{{ aaw.date or today() }}</span>
+    </div>
+
+    <div class="aaw__overflow" data-aaw-overflow>
+      <button
+        type="button"
+        class="slds-button slds-button_icon slds-button_icon-bare aaw__overflow-trigger"
+        data-aaw-overflow-trigger
+        aria-haspopup="menu"
+        aria-expanded="false"
+        aria-controls="aaw-overflow-menu"
+        aria-label="More actions"
+        title="More actions"
+      >
+        <svg class="slds-button__icon" aria-hidden="true">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
+        </svg>
+      </button>
+
+      <div class="aaw-menu__list" id="aaw-overflow-menu" role="menu" aria-label="More actions" data-aaw-overflow-menu hidden>
+        <ul class="aaw-menu__items" role="none">
+          {% for action in aaw.overflowActions %}
+          <li role="none">
+            <button type="button" class="aaw-menu__item" role="menuitem" data-aaw-overflow-action="{{ action.id }}">
+              <span>{{ action.label }}</span>
+            </button>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  {# One flat list — no tabs, no panels. `role="list"` survives the
+     `list-style: none` in CSS, so AT still announces "list of N items",
+     which is the only count left now that the tab badges are gone.
+
+     Rows are grouped by `aaw.stateOrder` (completed → running →
+     scheduled → paused) rather than taken in array order, so the
+     sequence holds no matter where a row is added to the data. The
+     nested loop is deliberate: it's O(states × rows) on a list of this
+     size, and it doesn't depend on a Nunjucks filter being available. #}
+  <ul class="aaw__list" role="list">
+    {% for state in aaw.stateOrder %}
+      {% for item in aaw.items %}
+        {% if item.state == state %}
+          <li class="aaw__list-item">
+            {% if item.variant == "task" %}
+              {{ aawTaskRow(item, aaw.rowActions, aaw.statusLabels, aaw.retryTime) }}
+            {% else %}
+              {{ aawCard(item, aaw.outputTypes, aaw.rowActions, aaw.statusLabels, aaw.retryTime) }}
+            {% endif %}
+          </li>
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+  </ul>
+</section>

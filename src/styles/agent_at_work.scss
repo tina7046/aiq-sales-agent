@@ -1,0 +1,944 @@
+// ══════════════════════════════════════════════════════════════════════
+//  "Your agent at work" — PROTOTYPE styles
+//  ----------------------------------------------------------------------
+//  Compiles to /styles/agent_at_work.css and is loaded ONLY by
+//  agent_at_work.html. Everything lives under the `aaw-`/`.aaw` namespace
+//  and is written from scratch rather than extending `.seller-home__feed*`
+//  in home.scss — the prototype gets a clean slate, and porting a settled
+//  design back is a copy of this file's rules under the shipping names.
+//
+//  v0 below is deliberately at parity with today's component so there's a
+//  known-good starting point; edit freely from here.
+//
+//  Tokens (SLDS 2 globals, with fallbacks so the file renders standalone):
+//    • Card radius / surface   --slds-g-radius-border-3 (12px) / #fff
+//    • Title 14/19 weight 590  --slds-g-color-on-surface-2 (#2e2e2e)
+//    • Desc 12/1.3             --slds-g-color-on-surface-1 (#5c5c5c)
+//    • Accent (tabs, badge)    --slds-g-color-accent-2     (#0250d9)
+//    • Pill surface            --slds-g-color-neutral-base-95 (#f3f3f3)
+// ══════════════════════════════════════════════════════════════════════
+
+// Lab page chrome — NOT part of the component. Deleted at port time.
+//
+// How far the shader canvas hangs outside the page box on every side, so
+// its blur halo falls off past the edges instead of tapering to
+// transparent inside the visible area. Same 90px as home.scss.
+$aaw-god-rays-overscan: 90px;
+
+.aaw-lab {
+  position: relative; // positioning root for the shader host
+  min-height: 100%;
+  padding: var(--slds-g-spacing-8, 3rem) var(--slds-g-spacing-6, 2rem);
+
+  // Fallback surface, and the thing that actually fills the cleared cone
+  // at 12 o'clock — the shader canvas is fully transparent there. Also
+  // what shows if WebGL is unavailable or the CDN is unreachable. Same
+  // value as `.seller-home`.
+  background: #f7fbff;
+
+  overflow: clip; // contains the overscan
+}
+
+// ── God-rays shader canvas host ───────────────────────────────────────
+// scripts/aaw_god_rays.js mounts a <canvas> in here. Anchored to the top
+// and sized by height rather than pinned on all four sides: pinning both
+// edges would make the height fully determined by the page and leave
+// `min-height` nothing to clamp.
+//
+// No left inset, unlike Seller Home — there's no nav to sit beside, so
+// the box and the content column already share a centre.
+//
+// Inert: clicks and hovers pass through to the list above it.
+.aaw-lab__god-rays {
+  position: absolute;
+  top: -$aaw-god-rays-overscan;
+  left: -$aaw-god-rays-overscan;
+  right: -$aaw-god-rays-overscan;
+  height: calc(100% + #{$aaw-god-rays-overscan * 2});
+
+  // Floor on the box height, so a short window still gets a ray field
+  // long enough to reach the bottom instead of a squashed one.
+  min-height: 50rem;
+
+  pointer-events: none;
+  z-index: 0;
+}
+
+.aaw-lab__inner {
+  // Promoted above the shader host, which is absolutely positioned and
+  // would otherwise paint over this in-flow sibling.
+  position: relative;
+  z-index: 1;
+
+  max-width: 50rem; // 800px — the Seller Home content column
+  width: 100%;
+  margin-inline: auto;
+}
+
+.aaw-lab__note {
+  margin: 0 0 var(--slds-g-spacing-6, 2rem);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  line-height: 1.4;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+// ── Component root ────────────────────────────────────────────────────
+// Self-sizing: the host page owns the column width, so the component
+// only sets its own inner rhythm.
+.aaw {
+  width: 100%;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+
+  // Matches `.seller-home__feed`: 8px top / 16px sides / 0 bottom.
+  padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-4, 1rem) 0;
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+
+  // Subtle top-to-bottom fade — 80% white at 7%, clear by 48%. Sits over
+  // the shader so the section reads as a slightly-more-opaque surface
+  // without needing a border to separate it from the rays.
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.8) 7.169%,
+    rgba(255, 255, 255, 0) 48.276%
+  );
+}
+
+// ── Header ────────────────────────────────────────────────────────────
+// The tab bar used to own the gap down to the list; with it gone the
+// header carries that space itself.
+.aaw__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  padding-block: var(--slds-g-spacing-2, 0.5rem);
+  margin-bottom: var(--slds-g-spacing-2, 0.5rem);
+  min-height: 3rem;
+}
+
+.aaw__title-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+  min-width: 0;
+}
+
+.aaw__heading {
+  margin: 0;
+  color: #111;
+  font-size: var(--slds-g-font-scale-2, 1rem);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aaw__date {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// ── List ──────────────────────────────────────────────────────────────
+.aaw__list {
+  position: relative; // reference frame for GSAP Flip during a reshuffle
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+// Row spacing is a margin on each item rather than a flex `gap`, because
+// a gap belongs to the container and can't be animated away per-row. A
+// dismissing row has to collapse its own trailing space along with its
+// height, or the list would close up 8px short and then jump.
+.aaw__list-item {
+  margin-bottom: var(--slds-g-spacing-2, 0.5rem);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  Status button — shared by both row treatments
+// ----------------------------------------------------------------------
+//  Every glyph is in the DOM at once and this stylesheet decides which
+//  two are live, keyed off the row's `data-aaw-state`. Two reasons it's
+//  worth the extra elements:
+//
+//    • the hover swap is a cross-fade between two already-painted
+//      layers, so it can't trail the pointer the way a JS href swap can
+//    • the state→glyph mapping exists once, here, instead of being
+//      written in the template for first paint and again in the JS for
+//      every toggle after it
+//
+//  Size is a custom property so the card can run a tighter glyph than
+//  the task row without a second set of rules.
+// ══════════════════════════════════════════════════════════════════════
+.aaw-status {
+  --aaw-status-size: 1.5rem;
+  --aaw-status-glyph: 1.125rem;
+
+  position: relative; // lifts it above the row's stretched-link overlay
+  z-index: 2;
+
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--aaw-status-size);
+  block-size: var(--aaw-status-size);
+
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: var(--slds-g-radius-border-circle, 100%);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
+    outline-offset: 2px;
+  }
+}
+
+// Card-scale: matches the 14px title's line box rather than the task
+// row's 16px one.
+.aaw-status--sm {
+  --aaw-status-size: 1.25rem;
+  --aaw-status-glyph: 1rem;
+}
+
+// All glyphs stack on the same centre; the rules below reveal two.
+.aaw-status__glyph {
+  position: absolute;
+  inline-size: var(--aaw-status-glyph);
+  block-size: var(--aaw-status-glyph);
+  opacity: 0;
+  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+  transition: opacity 120ms ease, fill 120ms ease;
+}
+
+.aaw-status:hover .aaw-status__glyph,
+.aaw-status:focus-visible .aaw-status__glyph {
+  fill: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// The spinner is the shared `.sh-spinner` (index.scss), re-boxed to the
+// glyph slot so swapping it in doesn't change the button's metrics.
+// Parked by default — nine of ten rows carry one they never show, and
+// an invisible element has no business animating.
+.aaw-status__glyph--spinner {
+  box-sizing: border-box;
+  border-width: 2px;
+  animation: none;
+}
+
+[data-aaw-state="running"] .aaw-status__glyph--spinner {
+  animation: sh-spin 0.85s linear infinite;
+}
+
+// At rest: what the row IS. On hover: what the click WILL DO. Every
+// state offers pause except the two where it isn't the obvious intent —
+// a paused row offers play, and a failed one offers retry.
+$aaw-status-rest: (
+  completed: "check",
+  running:   "spinner",
+  scheduled: "clock",
+  paused:    "pause",
+  failed:    "warning",
+);
+
+$aaw-status-action: (
+  completed: "pause",
+  running:   "pause",
+  scheduled: "pause",
+  paused:    "play",
+  failed:    "refresh",
+);
+
+@each $state, $glyph in $aaw-status-rest {
+  [data-aaw-state="#{$state}"] .aaw-status__glyph--#{$glyph} {
+    opacity: 1;
+  }
+}
+
+// The one glyph that carries colour. Scoped to the resting glyph so the
+// hover swap to the retry arrow returns to the normal grey — the error
+// badge below the title is already saying it in words by then.
+[data-aaw-state="failed"] .aaw-status__glyph--warning {
+  fill: var(--slds-g-color-error-base-40, #ea001e);
+}
+
+@each $state, $glyph in $aaw-status-action {
+  // Clear the resting glyph, then raise the action one. Both selectors
+  // carry the same specificity, so source order decides — which is why
+  // these two blocks must stay in this order.
+  [data-aaw-state="#{$state}"] .aaw-status:hover .aaw-status__glyph,
+  [data-aaw-state="#{$state}"] .aaw-status:focus-visible .aaw-status__glyph {
+    opacity: 0;
+  }
+
+  [data-aaw-state="#{$state}"] .aaw-status:hover .aaw-status__glyph--#{$glyph},
+  [data-aaw-state="#{$state}"] .aaw-status:focus-visible .aaw-status__glyph--#{$glyph} {
+    opacity: 1;
+  }
+}
+
+// ── Card ──────────────────────────────────────────────────────────────
+//     ┌──────────────────────────────┬─────────────────┐
+//     │ body (title → desc → pills)  │ rail            │
+//     └──────────────────────────────┴─────────────────┘
+//         flex: 1  min-width: 0        156px reserved
+//
+// Cards with no outputs stay on the compact 56px min-height; the
+// `--has-outputs` variant top-aligns and grows to fit the pills row.
+.aaw-card {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+
+  min-height: 3.5rem;
+  padding-inline: var(--slds-g-spacing-4, 1rem);
+
+  background: #ffffffa1;
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+
+  cursor: pointer;
+  transition: box-shadow 120ms ease;
+
+  // Same lift for pointer hover and keyboard focus, so both input modes
+  // get the same "this is interactive" signal.
+  // https://smoothshadows.com/#djEsMSw1LDAuMDgsMjQsMzIsMCwjYjFiYWQzLCNmYWZjZmYsI2ZmZmZmZiwy
+  &:hover,
+  &:focus-within {
+    box-shadow:
+      0px 1px 1px rgba(177, 186, 211, 0.02),
+      0px 5px 4px rgba(177, 186, 211, 0.03),
+      0px 12px 9px rgba(177, 186, 211, 0.05),
+      0px 20px 15px rgba(177, 186, 211, 0.06),
+      0px 32px 24px rgba(177, 186, 211, 0.08);
+  }
+}
+
+.aaw-card--has-outputs {
+  align-items: flex-start;
+  padding-block: var(--slds-g-spacing-4, 1rem);
+  min-height: 0;
+}
+
+// Status glyph + text, as one block the card can centre. It must stay
+// unpositioned: the title's stretched ::after resolves against the
+// nearest positioned ancestor, and that has to be the card, not this.
+.aaw-card__main {
+  display: flex;
+  align-items: flex-start; // glyph sits on the title's line, not between lines
+  gap: var(--slds-g-spacing-3, 0.75rem);
+  flex: 1;
+  min-width: 0;
+}
+
+.aaw-card__body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0; // lets the nested truncation actually truncate
+}
+
+// The heading is a layout-neutral wrapper — all the type lives on the
+// interactive element inside it, so `<h3><a>` and `<h3><button>` render
+// identically.
+.aaw-card__title {
+  margin: 0;
+  max-width: 100%;
+  min-width: 0;
+  font: inherit;
+}
+
+// Plain dark text, not a blue link — the card's hover lift already
+// carries the affordance. Underline appears on hover/focus of the
+// element itself so keyboard users see it on the focused thing.
+//
+// `<button>` needs the reset that `<a>` doesn't; sharing one class
+// keeps the two element choices visually indistinguishable.
+.aaw-card__title-action {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: start;
+
+  font-family: inherit;
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.1875rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  text-decoration: none;
+  cursor: pointer;
+
+  // Stretched hit area: a transparent overlay filling the card, so a
+  // mouse click anywhere activates this control while the row keeps one
+  // tab stop and one announcement. Radius is restated because it
+  // doesn't inherit through a pseudo-element.
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: var(--slds-g-radius-border-3, 0.75rem);
+  }
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+    text-decoration-thickness: 1px;
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  &:visited {
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  }
+}
+
+// Subline — "<status> · <time>". Separate spans because both halves are
+// rewritten independently when a row is paused or resumed.
+.aaw-card__desc {
+  margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.3;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+.aaw-card__sep {
+  margin-inline: 0.375em;
+}
+
+// ── State cues ────────────────────────────────────────────────────────
+// There are none, deliberately. A paused row keeps the same surface,
+// title colour and subline treatment as every other row; the only thing
+// that changes is what the subline SAYS ("Paused · Last run Thursday")
+// and which glyph the status button rests on. Both are content, not
+// decoration, so `data-aaw-state` drives the glyph and nothing else.
+//
+// Styling paused rows down was the earlier approach — a grey chip on the
+// text and a flat card. It made a row that's one click from running
+// again look disabled, which is the wrong read for a schedule the user
+// switched off on purpose.
+
+// ── Error line ────────────────────────────────────────────────────────
+// A failed row's error badge and the pill that replaces it on retry both
+// sit in the outputs row, and state shows one. Neither is ever removed,
+// so the card keeps a third line through the transition and its height
+// holds — and the error is still there if the retry fails again.
+[data-aaw-state="failed"] .aaw-card__retry {
+  display: none;
+}
+
+[data-aaw-state]:not([data-aaw-state="failed"]) .aaw-card__error {
+  display: none;
+}
+
+// The badge is stock SLDS apart from its box: `line-height: normal` and
+// a 1px border would make it a pixel taller than a pill, which is enough
+// to nudge the card when the two swap. Matching the pill's 16px line and
+// absorbing the border into the padding lands both on exactly 24px.
+.aaw-card__outputs .slds-badge {
+  line-height: 1rem;
+  padding-block: calc(var(--slds-g-spacing-1, 0.25rem) - 1px);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.aaw-card__outputs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+  margin-top: var(--slds-g-spacing-2, 0.5rem);
+  max-width: 100%;
+}
+
+// ── Output pill ───────────────────────────────────────────────────────
+// A neutral chip; only the leading glyph differentiates the semantic
+// categories. Doctype sprites are pre-colored, so no `fill` override —
+// forcing currentColor would flatten them to one hue.
+.aaw-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+  max-width: 100%;
+  overflow: hidden;
+
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--slds-g-radius-border-1, 0.25rem);
+  background: var(--slds-g-color-neutral-base-95, #f3f3f3);
+
+  font-size: 0.75rem;
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1rem;
+  color: #2e2e2e;
+}
+
+.aaw-pill__glyph {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+
+.aaw-pill__glyph--image {
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.aaw-pill__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: inherit;
+}
+
+// ── Right rail ────────────────────────────────────────────────────────
+// Fixed reserve so revealing the badge / kebab on hover can't reflow the
+// text to their left.
+.aaw-card__rail {
+  flex-shrink: 0;
+  min-width: 9.75rem; // 156px
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+// Hidden with `visibility` (not just opacity) so the badge leaves the
+// a11y tree too — the title's aria-label already carries the workflow.
+.aaw-card__workflow {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--slds-g-radius-border-pill, 15rem);
+  background: #d8e6fe;
+  color: #0250d9;
+  font-size: 0.75rem;
+  line-height: 1.125rem;
+
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 120ms ease, visibility 120ms ease;
+}
+
+.aaw-card:hover .aaw-card__workflow,
+.aaw-card:focus-within .aaw-card__workflow {
+  opacity: 1;
+  visibility: visible;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  Task row — the alternate treatment (`item.variant == "task"`)
+// ----------------------------------------------------------------------
+//  The opposite bet from the card: no surface, no shadow, no pills. The
+//  row is a fixed 72px band that only draws ink where there's content,
+//  and neighbours are separated by a hairline instead of a gap. Hover is
+//  the whole thing — one background wash, and the two right-hand actions
+//  fade in — so a list of these reads as a table until you touch it.
+//
+//     ┌ 40px ┬──────────────────────────────────────┬── auto ──┐
+//     │  ⏱   │  title                               │   ✎  ⋮   │  72px
+//     │      │  cadence · next run                  │          │
+//     └──────┴──────────────────────────────────────┴──────────┘
+//
+//  Type here is 16/24 against the card's 14/12: at this row height the
+//  card's scale would leave the band looking half-empty.
+// ══════════════════════════════════════════════════════════════════════
+.aaw-task {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--slds-g-spacing-4, 1rem);
+
+  height: 4.5rem; // 72px
+  padding-inline: var(--slds-g-spacing-4, 1rem);
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+
+  cursor: pointer;
+  transition: background-color 120ms ease;
+
+  &:hover,
+  &:focus-within {
+    background: var(--slds-g-color-surface-container-2, #f3f3f3);
+  }
+}
+
+// The rule between two task rows. It belongs to the lower row (drawn on
+// its top edge) and starts past the status glyph, so it reads as a
+// divider under the text rather than a full-width border.
+//
+// `:has()` on the preceding item is what replaces a plain `:not(:first-
+// child)`: the rule should only appear where two task rows actually
+// meet, never above a card or as a stray hairline floating in the list's
+// gap. The same `:has()` pair cancels that gap, so the two rows sit
+// flush the way the divider assumes.
+.aaw__list-item:has(.aaw-task):has(+ .aaw__list-item:has(.aaw-task)) {
+  margin-bottom: 0;
+}
+
+.aaw__list-item:has(.aaw-task) + .aaw__list-item:has(.aaw-task) .aaw-task::before {
+  content: "";
+  position: absolute;
+  inset-inline: 2.5rem 0;
+  top: 0;
+  border-top: 1px solid var(--slds-g-color-border-1, #e5e5e5);
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+// Hovering a row rounds its own corners into the wash, so the divider
+// has to go — on this row's top edge and on the next row's, which is
+// this row's bottom edge.
+.aaw__list-item:hover .aaw-task::before,
+.aaw__list-item:focus-within .aaw-task::before,
+.aaw__list-item:hover + .aaw__list-item .aaw-task::before,
+.aaw__list-item:focus-within + .aaw__list-item .aaw-task::before {
+  opacity: 0;
+}
+
+// Must stay unpositioned: the title button's stretched ::after resolves
+// against the nearest positioned ancestor, which has to be the row.
+.aaw-task__main {
+  display: flex;
+  // Top-aligned, not centred: the 24px button and the title's 24px line
+  // box are the same height, so this reads as centred on the title
+  // rather than floating between the two lines. It also holds if a row
+  // ever loses its subline — the glyph stays put instead of sliding.
+  align-items: flex-start;
+  gap: var(--slds-g-spacing-4, 1rem);
+  min-width: 0;
+}
+
+.aaw-task__text {
+  min-width: 0;
+  flex: 1;
+}
+
+.aaw-task__title {
+  margin: 0;
+  max-width: 100%;
+  min-width: 0;
+  font: inherit;
+}
+
+// The row's hit target and its single tab stop, stretched over the
+// whole row by ::after. Inside the heading rather than beside it, so
+// the row announces once ("heading, <title>, button") instead of
+// reading the title as a heading and then again as a button.
+.aaw-task__title-action {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: start;
+  cursor: pointer;
+
+  font-family: inherit;
+  font-size: var(--slds-g-font-scale-2, 1rem);
+  font-weight: var(--slds-g-font-weight-5, 500);
+  line-height: 1.5rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: var(--slds-g-radius-border-3, 0.75rem);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+// Both halves truncate independently: on a narrow row the cadence gives
+// up characters before the time does, since the time is the part worth
+// reading.
+.aaw-task__desc {
+  margin: 0;
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 0.375rem;
+
+  font-size: var(--slds-g-font-scale-2, 1rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.5rem;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+.aaw-task__status,
+.aaw-task__time {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aaw-task__sep {
+  flex-shrink: 0;
+}
+
+// ── Task row rail ─────────────────────────────────────────────────────
+// Above the overlay so its buttons get their own clicks. Nothing is
+// reserved for it: the actions only exist on hover, and the text has
+// `minmax(0, 1fr)` to give back.
+.aaw-task__rail {
+  position: relative;
+  z-index: 3;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+}
+
+.aaw-task__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: var(--slds-g-radius-border-circle, 100%);
+  cursor: pointer;
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease, background-color 120ms ease;
+
+  &:hover {
+    background: var(--slds-g-color-surface-container-3, #e5e5e5);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
+    outline-offset: -2px;
+  }
+}
+
+.aaw-task__action-icon {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  fill: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// The kebab inside a task row is the shared `.aaw-menu` markup, but its
+// reveal is keyed to `.aaw-card` — rebind it to this row, and match the
+// 36px sizing of the edit button beside it.
+.aaw-task .aaw-menu__trigger {
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+}
+
+.aaw-task:hover,
+.aaw-task:focus-within {
+  .aaw-task__action,
+  .aaw-menu__trigger {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+// Below the hover breakpoint there's no hover to reveal anything, so the
+// kebab — the row's only route to every action — stays out.
+@media (hover: none), (max-width: 47.9375rem) {
+  .aaw-task .aaw-menu__trigger {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .aaw-task__main {
+    gap: var(--slds-g-spacing-3, 0.75rem);
+  }
+}
+
+// ── Menus (row kebab + section overflow) ──────────────────────────────
+// z-index clears the stretched-link overlay (z-index 1) so clicks land
+// on the trigger instead of the card's anchor.
+.aaw-menu,
+.aaw__overflow {
+  position: relative;
+  z-index: 3;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.aaw-menu__trigger,
+.aaw__overflow-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--slds-g-sizing-9, 2rem);
+  block-size: var(--slds-g-sizing-9, 2rem);
+  border-radius: var(--slds-g-radius-border-circle, 100%);
+
+  transition: opacity 160ms ease, background-color 120ms ease;
+
+  .slds-button__icon {
+    fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+  }
+
+  &:hover,
+  &:focus-visible,
+  &[aria-expanded="true"] {
+    background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+    border-radius: var(--slds-g-radius-border-circle, 100%);
+  }
+
+  &:active {
+    background-color: var(--slds-g-color-surface-container-3, #e5e5e5);
+  }
+}
+
+// The row kebab follows the badge's progressive disclosure, but stays
+// put while its menu is open so it can't vanish under the pointer.
+.aaw-menu__trigger {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.aaw-card:hover .aaw-menu__trigger,
+.aaw-card:focus-within .aaw-menu__trigger,
+.aaw-menu__trigger[aria-expanded="true"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.aaw-menu__list {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  z-index: 5;
+
+  min-width: 10rem;
+  padding-block: var(--slds-g-spacing-1, 0.25rem);
+  background: var(--slds-g-color-surface-container-1, #fff);
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: 1rem;
+  box-shadow:
+    0 4px 12px 0 rgba(0, 0, 0, 0.12),
+    0 1px 3px 0 rgba(0, 0, 0, 0.08);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.aaw-menu__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.aaw-menu__item {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  margin: 0;
+  width: 100%;
+  cursor: pointer;
+  text-align: start;
+
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
+
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.0625rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  transition: background-color 120ms ease, color 120ms ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--slds-g-color-surface-container-2, #f3f3f3);
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+    outline: none;
+  }
+
+  &:focus-visible {
+    box-shadow: inset 3px 0 0 var(--slds-g-color-accent-2, #0250d9);
+  }
+}
+
+.aaw-menu__item-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+// Dismiss and reshuffle are GSAP timelines in agent_at_work.js, not
+// keyframes — a Flip reorder needs to measure real positions before and
+// after a DOM move, which CSS can't do.
+
+@media (prefers-reduced-motion: reduce) {
+  .aaw-card,
+  .aaw-menu__trigger,
+  .aaw__overflow-trigger,
+  .aaw-menu__item,
+  .aaw-card__workflow,
+  .aaw-task,
+  .aaw-task::before,
+  .aaw-status__glyph,
+  .aaw-task__action {
+    transition: none;
+  }
+
+  // Dismiss and reshuffle opt out in JS (`canAnimate`) rather than here,
+  // since skipping them means not running the timeline at all.
+}

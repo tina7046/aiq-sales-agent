@@ -1,0 +1,67 @@
+{% extends "_template.html" %}
+
+{#
+  "Your agent at work" — PROTOTYPE lab page
+  =====================================================================
+  Served at /agent_at_work.html. A sandbox for iterating on the feed
+  component without touching Seller Home.
+
+  The four prototype files, and where each one goes at port time:
+
+    src/views/_agent_at_work.html   markup  → replaces the body of
+                                              _home_feed.html (or is
+                                              included in its place)
+    src/styles/agent_at_work.scss   styles  → moves into home.scss under
+                                              the shipping class names
+    src/scripts/agent_at_work.js    JS      → becomes another controller
+                                              in home.js
+    src/views/data/agent_at_work.json data  → merges back into the
+                                              `feed` block of index.json
+
+  Nothing here imports home.css: the component is self-contained, so it
+  can't inherit (or be broken by) the live `.seller-home__feed*` rules.
+  The page background approximates Seller Home's surface so proportions
+  read the same as in context.
+#}
+
+{% block styles %}
+<link rel="stylesheet" href="/styles/agent_at_work.css" />
+{% endblock %}
+
+{% block content %}
+
+<div class="aaw-lab">
+  {# God-rays shader canvas host — the same animated background Seller
+     Home runs, so the component is judged over the surface it will
+     actually sit on. Empty and aria-hidden: decoration with no content.
+     scripts/aaw_god_rays.js mounts a WebGL canvas inside it; geometry
+     and stacking come from `.aaw-lab__god-rays`. #}
+  <div class="aaw-lab__god-rays" data-aaw-god-rays aria-hidden="true"></div>
+
+  <div class="aaw-lab__inner">
+    <p class="aaw-lab__note">
+      Prototype — iterating on the Seller Home “Your agent at work” feed.
+      Markup <code>_agent_at_work.html</code> · styles <code>agent_at_work.scss</code> ·
+      behaviour <code>agent_at_work.js</code> · data <code>data/agent_at_work.json</code>.
+    </p>
+
+    {% include "_agent_at_work.html" %}
+  </div>
+</div>
+
+{# GSAP + Flip drive the two list motions in agent_at_work.js: the
+   slide-and-collapse on dismiss, and the reshuffle when a row is paused
+   or resumed. Loaded here rather than in _template.html because this is
+   the only page that needs them. The controller degrades to instant DOM
+   changes if either script fails to load, so the prototype still works
+   offline. #}
+<script src="https://unpkg.com/gsap@3/dist/gsap.min.js"></script>
+<script src="https://unpkg.com/gsap@3/dist/Flip.min.js"></script>
+<script src="/scripts/agent_at_work.js"></script>
+
+{# ES module, so it defers on its own and the shader mounts after the
+   list is in the DOM — which matters because it measures the content
+   column to place the focal point. #}
+<script type="module" src="/scripts/aaw_god_rays.js"></script>
+
+{% endblock %}
