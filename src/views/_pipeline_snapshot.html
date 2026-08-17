@@ -1,0 +1,363 @@
+{#
+  Pipeline Snapshot — structured agent output
+  =====================================================================
+  Renders the Daily Pipeline Snapshot workflow's per-run output as an
+  in-feed agent response, following the "open document" treatment the
+  `agentMessage` macro already uses (no chat bubble around long-form
+  content — the response IS the document).
+
+  Consumed by `_home_conversation_messages.html → agentMessage(msg)`
+  when the message carries a `snapshot` block. Rendered inline INSIDE
+  the agent article, so the article's `data-sh-conv-msg` value is what
+  the workflow side panel's Activity list anchors to (see
+  `findMessage` in home_conversation.js — it resolves a run's
+  `messageId` against that attribute, not a DOM id).
+
+  Data contract — `snapshot` object, per run:
+    {
+      dateLabel:  String,       // "August 11, 2026"
+      date:       ISO String,   // machine-readable
+      titleLabel: String,       // "Daily Pipeline"
+      freshness?: { text, source },
+
+      summary:    String,       // 1–2 sentence outcome-oriented lead
+
+      metrics: {
+        heading: String,        // "Pipeline at a glance"
+        items:  [ {
+          id, label, value,
+          tone?:  'positive' | 'warning',  // colours the value
+          delta?: { text, direction }      // "up" | "down-good" | "up-warning"
+        } ]
+      },
+
+      changes: {
+        heading:   String,      // "What changed"
+        ariaLabel: String,
+        columns: [ { id, label } ],
+        rows:    [ { id, opportunityId, …one field per column id } ]
+      },
+
+      attention: {
+        heading: String,        // "Needs your attention"
+        items: [ {
+          id, severity, severityLabel,   // 'high' | 'warning' | 'info'
+          title, subtitle, detail, recommendation?,
+          opportunityId
+        } ]
+      },
+
+      actions: {
+        heading: String,        // "Recommended actions"
+        items: [ {
+          id, label, kind,      // 'outreach' | 'task' | 'research'
+          description?: String,
+          primary?: Boolean,
+          opportunityId?: String
+        } ]
+      }
+    }
+
+  Every block below `header` is optional — a snapshot with only a
+  summary renders as a summary, so a run that produced less than a
+  full analysis doesn't need a different message type.
+
+  Rendering notes:
+    • Headings are semantic `<h2>` / `<h3>`. The article sits inside
+      the thread's `<ol>` under the page `<h1>`, so the outline
+      (page title → snapshot title → section heads) stays well-formed.
+    • `snapshot.changes` borrows the SLDS 2 uplift table chrome from
+      `prospectTable`, so density / borders / hover come from the
+      design system. It adds `slds-table_fixed-layout`, which
+      `prospectTable` omits, because the snapshot's own column widths
+      (set in home_conversation.scss) only hold under fixed layout.
+      The wrapper's `data-sh-conv-table` id is namespaced with the
+      message id so two snapshots on one page never collide.
+    • Attention items are `<li>` cards with a leading severity bar.
+      The bar is decorative; the severity reaches AT users through the
+      visible badge text.
+    • Authored prose (summary, detail, recommendation, action
+      description) runs through the `emphasis` filter so `**bold**`
+      works inline, same as `agentMessage`'s text. The filter escapes
+      before it converts — see gulpfile.js.
+    • Every reference back to CRM (row, attention item, action) carries
+      `data-sh-snapshot-opp-id`. Nothing renders as a link today
+      because this project has no /opportunity route; the attribute
+      makes it a one-line change when one lands.
+    • Interpretation is separated from fact: numeric CRM values live in
+      the table and metric tiles unadorned, while generated prose
+      carries `data-sh-snapshot-inference` so a future "show sources"
+      affordance can toggle exactly those nodes.
+#}
+{% macro pipelineSnapshot(snapshot, messageId) %}
+{# Message-scoped table id so multiple snapshots on one page never
+   collide on the changes-table attribute hook. #}
+{% set _tableId = "snapshot-" ~ (messageId or "msg") ~ "-changes" %}
+<section
+  class="seller-home__snapshot"
+  data-sh-snapshot
+  aria-labelledby="{{ messageId }}-title"
+>
+  {# ── Header: title + freshness ─────────────────────────────────
+     "Daily Pipeline | August 11, 2026" per the design. One <h2>
+     with a visual pipe separator; the accessible name reads the two
+     parts naturally. The freshness note sits beneath as compact
+     metadata in the same gray as the workflow-activity chip. #}
+  <header class="seller-home__snapshot-header">
+    <h2 id="{{ messageId }}-title" class="seller-home__snapshot-title">
+      <span class="seller-home__snapshot-title-primary">{{ snapshot.titleLabel or "Daily Pipeline" }}</span>
+      <span class="seller-home__snapshot-title-sep" aria-hidden="true">|</span>
+      <span class="seller-home__snapshot-title-date">{{ snapshot.dateLabel }}</span>
+    </h2>
+    {% if snapshot.freshness and snapshot.freshness.text %}
+    <p class="seller-home__snapshot-freshness">
+      <span class="seller-home__snapshot-freshness-text">{{ snapshot.freshness.text }}</span>
+      {% if snapshot.freshness.source %}
+      <span class="seller-home__snapshot-freshness-sep" aria-hidden="true">·</span>
+      <span class="seller-home__snapshot-freshness-source">{{ snapshot.freshness.source }}</span>
+      {% endif %}
+    </p>
+    {% endif %}
+  </header>
+
+  {# ── Summary ────────────────────────────────────────────────────
+     Concise outcome-oriented lead. Same typography as plain agent
+     text so the summary reads as one continuous response, tagged as
+     inference because it's generated interpretation rather than a
+     CRM fact. #}
+  {% if snapshot.summary %}
+  <p
+    class="seller-home__conv-msg-agent-text seller-home__snapshot-summary"
+    data-sh-snapshot-inference
+  >{{ snapshot.summary | emphasis | safe }}</p>
+  {% endif %}
+
+  {# ── Pipeline at a glance — metric tiles ───────────────────────
+     However many tiles are supplied, laid out on a grid that
+     responds to the snapshot's own width: 4 columns wide, 2 at
+     medium, stacked at narrow. Each tile is a plain `<div>`, not a
+     link — the value is the terminal fact and drilling in from a KPI
+     is a separate future affordance. #}
+  {% if snapshot.metrics and snapshot.metrics.items and snapshot.metrics.items | length > 0 %}
+  <section
+    class="seller-home__snapshot-section seller-home__snapshot-metrics"
+    aria-labelledby="{{ messageId }}-metrics-heading"
+  >
+    <h3
+      id="{{ messageId }}-metrics-heading"
+      class="seller-home__snapshot-heading"
+    >{{ snapshot.metrics.heading }}</h3>
+    <ul class="seller-home__snapshot-metric-grid" role="list">
+      {% for m in snapshot.metrics.items %}
+      <li
+        class="seller-home__snapshot-metric"
+        data-sh-snapshot-metric="{{ m.id }}"
+      >
+        <span class="seller-home__snapshot-metric-label">{{ m.label }}</span>
+        {# `tone` colours the value directly — "Change since yesterday:
+           Down $120K" reads amber for a shrinking pipeline, green for
+           a growing one. Optional so plain metrics stay neutral. #}
+        <span
+          class="seller-home__snapshot-metric-value{% if m.tone %} seller-home__snapshot-metric-value--{{ m.tone }}{% endif %}"
+        >{{ m.value }}</span>
+        {% if m.delta and m.delta.text %}
+        {# Direction is READ by CSS to pick the semantic colour; the
+           visible text plus the assistive-text prefix carry the
+           meaning to AT users, so colour is never the only channel. #}
+        <span
+          class="seller-home__snapshot-metric-delta seller-home__snapshot-metric-delta--{{ m.delta.direction or 'neutral' }}"
+        >
+          <span class="slds-assistive-text">
+            {% if m.delta.direction == 'up' or m.delta.direction == 'up-warning' %}up{% elif m.delta.direction == 'down-good' or m.delta.direction == 'down' %}down{% endif %}
+          </span>
+          {{ m.delta.text }}
+        </span>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {# ── What changed — SLDS 2 table ────────────────────────────────
+     Wrapped in `.seller-home__conv-prospect-table` so a narrow
+     container scrolls horizontally INSIDE the wrapper rather than
+     widening the thread. Rows carry their opportunity id for a
+     future record-open handler. #}
+  {% if snapshot.changes and snapshot.changes.rows and snapshot.changes.rows | length > 0 %}
+  <section
+    class="seller-home__snapshot-section seller-home__snapshot-changes"
+    aria-labelledby="{{ messageId }}-changes-heading"
+  >
+    <h3
+      id="{{ messageId }}-changes-heading"
+      class="seller-home__snapshot-heading"
+    >{{ snapshot.changes.heading }}</h3>
+    <div
+      class="seller-home__conv-prospect-table seller-home__snapshot-changes-table"
+      data-sh-conv-table="{{ _tableId }}"
+    >
+      <table
+        class="slds-table slds-table_bordered slds-table_fixed-layout slds-table-uplift seller-home__conv-prospect-table-el seller-home__snapshot-changes-table-el"
+        role="grid"
+        aria-label="{{ snapshot.changes.ariaLabel or snapshot.changes.heading }}"
+      >
+        <thead>
+          <tr class="slds-line-height_reset">
+            {% for col in snapshot.changes.columns %}
+            <th class="slds-cell_action-mode" scope="col" data-sh-conv-col="{{ col.id }}">
+              <div class="slds-grid slds-grid_vertical-align-center slds-has-flexi-truncate">
+                <span class="slds-truncate" title="{{ col.label }}">{{ col.label }}</span>
+              </div>
+            </th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in snapshot.changes.rows %}
+          {# `slds-hint-parent` is the hook SLDS's uplift row-hover
+             rule matches on — same reason `prospectTable` keeps it. #}
+          <tr
+            class="slds-hint-parent seller-home__conv-prospect-row"
+            data-sh-conv-row
+            data-sh-conv-row-id="{{ row.id }}"
+            {% if row.opportunityId %}data-sh-snapshot-opp-id="{{ row.opportunityId }}"{% endif %}
+          >
+            {% for col in snapshot.changes.columns %}
+            <td class="slds-cell_action-mode" role="gridcell">
+              <span class="slds-truncate" title="{{ row[col.id] }}">{{ row[col.id] }}</span>
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+
+  {# ── Needs your attention — severity cards ─────────────────────
+     Each item is a semantic `<li>` with a leading severity bar. The
+     bar is decorative (`aria-hidden`); the badge text is what an AT
+     user hears, so severity never travels by colour alone. #}
+  {% if snapshot.attention and snapshot.attention.items and snapshot.attention.items | length > 0 %}
+  <section
+    class="seller-home__snapshot-section seller-home__snapshot-attention"
+    aria-labelledby="{{ messageId }}-attention-heading"
+  >
+    <h3
+      id="{{ messageId }}-attention-heading"
+      class="seller-home__snapshot-heading"
+    >{{ snapshot.attention.heading }}</h3>
+    <ul class="seller-home__snapshot-attention-list" role="list">
+      {% for item in snapshot.attention.items %}
+      <li
+        class="seller-home__snapshot-attention-item seller-home__snapshot-attention-item--{{ item.severity or 'info' }}"
+        data-sh-snapshot-attention="{{ item.id }}"
+        {% if item.opportunityId %}data-sh-snapshot-opp-id="{{ item.opportunityId }}"{% endif %}
+      >
+        <span
+          class="seller-home__snapshot-attention-bar"
+          aria-hidden="true"
+        ></span>
+        <div class="seller-home__snapshot-attention-body">
+          <div class="seller-home__snapshot-attention-title-row">
+            <span class="seller-home__snapshot-attention-title">{{ item.title }}</span>
+            {% if item.severityLabel %}
+            <span
+              class="seller-home__snapshot-attention-badge seller-home__snapshot-attention-badge--{{ item.severity or 'info' }}"
+            >{{ item.severityLabel }}</span>
+            {% endif %}
+          </div>
+          {% if item.subtitle %}
+          <p class="seller-home__snapshot-attention-subtitle">{{ item.subtitle }}</p>
+          {% endif %}
+          {% if item.detail %}
+          <p
+            class="seller-home__snapshot-attention-detail"
+            data-sh-snapshot-inference
+          >{{ item.detail | emphasis | safe }}</p>
+          {% endif %}
+          {% if item.recommendation %}
+          {# Inline "Recommended action:" lead so the card reads as a
+             natural sentence when a screen reader announces the whole
+             thing. Generated interpretation, so it's tagged as
+             inference too. #}
+          <p
+            class="seller-home__snapshot-attention-recommendation"
+            data-sh-snapshot-inference
+          >
+            <span class="seller-home__snapshot-attention-recommendation-lead">Recommended action:</span>
+            <span class="seller-home__snapshot-attention-recommendation-text">{{ item.recommendation | emphasis | safe }}</span>
+          </p>
+          {% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {# ── Recommended actions — description + base-button rows ─────
+     Each row is a one-sentence description followed by an SLDS 2
+     base button (`.slds-button` with no variant → transparent
+     chrome, accent-2 text) carrying a short verb phrase and a
+     trailing paperplane.
+
+     Semantics: a `<ul>`, because these are parallel actions. Each
+     `<li>` pairs its sentence with its button, and the button
+     points at the sentence via `aria-describedby` so a screen
+     reader announces both ("Reschedule — Reschedule the Vehement
+     executive review to keep the deal on track.").
+
+     Each button dispatches `sh:snapshot-action` with
+     { snapshotId, actionId, kind, opportunityId } so a future
+     handler can bind without touching this markup. Nothing listens
+     yet — clicking is a no-op by design.
+
+     An action without `description` renders button-only, so the
+     macro stays forgiving if a run ships bare actions. #}
+  {% if snapshot.actions and snapshot.actions.items and snapshot.actions.items | length > 0 %}
+  <section
+    class="seller-home__snapshot-section seller-home__snapshot-actions"
+    aria-labelledby="{{ messageId }}-actions-heading"
+  >
+    <h3
+      id="{{ messageId }}-actions-heading"
+      class="seller-home__snapshot-heading"
+    >{{ snapshot.actions.heading }}</h3>
+    <ul class="seller-home__snapshot-actions-list">
+      {% for action in snapshot.actions.items %}
+      <li class="seller-home__snapshot-actions-item">
+        {% if action.description %}
+        <p
+          id="{{ messageId }}-action-{{ loop.index0 }}-desc"
+          class="seller-home__snapshot-actions-text"
+        >{{ action.description | emphasis | safe }}</p>
+        {% endif %}
+        <button
+          type="button"
+          class="slds-button seller-home__snapshot-action"
+          data-sh-snapshot-action="{{ action.id }}"
+          data-sh-snapshot-action-kind="{{ action.kind or 'generic' }}"
+          {% if action.description %}aria-describedby="{{ messageId }}-action-{{ loop.index0 }}-desc"{% endif %}
+          {% if action.opportunityId %}data-sh-snapshot-opp-id="{{ action.opportunityId }}"{% endif %}
+        >
+          <span class="seller-home__snapshot-action-label">{{ action.label }}</span>
+          {# Paperplane / "send" glyph — the button reads as "send this
+             next step to the doer", which is what the SLDS utility
+             `send` icon means. #}
+          <svg
+            class="slds-button__icon slds-button__icon_right seller-home__snapshot-action-icon"
+            aria-hidden="true"
+          >
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#send"></use>
+          </svg>
+        </button>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+</section>
+{% endmacro %}

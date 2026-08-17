@@ -4166,3 +4166,1205 @@ $sh-linkedin-brand: #0a66c2;
     transition: none;
   }
 }
+
+
+// ══════════════════════════════════════════════════════════════════════
+// Workflow drill-in — layout row + details side panel
+// ══════════════════════════════════════════════════════════════════════
+// Everything below is additive: a conversation without a
+// `workflowContext` renders exactly as it did before, because the
+// layout wrapper collapses to a pass-through and no
+// `.seller-home__conv-side` child is visible.
+
+// ── Layout row ────────────────────────────────────────────────────────
+// Wraps the conversation column and the side panels as flex siblings,
+// so the Activity list keeps its own scroll and closing the panel lets
+// the thread reclaim the width without any transform math.
+.seller-home__conv-layout {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+
+  display: flex;
+  flex-direction: row;
+
+  // `min-width: 0` on `.seller-home__conv` (already set above) is what
+  // lets the thread column shrink as the panel takes its slice —
+  // without it the thread's content cap would win and push the panel
+  // off the shell instead.
+  &--with-panel {
+    // Marker only; the child sizing rules do the work.
+  }
+
+  // Collapsed: the panel stays in the DOM (scroll position, focus
+  // target, and bound handlers all survive) but takes zero width.
+  // `visibility` + `pointer-events` keep it out of the a11y tree and
+  // out of hit-testing without unmounting it.
+  &.is-panel-collapsed .seller-home__conv-side {
+    flex-basis: 0;
+    width: 0;
+    min-width: 0;
+    border-inline-start-width: 0;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+// ── Panel shell ───────────────────────────────────────────────────────
+.seller-home__conv-side {
+  // Non-active panels ship with the `hidden` attribute, and the
+  // `display: flex` below would otherwise beat the UA rule.
+  &[hidden] {
+    display: none;
+  }
+
+  flex: 0 0 25rem; // 400px
+  width: 25rem;
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  // Confine the scroll to the body so the header stays pinned.
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+
+  background: var(--slds-g-color-surface-1, #ffffff);
+  // Inset border rather than a margin so the width stays predictable
+  // and nothing shifts as the panel opens and closes.
+  border-inline-start: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+
+  transition: flex-basis 220ms ease, width 220ms ease, border-inline-start-width 220ms ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+// ── Panel header ──────────────────────────────────────────────────────
+.seller-home__conv-side-header {
+  flex: 0 0 auto;
+
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  padding: var(--slds-g-spacing-3, 0.75rem);
+
+  background: var(--slds-g-color-surface-1, #ffffff);
+  border-bottom: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+}
+
+// Shares the conversation header's title typography by design — the
+// panel and the thread read as one surface.
+.seller-home__conv-side-title {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro Display", "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-3, 1.25rem); // 20px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.75rem; // 28px
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seller-home__conv-side-header-actions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+}
+
+// The bordered chrome, hover, and focus ring all come from
+// `slds-button_icon-container`.
+.seller-home__conv-side-close {
+  flex: 0 0 auto;
+}
+
+// ── Panel overflow menu ───────────────────────────────────────────────
+// Absolutely positioned so opening it doesn't reflow the header row.
+.seller-home__conv-side-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.seller-home__conv-side-menu-trigger {
+  flex: 0 0 auto;
+}
+
+.seller-home__conv-side-menu-list {
+  position: absolute;
+  top: calc(100% + var(--slds-g-spacing-1, 0.25rem));
+  right: 0;
+  z-index: 10;
+
+  min-width: 12rem;
+  padding: var(--slds-g-spacing-1, 0.25rem) 0;
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.seller-home__conv-side-menu-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.seller-home__conv-side-menu-item {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  width: 100%;
+  padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
+  text-align: start;
+  cursor: pointer;
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  line-height: 1.125rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  &:hover {
+    background: var(--slds-g-color-neutral-base-95, #f3f3f3);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-border-brand-1, #0176d3);
+    outline-offset: -2px;
+  }
+}
+
+.seller-home__conv-side-menu-item-icon {
+  width: 1rem;
+  height: 1rem;
+  fill: currentColor;
+  flex: 0 0 auto;
+}
+
+// ── Panel body ────────────────────────────────────────────────────────
+// The only scroll surface inside the panel.
+.seller-home__conv-side-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  background: var(--slds-g-color-surface-1, #ffffff);
+}
+
+.seller-home__conv-side-description {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.125rem; // 18px
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// ── Activity section ──────────────────────────────────────────────────
+.seller-home__conv-side-activity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+
+  padding-top: var(--slds-g-spacing-4, 1rem);
+}
+
+.seller-home__conv-side-activity-heading {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.1875rem; // 19px
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// ── Filter row ────────────────────────────────────────────────────────
+// Native `<select>` under the SLDS picklist chrome, so keyboard
+// behaviour comes from the element. Equal widths keep both pickers the
+// same size regardless of their option-label lengths.
+.seller-home__conv-side-filters {
+  display: flex;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  align-items: stretch;
+}
+
+.seller-home__conv-side-filter {
+  flex: 1 1 0;
+  min-width: 0;
+  // Drop the SLDS form-element margin so the filters sit in the
+  // panel's compact rhythm.
+  margin: 0;
+
+  // Set on the label so BOTH the container (which colors the chevron
+  // through `currentColor`) and the `<select>` (which reads the border
+  // token) inherit them.
+  --slds-c-select-text-color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  --slds-c-select-color-border: var(--slds-g-color-border-1, #c9c9c9);
+
+  // SLDS paints the classic double triangles. Suppress the top one and
+  // repaint the bottom as a masked chevron, which inherits
+  // `currentColor` so hover / focus / disabled need no extra plumbing.
+  .slds-select_container::before {
+    display: none;
+  }
+
+  .slds-select_container::after {
+    border: 0;
+    inset-block-start: 50%;
+    inset-block-end: auto;
+    inset-inline-end: var(--slds-g-spacing-2, 0.5rem);
+    transform: translateY(-50%);
+
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+
+    background-color: currentColor;
+    mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 520 520'><path d='M83 140h354c10 0 17 13 9 22L273 374c-6 8-19 8-25 0L73 162c-7-9-1-22 10-22z'/></svg>") center / contain no-repeat;
+    -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 520 520'><path d='M83 140h354c10 0 17 13 9 22L273 374c-6 8-19 8-25 0L73 162c-7-9-1-22 10-22z'/></svg>") center / contain no-repeat;
+  }
+}
+
+// `.slds-select` inherits its font-size, and the panel's inherited
+// default is a step larger than the picklist wants.
+.seller-home__conv-side-filter-select {
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+}
+
+// ── Run tiles ─────────────────────────────────────────────────────────
+.seller-home__conv-side-run-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.seller-home__conv-side-run-item {
+  list-style: none;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+// Anchor (completed) and div (failed) variants share the shell; only
+// the anchor gets the hover and selected treatments.
+.seller-home__conv-side-run-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.16);
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  color: inherit;
+  text-decoration: none;
+
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+
+  // `[href]:hover` rather than `&:hover` — the extra attribute bumps
+  // specificity past the global `a:hover { text-decoration: underline }`
+  // that would otherwise underline the whole tile.
+  &[href]:hover {
+    background: var(--slds-g-color-neutral-base-95, #f3f3f3);
+    text-decoration: none;
+  }
+
+  &[href]:focus-visible {
+    outline: 2px solid var(--slds-g-color-border-brand-1, #0176d3);
+    outline-offset: 2px;
+    text-decoration: none;
+  }
+
+  // The run the thread is currently anchored to.
+  &.is-selected {
+    background: var(--slds-g-color-surface-container-2, #f3f3f3);
+  }
+
+  // Failed tiles aren't clickable as a whole — the Retry button is.
+  &--failed {
+    cursor: default;
+  }
+}
+
+.seller-home__conv-side-run-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.seller-home__conv-side-run-timestamp {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.1875rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// ── Status pills ──────────────────────────────────────────────────────
+// The `slds-badge` blueprint in the markup already owns padding,
+// radius, typography, and border. The only structural need here is that
+// the pill holds its width against the ellipsizing timestamp beside it.
+.seller-home__conv-side-run-badge {
+  flex: 0 0 auto;
+}
+
+// Colored by remapping the badge's own component tokens, so a future
+// change to the badge blueprint still flows through.
+.seller-home__conv-side-run-badge--completed {
+  --slds-c-badge-color-background: var(--slds-g-color-success-base-95, #d5f2dc);
+  --slds-c-badge-text-color: var(--slds-g-color-success-base-30, #164a24);
+  --slds-c-badge-color-border: var(--slds-g-color-success-base-95, #d5f2dc);
+}
+
+.seller-home__conv-side-run-badge--failed {
+  --slds-c-badge-color-background: var(--slds-g-color-error-base-95, #feded8);
+  --slds-c-badge-text-color: var(--slds-g-color-error-base-30, #8e030f);
+  --slds-c-badge-color-border: var(--slds-g-color-error-base-95, #feded8);
+}
+
+.seller-home__conv-side-run-summary {
+  margin: 0;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-2, 0.75rem); // 12px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.3;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+
+  overflow-wrap: anywhere;
+}
+
+// ── Tile CTAs ─────────────────────────────────────────────────────────
+// Both variants extend `slds-text-link` in the markup, which owns color
+// and transition. This carries the tile-scoped structure plus the
+// button reset the Retry variant needs to read as a link.
+.seller-home__conv-side-run-cta {
+  align-self: flex-start;
+
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  line-height: 1.125rem;
+  font-weight: var(--slds-g-font-weight-4, 400);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-border-brand-1, #0176d3);
+    outline-offset: 2px;
+    border-radius: 0.25rem;
+  }
+}
+
+// "View Output" is a span, so its hover comes from the parent anchor.
+// Deliberately no underline: the tile's background tint already signals
+// clickability, and doubling that reads as competing affordances.
+.seller-home__conv-side-run-card[href]:hover .seller-home__conv-side-run-cta--completed,
+.seller-home__conv-side-run-card[href]:focus-visible .seller-home__conv-side-run-cta--completed {
+  color: var(--slds-g-color-accent-3, #022ac0);
+  text-decoration: none;
+}
+
+// Retry carries the error family so it reinforces the badge beside it.
+.seller-home__conv-side-run-cta--retry {
+  color: var(--slds-g-color-error-base-30, #8e030f);
+
+  &:hover,
+  &:focus-visible {
+    color: var(--slds-g-color-error-base-20, #6c0209);
+    text-decoration: none;
+  }
+}
+
+// While a retry is in flight the button is `[disabled] [aria-busy]`.
+.seller-home__conv-side-run-cta[disabled],
+.seller-home__conv-side-run-cta[aria-busy="true"] {
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  cursor: progress;
+  pointer-events: none;
+}
+
+// Covers both "no runs yet" and "no runs match these filters".
+.seller-home__conv-side-empty {
+  margin: 0;
+  padding: var(--slds-g-spacing-3, 0.75rem) 0;
+  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);
+  line-height: 1.125rem;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  text-align: center;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+// ── Inline error slot ─────────────────────────────────────────────────
+// Warning palette, not error red: the panel still works, only the one
+// selection failed.
+.seller-home__conv-side-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+
+  margin: 0 0 var(--slds-g-spacing-3, 0.75rem);
+  padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
+
+  background: var(--slds-g-color-warning-base-95, #fff3d4);
+  border: 1px solid var(--slds-g-color-warning-base-60, #c68a00);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);
+  line-height: 1.125rem;
+  color: var(--slds-g-color-warning-base-30, #58390a);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.seller-home__conv-side-error-icon {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  margin-block-start: 0.125rem;
+  fill: currentColor;
+}
+
+.seller-home__conv-side-error-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.seller-home__conv-side-error-dismiss {
+  flex: 0 0 auto;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  color: inherit;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-border-brand-1, #0176d3);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+.seller-home__conv-side-error-dismiss-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  fill: currentColor;
+}
+
+// ── Conversation header: Activity button ──────────────────────────────
+// Pushed to the trailing edge with `margin-inline-start: auto` so the
+// header's existing `justify-content: flex-start` can stay as-is —
+// switching it to `space-between` would drift the sparkle and title off
+// the left padding edge.
+.seller-home__conv-header-actions {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  flex: 0 0 auto;
+}
+
+// Hidden until there's a panel to reopen. Everything visual — fill,
+// border, brand text color, pill radius, height, icon gap — comes from
+// `slds-button_neutral`; only the type scale and weight are set here,
+// because the button inherits a smaller size inside the header band.
+.seller-home__conv-header-reopen {
+  display: none;
+
+  --slds-c-button-font-weight: var(--slds-g-font-weight-6, 600);
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+
+  .slds-button__icon_left {
+    block-size: 1rem;
+    inline-size: 1rem;
+  }
+}
+
+// Revealed only when a panel exists AND has been closed. A
+// conversation with no workflow gets an empty `data-sh-conv-workflow-id`
+// from `switchPanel`, so the button stays hidden there even though its
+// layout is collapsed.
+.seller-home__conv-layout.is-panel-collapsed[data-sh-conv-workflow-id]:not([data-sh-conv-workflow-id=""])
+  .seller-home__conv-header-reopen {
+  display: inline-flex;
+}
+
+// ── Scroll-target highlight ───────────────────────────────────────────
+// The message an Activity tile points at pulses for ~1.8 s so the jump
+// lands somewhere visible. A background tint rather than a transform,
+// so reduced-motion users lose nothing by opting out of movement.
+//
+// `scroll-margin-block-start` gives the message a gap above it inside
+// the thread's scroll container — `scrollIntoView({block: 'start'})`
+// would otherwise put it flush against the top edge.
+.seller-home__conv-msg--agent {
+  scroll-margin-block-start: var(--slds-g-spacing-4, 1rem);
+  transition: background-color 320ms ease;
+
+  // The controller adds `tabindex="-1"` to focus the message after the
+  // scroll. Suppress the resting ring; keyboard focus still shows one.
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-border-brand-1, #0176d3);
+    outline-offset: 2px;
+  }
+}
+
+// The tint is painted with a spread `box-shadow` as well as a
+// background so it reads as a padded block, without adding padding to
+// the base message and shifting every agent message on the surface.
+.seller-home__conv-msg--agent.is-highlighted {
+  background: var(--slds-g-color-brand-base-95, #edf4ff);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  box-shadow: 0 0 0 var(--slds-g-spacing-2, 0.5rem) var(--slds-g-color-brand-base-95, #edf4ff);
+}
+
+// ── Narrow viewports ──────────────────────────────────────────────────
+// Below this width the thread and a 400 px panel can't both hold their
+// shape, so the panel steps down and then out. The seller can still
+// reach it through the header's Activity button once the layout is
+// collapsed.
+@media (max-width: 64em) {
+  .seller-home__conv-side {
+    flex-basis: 20rem;
+    width: 20rem;
+  }
+}
+
+@media (max-width: 48em) {
+  .seller-home__conv-layout .seller-home__conv-side {
+    flex-basis: 0;
+    width: 0;
+    min-width: 0;
+    border-inline-start-width: 0;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Pipeline Snapshot — in-feed structured agent output
+// ============================================================
+// Owned by `_pipeline_snapshot.html → pipelineSnapshot(snapshot,
+// messageId)`. Renders inside the standard agent article, so the
+// existing `.seller-home__conv-msg--agent` shell (indent, 800 px
+// content column, live-region membership) still applies.
+//
+// The snapshot IS the response — no chat bubble, no border, no
+// card chrome around the whole thing. Section headings + the
+// table/cards/buttons carry the visual grammar; the surrounding
+// article stays open-document.
+
+.seller-home__snapshot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-4, 1rem);   // 16px between sections
+  // Cap the snapshot to the agent article's own inner width. The
+  // article already lives inside the 800 px thread column with a
+  // 12 px left indent, so 100% here is the correct max. No explicit
+  // max-width — inherits from the parent.
+  width: 100%;
+
+  // Container queries — the snapshot reflows to fit whatever
+  // width the enclosing agent article gets, which is what the
+  // middle column has left over after the side panel takes its
+  // 400 px. Viewport-based media queries would miss the case
+  // where the viewport is wide but the middle column is narrow
+  // (panel open at ~1100 px viewport = ~700 px middle column).
+  // `inline-size` scopes the query to horizontal width only, so
+  // block-direction layout is unaffected.
+  container-type: inline-size;
+  container-name: snapshot;
+}
+
+// ── Header: title + freshness ────────────────────────────────────
+.seller-home__snapshot-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;   // 2px — tight metadata stack
+}
+
+.seller-home__snapshot-title {
+  margin: 0;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  // 20 px title matches the workflow-panel header — the snapshot and
+  // its panel share typography by design so a run reads as one
+  // artefact across both surfaces.
+  font-size: var(--slds-g-font-scale-3, 1.25rem);   // 20px
+  font-weight: var(--slds-g-font-weight-6, 590);    // Semibold
+  line-height: 1.75rem;
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.375rem;   // 6px between the three title spans
+}
+
+.seller-home__snapshot-title-sep {
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-weight: var(--slds-g-font-weight-4, 400);
+}
+
+.seller-home__snapshot-title-date {
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  font-weight: var(--slds-g-font-weight-4, 400);   // secondary emphasis
+}
+
+.seller-home__snapshot-freshness {
+  margin: 0;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);   // 13px
+  line-height: 1.125rem;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.seller-home__snapshot-freshness-sep {
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+// ── Summary — inherits agent-text typography ─────────────────────
+// No structural override needed; the `data-sh-snapshot-inference`
+// hook is opt-in for a future "show CRM sources" affordance.
+.seller-home__snapshot-summary {
+  // Kept as a placeholder rule so future adjustments to the summary's
+  // presentation don't have to reach into `.seller-home__conv-msg-agent-text`
+  // and risk regressing plain agent messages.
+}
+
+// ── Sections ─────────────────────────────────────────────────────
+.seller-home__snapshot-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-3, 0.75rem);   // 12px between heading and body
+}
+
+.seller-home__snapshot-heading {
+  margin: 0;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-2, 1rem);      // 16px
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.5rem;
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+// ── Metric tiles ─────────────────────────────────────────────────
+// Responsive grid: 4 columns on desktop, 2 columns on medium,
+// stacked on narrow. `minmax(0, 1fr)` keeps tiles from overflowing
+// their track when a value is unusually long.
+.seller-home__snapshot-metric-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--slds-g-spacing-2, 0.5rem);   // 8px between tiles
+}
+
+.seller-home__snapshot-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;   // 2px — tight label / value / delta stack
+  min-width: 0;
+
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  // `neutral-base-95` (#F3F3F3) — a paler hairline than the default
+  // `border-1` (#C9C9C9). Keeps the metric tiles quiet inside the
+  // snapshot so the values (not the tile edges) carry the visual
+  // weight. Same treatment applied to attention cards + the
+  // changes-table wrapper below so every snapshot chrome reads
+  // as one visual language.
+  border: 1px solid var(--slds-g-color-neutral-base-95, #f3f3f3);
+  // 12px — SLDS 2 `radius-border-3`. Matches the attention cards
+  // + changes-table wrapper below so every snapshot chrome shares
+  // one corner treatment.
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+}
+
+.seller-home__snapshot-metric-label {
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);   // 13px
+  line-height: 1.125rem;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seller-home__snapshot-metric-value {
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  // Prominent value — 20px semibold matches the snapshot title so
+  // the KPI reads as the primary metric within the tile.
+  font-size: var(--slds-g-font-scale-3, 1.25rem);   // 20px
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.75rem;
+  // Pure black (#000) for maximum contrast against the tile's
+  // white surface. All tone modifiers below also render pure
+  // black — the tile's LABEL (e.g., "Change since yesterday") +
+  // the value's TEXT ("Up $210K" / "Down $120K") already carry
+  // the direction, so the color no longer has to.
+  color: #000000;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &--positive,
+  &--warning,
+  &--danger {
+    color: #000000;
+  }
+}
+
+.seller-home__snapshot-metric-delta {
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);
+  line-height: 1.125rem;
+  font-weight: var(--slds-g-font-weight-6, 590);   // Semibold — subtle emphasis
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &--up,
+  &--down-good {
+    // Positive movement — success family. `down-good` is used when
+    // a metric DECREASING is the healthy direction (e.g., at-risk
+    // pipeline going down is good).
+    color: var(--slds-g-color-success-base-30, #164a24);
+  }
+
+  &--up-warning,
+  &--down {
+    // Negative movement — warning family. `up-warning` is used
+    // when a metric INCREASING is bad (e.g., at-risk pipeline
+    // going up).
+    color: var(--slds-g-color-warning-base-30, #58390a);
+  }
+
+  &--neutral {
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  }
+}
+
+// ── Changes table ────────────────────────────────────────────────
+// Reuses the prospect-table wrapper + fixed-layout chrome. Column
+// widths are tuned for the four columns produced by the snapshot
+// author: Opportunity | Amount | Change (short description) |
+// Why it matters (impact sentence).
+//
+// Narrative columns (Change + Why it matters) DEPART from the
+// standard `slds-truncate` behavior: their content is prose (up to
+// 60 chars per cell), which reads far better wrapped than
+// ellipsized. Rules below override the prospect-table's whitespace
+// + overflow rules on those cells only.
+
+// Wrapper border + radius — overrides the defaults on the shared
+// `.seller-home__conv-prospect-table` class when scoped INSIDE the
+// snapshot only, so the prospect list on other pages keeps its
+// original 8 px radius + `border-1` (#C9C9C9) hairline. Same
+// treatment as the metric tiles + attention cards above so every
+// snapshot chrome shares one corner + border color.
+.seller-home__snapshot-changes-table {
+  border-color:  var(--slds-g-color-neutral-base-95, #f3f3f3);
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+}
+
+.seller-home__snapshot-changes-table-el {
+  // Pin the table to the wrapper's width. The shared
+  // `.seller-home__conv-prospect-table-el` class this element also
+  // carries sets `width: max-content; min-width: 100%` so the wide
+  // prospect list can scroll horizontally — inherited here, that
+  // makes the fixed column widths below sum PAST the wrapper and the
+  // "Why it matters" column gets clipped behind a scrollbar. Snapshot
+  // tables are four columns that must fit the thread, so the last
+  // `width: auto` column has to absorb the remainder instead.
+  width: 100%;
+
+  // Internal row-separator lines from SLDS `slds-table_bordered`
+  // resolve to `--slds-g-color-border-1` (#C9C9C9) by default.
+  // Override to `neutral-base-95` for a paler separator that
+  // matches the wrapper's hairline color. Scoped to the snapshot
+  // table only via the `-el` suffix.
+  thead th,
+  tbody td,
+  tbody th {
+    border-block-start-color: var(--slds-g-color-neutral-base-95, #f3f3f3);
+    border-block-end-color:   var(--slds-g-color-neutral-base-95, #f3f3f3);
+  }
+
+  // Header labels — override the shared prospect-table's
+  // `on-surface-2` (#2E2E2E) to pure black inside the snapshot.
+  // The `.slds-truncate` span inside each `<th>` inherits color,
+  // so setting it on the `<th>` cascades to the visible text.
+  thead th {
+    color: #000000;
+  }
+
+  th:nth-child(1),
+  td:nth-child(1) { width: 11rem; }    // Opportunity — company + product
+  th:nth-child(2),
+  td:nth-child(2) { width: 5rem; }     // Amount — always short currency
+  th:nth-child(3),
+  td:nth-child(3) { width: 15rem; }    // Change — narrative, wraps
+  th:nth-child(4),
+  td:nth-child(4) { width: auto; }     // Why it matters — narrative, fills
+
+  // Let narrative cells wrap. The `slds-truncate` class inside the
+  // cell keeps its title tooltip attribute (screen-reader friendly)
+  // but the inline overrides below unset the visual truncation.
+  td:nth-child(3),
+  td:nth-child(4) {
+    vertical-align: top;
+    padding-block: 0.5rem;
+
+    .slds-truncate {
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+      line-height: 1.125rem;
+    }
+  }
+}
+
+// ── Attention cards ──────────────────────────────────────────────
+.seller-home__snapshot-attention-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+// Each card is a two-column row: a 4 px leading severity bar and
+// the body. `position: relative` on the item + `absolute` on the
+// bar keeps the bar visually pinned to the card's left edge even
+// as the body's content wraps at narrow widths.
+.seller-home__snapshot-attention-item {
+  position: relative;
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  padding-inline-start: var(--slds-g-spacing-4, 1rem);
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  // `neutral-base-95` (#F3F3F3) — paired with the metric tiles +
+  // changes-table wrapper so every snapshot chrome uses the same
+  // hairline color. The card's severity-color leading bar carries
+  // the "high/warning/info" meaning; the outer border stays quiet.
+  border: 1px solid var(--slds-g-color-neutral-base-95, #f3f3f3);
+  // 12px — matches metric tiles + changes-table wrapper so every
+  // snapshot chrome shares one corner treatment.
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+  // Clip the absolutely-positioned severity bar (below) to the
+  // card's rounded corners. Without this, the 4 px wide bar can't
+  // follow the card's 12 px corner curve on its own — its own
+  // border-radius gets clamped to half its width (2 px), so it
+  // renders as a rounded cap that doesn't align with the card's
+  // arc. Letting the card do the clipping guarantees the bar's
+  // top + bottom edges hug the card's inner-radius curve exactly.
+  overflow: hidden;
+}
+
+.seller-home__snapshot-attention-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  inset-inline-start: 0;
+  width: 4px;
+
+  // No border-radius on the bar itself — the parent card's
+  // `overflow: hidden` + 12 px `border-radius` do the clipping,
+  // so the bar's start-side corners naturally follow the card's
+  // rounded corner arc. End-side (right edge of the bar) stays
+  // square where it meets the card body.
+  background: var(--slds-g-color-neutral-base-60, #939393);
+}
+
+.seller-home__snapshot-attention-item--high .seller-home__snapshot-attention-bar {
+  background: var(--slds-g-color-error-base-40, #b60554);
+}
+
+.seller-home__snapshot-attention-item--warning .seller-home__snapshot-attention-bar {
+  background: var(--slds-g-color-warning-base-60, #c68a00);
+}
+
+.seller-home__snapshot-attention-item--info .seller-home__snapshot-attention-bar {
+  background: var(--slds-g-color-brand-base-50, #0b5cab);
+}
+
+.seller-home__snapshot-attention-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.seller-home__snapshot-attention-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  flex-wrap: wrap;
+}
+
+.seller-home__snapshot-attention-title {
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 0.875rem);   // 14px
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.1875rem;
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+.seller-home__snapshot-attention-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem var(--slds-g-spacing-2, 0.5rem);
+  border-radius: 999px;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-2, 0.75rem);
+  line-height: 1rem;
+  font-weight: var(--slds-g-font-weight-4, 400);
+  white-space: nowrap;
+
+  &--high {
+    background: var(--slds-g-color-error-base-95, #feded8);
+    color: var(--slds-g-color-error-base-30, #8e030f);
+  }
+  &--warning {
+    background: var(--slds-g-color-warning-base-95, #fff3d4);
+    color: var(--slds-g-color-warning-base-30, #58390a);
+  }
+  &--info {
+    background: var(--slds-g-color-brand-base-95, #edf4ff);
+    color: var(--slds-g-color-brand-base-30, #06498b);
+  }
+}
+
+.seller-home__snapshot-attention-subtitle {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);   // 13px
+  line-height: 1.125rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  overflow-wrap: anywhere;
+}
+
+.seller-home__snapshot-attention-detail {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);   // 13px
+  line-height: 1.125rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  overflow-wrap: anywhere;
+}
+
+// Recommended-action line inside an attention card. Kept subtly
+// separated from `detail` by a small top gap (via the parent's
+// `gap: 0.25rem`) and by a semibold "Recommended action:" lead.
+// Text weight stays regular so the sentence reads naturally.
+.seller-home__snapshot-attention-recommendation {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.8125rem);   // 13px
+  line-height: 1.125rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  overflow-wrap: anywhere;
+}
+
+.seller-home__snapshot-attention-recommendation-lead {
+  font-weight: var(--slds-g-font-weight-6, 590);
+  margin-inline-end: 0.25rem;
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+// ── Recommended actions ──────────────────────────────────────────
+// Horizontal button cluster that wraps at narrow widths. Uses SLDS
+// button chrome directly — no visual overrides here beyond
+// wrap/gap.
+// ── Recommended actions — Figma "Coworker Next Steps" pattern ────
+// Design node 5540:28263. Each row is a description sentence +
+// SLDS 2 base-button (accent-2 link-blue, no chrome) with a
+// trailing paperplane. Rows stack vertically; the description
+// wraps naturally when the container narrows, and the button
+// stays right of the sentence on the same line where space allows.
+.seller-home__snapshot-actions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  display: flex;
+  flex-direction: column;
+  // 12 px (spacing-3) between rows — matches Figma's row rhythm
+  // and gives each next-step visual breathing room without
+  // making the section feel airy.
+  gap: var(--slds-g-spacing-3, 0.75rem);
+}
+
+.seller-home__snapshot-actions-item {
+  list-style: none;
+
+  display: flex;
+  align-items: center;
+  // 4 px (spacing-1) between the description and the base button
+  // — same gap Figma declares on the row's flex container.
+  gap: var(--slds-g-spacing-1, 0.25rem);
+
+  // When a description runs long inside a narrow snapshot column
+  // (medium viewport + side panel open, ~640 px), the row wraps
+  // and the button drops beneath the description. Left-align both
+  // parts on wrap so the button sits under the sentence's start
+  // edge rather than drifting right.
+  flex-wrap: wrap;
+}
+
+// Row description — Figma 5540:28264:
+//   Font: --slds-g-font-family-base @ 14 px / 19 px, weight 400
+//   Color: --slds-g-color-on-surface-3 (#001e5b)
+.seller-home__snapshot-actions-text {
+  margin: 0;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 0.875rem);          // 14 px
+  line-height: 1.1875rem;                                   // 19 px per spec
+  font-weight: var(--slds-g-font-weight-4, 400);
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+
+  // `flex: 0 1 auto` keeps the sentence at its natural width up
+  // to the row's available space, then wraps. `min-width: 0`
+  // enables text wrapping inside the flex row.
+  min-width: 0;
+}
+
+// Row action — SLDS 2 base-button. The `.slds-button` class ships
+// the accent-2 rest color, accent-3 hover, no chrome, and the
+// paperplane's currentColor tint. We override only the button's
+// intrinsic padding so it reads as a link within the sentence
+// rhythm (Figma has no visible button padding around the label).
+.seller-home__snapshot-action {
+  // Zero out the SLDS button padding tokens — the base blueprint
+  // pulls from these, so overriding them keeps the anchor point
+  // right at the text edge without touching the SLDS blueprint.
+  --slds-c-button-spacing-block-start:  0;
+  --slds-c-button-spacing-block-end:    0;
+  --slds-c-button-spacing-inline-start: 0;
+  --slds-c-button-spacing-inline-end:   0;
+
+  // Force base weight — SLDS 2 button base uses --slds-g-font-weight-4
+  // (400), but the surrounding paragraph carries weight 400 too.
+  // Figma shows the button label at semibold (weight 590) so the
+  // link stands out inside the sentence rhythm.
+  font-weight: var(--slds-g-font-weight-6, 590);
+  font-size: var(--slds-g-font-scale-1, 0.875rem);          // 14 px
+  line-height: 1.1875rem;                                   // 19 px
+}
+
+// Right-icon: paperplane. `slds-button__icon_right` supplies the
+// `margin-inline-start: 0.5rem` in the SLDS blueprint, but the
+// Figma spec uses only 4 px between label + glyph so tighten it.
+.seller-home__snapshot-action-icon {
+  margin-inline-start: var(--slds-g-spacing-1, 0.25rem);
+  // Cap the paperplane at ~14 px so it visually sits with the
+  // 14 px label. SLDS button__icon defaults to 1 rem which
+  // reads too heavy alongside the text.
+  block-size: 0.875rem;
+  inline-size: 0.875rem;
+}
+
+// ── Responsive ───────────────────────────────────────────────────
+// Snapshot responds to its OWN container width via `container-type:
+// inline-size` on `.seller-home__snapshot` above, so the same
+// rules apply whether the middle column is narrow because the
+// viewport is narrow or because the side panel is open.
+
+@container snapshot (max-width: 44rem) {   // ~704px — 4-col grid is too tight
+  .seller-home__snapshot-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  // Table columns: at this width the fixed 11+5+15+auto widths
+  // starve the narrative "Why it matters" column. Collapse the
+  // Change column to auto too so both narrative columns share
+  // the remaining space evenly, and drop the leading two column
+  // widths a hair to keep the table inside the container.
+  .seller-home__snapshot-changes-table-el {
+    th:nth-child(1),
+    td:nth-child(1) { width: 9rem; }     // Opportunity — tighter
+    th:nth-child(3),
+    td:nth-child(3) { width: auto; }     // Change — narrative, share width
+    th:nth-child(4),
+    td:nth-child(4) { width: auto; }     // Why it matters — narrative, share width
+  }
+}
+
+@container snapshot (max-width: 28rem) {   // ~448px — stack the metrics
+  .seller-home__snapshot-metric-grid {
+    grid-template-columns: 1fr;
+  }
+}

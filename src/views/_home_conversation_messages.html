@@ -303,27 +303,44 @@
    and reads the same roster, so restoring it is an import plus a
    branch here (see `_reviewParked` in the data).
 
+   A `snapshot` turns the response into a structured run report —
+   title, freshness line, metric tiles, a changes table, severity
+   cards, and recommended actions. It's what the Daily Pipeline
+   Snapshot workflow writes into the feed on every run, and it
+   replaces `text` rather than joining it (the snapshot owns its own
+   summary paragraph, so rendering both would print the lead twice).
+
+   `runId` marks the message as the persisted output of a scheduled
+   run, which is how the workflow side panel round-trips a run tile
+   back to its message.
+
    Data contract:
      {
        id: String, type: 'agent', text: String,
        table?:    { … see prospectTable },
        cadence?:  { … see _home_conversation_cadence.html },
+       snapshot?: { … see _pipeline_snapshot.html },
+       runId?:    String,  // the scheduled run this output came from
        rowsFrom?: String   // id of the message owning the rows
      }
 #}
 {% import "_home_conversation_cadence.html" as cadence %}
+{% import "_pipeline_snapshot.html" as snapshotMacros %}
 
 {% macro agentMessage(msg, rows) %}
 {# Roster: this message's own table rows when it has a table,
    otherwise the rows the page resolved from `rowsFrom`. #}
 {% set _rows = (msg.table and msg.table.rows) or rows or [] %}
 <article
-  class="seller-home__conv-msg seller-home__conv-msg--agent{% if msg.table %} seller-home__conv-msg--has-table{% endif %}{% if msg.cadence %} seller-home__conv-msg--has-cadence{% endif %}"
+  class="seller-home__conv-msg seller-home__conv-msg--agent{% if msg.table %} seller-home__conv-msg--has-table{% endif %}{% if msg.cadence %} seller-home__conv-msg--has-cadence{% endif %}{% if msg.snapshot %} seller-home__conv-msg--has-snapshot{% endif %}"
   data-sh-conv-msg="{{ msg.id }}"
   data-sh-conv-msg-type="agent"
+  {% if msg.runId %}data-sh-conv-run="{{ msg.runId }}"{% endif %}
   aria-label="Agent response"
 >
-  {% if msg.text %}
+  {% if msg.snapshot %}
+  {{ snapshotMacros.pipelineSnapshot(msg.snapshot, msg.id) }}
+  {% elif msg.text %}
   {# `**bold**` / `_italic_` in the authored copy — see the `emphasis`
      filter in gulpfile.js, which escapes before it converts, so the
      only markup that survives is the two marks it adds itself. #}

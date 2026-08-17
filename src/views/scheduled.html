@@ -27,8 +27,7 @@
     │  │             ┌─────────────────────────────┐       │   │
     │  │             │  50rem inner column          │       │   │
     │  │             │                              │       │   │
-    │  │             │  Description paragraph       │       │   │
-    │  │             │  Composer (shared partial)   │       │   │
+    │  │             │  Educational banner          │       │   │
     │  │             │  Tabs + filter button        │       │   │
     │  │             │  Workflow list (56 px rows)  │       │   │
     │  │             └─────────────────────────────┘       │   │
@@ -68,8 +67,8 @@
      page inherits Knowledge's already-tuned column widths, body
      scroll, and header-band styling without duplicating rules. The
      new `.seller-home--scheduled` class is reserved for
-     Scheduled-only overrides (composer margin above the tabs,
-     tab-row spacing, workflow-row layout). #}
+     Scheduled-only overrides (tab-row spacing, workflow-row
+     layout). #}
   <div class="seller-home seller-home--knowledge seller-home--scheduled" data-sh-root>
     {# Left navigation — same partial Seller Home + Knowledge use.
        `navActive = "schedules"` set above drives the highlight. #}
@@ -109,34 +108,33 @@
          Same scrollable pattern as Knowledge. The inner column is
          capped at 50 rem (800 px) via the shared
          `.seller-home__knowledge-body-inner` rule. Content order
-         mirrors Figma node 8831:380388 exactly:
-           1. Description paragraph
-           2. Composer (shared partial)
-           3. Tabs + filter button
-           4. Workflow list (Step 4)
-         Steps 4-6 slot content beneath this scaffold; this file
-         holds the container so future edits stay local. #}
+         mirrors Figma node 8831:380388:
+           1. Shared educational banner (same partial Skills uses)
+           2. Tabs + filter button
+           3. Workflow list
+         The prior intro paragraph + "Schedule a task" composer were
+         retired when the page adopted the shared banner — the
+         `composer` block stays in scheduled.json (dormant) so re-
+         introducing that surface later is a one-line template
+         edit. #}
       <section
         class="seller-home__knowledge-body"
         aria-label="{{ pageTitle }}"
       >
         <div class="seller-home__knowledge-body-inner">
-          {# ── Description ──────────────────────────────────────────
-             Intro paragraph beneath the header, above the composer.
-             14/19 Regular per Figma tokens (`--slds-g-color-on-surface-2`
-             = #2E2E2E). Kept as a semantic `<p>` so AT users get the
-             right shape; role owned by the surrounding page landmark. #}
-          <p class="seller-home__scheduled-description">
-            {{ header.description }}
-          </p>
-
-          {# ── Composer ─────────────────────────────────────────────
-             Shared partial. Reads its config from the `composer`
-             context variable set in scheduled.json. Empty
-             `samplePrompts` disables home.js's placeholder
-             typewriter — Scheduled ships a single static
-             "Schedule a task" placeholder per the design. #}
-          {% include "_home_composer.html" %}
+          {# ── Educational banner ───────────────────────────────────
+             Shared partial (also consumed by /skills.html). Copy +
+             illustration path both come from scheduled.json →
+             `banner`; the include is guarded on `banner.title` so
+             clearing the block in JSON hides the banner without a
+             template edit. `bannerHeadingId` scopes the aria-
+             labelledby id to this page so multiple banners could
+             coexist without colliding. #}
+          {% if banner and banner.title %}
+            {% set bannerHeadingId = "seller-home-scheduled-banner-heading" %}
+            {% set bannerVariant   = "scheduled" %}
+            {% include "_seller_home_banner.html" %}
+          {% endif %}
 
           {# ── Tabs row (filter chips) + filter button ─────────────
              ARIA note: these are filter chips over one list, NOT

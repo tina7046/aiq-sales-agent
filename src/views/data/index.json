@@ -2165,6 +2165,563 @@
           ]
         }
       ]
+    },
+    // ── conv-daily-pipeline-snapshot ────────────────────────────────
+    // Drill-in target for the Daily Pipeline Snapshot row on
+    // `/scheduled.html`, and the first conversation here to carry a
+    // `workflowContext` block. That block is the whole switch: its
+    // presence is what makes home_conversation.html render the
+    // workflow-details side panel beside the thread.
+    //
+    // The shape:
+    //   • scheduledWorkflowId  back-link to the `wf-…` id in
+    //                          scheduled.json → workflows[].
+    //   • description          panel body copy.
+    //   • filters              which picklist option each combobox
+    //                          opens on.
+    //   • filterOptions        the choices themselves, kept beside
+    //                          `filters` so adding "Last 90 days" is
+    //                          one edit in one place.
+    //   • runs[]               run history, newest first (the panel's
+    //                          reading order). A run's `messageId`
+    //                          names the thread message its output
+    //                          landed in, which is what the Activity
+    //                          list scrolls to. A failed run has no
+    //                          output, so it carries `messageId: null`
+    //                          and gets Retry instead of View Output.
+    //
+    // Unlike the two conversations above, this one has no `opening`
+    // block. Run history is history — it was already there when the
+    // seller arrived, so it paints inline on open rather than
+    // animating in behind thinking beats. `label` on each run is
+    // pre-formatted so the prototype needs no date formatter.
+    "conv-daily-pipeline-snapshot": {
+      "id": "conv-daily-pipeline-snapshot",
+      "title": "Daily Pipeline Snapshot",
+      "subtitle": "Daily Pipeline Snapshot",
+      "workflow": { "id": "wf-daily-pipeline-snapshot", "label": "Daily Pipeline Snapshot" },
+      "status": "scheduled",
+      "recentLabel": "Daily Pipeline Snapshot",
+      "workflowContext": {
+        "scheduledWorkflowId": "wf-daily-pipeline-snapshot",
+        "description": "Summarizes pipeline movement, emerging risks, and deals requiring attention.",
+        "filters": {
+          "status": "all",
+          "range":  "last_30_days"
+        },
+        "filterOptions": {
+          "status": [
+            { "value": "all",       "label": "All Statuses" },
+            { "value": "completed", "label": "Completed"    },
+            { "value": "failed",    "label": "Failed"       }
+          ],
+          "range": [
+            { "value": "today",        "label": "Today"        },
+            { "value": "last_7_days",  "label": "Last 7 days"  },
+            { "value": "last_30_days", "label": "Last 30 days" }
+          ]
+        },
+        "runs": [
+          {
+            "runId":     "run-2026-08-07-0804",
+            "status":    "completed",
+            "startedAt": "2026-08-07T08:04:00-07:00",
+            "label":     "August 7 at 8:04 AM",
+            "summary":   "68 opportunities reviewed \u00b7 7 risks found \u00b7 3 actions recommended",
+            "messageId": "msg-run-2026-08-07-0804"
+          },
+          {
+            "runId":     "run-2026-08-06-0804",
+            "status":    "completed",
+            "startedAt": "2026-08-06T08:04:00-07:00",
+            "label":     "August 6 at 8:04 AM",
+            "summary":   "71 opportunities reviewed \u00b7 5 risks found \u00b7 2 actions recommended",
+            "messageId": "msg-run-2026-08-06-0804"
+          },
+          {
+            "runId":     "run-2026-08-05-0804",
+            "status":    "completed",
+            "startedAt": "2026-08-05T08:04:00-07:00",
+            "label":     "August 5 at 8:04 AM",
+            "summary":   "66 opportunities reviewed \u00b7 4 risks found \u00b7 2 actions recommended",
+            "messageId": "msg-run-2026-08-05-0804"
+          },
+          // No `messageId`: the run failed before it produced output,
+          // so there is nothing in the thread to scroll to. The panel
+          // renders this tile with a Retry button instead of a link.
+          {
+            "runId":     "run-2026-08-03-0900",
+            "status":    "failed",
+            "startedAt": "2026-08-03T09:00:00-07:00",
+            "label":     "August 3 at 9:00 AM",
+            "summary":   "Salesforce access expired before the snapshot was created",
+            "messageId": null,
+            "errorAction": {
+              "id":    "act-retry-run-2026-08-03",
+              "label": "Retry",
+              "kind":  "retry"
+            }
+          }
+        ]
+      },
+      // Feed order is chronological ascending — oldest run at the top,
+      // newest at the bottom, the way a thread grows. The Activity
+      // panel inverts that for its own list.
+      //
+      // Each completed run contributes ONE agent message carrying a
+      // `snapshot` block, rendered by `_pipeline_snapshot.html`. The
+      // snapshot owns its own "Daily Pipeline | August 5, 2026" header,
+      // so it separates the runs visually without a per-run activity
+      // chip in between. Message ids match `runs[].messageId`, because
+      // that is what the Activity list anchors to.
+      //
+      // The trailing chip closes the thread with the newest run’s
+      // headline counts — the one place the feed states the run
+      // outcome as a status line rather than as a document.
+      "messages": [
+        {
+          "id": "msg-run-2026-08-05-0804",
+          "type": "agent",
+          "runId": "run-2026-08-05-0804",
+          "snapshot": {
+            "titleLabel": "Daily Pipeline",
+            "dateLabel": "August 5, 2026",
+            "date": "2026-08-05T08:04:00-07:00",
+            "freshness": {
+              "text": "Data as of August 5 at 8:04 AM PST",
+              "source": "Salesforce"
+            },
+            "summary": "Your pipeline remains above target coverage at 3.2\u00d7. Two late-stage opportunities advanced, but $410K is concentrated in deals without a confirmed next meeting.",
+            "metrics": {
+              "heading": "Pipeline at a glance",
+              "items": [
+                {
+                  "id": "open",
+                  "label": "Open pipeline",
+                  "value": "$2.31M"
+                },
+                {
+                  "id": "coverage",
+                  "label": "Coverage",
+                  "value": "3.2\u00d7"
+                },
+                {
+                  "id": "expected",
+                  "label": "Expected this quarter",
+                  "value": "$830K"
+                },
+                {
+                  "id": "change_yesterday",
+                  "label": "Change since yesterday",
+                  "value": "Up $85K",
+                  "tone": "positive"
+                }
+              ]
+            },
+            "changes": {
+              "heading": "What changed",
+              "ariaLabel": "Opportunities that changed since the last snapshot",
+              "columns": [
+                {
+                  "id": "opportunity",
+                  "label": "Opportunity"
+                },
+                {
+                  "id": "amount",
+                  "label": "Amount"
+                },
+                {
+                  "id": "change",
+                  "label": "Change"
+                },
+                {
+                  "id": "whyItMatters",
+                  "label": "Why it matters"
+                }
+              ],
+              "rows": [
+                {
+                  "id": "opp-globex-platform",
+                  "opportunityId": "0064000000GXP01",
+                  "opportunity": "Globex Platform",
+                  "amount": "$180K",
+                  "change": "Technical evaluation completed",
+                  "whyItMatters": "The deal can move into commercial review"
+                },
+                {
+                  "id": "opp-hooli-data-cloud",
+                  "opportunityId": "0064000000HDC01",
+                  "opportunity": "Hooli Data Cloud",
+                  "amount": "$125K",
+                  "change": "Security review approved",
+                  "whyItMatters": "Removes the largest remaining technical blocker"
+                },
+                {
+                  "id": "opp-vehement-capital",
+                  "opportunityId": "0064000000VEH01",
+                  "opportunity": "Vehement Capital",
+                  "amount": "$230K",
+                  "change": "Next meeting was canceled",
+                  "whyItMatters": "No new meeting has been scheduled for this month"
+                }
+              ]
+            },
+            "attention": {
+              "heading": "Needs your attention",
+              "items": [
+                {
+                  "id": "att-05-vehement",
+                  "severity": "high",
+                  "severityLabel": "High risk",
+                  "title": "Vehement Capital",
+                  "subtitle": "$230K \u00b7 No meeting scheduled",
+                  "detail": "The executive review was canceled and no replacement meeting is scheduled.",
+                  "recommendation": "Propose new times and confirm whether the target close date is still realistic.",
+                  "opportunityId": "0064000000VEH01"
+                },
+                {
+                  "id": "att-05-wonka",
+                  "severity": "warning",
+                  "severityLabel": "At risk",
+                  "title": "Wonka Industries",
+                  "subtitle": "Proposal \u00b7 Mutual action plan idle 16 days",
+                  "detail": "The opportunity is in Proposal, but the mutual action plan has not been updated in 16 days.",
+                  "recommendation": "Review milestones with the account team.",
+                  "opportunityId": "0064000000WON01"
+                }
+              ]
+            },
+            "actions": {
+              "heading": "Recommended actions",
+              "items": [
+                {
+                  "id": "act-05-vehement-reschedule",
+                  "description": "Reschedule the Vehement executive review to keep the deal on track.",
+                  "label": "Reschedule",
+                  "kind": "task",
+                  "primary": true,
+                  "opportunityId": "0064000000VEH01"
+                },
+                {
+                  "id": "act-05-wonka-map",
+                  "description": "Update the Wonka mutual action plan with the latest milestones.",
+                  "label": "Update plan",
+                  "kind": "task",
+                  "opportunityId": "0064000000WON01"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "msg-run-2026-08-06-0804",
+          "type": "agent",
+          "runId": "run-2026-08-06-0804",
+          "snapshot": {
+            "titleLabel": "Daily Pipeline",
+            "dateLabel": "August 6, 2026",
+            "date": "2026-08-06T08:04:00-07:00",
+            "freshness": {
+              "text": "Data as of August 6 at 8:04 AM PST",
+              "source": "Salesforce"
+            },
+            "summary": "Pipeline increased by $210K since yesterday, driven by two newly qualified opportunities. Coverage improved to 3.3\u00d7, although the Wayne Industries opportunity is now at risk because the economic buyer has not engaged.",
+            "metrics": {
+              "heading": "Pipeline at a glance",
+              "items": [
+                {
+                  "id": "open",
+                  "label": "Open pipeline",
+                  "value": "$2.52M"
+                },
+                {
+                  "id": "coverage",
+                  "label": "Coverage",
+                  "value": "3.3\u00d7"
+                },
+                {
+                  "id": "expected",
+                  "label": "Expected this quarter",
+                  "value": "$900K"
+                },
+                {
+                  "id": "change_yesterday",
+                  "label": "Change since yesterday",
+                  "value": "Up $210K",
+                  "tone": "positive"
+                }
+              ]
+            },
+            "changes": {
+              "heading": "What changed",
+              "ariaLabel": "Opportunities that changed since the last snapshot",
+              "columns": [
+                {
+                  "id": "opportunity",
+                  "label": "Opportunity"
+                },
+                {
+                  "id": "amount",
+                  "label": "Amount"
+                },
+                {
+                  "id": "change",
+                  "label": "Change"
+                },
+                {
+                  "id": "whyItMatters",
+                  "label": "Why it matters"
+                }
+              ],
+              "rows": [
+                {
+                  "id": "opp-stark-expansion",
+                  "opportunityId": "0064000000STK01",
+                  "opportunity": "Stark Industries Expansion",
+                  "amount": "$140K",
+                  "change": "Added to pipeline at Qualification",
+                  "whyItMatters": "Creates new upside for the current quarter"
+                },
+                {
+                  "id": "opp-cyberdyne-automation",
+                  "opportunityId": "0064000000CBD01",
+                  "opportunity": "Cyberdyne Automation",
+                  "amount": "$70K",
+                  "change": "Converted from lead to qualified opportunity",
+                  "whyItMatters": "Discovery confirmed budget and a target launch date"
+                },
+                {
+                  "id": "opp-wayne-analytics",
+                  "opportunityId": "0064000000WAY01",
+                  "opportunity": "Wayne Industries Analytics",
+                  "amount": "$260K",
+                  "change": "Last activity reached 14 days",
+                  "whyItMatters": "Momentum is declining in a high-value late-stage deal"
+                }
+              ]
+            },
+            "attention": {
+              "heading": "Needs your attention",
+              "items": [
+                {
+                  "id": "att-06-wayne",
+                  "severity": "high",
+                  "severityLabel": "High risk",
+                  "title": "Wayne Industries Analytics",
+                  "subtitle": "$260K \u00b7 Economic buyer unengaged",
+                  "detail": "The champion is engaged, but the economic buyer has not attended either recent meeting.",
+                  "recommendation": "Ask the champion to include the economic buyer in the next review.",
+                  "opportunityId": "0064000000WAY01"
+                },
+                {
+                  "id": "att-06-massive-dynamic",
+                  "severity": "warning",
+                  "severityLabel": "At risk",
+                  "title": "Massive Dynamic Renewal",
+                  "subtitle": "Legal review open 9 days",
+                  "detail": "Legal review has been open for nine days without an update.",
+                  "recommendation": "Confirm ownership and the expected completion date.",
+                  "opportunityId": "0064000000MDR01"
+                }
+              ]
+            },
+            "actions": {
+              "heading": "Recommended actions",
+              "items": [
+                {
+                  "id": "act-06-wayne-outreach",
+                  "description": "Draft an economic-buyer outreach for Wayne Industries to bring the buyer into the review.",
+                  "label": "Draft outreach",
+                  "kind": "outreach",
+                  "primary": true,
+                  "opportunityId": "0064000000WAY01"
+                },
+                {
+                  "id": "act-06-massive-legal",
+                  "description": "Summarize the Massive Dynamic legal blocker for the account team.",
+                  "label": "Summarize blocker",
+                  "kind": "task",
+                  "opportunityId": "0064000000MDR01"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "msg-run-2026-08-07-0804",
+          "type": "agent",
+          "runId": "run-2026-08-07-0804",
+          "snapshot": {
+            "titleLabel": "Daily Pipeline",
+            "dateLabel": "August 7, 2026",
+            "date": "2026-08-07T08:04:00-07:00",
+            "freshness": {
+              "text": "Data as of August 7 at 8:04 AM PST",
+              "source": "Salesforce"
+            },
+            "summary": "Your pipeline is holding steady at $2.4M, but three deals need attention today. The biggest risk is Acme Expansion, which slipped into next quarter and has had no customer engagement in 12 days.",
+            "metrics": {
+              "heading": "Pipeline at a glance",
+              "items": [
+                {
+                  "id": "open",
+                  "label": "Open pipeline",
+                  "value": "$2.4M"
+                },
+                {
+                  "id": "coverage",
+                  "label": "Coverage",
+                  "value": "3.1\u00d7"
+                },
+                {
+                  "id": "expected",
+                  "label": "Expected this quarter",
+                  "value": "$780K"
+                },
+                {
+                  "id": "change_yesterday",
+                  "label": "Change since yesterday",
+                  "value": "Down $120K",
+                  "tone": "warning"
+                }
+              ]
+            },
+            "changes": {
+              "heading": "What changed",
+              "ariaLabel": "Opportunities that changed since the last snapshot",
+              "columns": [
+                {
+                  "id": "opportunity",
+                  "label": "Opportunity"
+                },
+                {
+                  "id": "amount",
+                  "label": "Amount"
+                },
+                {
+                  "id": "change",
+                  "label": "Change"
+                },
+                {
+                  "id": "whyItMatters",
+                  "label": "Why it matters"
+                }
+              ],
+              "rows": [
+                {
+                  "id": "opp-acme-expansion",
+                  "opportunityId": "0064000000ACM01",
+                  "opportunity": "Acme Expansion",
+                  "amount": "$320K",
+                  "change": "Close date moved from August 28 to October 15",
+                  "whyItMatters": "Removes $320K from this quarter\u2019s forecast"
+                },
+                {
+                  "id": "opp-globex-platform",
+                  "opportunityId": "0064000000GXP01",
+                  "opportunity": "Globex Platform",
+                  "amount": "$180K",
+                  "change": "Stage advanced from Discovery to Evaluation",
+                  "whyItMatters": "Buying committee confirmed and technical review scheduled"
+                },
+                {
+                  "id": "opp-initech-renewal",
+                  "opportunityId": "0064000000INI01",
+                  "opportunity": "Initech Renewal",
+                  "amount": "$95K",
+                  "change": "Probability decreased from 70% to 50%",
+                  "whyItMatters": "Procurement raised concerns about implementation timing"
+                }
+              ]
+            },
+            "attention": {
+              "heading": "Needs your attention",
+              "items": [
+                {
+                  "id": "att-07-acme",
+                  "severity": "high",
+                  "severityLabel": "High risk",
+                  "title": "Acme Expansion",
+                  "subtitle": "$320K \u00b7 Close date slipped to Q4",
+                  "detail": "No customer engagement in 12 days and the close date moved into next quarter.",
+                  "recommendation": "Re-engage the champion and confirm whether the expansion is still funded.",
+                  "opportunityId": "0064000000ACM01"
+                },
+                {
+                  "id": "att-07-initech",
+                  "severity": "warning",
+                  "severityLabel": "At risk",
+                  "title": "Initech Renewal",
+                  "subtitle": "Renewal due in 21 days",
+                  "detail": "Renewal is due in 21 days, but procurement timing remains unresolved.",
+                  "recommendation": "Schedule a commercial review with procurement this week.",
+                  "opportunityId": "0064000000INI01"
+                },
+                {
+                  "id": "att-07-umbrella",
+                  "severity": "warning",
+                  "severityLabel": "At risk",
+                  "title": "Umbrella Security Pilot",
+                  "subtitle": "Technical validation 4 days overdue",
+                  "detail": "The technical validation task is four days overdue.",
+                  "recommendation": "Ask the solution engineer to confirm the remaining blocker.",
+                  "opportunityId": "0064000000UMB01"
+                }
+              ]
+            },
+            "actions": {
+              "heading": "Recommended actions",
+              "items": [
+                {
+                  "id": "act-07-acme-followup",
+                  "description": "Draft a follow-up to the Acme champion to re-engage the account.",
+                  "label": "Draft follow-up",
+                  "kind": "outreach",
+                  "primary": true,
+                  "opportunityId": "0064000000ACM01"
+                },
+                {
+                  "id": "act-07-initech-risk",
+                  "description": "Prepare the Initech renewal risk summary for this week's commercial review.",
+                  "label": "Prepare summary",
+                  "kind": "task",
+                  "opportunityId": "0064000000INI01"
+                },
+                {
+                  "id": "act-07-umbrella-blocker",
+                  "description": "Review the Umbrella technical blocker with the solution engineer.",
+                  "label": "Review blocker",
+                  "kind": "task",
+                  "opportunityId": "0064000000UMB01"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "msg-run-activity",
+          "type": "workflow_activity",
+          "workflowLabel": "Daily Pipeline Snapshot completed",
+          "workflowIcon": "apps",
+          "statusText": "68 opportunities reviewed \u00b7 7 risks found \u00b7 3 actions recommended"
+        }
+      ],
+      // One turn so a follow-up send doesn't dead-end, matching the
+      // two conversations above.
+      "scriptedTurns": [
+        {
+          "id": "wf-snapshot-turn-01",
+          "thinkingMs": 2200,
+          "thinkingLabel": "Re-dating the flagged deals against their stage\u2026",
+          "reply": [
+            {
+              "id":   "wf-snapshot-turn-01-reply",
+              "type": "agent",
+              "text": "On it. I\u2019ll re-date the three flagged deals against the stage they\u2019re actually in, draft a re-engagement touch for _Confluent - CX_, and bring both back here for your approval before anything changes in Salesforce."
+            }
+          ]
+        }
+      ]
     }
   },
   "review": {
