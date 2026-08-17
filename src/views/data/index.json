@@ -5,8 +5,9 @@
 // local scope by filename → template lookup.
 //
 // Fields:
-//   • navPrimary  — the five top-level nav items above "Recents":
-//                   New chat, Schedules, Skills, Knowledge, Tools.
+//   • navPrimary  — the top-level nav items above "Recents":
+//                   New chat, Skills, Knowledge. (Scheduled is
+//                   currently hidden — commented out below.)
 //                   Each is { id, label, icon | iconImage, href? }.
 //                   `icon` is the SLDS utility-sprite symbol id,
 //                   resolved by _home_left_nav.html's renderNavItem
@@ -26,8 +27,9 @@
 //                   The last few items intentionally trail past the
 //                   scroll fade so the scroll affordance is visible
 //                   without cheating.
-//   • navFooter   — Feedback + Settings, pinned to the nav bottom by
-//                   the .seller-home__nav-footer flex rule.
+//   • navFooter   — Feedback, Connections, Settings, pinned to the nav
+//                   bottom by the .seller-home__nav-footer flex rule.
+//                   (Connections carries the count badge.)
 //   • briefing    — Phase 2 "Daily Briefing" content, consumed by the
 //                   `.seller-home__briefing` block in home.html. The
 //                   greeting is one editable string; every value in the
@@ -367,10 +369,10 @@
   // primary item routes to a page now.
   "navPrimary": [
     { "id": "new_chat",  "label": "New chat",  "icon": "add", "href": "/index.html" },
-    { "id": "schedules", "label": "Scheduled", "icon": "date_time", "href": "/scheduled.html" },
+    // Hidden (not deleted) — uncomment to restore the Scheduled nav item.
+    // { "id": "schedules", "label": "Scheduled", "icon": "date_time", "href": "/scheduled.html" },
     { "id": "skills",    "label": "Skills",    "iconImage": "/assets/images/nav-icons/skills.png", "href": "/skills.html" },
-    { "id": "knowledge", "label": "Knowledge", "icon": "knowledge_base", "href": "/knowledge.html" },
-    { "id": "tools",     "label": "Connections", "icon": "custom_apps", "href": "/tools.html" }
+    { "id": "knowledge", "label": "Knowledge", "icon": "knowledge_base", "href": "/knowledge.html" }
   ],
   // ── Recents ──────────────────────────────────────────────────────
   // Empty on purpose. The Recents rail is session state, not authored
@@ -388,6 +390,7 @@
   "recents": [],
   "navFooter": [
     { "id": "feedback", "label": "Feedback", "icon": "share" },
+    { "id": "tools",     "label": "Connections", "icon": "custom_apps", "href": "/tools.html" },
     { "id": "settings", "label": "Settings", "icon": "settings" }
   ],
   // ── Conversations ────────────────────────────────────────────────

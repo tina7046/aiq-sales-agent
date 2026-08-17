@@ -5,11 +5,10 @@
 
     ┌───────────────────────────────┐  ◂  Sticky top region:
     │                        ◂ (…)  │      • Row 0: collapse button
-    │  + New chat                   │      • Rows 1-5: primary items
-    │  🗓 Schedules                 │        (New chat, Schedules,
-    │  ▦ Skills                     │        Skills, Knowledge, Tools)
+    │  + New chat                   │      • Rows 1-4: primary items
+    │  🗓 Scheduled                 │        (New chat, Scheduled,
+    │  ▦ Skills                     │        Skills, Knowledge)
     │  📚 Knowledge                 │
-    │  🔧 Tools                     │
     │                               │  ◂  Scrollable middle region:
     │  🕒 Recents  (semibold hdr)   │      • Padded top → visible
     │    Acme Inc Prospecting       │        separation between the
@@ -17,15 +16,17 @@
     │    Q3 Pipeline Health Report  │        Recents header per the
     │    …                          │        current design.
     ├───────────────────────────────┤  ◂  Sticky footer region:
-    │  💬 Feedback                  │      • Feedback, Settings
+    │  💬 Feedback                  │      • Feedback, Connections,
+    │  🔧 Connections               │        Settings
     │  ⚙ Settings                   │
     └───────────────────────────────┘
 
   Consumes context vars provided by src/views/data/home.json:
     • navPrimary — Array<{ id, label, icon | iconImage, href? }>.
-                   Top primary items (currently New chat, Schedules,
-                   Skills, Knowledge, Tools).
-    • navFooter  — Array<{ id, label, icon }>. Bottom pinned items.
+                   Top primary items (currently New chat, Scheduled,
+                   Skills, Knowledge).
+    • navFooter  — Array<{ id, label, icon }>. Bottom pinned items
+                   (Feedback, Connections, Settings).
     • navActive  — String. `id` of the current active item. Defaults to
                    "new_chat". Ignored when unmatched (renders no active
                    state — intended for L1/orphaned surfaces).
@@ -449,7 +450,14 @@
   <div class="seller-home__nav-footer">
     <div class="seller-home__nav-list seller-home__nav-list--footer" role="list">
       {% for item in navFooter %}
-        {{ renderNavItem(item, _shNavActive) }}
+        {# Connections lives in the footer (above Settings) and keeps its
+           count badge — same convention as the primary loop, so the badge
+           follows the item wherever it's placed. #}
+        {% if item.id == "tools" %}
+          {{ renderNavItem(item, _shNavActive, _connectionsCount) }}
+        {% else %}
+          {{ renderNavItem(item, _shNavActive) }}
+        {% endif %}
       {% endfor %}
     </div>
   </div>
