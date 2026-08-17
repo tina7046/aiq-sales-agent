@@ -4,11 +4,111 @@
 
 {% block content %}
 
+{% import "_sparkle.html" as sparkle %}
+
 <link rel="stylesheet"
 	href="https://cdnjs.cloudflare.com/ajax/libs/design-system/2.28.0/styles/salesforce-lightning-design-system.min.css"
 	integrity="sha512-yGlcH7165+gHMWfLapErhAgPK+gSZSQBtGgcO2zsJj8ASkfPh/z8k+4SZ2h+VBZLUIjzur8kktBrGbW3gcWUDQ=="
 	crossorigin="anonymous" referrerpolicy="no-referrer" />
 <link rel="stylesheet" href="/styles/slds2_agentic.css" />
+
+{# ─────────────────────────────────────────────────────────────────────
+   Stars / typing animation demo
+   Renders the shared, reusable "typing" component — markup from
+   _sparkle.html, styles from styles/index.scss (.sh-typing / .sh-sparkle).
+   The same component drives the conversation feed's thinking indicator;
+   only the demo layout + an enlarged variant are page-local here.
+   ──────────────────────────────────────────────────────────────────── #}
+<style>
+  .ai-typing-demo {
+    padding: 2.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2.5rem;
+    border-bottom: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+    background: var(--slds-g-color-surface-container-1, #fff);
+  }
+  .ai-typing-demo__row { display: flex; align-items: center; gap: 1rem; }
+  .ai-typing-demo__caption {
+    color: var(--slds-g-color-on-surface-2, #444);
+    font-size: 0.75rem;
+  }
+
+  /* The sparkle/typing component is global + size-agnostic
+     (.sh-typing / .sh-sparkle in styles/index.scss). The demo only sets
+     the label's type scale and an enlarged variant to show the motion. */
+  .ai-typing-demo .sh-typing { font-weight: 600; font-size: 0.875rem; }
+  .ai-typing-demo__row--lg .sh-typing { font-size: 2rem; gap: var(--slds-g-spacing-3, 0.75rem); }
+  .ai-typing-demo__row--lg .sh-sparkle { width: 1.75rem; height: 1.75rem; }
+
+  /* ── Spinner ── the component is now global (`.sh-spinner` in
+     styles/index.scss), ported from BB – AOP's account research page.
+     The demo only lays it out + shows an enlarged size. */
+  .bb-spinner-demo {
+    padding: 2.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2rem;
+    border-bottom: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+    background: var(--slds-g-color-surface-container-1, #fff);
+  }
+  .bb-spinner-demo__row { display: flex; align-items: center; gap: 1rem; }
+  .bb-spinner-demo__caption { color: var(--slds-g-color-on-surface-2, #444); font-size: 0.75rem; }
+  .bb-spinner-demo__label { color: var(--slds-g-color-on-surface-2, #444); font-size: 0.875rem; }
+  /* Demo-only larger size — thicker ring keeps the proportion. */
+  .bb-spinner-demo__row--lg .sh-spinner { width: 2.5rem; height: 2.5rem; border-width: 4px; }
+</style>
+
+<section class="ai-typing-demo" aria-label="Stars animation demo">
+  <h1 class="slds-text-heading_medium">Typing / stars animation</h1>
+
+  {# Real size — as it sits inline in a message row. #}
+  <div class="ai-typing-demo__row">
+    <span class="sh-typing">
+      <span class="sh-typing__label" aria-hidden="true">Thinking…</span>
+      <span class="slds-assistive-text" role="status" aria-live="polite" aria-atomic="true">Thinking…</span>
+      {{ sparkle.sparkles() }}
+    </span>
+    <span class="ai-typing-demo__caption">real size</span>
+  </div>
+
+  {# Enlarged so the size + color pulse and the staggered wave are easy to read. #}
+  <div class="ai-typing-demo__row ai-typing-demo__row--lg">
+    <span class="sh-typing">
+      <span class="sh-typing__label" aria-hidden="true">Working on it…</span>
+      {{ sparkle.sparkles() }}
+    </span>
+  </div>
+</section>
+
+{# ─────────────────────────────────────────────────────────────────────
+   Spinner demo — ported from BB – AOP's account research page
+   (aop-editor preview: `createSpinner()` renders <div class="spinner">).
+   Markup is a single empty element; all of it is the CSS above.
+   ──────────────────────────────────────────────────────────────────── #}
+<section class="bb-spinner-demo" aria-label="Spinner demo">
+  <h1 class="slds-text-heading_medium">Spinner (BB – AOP · account research)</h1>
+
+  <div class="bb-spinner-demo__row">
+    <span class="sh-spinner" role="status" aria-label="Loading"></span>
+    <span class="bb-spinner-demo__caption">real size (20px)</span>
+  </div>
+
+  <div class="bb-spinner-demo__row bb-spinner-demo__row--lg">
+    <span class="sh-spinner" role="status" aria-label="Loading"></span>
+    <span class="bb-spinner-demo__caption">large</span>
+  </div>
+
+  {# Inline with a label, mirroring the research step's "step in progress" row. #}
+  <div class="bb-spinner-demo__row">
+    <span class="sh-spinner" aria-hidden="true"></span>
+    <span class="bb-spinner-demo__label">Researching accounts…</span>
+  </div>
+</section>
 
 <svg aria-hidden="true" focusable="false"
 	style="position: absolute; width: 0; height: 0; overflow: hidden;">

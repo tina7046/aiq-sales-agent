@@ -1261,13 +1261,47 @@
 // Hidden by default; revealed on row hover / focus-within or when
 // the menu is open. Icon color stays at on-surface-1 muted gray so
 // it reads as chrome, not primary content.
+//
+// The bare variant ships size-less (`slds-button_icon-bare` sets no
+// width/height and `--slds-c-button-color-background-hover: none`),
+// so we give it the 32×32 box the layout gutter already reserves and
+// center the 14px ⋮ inside it. That box is what the hover-gray fills
+// as an even circle around the icon.
 .seller-home__knowledge-doc-menu-trigger {
   opacity: 0;
   pointer-events: none;
-  transition: opacity 160ms ease;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--slds-g-sizing-9, 2rem);  // 32px
+  block-size: var(--slds-g-sizing-9, 2rem);   // 32px
+  border-radius: var(--slds-g-radius-border-circle, 100%);
+
+  transition:
+    opacity 160ms ease,
+    background-color 120ms ease;
 
   .slds-button__icon {
     fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+  }
+
+  // Hover-gray — the shell's standard hover surface,
+  // `--slds-g-color-surface-container-2` (#f3f3f3), the same neutral
+  // fill nav items and list rows use on hover. Also applied on
+  // keyboard focus and while the menu is open so the ⋮ reads as
+  // "active". `border-radius` is repeated on :focus-visible because
+  // SLDS's bare-icon focus rule otherwise swaps in its own radius.
+  &:hover,
+  &:focus-visible,
+  &[aria-expanded="true"] {
+    background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+    border-radius: var(--slds-g-radius-border-circle, 100%);
+  }
+
+  // Pressed — one step darker (surface-container-3, #e5e5e5).
+  &:active {
+    background-color: var(--slds-g-color-surface-container-3, #e5e5e5);
   }
 }
 
@@ -1316,7 +1350,7 @@
 }
 
 // Menu items — SLDS-adjacent hover / focus behavior. Cloned from
-// `.seller-home__review-row-menu-item` so the two menus feel
+// `.seller-home__feed-item-menu-item` so the two menus feel
 // identical; leading icon (utility sprite) matches the item's slug.
 .seller-home__knowledge-doc-menu-item {
   appearance: none;

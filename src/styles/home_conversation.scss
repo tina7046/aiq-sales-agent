@@ -1061,10 +1061,11 @@
 }
 
 // ── Thinking indicator ────────────────────────────────────────────
-// Label followed by a cluster of three twinkling sparkles, matching
-// the platform's `typing-animation` component. That component ships
-// the SVGs and per-star classes but keeps its motion in a scoped
-// stylesheet, so the animation below is our own.
+// A shimmer-sweep label + a cluster of pulsing sparkles — the shared
+// "typing" component. The sparkle motion and the label shimmer are
+// defined once in styles/index.scss (`.sh-sparkle*` / `.sh-typing__label`,
+// global + reusable); this block only positions the row in the thread
+// and sizes the label to the thread's 12px meta scale.
 //
 // Borrows the activity chip's 12 px indent so the thread's left edge
 // doesn't shift as the row appears and is swapped for the reply.
@@ -1089,69 +1090,10 @@
   color: var(--slds-g-color-on-surface-2, #2e2e2e);
 }
 
-// Horizontal row, centered on the label's midline. Each star keeps a
-// fixed layout box and only `transform` animates — transforms don't
-// reflow, so the row's width and height hold steady while the stars
-// pulse instead of nudging the composer on every beat.
-.seller-home__conv-thinking-stars {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.0625rem;   // 1px — the stars' own points supply the rest
-}
-
-// Descending sizes left to right, so the row reads as a sparkle with a
-// trailing tail rather than three identical dots.
-.seller-home__conv-thinking-star {
-  flex: 0 0 auto;
-  display: block;
-
-  // Presentation attributes lose to stylesheet rules, so this repaints
-  // the inline `fill="#0176d3"` from a token — one edit reskins all
-  // three stars with the surface's accent. Foreground accent rather
-  // than the `accent-container-*` family, which is for container fills.
-  fill: var(--slds-g-color-accent-1, #066afe);
-
-  // Scale from the middle so a star twinkles in place rather than
-  // drifting toward one corner.
-  transform-origin: center;
-  animation: sh-conv-sparkle-twinkle 1.5s ease-in-out infinite;
-}
-
-.seller-home__conv-thinking-star--1 {
-  width: 0.75rem;    // 12px
-  height: 0.75rem;
-}
-
-.seller-home__conv-thinking-star--2 {
-  width: 0.5rem;     // 8px
-  height: 0.5rem;
-  // Offset so the three peak in sequence — the row reads as one
-  // shimmer travelling across it instead of three separate blinks.
-  animation-delay: 0.35s;
-}
-
-.seller-home__conv-thinking-star--3 {
-  width: 0.375rem;   // 6px
-  height: 0.375rem;
-  animation-delay: 0.7s;
-}
-
-@keyframes sh-conv-sparkle-twinkle {
-  0%, 100% { transform: scale(0.55); opacity: 0.4; }
-  50%      { transform: scale(1);    opacity: 1; }
-}
-
-// Motion is the affordance here, not the message — with the animation
-// suppressed the cluster holds at full size and the label still says
-// what's happening.
-@media (prefers-reduced-motion: reduce) {
-  .seller-home__conv-thinking-star {
-    animation: none;
-    transform: none;
-    opacity: 1;
-  }
-}
+// The sparkle cluster (`.sh-sparkles` / `.sh-sparkle`) and its motion —
+// plus the reduced-motion freeze — now live in styles/index.scss so
+// every surface shares one definition. The thread only needs the row +
+// label rules above; the reusable classes handle the rest.
 
 // While a turn is in flight the composer stays typeable (the seller
 // can line up their next message) but Send is held disabled by JS so

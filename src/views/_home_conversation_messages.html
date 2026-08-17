@@ -89,25 +89,24 @@
 {% endmacro %}
 
 
+{% import "_sparkle.html" as sparkle %}
+
 {# ── Thinking indicator ───────────────────────────────────────────
    Transient "the agent is working" row, appended to the thread on
    send and removed when the scripted reply lands. Shares the
    activity chip's 12 px indent so the left edge of the thread stays
    aligned as the row appears and disappears.
 
-   Structure follows the platform's `typing-animation` component:
-   label first, then a cluster of three sparkles that twinkle on a
-   staggered loop (`star1` / `star2` / `star3` there, `--1` / `--2` /
-   `--3` here). The per-star class is what lets the stylesheet offset
-   each one's animation — see home_conversation.scss.
+   The sparkle motion + label shimmer are the shared, reusable
+   "typing" component: markup via `sparkle.sparkles()` (views/
+   _sparkle.html), styles via `.sh-sparkle*` / `.sh-typing__label`
+   (styles/index.scss — global). This macro only positions the row in
+   the thread and sizes the label to the thread's 12px meta scale.
 
-   Two deliberate departures from that component:
-     • No assistive-text span with `role="status"`. This row is
-       appended INTO the thread's `role="log" aria-live="polite"`
-       container, so a nested live region would announce twice. The
-       visible label is already announced by the log.
-     • The sparkle cluster is `aria-hidden` — it's decoration; the
-       label carries the meaning.
+   a11y: no assistive-text `role="status"` here — the row is appended
+   INTO the thread's `role="log" aria-live="polite"` container, so a
+   nested live region would double-announce. The visible label is
+   announced by the log; the sparkle cluster is aria-hidden decoration.
 
    `data-sh-conv-thinking-label` is the per-turn write target —
    home_conversation.js sets it from the turn's `thinkingLabel`
@@ -120,31 +119,12 @@
     data-sh-conv-msg-type="thinking"
   >
     <span
-      class="seller-home__conv-thinking-label"
+      class="seller-home__conv-thinking-label sh-typing__label"
       data-sh-conv-thinking-label
     >{{ label }}</span>
-    <span class="seller-home__conv-thinking-stars" aria-hidden="true">
-      {{ sparkleStar(1) }}{{ sparkleStar(2) }}{{ sparkleStar(3) }}
-    </span>
+    {{ sparkle.sparkles() }}
   </div>
 </li>
-{% endmacro %}
-
-
-{# One sparkle. Same 8-point path and 152 × 152 viewBox as the
-   platform's typing indicator, factored into a macro so the path
-   literal appears once instead of three times.
-
-   The `fill` attribute is the no-CSS fallback only — presentation
-   attributes lose to any stylesheet rule, so home_conversation.scss
-   repaints these from a design token without touching the markup. #}
-{% macro sparkleStar(index) %}
-<svg
-  class="seller-home__conv-thinking-star seller-home__conv-thinking-star--{{ index }}"
-  xmlns="http://www.w3.org/2000/svg"
-  viewBox="0 0 152 152"
-  aria-hidden="true"
-><path fill="#0176d3" d="m148.719 81.32-30.734 15.348c-9.231 4.597-16.683 12.086-21.317 21.317L81.32 148.719c-2.187 4.375-8.453 4.375-10.64 0l-15.348-30.734c-4.597-9.231-12.086-16.683-21.317-21.317L3.28 81.32c-4.375-2.187-4.375-8.453 0-10.64l30.734-15.348c9.23-4.597 16.683-12.086 21.317-21.317L70.68 3.28c2.187-4.375 8.453-4.375 10.64 0l15.348 30.734c4.597 9.23 12.086 16.683 21.317 21.317l30.734 15.348c4.375 2.187 4.375 8.453 0 10.64Z"/></svg>
 {% endmacro %}
 
 

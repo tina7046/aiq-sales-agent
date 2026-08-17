@@ -102,18 +102,20 @@
 //                     Each action: { id, label, icon }.
 //                     `icon` is an SLDS utility-sprite symbol id.
 //
-//   • review     — Phase 4 "Ready to Review" surface. Two independent
-//                  row collections (`reviewItems` and `tasks`) live
+//   • feed       — Phase 4 tabbed feed surface (Ready / Running /
+//                  Scheduled). One row collection per tab lives
 //                  side-by-side so they can bind to different APIs
 //                  later without renaming anything. Fields:
 //                    - defaultTabId       (string)  initially-selected tab id
 //                    - tabs[]             (array)   { id, label, dataKey }
 //                                                   dataKey names the sibling
-//                                                   array on `review` that
+//                                                   array on `feed` that
 //                                                   supplies rows for the tab
 //                    - overflowActions[]  (array)   { id, label } kebab menu
-//                    - reviewItems[]      (array)   rows for Ready to Review
-//                    - tasks[]            (array)   rows for Tasks
+//                    - readyItems[]       (array)   rows for the Ready tab
+//                    - runningItems[]     (array)   rows for the Running tab
+//                    - scheduledItems[]   (array)   rows for the Scheduled tab
+//                    - tasks[]            (array)   legacy, currently unused
 //                    - outputTypes        (object)  { <icon> →
 //                                                     { sprite, spriteFamily?, iconImage? } }
 //                                                   central registry mapping
@@ -394,7 +396,7 @@
   // review row's title) so the URL survives title/description edits.
   // Each entry owns everything the conversation page renders. Rows
   // reference this map via `conversationId` on the source of the
-  // drill-in (e.g. review.reviewItems[].conversationId).
+  // drill-in (e.g. feed.readyItems[].conversationId).
   //
   // A row inside an agent message's `table` is one prospect record. It
   // feeds the table, and it's also the roster the cadence card below
@@ -440,7 +442,7 @@
     "conv-001": {
       "id": "conv-001",
       // Matches the review card that drills in here
-      // (`review.reviewItems[]` with `conversationId: "conv-001"`) so the
+      // (`feed.readyItems[]` with `conversationId: "conv-001"`) so the
       // card, the page header, and the Recents row all read the same.
       // Two other copies of this string have to move with it:
       // `recentLabel` below and `fallbackTitle` in home_conversation.json.
@@ -2166,28 +2168,30 @@
       ]
     }
   },
-  "review": {
-    "heading": "Your path to quota",
+  "feed": {
+    "heading": "Your agent at work",
     // Optional PIN for the date beside the heading. null = show today,
     // recomputed on every page load. Set a literal string ("Mon July 13")
     // to freeze it — useful when a screenshot has to match a deck.
     "date": null,
     "defaultTabId": "ready",
     // Pill tablist in the card header (Ready / Running / Scheduled),
-    // rendered by _home_ready_to_review.html and wired by
+    // rendered by _home_feed.html and wired by
     // `tablistController` in home.js. Each tab swaps in the panel built
     // from its `dataKey` collection. `defaultTabId` picks the tab shown
     // on first paint.
     "tabs": [
-      { "id": "ready",     "label": "Ready",     "dataKey": "reviewItems" },
-      { "id": "running",   "label": "Running",   "dataKey": "runningItems" },
+      { "id": "ready",     "label": "Completed", "dataKey": "readyItems" },
+      // `inProgress` swaps each output pill's doctype glyph for a spinner
+      // (the run is still generating its outputs) — see _home_feed.html.
+      { "id": "running",   "label": "Running",   "dataKey": "runningItems", "inProgress": true },
       { "id": "scheduled", "label": "Scheduled", "dataKey": "scheduledItems" }
     ],
     "overflowActions": [
       { "id": "view_all",        "label": "View all" },
       { "id": "review_settings", "label": "Review settings" }
     ],
-    // Per-row overflow-menu actions rendered by the `reviewRow` macro.
+    // Per-row overflow-menu actions rendered by the `feedItem` macro.
     // Same { id, label, icon? } shape as `overflowActions` above so a
     // future consumer can share renderers between the section-level and
     // row-level menus. `icon` (optional) is an SLDS utility-sprite id.
@@ -2231,7 +2235,7 @@
       "document": { "iconImage": "/assets/images/output-icons/doc.png" },
       "pdf":      { "sprite": "pdf",    "spriteFamily": "doctype" }
     },
-    "reviewItems": [
+    "readyItems": [
       {
         "id": "ri-01",
         "conversationId": "conv-001",
@@ -2273,7 +2277,7 @@
     ],
     // Sample rows for the new Running / Scheduled tabs so the pill
     // tablist has content to swap between. Same row shape as
-    // `reviewItems`; no `conversationId`, so the cards render inert
+    // `readyItems`; no `conversationId`, so the cards render inert
     // (href="#") — prototype content only.
     "runningItems": [
       {
@@ -2282,8 +2286,7 @@
         "description": "Building Pipeline · Started today at 9:12 AM",
         "icon":     { "sprite": "lead" },
         "outputs":  [
-          { "icon": "table",   "label": "42 accounts" },
-          { "icon": "message", "label": "18 of 42 enriched" }
+          { "icon": "table",   "label": "42 accounts" }
         ],
         "workflow": { "id": "", "label": "" }
       },
@@ -2299,11 +2302,19 @@
       }
     ],
     "scheduledItems": [
+      // Placeholder output pills so Scheduled cards match the height of the
+      // Ready / Running tabs (a card only grows past the compact 56px
+      // variant once it has `outputs`). Estimates (~) read as "expected"
+      // for a run that hasn't happened yet — swap for real data later.
       {
         "id": "sch-01",
         "title": "Weekly prospecting run",
         "description": "Building Pipeline · Scheduled for tomorrow at 6:00 AM",
         "icon":     { "sprite": "lead" },
+        "outputs":  [
+          { "icon": "table",   "label": "~40 accounts" },
+          { "icon": "message", "label": "~25 prospects" }
+        ],
         "workflow": { "id": "", "label": "" }
       },
       {
@@ -2311,6 +2322,9 @@
         "title": "Refresh account health scores",
         "description": "Data Enrichment · Scheduled for Monday at 6:00 AM",
         "icon":     { "sprite": "partners" },
+        "outputs":  [
+          { "icon": "table", "label": "1,240 accounts" }
+        ],
         "workflow": { "id": "", "label": "" }
       },
       {
@@ -2318,6 +2332,9 @@
         "title": "Prepare weekly executive brief",
         "description": "Executive Brief · Scheduled for Friday at 5:00 AM",
         "icon":     { "sprite": "partners" },
+        "outputs":  [
+          { "icon": "doc", "label": "Exec brief" }
+        ],
         "workflow": { "id": "", "label": "" }
       }
     ],

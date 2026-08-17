@@ -1,0 +1,28 @@
+{#
+  Reusable sparkle / typing-indicator markup
+  ===================================================================
+  Pairs with the `.sh-sparkle` / `.sh-sparkles` / `.sh-typing` styles in
+  styles/index.scss (global — loaded on every page via _template.html).
+
+  Import once, then call the macros:
+    {% import "_sparkle.html" as sparkle %}
+    {{ sparkle.sparkles() }}          → the 3-star cluster (decorative)
+    {{ sparkle.star() }}              → a single star
+
+  For a labelled indicator, wrap a shimmer label + the cluster yourself
+  so callers keep control of the label's font + a11y wiring:
+    <span class="sh-typing">
+      <span class="sh-typing__label">Thinking…</span>
+      {{ sparkle.sparkles() }}
+    </span>
+#}
+
+{# One sparkle. `fill="currentColor"` so the `.sh-sparkle` color keyframe
+   drives it; the 152×152 viewBox holds the platform's 8-point sparkle
+   path. Decorative — the cluster is aria-hidden by `sparkles()`. #}
+{% macro star() %}<svg class="sh-sparkle" viewBox="0 0 152 152" aria-hidden="true"><path fill="currentColor" d="m148.719 81.32-30.734 15.348c-9.231 4.597-16.683 12.086-21.317 21.317L81.32 148.719c-2.187 4.375-8.453 4.375-10.64 0l-15.348-30.734c-4.597-9.231-12.086-16.683-21.317-21.317L3.28 81.32c-4.375-2.187-4.375-8.453 0-10.64l30.734-15.348c9.23-4.597 16.683-12.086 21.317-21.317L70.68 3.28c2.187-4.375 8.453-4.375 10.64 0l15.348 30.734c4.597 9.23 12.086 16.683 21.317 21.317l30.734 15.348c4.375 2.187 4.375 8.453 0 10.64Z"/></svg>{% endmacro %}
+
+{# Three staggered sparkles. Decorative (aria-hidden) — the caller's label
+   or an assistive-text sibling carries the meaning. Delays are applied by
+   position in CSS, so exactly three children produce the travelling wave. #}
+{% macro sparkles() %}<span class="sh-sparkles" aria-hidden="true">{{ star() }}{{ star() }}{{ star() }}</span>{% endmacro %}

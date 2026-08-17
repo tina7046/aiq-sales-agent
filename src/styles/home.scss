@@ -1852,7 +1852,7 @@ main.app-wrapper {
 // Ready to Review + Tasks   (Phase 4 · rebuild)
 // ──────────────────────────────────────────────────────────────────────
 // Figma frame 8615:375480 ("dynamic content"). This section is
-// namespaced under `.seller-home__ready` and `.seller-home__review-row`
+// namespaced under `.seller-home__feed` and `.seller-home__feed-item`
 // so it can't leak into other pages that also use SLDS tabs/badges.
 //
 // Design tokens (from Figma `get_variable_defs`):
@@ -1882,7 +1882,7 @@ main.app-wrapper {
 // to ~340 px. Longer titles will truncate — the row markup already
 // exposes the full title via a `title=""` tooltip for that case.
 // ══════════════════════════════════════════════════════════════════════
-.seller-home__ready {
+.seller-home__feed {
   // Match briefing + composer content column: 800px, centered.
   max-width: 50rem;
   width: 100%;
@@ -1908,7 +1908,7 @@ main.app-wrapper {
 // Title + date on the left, overflow menu on the right. Matches
 // Figma "Spotlight with Simple Filtering" (8363:275599): 8px vertical
 // padding wrapping a 32-px-tall title row.
-.seller-home__ready-header {
+.seller-home__feed-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1921,14 +1921,14 @@ main.app-wrapper {
 // Heading + date sit on a shared baseline. 12px gap per Figma
 // (`gap-[12px]` in the exported spec). The heading takes its own
 // intrinsic width; the date is a small caption after it.
-.seller-home__ready-title-row {
+.seller-home__feed-title-row {
   display: flex;
   align-items: baseline;
   gap: var(--slds-g-spacing-3, 0.75rem);
   min-width: 0;
 }
 
-.seller-home__ready-heading {
+.seller-home__feed-heading {
   margin: 0;
   color: #111;                                              // Figma
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
@@ -1940,7 +1940,7 @@ main.app-wrapper {
   text-overflow: ellipsis;
 }
 
-.seller-home__ready-date {
+.seller-home__feed-date {
   flex-shrink: 0;
   color: var(--slds-g-color-on-surface-2, #2e2e2e);         // Figma
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
@@ -1954,7 +1954,7 @@ main.app-wrapper {
 // tab height (~32 px), underline (1 px), and label color don't match
 // Figma. All ARIA roles / roving-tabindex are set in markup and
 // managed by home.js on switch.
-.seller-home__ready-tabs {
+.seller-home__feed-tabs {
   display: flex;
   gap: 0;
 }
@@ -1964,7 +1964,7 @@ main.app-wrapper {
 // bottom hairline that the active tab's 3px underline paints over (the
 // inner `.seller-home__scheduled-tabs` keeps its `-1px` bottom margin so
 // the underline overlaps this line). Adds breathing room before the list.
-.seller-home__ready-tabbar {
+.seller-home__feed-tabbar {
   border-bottom: 1px solid var(--slds-g-color-border-1, #c9c9c9);
   margin-bottom: var(--slds-g-spacing-4, 1rem); // 16px
 }
@@ -1975,7 +1975,7 @@ main.app-wrapper {
 // (index.css) + `.tool-categories` divider tweaks (tools.css); the rules
 // below scope this card's overrides so the shared Connections chips are
 // untouched.
-.seller-home__ready-tabbar-cycler {
+.seller-home__feed-tabbar-cycler {
   margin: 0.25rem 0 var(--slds-g-spacing-4, 1rem); // 4px / 16px
 
   // Each chip carries a label + a count badge, side by side.
@@ -1997,7 +1997,7 @@ main.app-wrapper {
 }
 
 // Count badge on each cycler chip — neutral pill on the resting chips.
-.seller-home__ready-cycler-count {
+.seller-home__feed-cycler-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2016,36 +2016,25 @@ main.app-wrapper {
 
 // On the selected (blue) chip the badge flips to translucent white so it
 // stays legible against the blue-50 fill.
-.seller-home__ready-tabbar-cycler .slds-item-active .seller-home__ready-cycler-count {
+.seller-home__feed-tabbar-cycler .slds-item-active .seller-home__feed-cycler-count {
   background: rgba(255, 255, 255, 0.24);
   color: #fff;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// TEMPORARILY HIDDEN (not deleted) — delete THIS block to restore:
-//   • the Ready / Running / Scheduled tab switcher (all 3 treatments)
-//   • the floating A/B/C tab-style control widget
-// All markup + JS stay in place; this only hides the UI.
-.seller-home__ready [data-sh-ready-tabstyle-view],
-.seller-home__ready-abpanel {
-  display: none !important;
-}
-// ═══════════════════════════════════════════════════════════════════
-
 // ── A/B/C comparison scaffolding (prototype) ────────────────────────
 // All tab treatments render; show only the one the section root's
-// `data-ready-tabstyle` selects (set by the floating panel + localStorage).
-.seller-home__ready [data-sh-ready-tabstyle-view] {
+// `data-feed-tabstyle` selects (set by the floating panel + localStorage).
+.seller-home__feed [data-sh-feed-tabstyle-view] {
   display: none;
 }
-.seller-home__ready[data-ready-tabstyle="a"] [data-sh-ready-tabstyle-view="a"],
-.seller-home__ready[data-ready-tabstyle="b"] [data-sh-ready-tabstyle-view="b"],
-.seller-home__ready[data-ready-tabstyle="c"] [data-sh-ready-tabstyle-view="c"] {
+.seller-home__feed[data-feed-tabstyle="a"] [data-sh-feed-tabstyle-view="a"],
+.seller-home__feed[data-feed-tabstyle="b"] [data-sh-feed-tabstyle-view="b"],
+.seller-home__feed[data-feed-tabstyle="c"] [data-sh-feed-tabstyle-view="c"] {
   display: block;
 }
 
 // Option C wrapper — spacing before the list, matching A/B.
-.seller-home__ready-tabbar-slider {
+.seller-home__feed-tabbar-slider {
   margin: 0.25rem 0 var(--slds-g-spacing-4, 1rem);
 }
 
@@ -2055,7 +2044,7 @@ main.app-wrapper {
 // (z-index: 3) so it stays clickable even when that panel is expanded.
 // Prototype-only; remove alongside the losing treatments once a winner
 // is chosen.
-.seller-home__ready-abpanel {
+.seller-home__feed-abpanel {
   position: fixed;
   right: 16px;
   bottom: 64px; // clears the ~40px collapsed "Controls" launcher below it
@@ -2074,19 +2063,19 @@ main.app-wrapper {
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
 }
 
-.seller-home__ready-abpanel-title {
+.seller-home__feed-abpanel-title {
   font-size: 0.75rem;
   font-weight: var(--slds-g-font-weight-6, 590);
   color: var(--slds-g-color-on-surface-2, #2e2e2e);
   padding-inline-start: 0.25rem;
 }
 
-.seller-home__ready-abpanel-options {
+.seller-home__feed-abpanel-options {
   display: inline-flex;
   gap: 4px;
 }
 
-.seller-home__ready-abpanel-btn {
+.seller-home__feed-abpanel-btn {
   appearance: none;
   cursor: pointer;
   font: inherit;
@@ -2112,7 +2101,7 @@ main.app-wrapper {
 
 // ── Option C: transitions.dev "Tabs sliding" (16-tabs-sliding) ──────
 // Pasted verbatim from the transitions-dev skill. `.t-*` are the portable
-// hooks; JS in `bindReadyToReview` writes the pill's transform + width and
+// hooks; JS in `bindFeed` writes the pill's transform + width and
 // the CSS below owns the tween. Prototype-only — remove with the losing
 // treatments once a winner is chosen.
 :root {
@@ -2259,7 +2248,7 @@ main.app-wrapper {
   }
 }
 
-.seller-home__ready-tab {
+.seller-home__feed-tab {
   appearance: none;
   background: transparent;
   border: 0;
@@ -2300,14 +2289,14 @@ main.app-wrapper {
   }
 }
 
-.seller-home__ready-tab-label {
+.seller-home__feed-tab-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
 }
 
-.seller-home__ready-tab-count {
+.seller-home__feed-tab-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2326,7 +2315,7 @@ main.app-wrapper {
   transition: background-color 120ms ease, color 120ms ease;
 }
 
-.seller-home__ready-tab.is-active .seller-home__ready-tab-count {
+.seller-home__feed-tab.is-active .seller-home__feed-tab-count {
   background: var(--slds-g-color-info-container-1, #d8e6fe);
   color: var(--slds-g-color-on-info-1, #0b5cab);
 }
@@ -2336,12 +2325,42 @@ main.app-wrapper {
 // match the composer's icon buttons. Menu is absolute-positioned
 // relative to the wrapper — no viewport math because the header
 // pins to a fixed 1000-px column that never overflows.
-.seller-home__ready-overflow {
+.seller-home__feed-overflow {
   position: relative;
   flex-shrink: 0;
 }
 
-.seller-home__ready-overflow-menu {
+// Section-level trigger — always visible in the card header (no
+// opacity reveal). Gets the same 32×32 hover-gray affordance as the
+// per-row kebabs so every ⋮ on the home page feels identical. The
+// header already reserves 32px (min-height: 3rem = 8 + 32 + 8), so
+// sizing the trigger up to 32px just realizes that Figma spec.
+.seller-home__feed-overflow-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--slds-g-sizing-9, 2rem);  // 32px
+  block-size: var(--slds-g-sizing-9, 2rem);   // 32px
+  border-radius: var(--slds-g-radius-border-circle, 100%);
+  transition: background-color 120ms ease;
+
+  .slds-button__icon {
+    fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+  }
+
+  &:hover,
+  &:focus-visible,
+  &[aria-expanded="true"] {
+    background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+    border-radius: var(--slds-g-radius-border-circle, 100%);
+  }
+
+  &:active {
+    background-color: var(--slds-g-color-surface-container-3, #e5e5e5);
+  }
+}
+
+.seller-home__feed-overflow-menu {
   position: absolute;
   top: calc(100% + 0.25rem);
   right: 0;
@@ -2358,7 +2377,7 @@ main.app-wrapper {
   padding-block: var(--slds-g-spacing-1, 0.25rem);
 }
 
-.seller-home__ready-overflow-list {
+.seller-home__feed-overflow-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -2366,7 +2385,7 @@ main.app-wrapper {
   flex-direction: column;
 }
 
-.seller-home__ready-overflow-item {
+.seller-home__feed-overflow-item {
   appearance: none;
   background: transparent;
   border: 0;
@@ -2397,7 +2416,7 @@ main.app-wrapper {
 }
 
 // ── Panel list ─────────────────────────────────────────────────────
-.seller-home__ready-list {
+.seller-home__feed-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -2406,7 +2425,7 @@ main.app-wrapper {
   gap: var(--slds-g-spacing-2, 0.5rem);   // 8px inter-row gap (Figma)
 }
 
-.seller-home__ready-list-item {
+.seller-home__feed-list-item {
   // `<li>` container is layout-transparent — the article inside
   // owns the visual card (border-radius, shadow, padding). Keeping
   // the li plain also means the stretched-link's absolute-position
@@ -2442,7 +2461,7 @@ main.app-wrapper {
 // focus. In the grown variant the pills row lives INSIDE the body,
 // so it starts under the title (not the icon) — exactly per the
 // Figma spec.
-.seller-home__review-row {
+.seller-home__feed-item {
   position: relative;
 
   display: flex;
@@ -2497,8 +2516,8 @@ main.app-wrapper {
 // so every card reads as clickable. Non-linked rows have no overlay, and
 // their title's `href="#"` fires the section-root delegate rather than
 // navigating.
-.seller-home__review-row--linked {
-  .seller-home__review-row-title {
+.seller-home__feed-item--linked {
+  .seller-home__feed-item-title {
     &::after {
       content: "";
       position: absolute;
@@ -2518,7 +2537,7 @@ main.app-wrapper {
 // and vertical padding kicks in to give the third row breathing
 // room. Overrides only the three properties that need to change;
 // everything else is inherited from the base rule above.
-.seller-home__review-row--has-outputs {
+.seller-home__feed-item--has-outputs {
   align-items: flex-start;
   padding-block: var(--slds-g-spacing-4, 1rem);                // 16px vertical
   min-height: 0;                                               // let content decide
@@ -2529,13 +2548,13 @@ main.app-wrapper {
 //   • .slds-icon_container       → padding + border-radius
 //   • .slds-icon-standard-{name} → sets --slds-c-icon-color-background
 //                                   (canonical Salesforce object color)
-//   • .seller-home__review-row-icon → sizes the tile to Figma's 28×28
+//   • .seller-home__feed-item-icon → sizes the tile to Figma's 28×28
 //                                     and the inner glyph to 16×16
 // Everything colour-related comes from SLDS's tokens; we intentionally
 // do NOT set a background here. That's what makes the row's icon
 // automatically match whatever SLDS 2 declares for `lead`, `event`,
 // `partners`, `account`, `task`, `opportunity`, `contact`, etc.
-.seller-home__review-row-icon {
+.seller-home__feed-item-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2551,11 +2570,11 @@ main.app-wrapper {
 // In the grown variant the icon nudges 4 px down (Figma `pt-4`) so
 // its optical center lines up with the title's first-line baseline
 // instead of sitting flush against the card's top edge.
-.seller-home__review-row--has-outputs .seller-home__review-row-icon {
+.seller-home__feed-item--has-outputs .seller-home__feed-item-icon {
   margin-top: var(--slds-g-spacing-1, 0.25rem);
 }
 
-.seller-home__review-row-icon-glyph {
+.seller-home__feed-item-icon-glyph {
   // Sprites in `/assets/icons/standard-sprite/` are white glyphs on
   // transparent bg — set fill defensively in case a sprite defines
   // its own path fill downstream.
@@ -2563,7 +2582,7 @@ main.app-wrapper {
   color: #ffffff;
 }
 
-.seller-home__review-row-body {
+.seller-home__feed-item-body {
   display: flex;
   flex-direction: column;
   flex: 1;                   // fill the space between icon and workflow slot
@@ -2579,7 +2598,7 @@ main.app-wrapper {
 // Underlining kicks in only on hover of the link itself so keyboard
 // users pressing Tab into a card still see a subtle affordance on the
 // element that actually has focus.
-.seller-home__review-row-title {
+.seller-home__feed-item-title {
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
   font-size: var(--slds-g-font-scale-1, 0.875rem);
   font-weight: var(--slds-g-font-weight-6, 590);
@@ -2610,7 +2629,7 @@ main.app-wrapper {
   &:visited { color: var(--slds-g-color-on-surface-2, #2e2e2e); }
 }
 
-.seller-home__review-row-desc {
+.seller-home__feed-item-desc {
   margin: 0;
   // Inter is Figma's spec — falls through to SF Pro if Inter isn't
   // bundled. Visual difference at 12/1.3 is negligible.
@@ -2641,9 +2660,9 @@ main.app-wrapper {
 // `margin-inline-start: --slds-g-spacing-2` (8 px) between chained
 // badges — that adds to our gap and inflates the effective spacing
 // to 12 px. We neutralize the SLDS margin here so our 4 px gap is
-// the sole source of truth. Scoped to `.review-row-outputs` so
+// the sole source of truth. Scoped to `.feed-item-outputs` so
 // other badge stacks on the page keep SLDS defaults.
-.seller-home__review-row-outputs {
+.seller-home__feed-item-outputs {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -2678,7 +2697,7 @@ main.app-wrapper {
 // SLDS's base 4 px × 8 px padding + 12 px font-size already match
 // the Figma spec, so those defaults are inherited without an
 // override.
-.seller-home__review-row-output-pill {
+.seller-home__feed-item-output-pill {
   --slds-c-badge-color-background: var(--slds-g-color-neutral-base-95, #f3f3f3);
   --slds-c-badge-sizing-border: 0;
   --slds-c-badge-radius-border: var(--slds-g-radius-border-1, 0.25rem);
@@ -2700,9 +2719,21 @@ main.app-wrapper {
 // `currentColor` fill for utility-sprite glyphs; that override is
 // gone because it would flatten the doctype sprites' pre-baked
 // colors into a single navy blob.
-.seller-home__review-row-output-pill-glyph {
+.seller-home__feed-item-output-pill-glyph {
   width: 0.875rem;                                             // 14px inline glyph
   height: 0.875rem;
+  flex-shrink: 0;
+}
+
+// In-progress pill (Running tab): the reusable `.sh-spinner` (index.scss)
+// stands in for the doctype glyph to signal the output is still being
+// generated. Sized to the same 14px slot — `border-box` so the ring
+// includes its 2px border — so the pill's height + rhythm never shift.
+.seller-home__feed-item-output-pill .sh-spinner {
+  box-sizing: border-box;
+  width: 0.875rem;   // 14px
+  height: 0.875rem;
+  border-width: 2px;
   flex-shrink: 0;
 }
 
@@ -2713,12 +2744,12 @@ main.app-wrapper {
 // the pill's vertical rhythm stays identical regardless of icon
 // source. `object-fit: contain` protects against non-square source
 // images.
-.seller-home__review-row-output-pill-glyph--image {
+.seller-home__feed-item-output-pill-glyph--image {
   object-fit: contain;
   pointer-events: none;
 }
 
-.seller-home__review-row-output-pill-label {
+.seller-home__feed-item-output-pill-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2732,7 +2763,7 @@ main.app-wrapper {
 //   • Workflow badge (left of slot) — `visibility: hidden` by
 //     default; fades in on card hover / focus-within.
 //   • Per-card overflow menu ⋮ (right of slot) — same reveal
-//     behavior; see the .seller-home__review-row-menu block below.
+//     behavior; see the .seller-home__feed-item-menu block below.
 //
 // `justify-content: space-between` pins the badge to the slot's
 // left edge and the kebab to the right edge, matching the Figma
@@ -2744,7 +2775,7 @@ main.app-wrapper {
 // centered — that's how the ⋮ ends up aligned with the workflow
 // badge AND with the card's vertical mid-line in both the compact
 // (56 px) and grown (padded, has-outputs) card variants.
-.seller-home__review-row-workflow-slot {
+.seller-home__feed-item-workflow-slot {
   flex-shrink: 0;
   min-width: 9.75rem;                                          // 156px
   align-self: center;
@@ -2772,7 +2803,7 @@ main.app-wrapper {
 // aria-label already carries "…, workflow: {name}" — so hiding via
 // `visibility: hidden` also correctly hides the badge from the
 // accessibility tree.
-.seller-home__review-row-workflow {
+.seller-home__feed-item-workflow {
   --slds-c-badge-color-background: #D8E6FE;
   --slds-c-badge-text-color: #0250D9;
 
@@ -2783,8 +2814,8 @@ main.app-wrapper {
   transition: opacity 120ms ease, visibility 120ms ease;
 }
 
-.seller-home__review-row:hover .seller-home__review-row-workflow,
-.seller-home__review-row:focus-within .seller-home__review-row-workflow {
+.seller-home__feed-item:hover .seller-home__feed-item-workflow,
+.seller-home__feed-item:focus-within .seller-home__feed-item-workflow {
   opacity: 1;
   visibility: visible;
 }
@@ -2803,14 +2834,14 @@ main.app-wrapper {
 // badge from the kebab.
 //
 // `position: relative` scopes the absolutely-positioned dropdown
-// panel (`.seller-home__review-row-menu-list`) to this container so
+// panel (`.seller-home__feed-item-menu-list`) to this container so
 // the menu opens anchored to the ⋮, not to some ancestor.
 //
 // z-index sits ABOVE the linked-variant stretched-link ::after
 // (z-index: 1) so mouse clicks on the trigger / menu items land on
 // those buttons instead of being swallowed by the overlay that
 // routes clicks to the title anchor.
-.seller-home__review-row-menu {
+.seller-home__feed-item-menu {
   position: relative;
   z-index: 3;
   flex-shrink: 0;
@@ -2833,29 +2864,59 @@ main.app-wrapper {
 // attention. Applied via `fill` on the inner .slds-button__icon so
 // it wins over SLDS 2's default token-driven color, both on rest
 // and on hover / focus-visible states.
-.seller-home__review-row-menu-trigger {
+.seller-home__feed-item-menu-trigger {
   opacity: 0;
   pointer-events: none;
-  transition: opacity 160ms ease;
+
+  // 32×32 box (icon centered) so the hover-gray reads as an even
+  // circle around the ⋮ — mirrors the Knowledge tile kebab. The
+  // fixed 156-px workflow slot pins this to its right edge, so the
+  // larger box grows leftward without shifting the row's text.
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--slds-g-sizing-9, 2rem);  // 32px
+  block-size: var(--slds-g-sizing-9, 2rem);   // 32px
+  border-radius: var(--slds-g-radius-border-circle, 100%);
+
+  transition:
+    opacity 160ms ease,
+    background-color 120ms ease;
 
   .slds-button__icon {
     fill: var(--slds-g-color-on-surface-1, #5c5c5c);
   }
+
+  // Hover-gray — the shell's standard hover surface
+  // (`--slds-g-color-surface-container-2`, #f3f3f3); pressed steps one
+  // shade darker to surface-container-3 (#e5e5e5). Also shown on
+  // keyboard focus + while the menu is open. `border-radius` repeats
+  // on :focus-visible so SLDS's bare-icon focus radius can't swap in.
+  &:hover,
+  &:focus-visible,
+  &[aria-expanded="true"] {
+    background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+    border-radius: var(--slds-g-radius-border-circle, 100%);
+  }
+
+  &:active {
+    background-color: var(--slds-g-color-surface-container-3, #e5e5e5);
+  }
 }
 
-.seller-home__review-row:hover .seller-home__review-row-menu-trigger,
-.seller-home__review-row:focus-within .seller-home__review-row-menu-trigger,
-.seller-home__review-row-menu-trigger[aria-expanded="true"] {
+.seller-home__feed-item:hover .seller-home__feed-item-menu-trigger,
+.seller-home__feed-item:focus-within .seller-home__feed-item-menu-trigger,
+.seller-home__feed-item-menu-trigger[aria-expanded="true"] {
   opacity: 1;
   pointer-events: auto;
 }
 
 // Dropdown menu panel — same visual grammar as the section-level
-// overflow menu (`.seller-home__ready-overflow-menu`) so the two
+// overflow menu (`.seller-home__feed-overflow-menu`) so the two
 // read as instances of the same component. Anchored below-right of
 // the trigger; `right: 0` on the container's coordinate space keeps
 // the menu's right edge flush with the kebab.
-.seller-home__review-row-menu-list {
+.seller-home__feed-item-menu-list {
   position: absolute;
   top: calc(100% + 0.25rem);
   right: 0;
@@ -2872,7 +2933,7 @@ main.app-wrapper {
   padding-block: var(--slds-g-spacing-1, 0.25rem);
 }
 
-.seller-home__review-row-menu-items {
+.seller-home__feed-item-menu-items {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -2880,11 +2941,11 @@ main.app-wrapper {
   flex-direction: column;
 }
 
-// Individual menu-item button — mirrors `.seller-home__ready-overflow-item`
+// Individual menu-item button — mirrors `.seller-home__feed-overflow-item`
 // (hover fill, focus stripe, transitions) so the section-level and
 // row-level menus share one interaction feel. Adds an optional
 // leading icon (per-action `icon` in home.json → utility sprite).
-.seller-home__review-row-menu-item {
+.seller-home__feed-item-menu-item {
   appearance: none;
   background: transparent;
   border: 0;
@@ -2918,14 +2979,14 @@ main.app-wrapper {
   }
 }
 
-.seller-home__review-row-menu-item-icon {
+.seller-home__feed-item-menu-item-icon {
   flex-shrink: 0;
   width: 1rem;
   height: 1rem;
   fill: currentColor;
 }
 
-.seller-home__review-row-menu-item-label {
+.seller-home__feed-item-menu-item-label {
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -2945,7 +3006,7 @@ main.app-wrapper {
 // `overflow: hidden` clips the article's box-shadow during the
 // collapse so it doesn't spill into the neighbors' space as the
 // height shrinks past the shadow radius.
-.seller-home__ready-list-item.is-dismissing {
+.seller-home__feed-list-item.is-dismissing {
   overflow: hidden;
   pointer-events: none;
   opacity: 0;
@@ -2960,14 +3021,14 @@ main.app-wrapper {
 
 // A11y — reduced motion + touch (no-hover) fallbacks.
 @media (prefers-reduced-motion: reduce) {
-  .seller-home__ready-tab,
-  .seller-home__ready-tab-count,
-  .seller-home__ready-overflow-item,
-  .seller-home__review-row,
-  .seller-home__review-row-workflow,
-  .seller-home__review-row-menu-trigger,
-  .seller-home__review-row-menu-item,
-  .seller-home__ready-list-item.is-dismissing,
+  .seller-home__feed-tab,
+  .seller-home__feed-tab-count,
+  .seller-home__feed-overflow-item,
+  .seller-home__feed-item,
+  .seller-home__feed-item-workflow,
+  .seller-home__feed-item-menu-trigger,
+  .seller-home__feed-item-menu-item,
+  .seller-home__feed-list-item.is-dismissing,
   .seller-home__briefing-popover-action {
     transition: none;
   }
@@ -2984,7 +3045,7 @@ main.app-wrapper {
   // always — sighted touch users can't hover so gating the label
   // behind hover would hide meaningful context. AT users still get
   // it from the row's aria-label.
-  .seller-home__review-row-workflow {
+  .seller-home__feed-item-workflow {
     opacity: 1;
     visibility: visible;
     transition: none;
@@ -2993,7 +3054,7 @@ main.app-wrapper {
   // Same reasoning for the per-row overflow trigger — touch users
   // can't hover, so the kebab has to be always-visible or the menu
   // is unreachable. AT users always had it via keyboard focus.
-  .seller-home__review-row-menu-trigger {
+  .seller-home__feed-item-menu-trigger {
     opacity: 1;
     pointer-events: auto;
     transition: none;
@@ -3119,20 +3180,20 @@ main.app-wrapper {
 }
 
 // ── Individual tab (filter chip) ──────────────────────────────────
-// Cloned from `.seller-home__ready-tab`'s vocabulary so Home →
+// Cloned from `.seller-home__feed-tab`'s vocabulary so Home →
 // Scheduled reads as one visual family. Key differences:
 //   • Semantic role is `radio` (not `tab`) because these filter one
 //     list, not swap panels. See scheduled.html for the ARIA
 //     rationale. Styling is unaffected.
 //   • Trailing count pill (`.count`) styling matches
-//     `.seller-home__ready-tab-count`.
+//     `.seller-home__feed-tab-count`.
 .seller-home__scheduled-tab {
   appearance: none;
   background: transparent;
   border: 0;
   // Reserved 3-px bottom border so switching between inactive /
   // active states never reflows the row height. Same trick
-  // `.seller-home__ready-tab` uses.
+  // `.seller-home__feed-tab` uses.
   border-bottom: 3px solid transparent;
   padding: 0 var(--slds-g-spacing-3, 0.75rem);
   margin: 0;
@@ -3482,10 +3543,35 @@ main.app-wrapper {
 .seller-home__scheduled-workflow-menu-trigger {
   opacity: 0;
   pointer-events: none;
-  transition: opacity 160ms ease;
+
+  // 32×32 box (icon centered) so the hover-gray is an even circle —
+  // matches the Knowledge tile + Ready-row kebabs. The wrapper is
+  // absolute-positioned and centered at right:1rem, already sized for
+  // a 32-px trigger.
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--slds-g-sizing-9, 2rem);  // 32px
+  block-size: var(--slds-g-sizing-9, 2rem);   // 32px
+  border-radius: var(--slds-g-radius-border-circle, 100%);
+
+  transition:
+    opacity 160ms ease,
+    background-color 120ms ease;
 
   .slds-button__icon {
     fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+  }
+
+  &:hover,
+  &:focus-visible,
+  &[aria-expanded="true"] {
+    background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+    border-radius: var(--slds-g-radius-border-circle, 100%);
+  }
+
+  &:active {
+    background-color: var(--slds-g-color-surface-container-3, #e5e5e5);
   }
 }
 

@@ -29,9 +29,9 @@
 //     Tab, activation via Enter), and any click within the
 //     surrounding `<article>` bubbles to the section root where
 //     we fire the row-select event. Rows dispatch
-//     `sh:review-row-select`; menu items dispatch
-//     `sh:review-overflow-action`; tab switches dispatch
-//     `sh:review-tab-change`.
+//     `sh:feed-item-select`; menu items dispatch
+//     `sh:feed-overflow-action`; tab switches dispatch
+//     `sh:feed-tab-change`.
   //   • Phase 5: Knowledge doc list (rendered on /knowledge.html,
   //     no-ops on /home.html). Rows are native `<a>` elements, so
   //     click / Enter / Cmd-click routing already lives in the
@@ -535,9 +535,9 @@
     }
 
     // Phase 4 — Ready to Review + Tasks.
-    var readyRoot = root.querySelector('[data-sh-ready-root]')
-    if (readyRoot) {
-      bindReadyToReview(readyRoot)
+    var feedRoot = root.querySelector('[data-sh-feed-root]')
+    if (feedRoot) {
+      bindFeed(feedRoot)
     }
 
     // Phase 5 — Knowledge doc list (only present on /knowledge.html).
@@ -1347,9 +1347,9 @@
   //   ready-overflow  → overflowController(trigger, menu)
   //   ready-list      → delegated row-click handler
   // ══════════════════════════════════════════════════════════════════
-  function bindReadyToReview (readyRoot) {
-    var tabs = toArray(readyRoot.querySelectorAll('[data-sh-ready-tab]'))
-    var panels = toArray(readyRoot.querySelectorAll('[data-sh-ready-panel]'))
+  function bindFeed (feedRoot) {
+    var tabs = toArray(feedRoot.querySelectorAll('[data-sh-feed-tab]'))
+    var panels = toArray(feedRoot.querySelectorAll('[data-sh-feed-panel]'))
     if (tabs.length && panels.length) {
       tablistController(tabs, panels)
     }
@@ -1362,36 +1362,36 @@
     // the `tablistController` (pill treatment) does. Both treatments are
     // rendered for the A/B comparison; the sync block below mirrors the
     // active tab across them so flipping the control panel is seamless.
-    var tabnav = readyRoot.querySelector('[data-sh-tabnav]')
+    var tabnav = feedRoot.querySelector('[data-sh-tabnav]')
     if (tabnav && panels.length) {
       tabnav.addEventListener('sh:tabnav-change', function (event) {
         var value = event.detail && event.detail.value
         panels.forEach(function (panel) {
-          var on = panel.getAttribute('data-sh-ready-panel') === value
+          var on = panel.getAttribute('data-sh-feed-panel') === value
           panel.classList.toggle('is-visible', on)
           panel.hidden = !on
         })
-        document.dispatchEvent(new CustomEvent('sh:review-tab-change', {
+        document.dispatchEvent(new CustomEvent('sh:feed-tab-change', {
           detail: { tabId: value, source: 'ready' }
         }))
       })
     }
 
     // ── A/B/C tab-treatment comparison (prototype) ────────────────────
-    // All treatments render at once; a single `sh:review-tab-change`
+    // All treatments render at once; a single `sh:feed-tab-change`
     // listener mirrors the active tab across them so the floating control
     // panel can flip between them without showing a stale selection. This
     // block only mutates DOM (never dispatches), so there's no feedback
     // loop. It also rewrites the cycler's `data-sh-tabnav-index` so
     // ShTabNav's own "already selected" guard stays aligned.
-    var cyclerList = readyRoot.querySelector('[data-sh-tabnav]')
+    var cyclerList = feedRoot.querySelector('[data-sh-tabnav]')
     var cyclerChips = cyclerList
       ? toArray(cyclerList.querySelectorAll('[data-sh-tabnav-value]'))
       : []
 
     // Option C — transitions.dev sliding pill (16-tabs-sliding). JS writes
     // the active tab's offsetLeft/offsetWidth onto the pill; CSS tweens it.
-    var sliderBar = readyRoot.querySelector('[data-sh-ready-slider]')
+    var sliderBar = feedRoot.querySelector('[data-sh-feed-slider]')
     var sliderPill = sliderBar ? sliderBar.querySelector('.t-tabs-pill') : null
     var sliderTabs = sliderBar ? toArray(sliderBar.querySelectorAll('.t-tab')) : []
     function sliderActiveTab () {
@@ -1405,7 +1405,7 @@
     // Option C is the shown treatment (see the re-snap in applyTabStyle).
     function sliderMoveTo (tab, animate) {
       if (!tab || !sliderPill) return
-      if (readyRoot.getAttribute('data-ready-tabstyle') !== 'c') return
+      if (feedRoot.getAttribute('data-feed-tabstyle') !== 'c') return
       if (!animate) {
         var prev = sliderPill.style.transition
         sliderPill.style.transition = 'none'
@@ -1420,13 +1420,13 @@
     }
     sliderTabs.forEach(function (tab) {
       tab.addEventListener('click', function () {
-        var tabId = tab.getAttribute('data-sh-ready-slidertab')
+        var tabId = tab.getAttribute('data-sh-feed-slidertab')
         panels.forEach(function (panel) {
-          var on = panel.getAttribute('data-sh-ready-panel') === tabId
+          var on = panel.getAttribute('data-sh-feed-panel') === tabId
           panel.classList.toggle('is-visible', on)
           panel.hidden = !on
         })
-        document.dispatchEvent(new CustomEvent('sh:review-tab-change', {
+        document.dispatchEvent(new CustomEvent('sh:feed-tab-change', {
           detail: { tabId: tabId, source: 'ready' }
         }))
       })
@@ -1436,11 +1436,11 @@
     })
 
     // Mirror the active tab across all three treatments on any change.
-    document.addEventListener('sh:review-tab-change', function (event) {
+    document.addEventListener('sh:feed-tab-change', function (event) {
       if (!event.detail || event.detail.source !== 'ready') return
       var tabId = event.detail.tabId
       tabs.forEach(function (pill) {
-        var on = pill.getAttribute('data-sh-ready-tab') === tabId
+        var on = pill.getAttribute('data-sh-feed-tab') === tabId
         pill.classList.toggle('is-active', on)
         pill.setAttribute('aria-selected', on ? 'true' : 'false')
         pill.setAttribute('tabindex', on ? '0' : '-1')
@@ -1454,25 +1454,25 @@
         if (on && cyclerList) cyclerList.setAttribute('data-sh-tabnav-index', String(i))
       })
       sliderTabs.forEach(function (tab) {
-        var on = tab.getAttribute('data-sh-ready-slidertab') === tabId
+        var on = tab.getAttribute('data-sh-feed-slidertab') === tabId
         tab.setAttribute('aria-selected', on ? 'true' : 'false')
       })
       sliderMoveTo(sliderActiveTab(), true)
     })
 
-    // Floating A/B/C control panel — flips `data-ready-tabstyle` on the
+    // Floating A/B/C control panel — flips `data-feed-tabstyle` on the
     // section root (CSS shows the matching treatment) and remembers the
     // choice in localStorage. When Option C becomes visible its pill must
     // be snapped into place (a hidden bar measures as 0). Prototype-only.
-    var abPanel = readyRoot.querySelector('[data-sh-ready-abpanel]')
+    var abPanel = feedRoot.querySelector('[data-sh-feed-abpanel]')
     if (abPanel) {
-      var AB_KEY = 'sh-ready-tabstyle'
-      var abButtons = toArray(abPanel.querySelectorAll('[data-sh-ready-abstyle]'))
+      var AB_KEY = 'sh-feed-tabstyle'
+      var abButtons = toArray(abPanel.querySelectorAll('[data-sh-feed-abstyle]'))
       var applyTabStyle = function (style) {
         if (style !== 'a' && style !== 'b' && style !== 'c') style = 'b'
-        readyRoot.setAttribute('data-ready-tabstyle', style)
+        feedRoot.setAttribute('data-feed-tabstyle', style)
         abButtons.forEach(function (btn) {
-          btn.classList.toggle('is-active', btn.getAttribute('data-sh-ready-abstyle') === style)
+          btn.classList.toggle('is-active', btn.getAttribute('data-sh-feed-abstyle') === style)
         })
         try { window.localStorage.setItem(AB_KEY, style) } catch (e) {}
         // Snap the slider pill once its bar is actually shown + measurable.
@@ -1482,15 +1482,15 @@
       }
       var storedStyle = null
       try { storedStyle = window.localStorage.getItem(AB_KEY) } catch (e) {}
-      applyTabStyle(storedStyle || readyRoot.getAttribute('data-ready-tabstyle') || 'b')
+      applyTabStyle(storedStyle || feedRoot.getAttribute('data-feed-tabstyle') || 'b')
       abButtons.forEach(function (btn) {
         btn.addEventListener('click', function () {
-          applyTabStyle(btn.getAttribute('data-sh-ready-abstyle'))
+          applyTabStyle(btn.getAttribute('data-sh-feed-abstyle'))
         })
       })
     }
 
-    var overflow = readyRoot.querySelector('[data-sh-ready-overflow]')
+    var overflow = feedRoot.querySelector('[data-sh-feed-overflow]')
     if (overflow) {
       overflowController(overflow)
     }
@@ -1498,7 +1498,7 @@
     // Per-row overflow menu (⋮) — one controller for every card in
     // the panel, event-delegated off the section root so cards added
     // by a future dynamic render pick up the behavior automatically.
-    perRowOverflowController(readyRoot)
+    perRowOverflowController(feedRoot)
 
     // Row activation — delegated to the section root so future
     // dynamically-added rows / tabs work without re-binding.
@@ -1507,7 +1507,7 @@
     // activate a row:
     //
     //   1. Mouse click anywhere on the card. Bubbles up to the
-    //      section root; we find the enclosing `[data-sh-review-row]`
+    //      section root; we find the enclosing `[data-sh-feed-item]`
     //      and fire the event.
     //   2. Keyboard: the card's title `<a>` is the focusable entry
     //      point. Enter triggers the anchor's default click; the
@@ -1521,20 +1521,20 @@
     // regardless.
     //
     // Future nested action buttons inside a card (Dismiss, Snooze,
-    // ⋮ menu…) should tag themselves with `[data-sh-review-row-stop]`
+    // ⋮ menu…) should tag themselves with `[data-sh-feed-item-stop]`
     // and call `event.stopPropagation()` in their own handlers to
     // opt out of the card-level activation.
-    readyRoot.addEventListener('click', function (event) {
+    feedRoot.addEventListener('click', function (event) {
       // Per-row overflow menu owns its own click handling (see
       // perRowOverflowController below). We opt those clicks out of
       // the card-select delegate here so clicking the kebab or a
       // menu item never fires a phantom row-select / navigates the
-      // card. `data-sh-review-row-stop` is the shared opt-out marker
+      // card. `data-sh-feed-item-stop` is the shared opt-out marker
       // — future nested controls (Snooze, Assign, inline actions)
       // can adopt the same attribute to inherit this behavior.
-      if (closest(event.target, '[data-sh-review-row-stop]')) return
+      if (closest(event.target, '[data-sh-feed-item-stop]')) return
 
-      var row = closest(event.target, '[data-sh-review-row]')
+      var row = closest(event.target, '[data-sh-feed-item]')
       if (!row) return
 
       // Rows that link to a real conversation route (title anchor
@@ -1547,7 +1547,7 @@
       // ANYWHERE inside the card: on the title link directly, OR on
       // the stretched ::after overlay (whose click bubbles up as if
       // it originated on the anchor). Either way we've got the link.
-      var link = closest(event.target, '[data-sh-review-row-link]')
+      var link = closest(event.target, '[data-sh-feed-item-link]')
       if (link) {
         var href = link.getAttribute('href') || ''
         if (href === '' || href === '#') {
@@ -1556,10 +1556,10 @@
         // else: real URL — let the browser navigate.
       }
 
-      var rowId = row.getAttribute('data-sh-review-row')
-      var workflowId = row.getAttribute('data-sh-review-workflow') || null
+      var rowId = row.getAttribute('data-sh-feed-item')
+      var workflowId = row.getAttribute('data-sh-feed-workflow') || null
 
-      document.dispatchEvent(new CustomEvent('sh:review-row-select', {
+      document.dispatchEvent(new CustomEvent('sh:feed-item-select', {
         detail: { rowId: rowId, workflowId: workflowId, source: 'ready' }
       }))
       // eslint-disable-next-line no-console
@@ -1599,7 +1599,7 @@
     })
 
     function activate (target) {
-      var targetId = target.getAttribute('data-sh-ready-tab')
+      var targetId = target.getAttribute('data-sh-feed-tab')
       tabs.forEach(function (tab) {
         var on = tab === target
         tab.classList.toggle('is-active', on)
@@ -1607,11 +1607,11 @@
         tab.setAttribute('tabindex', on ? '0' : '-1')
       })
       panels.forEach(function (panel) {
-        var on = panel.getAttribute('data-sh-ready-panel') === targetId
+        var on = panel.getAttribute('data-sh-feed-panel') === targetId
         panel.classList.toggle('is-visible', on)
         panel.hidden = !on
       })
-      document.dispatchEvent(new CustomEvent('sh:review-tab-change', {
+      document.dispatchEvent(new CustomEvent('sh:feed-tab-change', {
         detail: { tabId: targetId, source: 'ready' }
       }))
     }
@@ -1622,10 +1622,10 @@
   // menu-item activation. Arrow-Up/Down inside the menu cycles
   // focus. Open state = `menu.hidden === false`.
   function overflowController (root) {
-    var trigger = root.querySelector('[data-sh-ready-overflow-trigger]')
-    var menu = root.querySelector('[data-sh-ready-overflow-menu]')
+    var trigger = root.querySelector('[data-sh-feed-overflow-trigger]')
+    var menu = root.querySelector('[data-sh-feed-overflow-menu]')
     if (!trigger || !menu) return
-    var items = toArray(menu.querySelectorAll('[data-sh-ready-overflow-action]'))
+    var items = toArray(menu.querySelectorAll('[data-sh-feed-overflow-action]'))
 
     trigger.addEventListener('click', function (event) {
       event.stopPropagation()
@@ -1660,8 +1660,8 @@
 
     items.forEach(function (item) {
       item.addEventListener('click', function () {
-        var actionId = item.getAttribute('data-sh-ready-overflow-action')
-        document.dispatchEvent(new CustomEvent('sh:review-overflow-action', {
+        var actionId = item.getAttribute('data-sh-feed-overflow-action')
+        document.dispatchEvent(new CustomEvent('sh:feed-overflow-action', {
           detail: { action: actionId, source: 'ready' }
         }))
         // eslint-disable-next-line no-console
@@ -1695,7 +1695,7 @@
   //   • Click trigger  → toggle its menu. Only ONE menu can be open at
   //                      a time; opening a second one closes the first.
   //                      First menuitem receives focus on open.
-  //   • Click item     → dispatch `sh:review-row-action`, close the
+  //   • Click item     → dispatch `sh:feed-item-action`, close the
   //                      menu, and — for `dismiss` — animate the card
   //                      collapsing out of the list.
   //   • Escape         → close, focus returns to the trigger.
@@ -1707,10 +1707,10 @@
   // grow a multi-open surface, promote this to a Map keyed by menu id.
   //
   // Card-level click-through opt-out lives on the delegated row-select
-  // handler above (`[data-sh-review-row-stop]` check), not here — one
+  // handler above (`[data-sh-feed-item-stop]` check), not here — one
   // fewer stopPropagation call and it applies uniformly to any nested
   // control that opts in.
-  function perRowOverflowController (readyRoot) {
+  function perRowOverflowController (feedRoot) {
     var openMenu = null
     var openTrigger = null
 
@@ -1734,11 +1734,11 @@
       if (returnFocus && trigger) trigger.focus()
     }
 
-    readyRoot.addEventListener('click', function (event) {
-      var trigger = closest(event.target, '[data-sh-review-row-menu-trigger]')
+    feedRoot.addEventListener('click', function (event) {
+      var trigger = closest(event.target, '[data-sh-feed-item-menu-trigger]')
       if (trigger) {
-        var container = closest(trigger, '[data-sh-review-row-menu]')
-        var menu = container && container.querySelector('[data-sh-review-row-menu-list]')
+        var container = closest(trigger, '[data-sh-feed-item-menu]')
+        var menu = container && container.querySelector('[data-sh-feed-item-menu-list]')
         if (!menu) return
 
         var willOpen = menu.hidden
@@ -1748,23 +1748,23 @@
         if (openMenu && openMenu !== menu) closeOpenMenu(false)
         setMenuState(trigger, menu, willOpen)
         if (willOpen) {
-          var first = menu.querySelector('[data-sh-review-row-menu-action]')
+          var first = menu.querySelector('[data-sh-feed-item-menu-action]')
           if (first) first.focus()
         }
         return
       }
 
-      var actionBtn = closest(event.target, '[data-sh-review-row-menu-action]')
+      var actionBtn = closest(event.target, '[data-sh-feed-item-menu-action]')
       if (!actionBtn) return
 
-      var actionId = actionBtn.getAttribute('data-sh-review-row-menu-action')
-      var row = closest(actionBtn, '[data-sh-review-row]')
-      var rowId = row && row.getAttribute('data-sh-review-row')
-      var listItem = closest(actionBtn, '[data-sh-ready-list-item]')
+      var actionId = actionBtn.getAttribute('data-sh-feed-item-menu-action')
+      var row = closest(actionBtn, '[data-sh-feed-item]')
+      var rowId = row && row.getAttribute('data-sh-feed-item')
+      var listItem = closest(actionBtn, '[data-sh-feed-list-item]')
 
       // Dispatch BEFORE mutating the DOM so a future subscriber can
       // inspect the row / li node from the event target if needed.
-      document.dispatchEvent(new CustomEvent('sh:review-row-action', {
+      document.dispatchEvent(new CustomEvent('sh:feed-item-action', {
         detail: { action: actionId, rowId: rowId, source: 'ready' }
       }))
       // eslint-disable-next-line no-console
@@ -1782,7 +1782,7 @@
       }
     })
 
-    readyRoot.addEventListener('keydown', function (event) {
+    feedRoot.addEventListener('keydown', function (event) {
       if (!openMenu) return
 
       if (event.key === 'Escape') {
@@ -1798,7 +1798,7 @@
       if (!openMenu.contains(document.activeElement) &&
           openTrigger !== document.activeElement) return
 
-      var items = toArray(openMenu.querySelectorAll('[data-sh-review-row-menu-action]'))
+      var items = toArray(openMenu.querySelectorAll('[data-sh-feed-item-menu-action]'))
       if (!items.length) return
       event.preventDefault()
       var idx = items.indexOf(document.activeElement)
@@ -1820,7 +1820,7 @@
     // the delegated click listener above.
     document.addEventListener('click', function (event) {
       if (!openMenu) return
-      var container = closest(event.target, '[data-sh-review-row-menu]')
+      var container = closest(event.target, '[data-sh-feed-item-menu]')
       if (container && container.contains(openMenu)) return
       closeOpenMenu(false)
     })
@@ -2354,7 +2354,7 @@
   // so the announcement reads as "Showing 5 Scheduled workflows"
   // (not "5 workflows for tab id 'scheduled'").
   function scheduledStatusText (count, activeTab) {
-    var labelNode = activeTab && activeTab.querySelector('.seller-home__scheduled-tab-label')
+    var labelNode = activeTab && activeTab.querySelector('.seller-home__feed-tab-label')
     var label = labelNode ? (labelNode.textContent || '').trim() : ''
     if (count === 0) return 'No workflows match this filter'
     return 'Showing ' + count + ' ' + (label ? label + ' ' : '') +

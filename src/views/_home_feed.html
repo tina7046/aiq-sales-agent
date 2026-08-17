@@ -1,13 +1,13 @@
 {#
-  Seller Home — Ready to Review + Tasks   (Phase 4)
+  Seller Home — Feed: Ready / Running / Scheduled   (Phase 4)
   =====================================================================
   Figma source: node 8615:375480 ("dynamic content").
 
   Layout at a glance (per Figma 8615:375503 "Source Tile"):
 
     ┌──────────────────────────────────────────────────────────────┐
-    │  ┌ Ready to Review [5] ┐  Tasks [3]                        ⋮ │
-    │  └─────────────────────┘                                     │
+    │  ┌ Ready [5] ┐  Running [2]   Scheduled [3]               ⋮ │
+    │  └───────────┘                                               │
     │                                                              │
     │  ┌───────────────────────────────────────────────────────┐   │
     │  │ ▨  12 hot prospects                       [Buyer Engage] │
@@ -18,10 +18,11 @@
     └──────────────────────────────────────────────────────────────┘
 
   ── Architecture ─────────────────────────────────────────────────
-  Two data collections drive the surface — `review.reviewItems` and
-  `review.tasks` — bound to `<tabpanel>` elements by the tab's
-  `dataKey`. They stay separate on `review` so future phases can
-  wire them to different back-end APIs without renaming anything.
+  One data collection per tab drives the surface —
+  `feed.readyItems`, `feed.runningItems`, `feed.scheduledItems` —
+  each bound to a `<tabpanel>` by that tab's `dataKey`. They stay
+  separate on `feed` so future phases can wire them to different
+  back-end APIs without renaming anything.
 
   Rows are **workflow cards**, NOT buttons. Each row is an
   `<article>` composed of three regions inside a flex row:
@@ -38,7 +39,7 @@
   The primary keyboard entry point is still the title `<a>` — Tab
   focuses it, Enter activates. Mouse clicks anywhere on the article
   are delegated to the same event handler (see home.js
-  `bindReadyToReview`), so the "full-row click" behavior works
+  `bindFeed`), so the "full-row click" behavior works
   without semantically making the row a button.
 
   Nested actions (Dismiss, Snooze, inline menus…) can be added
@@ -54,7 +55,7 @@
       canonical Salesforce object palette (lead = blue,
       event = purple, partners = teal, account = indigo, etc.).
     • `slds-badge` — SLDS 2 base badge for the workflow label.
-      Our own `.seller-home__review-row-workflow` class only adds
+      Our own `.seller-home__feed-item-workflow` class only adds
       the hover/focus reveal transition on top of it.
     • `slds-badge slds-badge_lightest` — SLDS 2 "lightest" badge
       variant for output pills. Our namespaced output-pill class
@@ -66,7 +67,7 @@
       colored avatars are retired.
 
   ── Contract ─────────────────────────────────────────────────────
-  Data comes from home.json → `review.*`:
+  Data comes from home.json → `feed.*`:
     • defaultTabId       — string, initial tab
     • tabs[]             — { id, label, dataKey }
     • overflowActions[]  — { id, label }
@@ -78,8 +79,9 @@
                            family — defaults to `utility`) or an
                            `iconImage` raster path. Semantic categories:
                            "table" | "message" | "document" | "pdf".
-    • reviewItems[]      — rows for "Ready to Review"
-    • tasks[]            — rows for "Tasks"
+    • readyItems[]       — rows for the "Ready" tab
+    • runningItems[]     — rows for the "Running" tab
+    • scheduledItems[]   — rows for the "Scheduled" tab
   Row: { id, title, description,
          icon:      { sprite },          ← SLDS 2 standard sprite name
          outputs?:  [ { icon, label } … ], ← 0-N output pills; label is
@@ -91,9 +93,9 @@
   by SLDS 2's `.slds-icon-standard-{sprite}` class. Output pills
   intentionally carry only a semantic `icon` category (not an SLDS
   sprite name) so a design update that swaps the sprite for a
-  category is a one-line edit in `review.outputTypes`. Adding a
+  category is a one-line edit in `feed.outputTypes`. Adding a
   new semantic category is a two-file change: add an entry under
-  `review.outputTypes` + reference it from any row's `outputs`.
+  `feed.outputTypes` + reference it from any row's `outputs`.
 #}
 
 {#
@@ -119,7 +121,7 @@
     • pdf      → polished distributable reports
 
   The mapping from semantic category → glyph lives in ONE place —
-  `review.outputTypes` in home.json — so a design change that
+  `feed.outputTypes` in home.json — so a design change that
   swaps e.g. `message → txt` for `message → email` is a one-line
   edit that re-skins every message pill on the page.
 
@@ -142,28 +144,32 @@
   Rendering an unknown `output.icon` skips the glyph — the pill
   degrades to a text-only chip rather than throwing.
 #}
-{% macro outputPill(output, outputTypes) %}
+{% macro outputPill(output, outputTypes, inProgress) %}
 {% set typeInfo = outputTypes[output.icon] %}
 <span
-  class="slds-badge slds-badge_lightest seller-home__review-row-output-pill"
+  class="slds-badge slds-badge_lightest seller-home__feed-item-output-pill"
   title="{{ output.label }}"
 >
-  {% if typeInfo %}
+  {% if inProgress %}
+    {# In-progress (Running tab): the reusable spinner replaces the doctype
+       glyph to signal the output is still being generated. #}
+    <span class="sh-spinner" aria-hidden="true"></span>
+  {% elif typeInfo %}
     {% if typeInfo.iconImage %}
       <img
-        class="seller-home__review-row-output-pill-glyph seller-home__review-row-output-pill-glyph--image"
+        class="seller-home__feed-item-output-pill-glyph seller-home__feed-item-output-pill-glyph--image"
         src="{{ typeInfo.iconImage }}"
         alt=""
         aria-hidden="true"
       />
     {% elif typeInfo.sprite %}
       {% set spriteFamily = typeInfo.spriteFamily or "utility" %}
-      <svg class="seller-home__review-row-output-pill-glyph" aria-hidden="true">
+      <svg class="seller-home__feed-item-output-pill-glyph" aria-hidden="true">
         <use xlink:href="/assets/icons/{{ spriteFamily }}-sprite/svg/symbols.svg#{{ typeInfo.sprite }}"></use>
       </svg>
     {% endif %}
   {% endif %}
-  <span class="seller-home__review-row-output-pill-label"{% if output.todayPrefix %} data-sh-today-short{% endif %}>{% if output.todayPrefix %}{{ todayShort() }} {% endif %}{{ output.label }}</span>
+  <span class="seller-home__feed-item-output-pill-label"{% if output.todayPrefix %} data-sh-today-short{% endif %}>{% if output.todayPrefix %}{{ todayShort() }} {% endif %}{{ output.label }}</span>
 </span>
 {% endmacro %}
 
@@ -176,12 +182,12 @@
   colliding.
 
   `rowActions` is the shared per-card overflow-menu action list from
-  home.json (`review.rowActions`). Rendered inside the card as a
+  home.json (`feed.rowActions`). Rendered inside the card as a
   hover-revealed kebab (⋮) trigger + dropdown menu. Passed in from
   the panel loop below so the macro stays a pure render — no data
   fetching, and a future test can invoke it with a custom action list.
 #}
-{% macro reviewRow(item, panelId, outputTypes, rowActions) %}
+{% macro feedItem(item, panelId, outputTypes, rowActions, inProgress) %}
 {#
   Build the title link's accessible name from title + workflow. The
   workflow badge is visually hidden by default and its container is
@@ -207,9 +213,9 @@
 {% set convHref = "/home_conversation.html?id=" ~ item.conversationId if item.conversationId else "#" %}
 {% set isLinked = item.conversationId is defined and item.conversationId %}
 <article
-  class="seller-home__review-row{% if item.outputs and item.outputs|length %} seller-home__review-row--has-outputs{% endif %}{% if isLinked %} seller-home__review-row--linked{% endif %}"
-  data-sh-review-row="{{ item.id }}"
-  {% if item.workflow %}data-sh-review-workflow="{{ item.workflow.id }}"{% endif %}
+  class="seller-home__feed-item{% if item.outputs and item.outputs|length %} seller-home__feed-item--has-outputs{% endif %}{% if isLinked %} seller-home__feed-item--linked{% endif %}"
+  data-sh-feed-item="{{ item.id }}"
+  {% if item.workflow %}data-sh-feed-workflow="{{ item.workflow.id }}"{% endif %}
 >
   {#
     Object icon removed per design direction — the row now starts with
@@ -218,7 +224,7 @@
     the layout re-flows automatically (flex + gap on the parent).
   #}
 
-  <div class="seller-home__review-row-body">
+  <div class="seller-home__feed-item-body">
     {#
       Title is a real `<a>` — Tab-navigable + Enter-activatable via
       native HTML semantics. When the row has a `conversationId`, the
@@ -233,22 +239,22 @@
       screen readers read it after the accessible name.
 
       Non-linked rows (`href="#"`) still fire the section root's
-      click delegate, which dispatches `sh:review-row-select` — the
+      click delegate, which dispatches `sh:feed-item-select` — the
       delegate preventDefaults ONLY on `#` hrefs so real conversation
       links navigate natively (and the browser handles back-nav +
       scroll restoration).
     #}
     <a
       href="{{ convHref }}"
-      class="seller-home__review-row-title"
+      class="seller-home__feed-item-title"
       id="{{ titleId }}"
-      data-sh-review-row-link="{{ item.id }}"
+      data-sh-feed-item-link="{{ item.id }}"
       aria-label="{{ linkName }}"
       aria-describedby="{{ descId }}"
       title="{{ item.title }}"
     >{{ item.title }}</a>
     <p
-      class="seller-home__review-row-desc"
+      class="seller-home__feed-item-desc"
       id="{{ descId }}"
       title="{{ item.description }}"
     >{{ item.description }}</p>
@@ -264,14 +270,14 @@
       drafts" on top would double-read the essence of the card.
     #}
     {% if item.outputs and item.outputs|length %}
-      <div class="seller-home__review-row-outputs" aria-hidden="true">
+      <div class="seller-home__feed-item-outputs" aria-hidden="true">
         {% for output in item.outputs %}
           {#
             Stable key = row id + output type — outputs never
             repeat their type within a single row's data, so this
             is unique per rendered pill and stable across renders.
           #}
-          {{ outputPill(output, outputTypes) }}
+          {{ outputPill(output, outputTypes, inProgress) }}
         {% endfor %}
       </div>
     {% endif %}
@@ -291,10 +297,10 @@
     to AT — so aria-hidden lives on the badge element itself, not
     on this container.
   #}
-  <div class="seller-home__review-row-workflow-slot">
+  <div class="seller-home__feed-item-workflow-slot">
     {% if item.workflow %}
       <span
-        class="slds-badge seller-home__review-row-workflow"
+        class="slds-badge seller-home__feed-item-workflow"
         title="{{ item.workflow.label }}"
         aria-hidden="true"
       >{{ item.workflow.label }}</span>
@@ -318,13 +324,13 @@
       disappear the moment the cursor drifts off the card and into
       the menu.
 
-      `data-sh-review-row-stop` is the shared opt-out marker the
+      `data-sh-feed-item-stop` is the shared opt-out marker the
       section-root click delegate looks for (see home.js
-      `bindReadyToReview`) so clicking the trigger or any menu item
+      `bindFeed`) so clicking the trigger or any menu item
       never dispatches a row-select / navigates the card.
 
       The menu itself is a data-driven list of `{ id, label, icon? }`
-      entries from `review.rowActions` in home.json. Today the sole
+      entries from `feed.rowActions` in home.json. Today the sole
       entry is "Dismiss"; new actions (Snooze, Assign, etc.) drop
       in by adding to that array — no template or JS changes needed.
 
@@ -338,14 +344,14 @@
     #}
     {% set menuId = panelId ~ "-" ~ item.id ~ "-menu" %}
     <div
-      class="seller-home__review-row-menu"
-      data-sh-review-row-menu
-      data-sh-review-row-stop
+      class="seller-home__feed-item-menu"
+      data-sh-feed-item-menu
+      data-sh-feed-item-stop
     >
       <button
         type="button"
-        class="slds-button slds-button_icon slds-button_icon-bare seller-home__review-row-menu-trigger"
-        data-sh-review-row-menu-trigger
+        class="slds-button slds-button_icon slds-button_icon-bare seller-home__feed-item-menu-trigger"
+        data-sh-feed-item-menu-trigger
         aria-haspopup="menu"
         aria-expanded="false"
         aria-controls="{{ menuId }}"
@@ -359,28 +365,28 @@
       </button>
 
       <div
-        class="seller-home__review-row-menu-list"
+        class="seller-home__feed-item-menu-list"
         id="{{ menuId }}"
         role="menu"
         aria-label="More actions"
-        data-sh-review-row-menu-list
+        data-sh-feed-item-menu-list
         hidden
       >
-        <ul class="seller-home__review-row-menu-items" role="none">
+        <ul class="seller-home__feed-item-menu-items" role="none">
           {% for action in rowActions %}
           <li role="none">
             <button
               type="button"
-              class="seller-home__review-row-menu-item"
+              class="seller-home__feed-item-menu-item"
               role="menuitem"
-              data-sh-review-row-menu-action="{{ action.id }}"
+              data-sh-feed-item-menu-action="{{ action.id }}"
             >
               {% if action.icon %}
-              <svg class="seller-home__review-row-menu-item-icon" aria-hidden="true">
+              <svg class="seller-home__feed-item-menu-item-icon" aria-hidden="true">
                 <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
               </svg>
               {% endif %}
-              <span class="seller-home__review-row-menu-item-label">{{ action.label }}</span>
+              <span class="seller-home__feed-item-menu-item-label">{{ action.label }}</span>
             </button>
           </li>
           {% endfor %}
@@ -393,30 +399,30 @@
 
 
 <section
-  class="seller-home__ready"
+  class="seller-home__feed"
   aria-labelledby="seller-home-ready-heading"
-  data-sh-ready-root
+  data-sh-feed-root
   {# A/B prototype: which tab treatment shows. Overridden pre-paint from
      localStorage by the inline script after this section, then managed at
-     runtime by the floating control panel (see bindReadyToReview). #}
-  data-ready-tabstyle="{{ review.defaultTabStyle or 'b' }}"
+     runtime by the floating control panel (see bindFeed). #}
+  data-feed-tabstyle="{{ feed.defaultTabStyle or 'b' }}"
 >
-  <div class="seller-home__ready-header">
+  <div class="seller-home__feed-header">
     {#
       Section title + date, per Figma "Spotlight with Simple Filtering"
       (8363:275599). Was a tablist when this section had both "Ready to
       Review" and "Tasks"; now that Tasks is gone (see home.json
-      `review.tabs`), the header is a plain heading. If Tasks comes
+      `feed.tabs`), the header is a plain heading. If Tasks comes
       back, restore the `<div role="tablist">…</div>` block that used
       to live here — the panel loop below is still data-driven off
-      `review.tabs`, so re-adding a tab entry re-emits its panel.
+      `feed.tabs`, so re-adding a tab entry re-emits its panel.
     #}
-    <div class="seller-home__ready-title-row">
-      <h2 id="seller-home-ready-heading" class="seller-home__ready-heading">
-        {{ review.heading }}
+    <div class="seller-home__feed-title-row">
+      <h2 id="seller-home-ready-heading" class="seller-home__feed-heading">
+        {{ feed.heading }}
       </h2>
       {#
-        The date is live by default. `review.date` in index.json is an
+        The date is live by default. `feed.date` in index.json is an
         optional PIN: set it to a literal string to freeze the header on
         a chosen day (handy for a screenshot), leave it null for today.
 
@@ -426,9 +432,9 @@
         load, which is what keeps a `dist` deployed last week honest.
       #}
       <span
-        class="seller-home__ready-date"
-        {% if not review.date %}data-sh-today{% endif %}
-      >{{ review.date or today() }}</span>
+        class="seller-home__feed-date"
+        {% if not feed.date %}data-sh-today{% endif %}
+      >{{ feed.date or today() }}</span>
     </div>
 
     {#
@@ -436,11 +442,11 @@
       open/close; `.is-open` mirror class is only there to give CSS
       a hook for reflecting the trigger's aria-expanded state.
     #}
-    <div class="seller-home__ready-overflow" data-sh-ready-overflow>
+    <div class="seller-home__feed-overflow" data-sh-feed-overflow>
       <button
         type="button"
-        class="slds-button slds-button_icon slds-button_icon-bare seller-home__ready-overflow-trigger"
-        data-sh-ready-overflow-trigger
+        class="slds-button slds-button_icon slds-button_icon-bare seller-home__feed-overflow-trigger"
+        data-sh-feed-overflow-trigger
         aria-haspopup="menu"
         aria-expanded="false"
         aria-controls="seller-home-ready-overflow-menu"
@@ -454,21 +460,21 @@
       </button>
 
       <div
-        class="seller-home__ready-overflow-menu"
+        class="seller-home__feed-overflow-menu"
         id="seller-home-ready-overflow-menu"
         role="menu"
         aria-label="More actions"
-        data-sh-ready-overflow-menu
+        data-sh-feed-overflow-menu
         hidden
       >
-        <ul class="seller-home__ready-overflow-list" role="none">
-          {% for action in review.overflowActions %}
+        <ul class="seller-home__feed-overflow-list" role="none">
+          {% for action in feed.overflowActions %}
             <li role="none">
               <button
                 type="button"
-                class="seller-home__ready-overflow-item"
+                class="seller-home__feed-overflow-item"
                 role="menuitem"
-                data-sh-ready-overflow-action="{{ action.id }}"
+                data-sh-feed-overflow-action="{{ action.id }}"
               >{{ action.label }}</button>
             </li>
           {% endfor %}
@@ -479,10 +485,10 @@
 
   {#
     A/B tab-treatment comparison (prototype scaffolding). BOTH treatments
-    are rendered; the floating control panel below + a `sh-ready-tabstyle`
-    localStorage flag pick which one shows, via `data-ready-tabstyle` on
-    the section root (CSS hides the other). `bindReadyToReview` keeps the
-    two in sync — one `sh:review-tab-change` listener mirrors the active
+    are rendered; the floating control panel below + a `sh-feed-tabstyle`
+    localStorage flag pick which one shows, via `data-feed-tabstyle` on
+    the section root (CSS hides the other). `bindFeed` keeps the
+    two in sync — one `sh:feed-tab-change` listener mirrors the active
     tab across both — so flipping the control is a pure visibility swap
     with no stale active state.
 
@@ -491,28 +497,28 @@
   #}
 
   {# Option A — pill tabs. `tablistController` (home.js) drives these via
-     `data-sh-ready-tab` → `data-sh-ready-panel`. #}
-  <div class="seller-home__ready-tabbar" data-sh-ready-tabstyle-view="a">
+     `data-sh-feed-tab` → `data-sh-feed-panel`. #}
+  <div class="seller-home__feed-tabbar" data-sh-feed-tabstyle-view="a">
     <div
-      class="seller-home__scheduled-tabs"
+      class="seller-home__feed-tabs"
       role="tablist"
       aria-label="Filter reviews by state"
     >
-      {% for tab in review.tabs %}
-        {% set isActive = (tab.id == review.defaultTabId) %}
-        {% set count = review[tab.dataKey] | length %}
+      {% for tab in feed.tabs %}
+        {% set isActive = (tab.id == feed.defaultTabId) %}
+        {% set count = feed[tab.dataKey] | length %}
         <button
           type="button"
-          class="seller-home__scheduled-tab{% if isActive %} is-active{% endif %}"
+          class="seller-home__feed-tab{% if isActive %} is-active{% endif %}"
           role="tab"
           id="seller-home-ready-tab-{{ tab.id }}"
           aria-selected="{% if isActive %}true{% else %}false{% endif %}"
           aria-controls="seller-home-ready-panel-{{ tab.id }}"
-          data-sh-ready-tab="{{ tab.id }}"
+          data-sh-feed-tab="{{ tab.id }}"
           tabindex="{% if isActive %}0{% else %}-1{% endif %}"
         >
-          <span class="seller-home__scheduled-tab-label">{{ tab.label }}</span>
-          <span class="seller-home__scheduled-tab-count" aria-hidden="true">{{ count }}</span>
+          <span class="seller-home__feed-tab-label">{{ tab.label }}</span>
+          <span class="seller-home__feed-tab-count" aria-hidden="true">{{ count }}</span>
           <span class="slds-assistive-text">{{ count }} item{% if count != 1 %}s{% endif %}</span>
         </button>
       {% endfor %}
@@ -521,18 +527,18 @@
 
   {# Option B — cycler chips. ShTabNav (tab_nav.js) auto-wires
      `[data-sh-tabnav]`; the `sh:tabnav-change` → panel bridge lives in
-     `bindReadyToReview`. Chip ids are namespaced `-chip-` so they don't
+     `bindFeed`. Chip ids are namespaced `-chip-` so they don't
      collide with Option A's `-tab-` ids above. #}
-  <div class="seller-home__ready-tabbar-cycler" data-sh-ready-tabstyle-view="b">
+  <div class="seller-home__feed-tabbar-cycler" data-sh-feed-tabstyle-view="b">
     <ul
       class="slds-list_horizontal slds-has-dividers_right tab-nav-cycler tool-categories"
       data-sh-tabnav
-      data-sh-ready-tablist
+      data-sh-feed-tablist
       aria-label="Filter reviews by state"
     >
-      {% for tab in review.tabs %}
-        {% set isActive = (tab.id == review.defaultTabId) %}
-        {% set count = review[tab.dataKey] | length %}
+      {% for tab in feed.tabs %}
+        {% set isActive = (tab.id == feed.defaultTabId) %}
+        {% set count = feed[tab.dataKey] | length %}
         <li class="slds-item">
           <div
             class="{% if isActive %}slds-item-active{% else %}slds-item-inactive{% endif %}"
@@ -540,8 +546,8 @@
             data-sh-tabnav-value="{{ tab.id }}"
             aria-controls="seller-home-ready-panel-{{ tab.id }}"
           >
-            <span class="seller-home__ready-cycler-label">{{ tab.label }}</span>
-            <span class="seller-home__ready-cycler-count" aria-hidden="true">{{ count }}</span>
+            <span class="seller-home__feed-cycler-label">{{ tab.label }}</span>
+            <span class="seller-home__feed-cycler-count" aria-hidden="true">{{ count }}</span>
             <span class="slds-assistive-text">{{ count }} item{% if count != 1 %}s{% endif %}</span>
           </div>
         </li>
@@ -551,21 +557,21 @@
 
   {# Option C — transitions.dev sliding-pill segmented control
      (transitions-dev skill, 16-tabs-sliding). `.t-tabs` + `.t-tabs-pill`
-     are the skill's verbatim hooks; `bindReadyToReview` writes the active
+     are the skill's verbatim hooks; `bindFeed` writes the active
      `.t-tab`'s offsetLeft/offsetWidth onto the pill and CSS tweens it. #}
-  <div class="seller-home__ready-tabbar-slider" data-sh-ready-tabstyle-view="c">
-    <div class="t-tabs" role="tablist" aria-label="Filter reviews by state" data-sh-ready-slider>
+  <div class="seller-home__feed-tabbar-slider" data-sh-feed-tabstyle-view="c">
+    <div class="t-tabs" role="tablist" aria-label="Filter reviews by state" data-sh-feed-slider>
       <span class="t-tabs-pill" aria-hidden="true"></span>
-      {% for tab in review.tabs %}
-        {% set isActive = (tab.id == review.defaultTabId) %}
-        {% set count = review[tab.dataKey] | length %}
+      {% for tab in feed.tabs %}
+        {% set isActive = (tab.id == feed.defaultTabId) %}
+        {% set count = feed[tab.dataKey] | length %}
         <button
           type="button"
           class="t-tab"
           role="tab"
           aria-selected="{% if isActive %}true{% else %}false{% endif %}"
           aria-controls="seller-home-ready-panel-{{ tab.id }}"
-          data-sh-ready-slidertab="{{ tab.id }}"
+          data-sh-feed-slidertab="{{ tab.id }}"
         >
           <span class="t-tab-label">{{ tab.label }}</span>
           <span class="t-tab-count" aria-hidden="true">{{ count }}</span>
@@ -577,46 +583,46 @@
 
   {# Floating A/B/C switch — a mini control panel (à la the shader panel)
      so all treatments can be polished in parallel before deciding.
-     Fixed, bottom-left; `bindReadyToReview` wires the buttons + persists
+     Fixed, bottom-left; `bindFeed` wires the buttons + persists
      the choice to localStorage. Prototype-only scaffolding — delete this
      block (and the losing tab treatments) once a winner is picked. #}
   <div
-    class="seller-home__ready-abpanel"
-    data-sh-ready-abpanel
+    class="seller-home__feed-abpanel"
+    data-sh-feed-abpanel
     role="group"
     aria-label="Ready-to-Review tab style"
   >
-    <span class="seller-home__ready-abpanel-title">Ready tabs</span>
-    <div class="seller-home__ready-abpanel-options">
-      <button type="button" class="seller-home__ready-abpanel-btn" data-sh-ready-abstyle="a">A · Tabs</button>
-      <button type="button" class="seller-home__ready-abpanel-btn" data-sh-ready-abstyle="b">B · Pills</button>
-      <button type="button" class="seller-home__ready-abpanel-btn" data-sh-ready-abstyle="c">C · Sliding</button>
+    <span class="seller-home__feed-abpanel-title">Ready tabs</span>
+    <div class="seller-home__feed-abpanel-options">
+      <button type="button" class="seller-home__feed-abpanel-btn" data-sh-feed-abstyle="a">A · Tabs</button>
+      <button type="button" class="seller-home__feed-abpanel-btn" data-sh-feed-abstyle="b">B · Pills</button>
+      <button type="button" class="seller-home__feed-abpanel-btn" data-sh-feed-abstyle="c">C · Sliding</button>
     </div>
   </div>
 
   {#
-    Panels — one per entry in `review.tabs` (Ready / Running /
+    Panels — one per entry in `feed.tabs` (Ready / Running /
     Scheduled). Only the default tab's panel is visible on first paint;
     the rest ship `hidden`. `tablistController` in home.js flips the
     `hidden` + `.is-visible` state as tabs are activated. Each panel is
     a `role="tabpanel"` labelled by its matching tab; `<ul role="list">`
     still gives AT a "list of N items" announcement.
   #}
-  {% for tab in review.tabs %}
+  {% for tab in feed.tabs %}
     {% set panelId = "seller-home-ready-panel-" ~ tab.id %}
-    {% set isActive = (tab.id == review.defaultTabId) %}
+    {% set isActive = (tab.id == feed.defaultTabId) %}
     <div
-      class="seller-home__ready-panel{% if isActive %} is-visible{% endif %}"
+      class="seller-home__feed-panel{% if isActive %} is-visible{% endif %}"
       id="{{ panelId }}"
       role="tabpanel"
       aria-labelledby="seller-home-ready-tab-{{ tab.id }}"
-      data-sh-ready-panel="{{ tab.id }}"
+      data-sh-feed-panel="{{ tab.id }}"
       {% if not isActive %}hidden{% endif %}
     >
-      <ul class="seller-home__ready-list" role="list">
-        {% for item in review[tab.dataKey] %}
-          <li class="seller-home__ready-list-item" data-sh-ready-list-item>
-            {{ reviewRow(item, panelId, review.outputTypes, review.rowActions) }}
+      <ul class="seller-home__feed-list" role="list">
+        {% for item in feed[tab.dataKey] %}
+          <li class="seller-home__feed-list-item" data-sh-feed-list-item>
+            {{ feedItem(item, panelId, feed.outputTypes, feed.rowActions, tab.inProgress) }}
           </li>
         {% endfor %}
       </ul>
@@ -631,10 +637,10 @@
 <script>
   (function () {
     try {
-      var s = window.localStorage.getItem('sh-ready-tabstyle');
+      var s = window.localStorage.getItem('sh-feed-tabstyle');
       if (s === 'a' || s === 'b') {
-        var el = document.querySelector('[data-sh-ready-root]');
-        if (el) el.setAttribute('data-ready-tabstyle', s);
+        var el = document.querySelector('[data-sh-feed-root]');
+        if (el) el.setAttribute('data-feed-tabstyle', s);
       }
     } catch (e) {}
   })();

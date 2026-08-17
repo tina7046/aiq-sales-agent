@@ -148,3 +148,124 @@ $static-font-path: '/assets/fonts/webfonts';
   left: 0;
 }
 
+// ──────────────────────────────────────────────────────────────────────
+// Sparkle / typing indicator (reusable, global)
+// ──────────────────────────────────────────────────────────────────────
+// The canonical "Agentforce" typing/thinking animation: an optional
+// shimmer-sweep label plus a cluster of sparkles that pulse in size and
+// color, staggered a quarter-cycle apart so the twinkle reads as one wave
+// travelling across them. Recreated from the platform's `typing-animation`
+// component (live demo on /blank.html).
+//
+// Defined here in index.css — loaded on every page via _template.html — so
+// the conversation feed, demos, and any future surface share ONE
+// definition. Markup ships as macros in views/_sparkle.html:
+//   {% import "_sparkle.html" as sparkle %}
+//   {{ sparkle.sparkles() }}                       → just the stars
+//   <span class="sh-typing">
+//     <span class="sh-typing__label">Thinking…</span>{{ sparkle.sparkles() }}
+//   </span>
+//
+// Timing matches the source: a 1s loop, cubic-bezier(0.61, 0.32, 0.41, 0.69)
+// easing, and 0 / -0.25s / -0.5s per-star delays applied BY POSITION, so any
+// three sparkles auto-wave without per-star modifier classes.
+.sh-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem); // 4px — matches slds-p-left_xx-small
+}
+
+// Shimmer-sweep label. A 200%-wide blue→violet→blue band is clipped to the
+// glyphs with a transparent fill, so the color sweeps THROUGH the text.
+// Consumers own the font (size/weight); only the paint is set here.
+.sh-typing__label {
+  background: linear-gradient(
+    90deg,
+    var(--slds-g-color-brand-base-40, #0250d9) 0%,
+    var(--slds-g-color-palette-violet-40, #9602c7) 50%,
+    var(--slds-g-color-brand-base-40, #0250d9) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: sh-typing-sweep 1s cubic-bezier(0.61, 0.32, 0.41, 0.69) infinite;
+}
+
+// Star cluster — sparkles sit adjacent; their own transparent bounding
+// boxes supply the spacing.
+.sh-sparkles {
+  display: inline-flex;
+  align-items: center;
+}
+
+// One sparkle. Fixed 12px box (only `transform` animates, so the row never
+// reflows), painted via `currentColor` so the color keyframe can drive the
+// fill of a `<path fill="currentColor">`.
+.sh-sparkle {
+  flex: 0 0 auto;
+  width: 0.75rem;  // 12px
+  height: 0.75rem;
+  color: var(--slds-g-color-brand-base-40, #0250d9);
+  transform-origin: center;
+  animation:
+    sh-sparkle-size  1s cubic-bezier(0.61, 0.32, 0.41, 0.69) infinite,
+    sh-sparkle-color 1s cubic-bezier(0.61, 0.32, 0.41, 0.69) infinite;
+}
+
+// Stagger by position — a quarter-cycle each — so three sparkles read as one
+// travelling shimmer. :nth-child keeps it modifier-class-free.
+.sh-sparkles .sh-sparkle:nth-child(1) { animation-delay: 0s,     0s;     }
+.sh-sparkles .sh-sparkle:nth-child(2) { animation-delay: -0.25s, -0.25s; }
+.sh-sparkles .sh-sparkle:nth-child(3) { animation-delay: -0.5s,  -0.5s;  }
+
+@keyframes sh-typing-sweep {
+  0%   { background-position: 0% 50%; }
+  25%  { background-position: 50% 50%; }
+  50%  { background-position: 100% 50%; }
+  75%  { background-position: 50% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes sh-sparkle-size {
+  0%, 100% { transform: scale(0.9167); }
+  25%, 75% { transform: scale(0.75);   }
+  50%      { transform: scale(0.5833); }
+}
+@keyframes sh-sparkle-color {
+  0%, 100% { color: var(--slds-g-color-brand-base-40, #0250d9); }
+  50%      { color: var(--slds-g-color-palette-violet-40, #9602c7); }
+}
+
+// Motion is the affordance, not the message — freeze at rest and keep the
+// label legible (solid brand color) when reduced motion is requested.
+@media (prefers-reduced-motion: reduce) {
+  .sh-typing__label,
+  .sh-sparkle { animation: none; }
+  .sh-typing__label { -webkit-text-fill-color: var(--slds-g-color-brand-base-40, #0250d9); }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Spinner (reusable, global)
+// ──────────────────────────────────────────────────────────────────────
+// Plain CSS border-spinner ported from BB – AOP's account-research preview
+// (aop-editor `createSpinner()` → <div class="spinner">): a light-gray ring
+// with one accent segment, rotating once every .85s. Global so any surface
+// can drop in `<span class="sh-spinner">`. Resize by overriding
+// width/height/border-width (e.g. the feed's in-progress output pills shrink
+// it to the 14px doctype-glyph slot — see home.scss).
+.sh-spinner {
+  display: inline-block;
+  width: 1.25rem;  // 20px
+  height: 1.25rem;
+  border: 3px solid var(--slds-g-color-neutral-base-90, #e5e5e5);
+  border-bottom-color: var(--slds-g-color-accent-1, #066afe);
+  border-radius: 50%;
+  animation: sh-spin 0.85s linear infinite;
+}
+@keyframes sh-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sh-spinner { animation: none; }
+}
+
