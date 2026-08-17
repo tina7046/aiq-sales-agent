@@ -72,6 +72,22 @@
 {% set navActive  = "__none__" %}
 {% set connections = _home.connections or [] %}
 
+{# ── Workflow drill-in ───────────────────────────────────────────────
+   A conversation reached from a Scheduled row carries a
+   `workflowContext` block (index.json → conversations[id]). Its
+   presence is what turns this page into the drill-in variant: the
+   thread shares the row with the workflow-details side panel rendered
+   by `_workflow_side_panel.html`.
+
+   `_initialWorkflow` is only the SSR default — whichever conversation
+   `data-sh-conv-default` names. Every workflow-backed conversation
+   gets its own panel further down, all but one of them `hidden`, and
+   `switchPanel` in home_conversation.js reveals the one matching
+   `?id=` at boot. So the build never has to guess the URL here
+   either; it just decides which panel starts visible. #}
+{% set _initialConv = conversations[defaultConversationId] or {} %}
+{% set _initialWorkflow = _initialConv.workflowContext or null %}
+
 {# ── Which conversation renders ──────────────────────────────────────
    Every entry in the registry is rendered, each into its own set of
    inert <template>s tagged with `data-sh-conv-for="<id>"`. The build
@@ -122,6 +138,22 @@
        home_conversation.js. #}
     {% include "_home_left_nav.html" %}
 
+    {# ── Layout row ──────────────────────────────────────────────────
+       Holds the conversation column and, beside it, every
+       workflow-backed side panel. They are flex siblings rather than
+       nested, so the Activity list scrolls on its own and closing the
+       panel just lets the thread reclaim the width.
+
+       `--with-panel` is emitted unconditionally to keep the flex math
+       identical across conversations: a conversation with no panel
+       simply has no visible `.seller-home__conv-side` child.
+       `is-panel-collapsed` starts on when the SSR default has no
+       workflow, and `switchPanel` keeps it in sync from there. #}
+    <div
+      class="seller-home__conv-layout seller-home__conv-layout--with-panel{% if not _initialWorkflow %} is-panel-collapsed{% endif %}"
+      data-sh-conv-layout
+      data-sh-conv-workflow-id="{{ (_initialWorkflow.scheduledWorkflowId if _initialWorkflow) or '' }}"
+    >
     <div
       class="seller-home__conv"
       role="main"
@@ -162,6 +194,32 @@
             class="seller-home__conv-header-title"
             data-sh-conv-title
           >{{ fallbackTitle }}</h1>
+        </div>
+
+        {# ── Reopen the workflow panel ────────────────────────────
+           Rendered on every conversation so the header markup stays
+           one shape, and revealed by CSS only when both things are
+           true: the layout is collapsed, AND it carries a non-empty
+           `data-sh-conv-workflow-id`. A conversation without a
+           workflow gets an empty id from `switchPanel`, so the
+           button stays hidden there even though its layout is
+           technically collapsed.
+
+           The visible "Activity" label is the accessible name — no
+           `aria-label` override, which would break voice control by
+           name. See `bindReopenPanel` in home_conversation.js. #}
+        <div class="seller-home__conv-header-actions">
+          <button
+            type="button"
+            class="slds-button slds-button_neutral seller-home__conv-header-reopen"
+            data-sh-conv-header-reopen
+            title="Activity"
+          >
+            <svg class="slds-button__icon slds-button__icon_left" aria-hidden="true">
+              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#list"></use>
+            </svg>
+            Activity
+          </button>
         </div>
       </header>
 
@@ -508,7 +566,29 @@
       <button type="button" class="slds-button seller-home__composer-feedback">Share Feedback</button>
         </div>
       </form>
-    </div>
+    </div>{# /.seller-home__conv #}
+
+    {# ── Workflow side panels ────────────────────────────────────────
+       One per workflow-backed conversation, all rendered here as
+       siblings of the thread column. Only the one matching the SSR
+       default starts visible; `switchPanel` swaps `hidden` at boot
+       once `?id=` is known, so changing conversations is a visibility
+       toggle rather than a re-render.
+
+       Conversations without a `workflowContext` emit nothing at all,
+       which is what keeps this page unchanged for `conv-001` and
+       `conv-002`. #}
+    {% for _cid, conv in conversations %}
+      {% if conv.workflowContext %}
+        {% set workflowContext = conv.workflowContext %}
+        {% set workflowId = conv.workflowContext.scheduledWorkflowId or conv.id %}
+        {% set workflowTitle = conv.title %}
+        {% set workflowConversationId = _cid %}
+        {% set workflowInitialHidden = _cid != defaultConversationId %}
+        {% include "_workflow_side_panel.html" %}
+      {% endif %}
+    {% endfor %}
+    </div>{# /.seller-home__conv-layout #}
   </div>
 
   {# ── Expanded table dialog ─────────────────────────────────────

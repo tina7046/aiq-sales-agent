@@ -7,14 +7,22 @@
 //   • pageTitle     — accessible name for the right-column `<main>`
 //                     region and the document title. Kept parallel
 //                     to knowledge.json for consistency.
-//   • header        — text above the composer.
+//   • header        — text above the body.
 //                       - heading      → the visible `<h1>`
-//                       - description  → intro paragraph beneath it
-//   • composer      — same shape home.json's `composer` uses so the
-//                     shared `_home_composer.html` partial renders
-//                     identically. Empty `samplePrompts` disables
-//                     home.js's typewriter (per design — Scheduled
-//                     ships a single static placeholder).
+//                     (The prior `description` intro paragraph was
+//                     retired when the page adopted the shared
+//                     educational banner — its copy now lives in
+//                     `banner.description` below.)
+//   • banner        — shared educational-banner block. Same shape
+//                     Skills uses; rendered by the shared partial
+//                     `_seller_home_banner.html`. See that file for
+//                     field-level docs. `banner.title` must be
+//                     non-empty for the include to render.
+//   • composer      — DORMANT (mirrors the Skills precedent). Kept
+//                     as-is so re-adding the chat surface is a one-
+//                     line template edit; no live consumer today.
+//                     Shape stays parallel to index.json's
+//                     `composer`.
 //   • tabs          — filter chips + counts across the workflow list.
 //                       - id           → filter key wired to `status`
 //                       - label        → visible label
@@ -58,12 +66,27 @@
 {
   "pageTitle": "Scheduled",
   "header": {
-    "heading": "Scheduled",
-    "description": "Agents that keep working in the background, on a schedule, on a trigger, or until a job is done. Type /schedule in any chat to set one up."
+    "heading": "Scheduled"
   },
-  // Composer — reuses the shared `_home_composer.html` partial. Empty
-  // `samplePrompts` deliberately disables the placeholder typewriter
-  // per the design (single static "Schedule a task" placeholder).
+  // Shared educational banner (see `_seller_home_banner.html`).
+  // Copy mirrors the Skills banner's tone/length so the two landing
+  // pages read as a matched pair. Same illustration asset as Skills
+  // for now — the mascot artwork is generic to Seller Home and no
+  // Scheduled-specific composition exists yet. Dropping in a
+  // Scheduled-specific illustration is a one-line JSON edit.
+  //
+  // This block replaced the prior `header.description` intro
+  // paragraph, whose copy the banner now carries.
+  "banner": {
+    "title":       "Put your recurring tasks on a schedule",
+    "description": "Let Agentforce Coworker handle recurring work, like daily pipeline summaries or weekly project updates. Choose what runs and when, then share schedules with your team.",
+    "imageSrc":    "/assets/images/skills-banner.jpg"
+  },
+  // Composer — DORMANT since the page adopted the shared banner
+  // (mirrors the Skills precedent). No live consumer: scheduled.html
+  // no longer includes `_home_composer.html`. Kept as-is, and kept
+  // shape-parallel to index.json's `composer`, so re-adding the chat
+  // surface is a one-line template edit.
   "composer": {
     "placeholder": "Schedule a task",
     "ariaLabel": "Schedule a task",
@@ -83,12 +106,20 @@
   // Tabs. Counts are computed client-side from `workflows[]` by
   // bindScheduled() in home.js so the JSON never has to hand-track
   // them. `statuses: []` on "all" means the tab matches everything.
+  //
+  // Approvals were promoted out of the "Scheduled" bucket into their
+  // own "Need attention" tab — they are the surface's most actionable
+  // state, so the design elevates them. "Scheduled" now covers
+  // workflows in a healthy cadence only. Default tab is "all" so a
+  // seller with mixed workflows lands on the fullest picture rather
+  // than an initially-empty "Need attention" tab.
   "tabs": {
-    "defaultTabId": "scheduled",
+    "defaultTabId": "all",
     "items": [
-      { "id": "all",       "label": "All",       "statuses": [] },
-      { "id": "scheduled", "label": "Scheduled", "statuses": ["needs_approval", "scheduled"] },
-      { "id": "paused",    "label": "Paused",    "statuses": ["paused"] }
+      { "id": "all",            "label": "All",            "statuses": [] },
+      { "id": "need_attention", "label": "Need attention", "statuses": ["needs_approval"] },
+      { "id": "scheduled",      "label": "Scheduled",      "statuses": ["scheduled"] },
+      { "id": "paused",         "label": "Paused",         "statuses": ["paused"] }
     ]
   },
   // Status registry — one entry per `workflow.status` value. Adding
@@ -101,19 +132,23 @@
     "scheduled":      { "label": "Scheduled",      "dot": "green"  },
     "paused":         { "label": "Paused",         "icon": "play"  }
   },
-  // Workflows. `linked: false` on every row for now — the design
-  // ships a list surface; the workflow-detail view is a separate
-  // future increment (mirrors the deferred detail-view step in the
-  // implementation plan). When a detail page lands, drop the
-  // `linked: false` field and the row automatically renders as an
-  // `<a>` to the row's route.
+  // Workflows. A row drills in when it has somewhere to go: drop the
+  // `linked: false` and give it an `href`, and the row macro renders it
+  // as an `<a>` instead of an inert `<div>`.
+  //
+  // Daily Pipeline Snapshot is the one wired up so far. Its `href`
+  // points at the conversation carrying the matching `workflowContext`
+  // block (index.json → conversations), which is what puts the
+  // run-history side panel beside that thread. The remaining rows stay
+  // `linked: false` until they have a conversation of their own.
   "workflows": [
     {
       "id":      "wf-daily-pipeline-snapshot",
       "title":   "Daily Pipeline Snapshot",
       "cadence": "Daily at 9:00 AM PST",
       "status":  "needs_approval",
-      "linked":  false
+      "linked":  true,
+      "href":    "/home_conversation.html?id=conv-daily-pipeline-snapshot"
     },
     {
       "id":      "wf-daily-deal-summary",

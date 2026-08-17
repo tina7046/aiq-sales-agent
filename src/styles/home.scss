@@ -3126,20 +3126,11 @@ main.app-wrapper {
      overrides. */
 }
 
-// ── Description paragraph ─────────────────────────────────────────
-// The 14/19 Regular intro line beneath the header, above the
-// composer. Same on-surface-2 color the doc-row name uses so the
-// two blocks read as one visual family. `margin: 0` because the
-// inner column's flex `gap` (16px) already handles the spacing to
-// the composer below; a stacked margin would double it.
-.seller-home__scheduled-description {
-  margin: 0;
-  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
-  font-weight: 400;
-  line-height: 1.1875rem; // 19px
-  color: var(--slds-g-color-on-surface-2, #2e2e2e);
-}
+// (The 14/19 intro paragraph beneath the header was removed when
+// Scheduled adopted the shared educational banner. Its
+// `.seller-home__scheduled-description` selector was deleted with
+// the markup; if the intro line ever returns, redeclare it here so
+// `.seller-home__scheduled` overrides stay grouped.)
 
 // ══════════════════════════════════════════════════════════════════════
 // Toolbar — tab chips + right-anchored filter button.
@@ -3332,10 +3323,15 @@ main.app-wrapper {
 .seller-home__scheduled-workflow-row {
   display: flex;
   align-items: center;
-  gap: var(--slds-g-spacing-3, 0.75rem); // 12px indicator-to-text
+  // 10px indicator-to-text. Bespoke rather than tokenised: 10 px
+  // falls between `--slds-g-spacing-2` (8) and `-3` (12), and the
+  // 24-px status cell already centers an 8-px dot, so the OPTICAL
+  // gap from dot to title is 10 + 8 = 18 px. Tuning by the optical
+  // figure is why this doesn't land on a token.
+  gap: 0.625rem; // 10px
   min-height: 3.5rem; // 56px — Figma-fixed row height
 
-  padding-inline: var(--slds-g-spacing-4, 1rem); // 16px
+  padding-inline: var(--slds-g-spacing-3, 0.75rem); // 12px
   padding-block: 0;
 
   background: var(--slds-g-color-surface-1, #ffffff);
@@ -3412,13 +3408,21 @@ main.app-wrapper {
 // doesn't cause a horizontal jump.
 //
 // Two shapes:
-//   • dot  — a 12-px filled circle. Color comes from the variant
+//   • dot  — an 8-px filled circle. Color comes from the variant
 //            modifier (`--yellow` | `--green`), painted from SLDS
 //            success / warning palette so a future palette shift
 //            flows through automatically.
-//   • icon — a 16-px utility-sprite glyph (used by `paused` →
-//            `play` sprite). Rendered at 16 px so the visual weight
-//            lines up with the dot's mass.
+//   • icon — an 11-px utility-sprite glyph (used by `paused` →
+//            `play` sprite). Sized so the glyph's visual weight
+//            lines up with the dot's mass — the two scale together,
+//            so a change to one needs a proportional change to the
+//            other or the paused row becomes the loudest indicator
+//            in the list.
+//
+// Both shapes shrank (12 → 8 dot, 16 → 11 glyph) so the indicator
+// reads lighter than the 14-px row title beside it. At 12 px the
+// dot carried more visual mass than the type it annotated, which
+// made the list read as a bulleted list rather than a status list.
 .seller-home__scheduled-status {
   flex: 0 0 auto;
   display: inline-flex;
@@ -3429,16 +3433,19 @@ main.app-wrapper {
 }
 
 .seller-home__scheduled-status--dot {
-  // The dot itself is a 12-px filled circle drawn as this element's
+  // The dot itself is an 8-px filled circle drawn as this element's
   // own background — `.seller-home__scheduled-status` provides the
   // 24-px alignment cell; a `::before` would add markup for no
   // benefit. Painted from SLDS palette tokens so a future palette
   // shift retunes both variants at once.
+  //
+  // The dot shrinks inside the fixed 24-px cell, so resizing it
+  // never reflows the title column.
   &::before {
     content: "";
     display: block;
-    width: 0.75rem;  // 12px
-    height: 0.75rem; // 12px
+    width: 0.5rem;  // 8px
+    height: 0.5rem; // 8px
     border-radius: 50%;
     // The base color is set by the variant modifiers below. Fall
     // back to a neutral gray so an unknown status still renders a
@@ -3465,7 +3472,7 @@ main.app-wrapper {
 }
 
 // ── Icon variant (paused → play glyph) ────────────────────────────
-// The 16-px sprite sits inside the 24-px alignment cell. Fill
+// The 11-px sprite sits inside the 24-px alignment cell. Fill
 // resolves via `currentColor`; the wrapper's `color` sets it to
 // the SLDS accent-3 (deep navy) so the glyph reads as chrome —
 // matches the "solid triangle" density in Figma without borrowing
@@ -3475,8 +3482,8 @@ main.app-wrapper {
 }
 
 .seller-home__scheduled-status-icon {
-  width: 1rem;   // 16px
-  height: 1rem;  // 16px
+  width: 0.6875rem;   // 11px
+  height: 0.6875rem;  // 11px
   fill: currentColor;
 }
 
@@ -3524,19 +3531,18 @@ main.app-wrapper {
 // Overflow menu — mirrors `.seller-home__knowledge-doc-menu` block.
 // Cloned rather than shared because the position math differs
 // (Scheduled has no chevron column — the trigger sits closer to the
-// row's right edge — so `right: 1rem` here vs `right: 3rem` on
+// row's right edge — so `right: 0.75rem` here vs `right: 3rem` on
 // Knowledge). Reveal contract, panel drop, item hover states, and
 // aria conventions are otherwise identical.
 // ══════════════════════════════════════════════════════════════════════
 .seller-home__scheduled-workflow-menu {
   position: absolute;
   top: 50%;
-  // 16 px padding + 32 px button width = 48 px total; centering the
-  // 32-px trigger at `right: 1rem` (16 px) puts its center on the
-  // row's right-side padding line, aligned with the chevron column
-  // math on Knowledge so the two lists' menus feel positionally
-  // consistent even though Scheduled ships no chevron.
-  right: 1rem;
+  // Tracks the row's `padding-inline`: centering the 32-px trigger
+  // at `right: 0.75rem` (12 px) puts its center on the row's
+  // right-side padding line. If the row padding changes, this
+  // changes with it or the trigger drifts off that line.
+  right: 0.75rem;
   transform: translateY(-50%);
   z-index: 2;
 }
@@ -3695,25 +3701,251 @@ main.app-wrapper {
   }
 }
 
-// Narrow-viewport tuning — tighten the workflow-row inline padding
-// so the row breathes without eating into the overflow trigger's
-// tap target. Mirrors the equivalent Knowledge doc-row rule.
+// Narrow-viewport tuning — tighten the indicator-to-text gap and the
+// reserved menu gutter so the row breathes without eating into the
+// overflow trigger's tap target. Mirrors the equivalent Knowledge
+// doc-row rule.
+//
+// The row's `padding-inline` and the menu's `right` are NOT overridden
+// here: both are already 12 px at every width since the row padding
+// came down from 16, so the former overrides were no-ops.
 @media (max-width: 40rem) {
   .seller-home__scheduled-workflow-row {
-    padding-inline: var(--slds-g-spacing-3, 0.75rem);
     gap: var(--slds-g-spacing-2, 0.5rem); // 8px, tightens indicator-to-text
   }
 
-  // Reserved right gutter for the overflow menu shrinks in step
-  // with the row's inline padding.
+  // Reserved right gutter for the overflow menu shrinks to keep an
+  // 8-px clearance from the ellipsized title (12 padding + 40 gutter
+  // − 12 menu offset − 32 button = 8).
   .seller-home__scheduled-workflow-body {
     margin-inline-end: 2.5rem; // 40px (32 overflow + 8 gap)
   }
+}
 
-  // Row's inline padding = 12 px; center the 32-px trigger at
-  // `right: 0.75rem` (12 px) so its center still lands on the
-  // row's right-side padding line.
-  .seller-home__scheduled-workflow-menu {
-    right: 0.75rem;
+// ══════════════════════════════════════════════════════════════════
+// Educational banner — brand-blue hero above the tab strip.
+// ------------------------------------------------------------------
+// Shared surface used on both the Skills and Scheduled landing
+// pages (renamed 2026-08-11 from the Skills-only `.seller-home__
+// skills-banner*` block). Rendered by the shared
+// `_seller_home_banner.html` partial.
+//
+// Lives in home.scss rather than skills.scss because both hosts
+// link home.css while only /skills.html links skills.css — a
+// second consumer on Scheduled would otherwise have had to pull
+// in the whole Skills stylesheet (or duplicate these rules) just
+// to paint the hero.
+//
+// Each host page ships its own
+// copy (title, description) and illustration path via its
+// {skills,scheduled}.json `banner` block; the CSS below owns the
+// gradient fill, mascot positioning, radius, padding, and
+// typography so the two hosts stay visually identical without
+// duplicating rules.
+//
+// The illustration is applied as a `background-image` (inline
+// `style` attr in the partial so the asset path stays in JSON)
+// which lets the mascot tuck behind the title gracefully at
+// narrow widths without a JS-driven visibility toggle.
+//
+// Layout math (Figma "Coworker – Skills" hero):
+//   • Height:     8rem (128 px) — tall enough for a two-line
+//                 description without pushing the tab strip off
+//                 the first fold.
+//   • Padding:    1.5rem 2rem (24 / 32) — matches the mascot's
+//                 baked-in inset so the title never overlaps the
+//                 sparkles.
+//   • Radius:     `--slds-g-radius-border-3` (12 px) — same shape
+//                 the SkillCard used pre-refactor, keeping the
+//                 visual family consistent inside the body-inner.
+//   • Margin-bottom: `--slds-g-spacing-4` (16 px) — separates the
+//                 banner from the tab-toolbar's top edge without
+//                 crowding.
+//
+// The gradient behind the mascot on the asset transitions from a
+// slightly lighter blue on the left to `--slds-g-color-accent-2` on
+// the right. `background-position: right center` anchors the
+// mascot to the right so a container narrower than the artwork's
+// intrinsic 1024 × 215 aspect still shows the whole mascot; the
+// left portion of the artwork's gradient covers the text region.
+//
+// Fallback gradient: if `banner.imageSrc` is ever cleared in JSON,
+// the CSS `background-color` below carries a token-driven brand-
+// blue so the banner still reads as a hero surface rather than a
+// grey block. Text contrast stays above WCAG AA against either
+// the image or the fallback fill.
+.seller-home__banner {
+  display: flex;
+  // Top-align the copy stack so the title's baseline sits ~25 px
+  // from the banner top edge (Figma frame 9737:22220 — copy stack
+  // anchored at `left: 24px, top: 25px`, NOT vertically centred).
+  // The banner's overall min-height (128 px) still holds; if a
+  // future localisation grows the copy taller than that, the
+  // banner grows downward from the top edge rather than pushing
+  // the title off the top-of-frame position.
+  align-items: flex-start;
+  justify-content: flex-start;
+  min-height: 8rem; // 128px
+  // 24 px on every side — matches Figma's copy-container inset
+  // (`left: 24`, `top: 25`, ~1 px off). Right pad doesn't matter
+  // for the copy column (its own max-width clears the mascot art)
+  // but keeps the mascot from crowding the very edge in narrow
+  // viewports.
+  padding: var(--slds-g-spacing-5, 1.5rem);
+  margin-bottom: var(--slds-g-spacing-4, 1rem);
+
+  color: var(--slds-g-color-on-accent-1, #ffffff);
+  background-color: var(--slds-g-color-accent-2, #0176fa);
+  background-repeat: no-repeat;
+  // `cover` keeps the artwork's aspect ratio while filling the
+  // banner surface; `right center` anchors the mascot to the right
+  // edge so a container narrower than the artwork still shows the
+  // whole mascot rather than cropping it.
+  background-size: cover;
+  background-position: right center;
+
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+  overflow: hidden;
+}
+
+// Left-anchored copy stack. `max-width` clamps the text column to
+// roughly the visual boundary between the gradient's darker right
+// side and the mascot art — long localised copy wraps to a second
+// line rather than running under the mascot. The whole stack is
+// vertically centred against the banner via the parent's
+// `align-items: center` rule.
+.seller-home__banner-copy {
+  display: flex;
+  flex-direction: column;
+  // Title and description stack with ZERO gap per Figma (frame
+  // 9737:22222 — inner text block sets `gap: --slds-g-spacing-0`).
+  // Optical spacing between them comes entirely from each block's
+  // line-box padding at their respective line-heights (28 px on
+  // the title, 18 px on the description).
+  gap: 0;
+  // 474 px per Figma (frame 9737:22221 → `w-[474px]`). Chosen so
+  // the copy column ends flush with where the mascot artwork
+  // begins — long localisations wrap onto a second line inside
+  // the copy area rather than colliding with the mascot.
+  max-width: 29.625rem; // 474px
+  min-width: 0;
+}
+
+// Title — SLDS Titles/font-scale-3 semibold, white. Matches the
+// header title one level up (`.seller-home__knowledge-header-title`)
+// so the two hero elements read as one typographic family across
+// the top of the page.
+.seller-home__banner-title {
+  margin: 0;
+  color: var(--slds-g-color-on-accent-1, #ffffff);
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-3, 1.25rem); // 20px
+  font-weight: 590;
+  line-height: 1.75rem; // 28px
+  letter-spacing: 0;
+}
+
+// Description — SLDS Body/font-scale-base regular (frame
+// 9737:22224 in the Figma source). 13 / 18, weight 400, letter
+// spacing 0, full-white foreground. The 90 %-alpha treatment the
+// prior implementation shipped was withdrawn because the Figma
+// spec uses solid white here (`text-white` on the paragraph, no
+// opacity modifier); the mascot never crosses under the copy
+// column, so there's no gradient region where a duller tone
+// would help contrast. Overflow-wrap on `anywhere` guards against
+// long unbroken tokens (URLs, locale tokens) blowing out the
+// text column at narrow widths.
+.seller-home__banner-description {
+  margin: 0;
+  color: var(--slds-g-color-on-accent-1, #ffffff);
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.125rem; // 18px
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+// Narrow-viewport tuning. On tablet-portrait widths (under 40 rem
+// / 640 px) the mascot begins to crowd the copy — we tighten the
+// padding, shorten the min-height, and cap the copy column at the
+// full banner width so the text stack drops onto more lines rather
+// than being pushed under the mascot art. The mascot itself is
+// still visible (`background-size: cover`, right-anchored) but
+// occupies less of the banner's total width.
+@media (max-width: 40rem) {
+  .seller-home__banner {
+    min-height: 7rem; // 112px
+    padding: 1.25rem 1.5rem; // 20 / 24
+  }
+
+  .seller-home__banner-copy {
+    max-width: 100%;
+  }
+}
+
+// ── Ultra-narrow (≤ 30 rem / 480 px) ──────────────────────────────
+// Below phone-portrait width the banner's mascot art gets crowded
+// enough by the copy column that its face falls behind the title.
+// Three protections stacked for defence in depth:
+//   • Nudge the mascot further off the right edge via
+//     `background-position: right -64px center` so its silhouette
+//     stays visible but its face doesn't sit under the copy.
+//   • Shrink the banner's inner padding by 4 px so the copy column
+//     reclaims horizontal room.
+//   • Overlay a right-anchored gradient scrim on the banner's
+//     surface via `::after` — transparent on the left, ~50 % accent-2
+//     on the right — so any copy that reaches into the mascot's
+//     silhouette region reads against a uniform darkened field
+//     rather than the mascot's lighter facial highlights. Kept as
+//     a pseudo-element (not a `background-image` layer) so the JSON-
+//     driven `imageSrc` on the banner element stays the sole owner
+//     of the mascot artwork; the scrim is a CSS-only overlay
+//     scoped to this breakpoint.
+// The `.seller-home__banner-copy` gets `position: relative;
+// z-index: 1` so it stays above the scrim. Copy is fully readable
+// at every band on the mascot art — SLDS tokens for
+// `--slds-g-color-on-accent-1` (white) stay above 4.5:1 against
+// the darkened field, so contrast holds even when the title
+// wraps under the mascot silhouette.
+@media (max-width: 30rem) {
+  // Drop the mascot artwork entirely at ultra-narrow — the copy
+  // column at this width is only ~ 240 px, which is smaller than
+  // the artwork's mascot region. Any positioning trick that keeps
+  // the mascot visible ends up placing its face directly under the
+  // title. Rather than fight the artwork, we hand the full banner
+  // to the copy and rely on the SLDS accent-2 background-color
+  // fallback (declared on `.seller-home__banner` above) for
+  // a clean, uniform brand-blue surface. The artwork returns
+  // automatically at > 30 rem because the `!important`-free
+  // `background-image` on the element (set inline from
+  // `banner.imageSrc` in `_seller_home_banner.html`) is a lower cascade
+  // priority than this media-query rule.
+  //
+  // 30 rem = 480 px at the default 16-px root font-size. Chrome
+  // headless clamps its viewport to a 500-px minimum, so this
+  // breakpoint is unreachable in the automated screenshot audit —
+  // but real phones (iPhone 375 CSS px, Android 360–412 CSS px)
+  // all report below 480 CSS px and therefore hit this rule
+  // naturally.
+  .seller-home__banner {
+    padding: 1rem 1.25rem; // 16 / 20
+    // `!important` is load-bearing here: `_seller_home_banner.html`
+    // sets `background-image` as an INLINE style attribute
+    // (specificity 1000), which regular CSS rules can't
+    // out-cascade. `!important` gives this media-query rule the
+    // authority to override the inline default at ultra-narrow —
+    // without it, the mascot artwork would still paint at 400 px.
+    // Preferred over refactoring the template to move the
+    // artwork onto a CSS class because keeping `banner.imageSrc`
+    // in JSON is the documented path for a future
+    // artwork / localised-mascot swap.
+    background-image: none !important;
+    background-color: var(--slds-g-color-accent-2, #0176fa);
+  }
+
+  .seller-home__banner-copy {
+    max-width: 100%;
   }
 }

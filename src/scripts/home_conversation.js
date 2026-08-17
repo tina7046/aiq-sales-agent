@@ -378,6 +378,15 @@
     // delegation, so a chip cloned in mid-thread needs no re-wiring.
     bindTableExpand()
 
+    // Workflow drill-in. `switchPanel` first, so the layout is in its
+    // final state before anything measures or focuses inside it; the
+    // binders then run against every panel, including the hidden ones,
+    // which costs nothing and means a later reveal needs no re-wiring.
+    switchPanel(openId, entry)
+    var panels = document.querySelectorAll('[data-sh-workflow-panel]')
+    for (var p = 0; p < panels.length; p++) bindWorkflowSidePanel(panels[p])
+    bindReopenPanel()
+
     // Composer: autosize, Enter-to-send, and the scripted reply queue.
     // It owns the thread mutations and the busy state, so the opening
     // sequence plays through the handle it returns rather than
@@ -2342,6 +2351,442 @@
     setTimeout(function () {
       if (container.parentNode) container.remove()
     }, duration)
+  }
+
+  // ── Workflow side panel ─────────────────────────────────────────
+  // Reveal the panel belonging to `activeConvId` and hide the rest.
+  // Every workflow-backed conversation renders its own panel at build
+  // time, so switching conversations is a visibility toggle.
+  //
+  // When no panel matches — the conversation has no `workflowContext`,
+  // or it's a scheduling draft — the layout collapses and the thread
+  // takes the full width. The empty `data-sh-conv-workflow-id` is what
+  // keeps the header's Activity button hidden in that case (see the
+  // compound selector in home_conversation.scss).
+  function switchPanel (activeConvId, activeEntry) {
+    var layout = document.querySelector('[data-sh-conv-layout]')
+    var panels = document.querySelectorAll('[data-sh-workflow-panel]')
+    var visiblePanel = null
+
+    for (var i = 0; i < panels.length; i++) {
+      var p = panels[i]
+      if (p.getAttribute('data-sh-workflow-panel-conversation-id') === activeConvId) {
+        p.removeAttribute('hidden')
+        p.removeAttribute('aria-hidden')
+        visiblePanel = p
+      } else {
+        p.setAttribute('hidden', '')
+        p.setAttribute('aria-hidden', 'true')
+      }
+    }
+
+    if (!layout) return
+
+    if (visiblePanel && activeEntry && activeEntry.workflowContext) {
+      // A panel to show — but respect the seller's last choice for
+      // this workflow. Closing it once should stay closed.
+      var wfId = visiblePanel.getAttribute('data-sh-workflow-panel-id') || ''
+      var pref = null
+      try {
+        pref = window.localStorage && window.localStorage.getItem('sh:convPanel:' + wfId)
+      } catch (e) { /* private mode: fall through to open */ }
+      if (pref === 'collapsed') layout.classList.add('is-panel-collapsed')
+      else layout.classList.remove('is-panel-collapsed')
+      layout.setAttribute('data-sh-conv-workflow-id', wfId)
+    } else {
+      layout.classList.add('is-panel-collapsed')
+      layout.setAttribute('data-sh-conv-workflow-id', '')
+    }
+  }
+
+  // Wire one workflow panel: collapse, overflow menu, run selection
+  // (scroll the thread to that run's output), Retry, and the two
+  // Activity filters.
+  //
+  // What it does NOT own: the messages themselves. The thread renders
+  // its own content; the panel only anchors into it.
+  function bindWorkflowSidePanel (panel) {
+    if (!panel) return
+
+    var workflowId = panel.getAttribute('data-sh-workflow-panel-id') || ''
+    var layout = panel.closest ? panel.closest('[data-sh-conv-layout]') : null
+    var storageKey = 'sh:convPanel:' + workflowId
+    var HIGHLIGHT_MS = 1800
+    var ERROR_TIMEOUT_MS = 6000
+    var RETRY_MOCK_MS = 2000
+
+    function collapse () {
+      if (!layout || layout.classList.contains('is-panel-collapsed')) return
+      layout.classList.add('is-panel-collapsed')
+      try {
+        if (window.localStorage) window.localStorage.setItem(storageKey, 'collapsed')
+      } catch (e) { /* no-op */ }
+      // Don't strand the caret on a control that just went away.
+      var main = document.querySelector('.seller-home__conv')
+      if (main && typeof main.focus === 'function') main.focus()
+    }
+
+    var closeBtn = panel.querySelector('[data-sh-workflow-panel-close]')
+    if (closeBtn) closeBtn.addEventListener('click', collapse)
+
+    // Escape inside the panel collapses it, the way SLDS docked panels
+    // behave — unless a menu is open, which claims Escape first.
+    panel.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape' && event.key !== 'Esc') return
+      if (panel.querySelector('[data-sh-workflow-panel-menu-list]:not([hidden])')) return
+      if (!layout || layout.classList.contains('is-panel-collapsed')) return
+      event.preventDefault()
+      collapse()
+    })
+
+    // ── Overflow menu ──────────────────────────────────────────
+    var menuTrigger = panel.querySelector('[data-sh-workflow-panel-menu-trigger]')
+    var menuList = panel.querySelector('[data-sh-workflow-panel-menu-list]')
+    if (menuTrigger && menuList) {
+      var setMenuOpen = function (open) {
+        menuList.hidden = !open
+        menuTrigger.setAttribute('aria-expanded', open ? 'true' : 'false')
+      }
+
+      menuTrigger.addEventListener('click', function (event) {
+        event.stopPropagation()
+        var isOpen = menuTrigger.getAttribute('aria-expanded') === 'true'
+        setMenuOpen(!isOpen)
+        if (!isOpen) {
+          var firstItem = menuList.querySelector('[data-sh-workflow-panel-action]')
+          if (firstItem && typeof firstItem.focus === 'function') {
+            setTimeout(function () { firstItem.focus() }, 0)
+          }
+        }
+      })
+
+      document.addEventListener('click', function (event) {
+        if (menuList.hidden) return
+        if (event.target && menuTrigger.parentNode &&
+            menuTrigger.parentNode.contains(event.target)) return
+        setMenuOpen(false)
+      })
+
+      menuList.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape' && event.key !== 'Esc') return
+        event.stopPropagation()
+        setMenuOpen(false)
+        menuTrigger.focus()
+      })
+
+      var menuItems = menuList.querySelectorAll('[data-sh-workflow-panel-action]')
+      for (var m = 0; m < menuItems.length; m++) {
+        menuItems[m].addEventListener('click', function (event) {
+          dispatch(panel, 'sh:workflow-action', {
+            action: event.currentTarget.getAttribute('data-sh-workflow-panel-action'),
+            workflowId: workflowId,
+            source: 'panel-overflow'
+          })
+          setMenuOpen(false)
+          menuTrigger.focus()
+        })
+      }
+    }
+
+    // ── Announce + inline error ────────────────────────────────
+    var announceEl = panel.querySelector('[data-sh-workflow-panel-announce]')
+    var errorEl = panel.querySelector('[data-sh-workflow-panel-error]')
+    var errorTextEl = panel.querySelector('[data-sh-workflow-panel-error-text]')
+    var errorDismissEl = panel.querySelector('[data-sh-workflow-panel-error-dismiss]')
+    var errorTimeoutId = 0
+    var highlightTimeoutId = 0
+    var highlightTargetEl = null
+
+    function announce (text) {
+      if (!announceEl) return
+      // Blank first, then write on the next frame: a live region
+      // assigned the same string twice isn't re-read.
+      announceEl.textContent = ''
+      requestAnimationFrame(function () { announceEl.textContent = text })
+    }
+
+    function hideError () {
+      if (errorEl) errorEl.hidden = true
+      if (errorTimeoutId) {
+        window.clearTimeout(errorTimeoutId)
+        errorTimeoutId = 0
+      }
+    }
+
+    function showError (text) {
+      if (!errorEl || !errorTextEl) return
+      errorTextEl.textContent = text
+      errorEl.hidden = false
+      if (errorTimeoutId) window.clearTimeout(errorTimeoutId)
+      errorTimeoutId = window.setTimeout(hideError, ERROR_TIMEOUT_MS)
+    }
+
+    if (errorDismissEl) errorDismissEl.addEventListener('click', hideError)
+
+    // ── Run selection → scroll the thread ──────────────────────
+    // A run's output is a message in the thread. The message macros
+    // key messages on `data-sh-conv-msg` rather than a DOM id, so
+    // resolve by id first (that's what the tile's `href` names, and
+    // what works with JS off) and fall back to the data attribute.
+    function findMessage (messageId) {
+      if (!messageId) return null
+      return document.getElementById(messageId) ||
+        document.querySelector('[data-sh-conv-msg="' + messageId + '"]')
+    }
+
+    var runAnchors = panel.querySelectorAll('a[data-sh-workflow-panel-run-target]')
+    for (var a = 0; a < runAnchors.length; a++) {
+      runAnchors[a].addEventListener('click', function (event) {
+        // Leave open-in-new-tab intent to the browser.
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+        if (event.button !== 0) return
+        event.preventDefault()
+        selectRun(event.currentTarget, { updateHash: true })
+      })
+    }
+
+    // `.is-selected` on the newest tile is baked in by the template,
+    // but a URL that arrives with `#msg-…` should win — then the panel
+    // and the thread agree on what "current" means.
+    var hashId = window.location.hash ? window.location.hash.slice(1) : ''
+    if (hashId) {
+      var matchAnchor = panel.querySelector('a[data-sh-workflow-panel-run-target="' + hashId + '"]')
+      if (matchAnchor) {
+        // One frame late, so the browser's own scroll restoration and
+        // the thread's first paint both finish first.
+        requestAnimationFrame(function () {
+          selectRun(matchAnchor, { updateHash: false })
+        })
+      }
+    }
+
+    function selectRun (anchor, options) {
+      options = options || {}
+      var targetId = anchor.getAttribute('data-sh-workflow-panel-run-target')
+      var runId = anchor.getAttribute('data-sh-workflow-panel-run')
+      var labelEl = anchor.querySelector('.seller-home__conv-side-run-timestamp')
+      var labelText = labelEl ? labelEl.textContent.trim() : (runId || 'run')
+
+      // Selection and hash update regardless of whether the message
+      // resolves — otherwise a stale selection lingers on a tile the
+      // seller just clicked.
+      selectAnchor(anchor)
+      hideError()
+
+      var targetEl = findMessage(targetId)
+
+      if (!targetEl) {
+        // Every seeded run maps to a rendered message here. This branch
+        // is what a real backend needs when the message is outside the
+        // loaded range.
+        showError('That output isn\u2019t available right now. Try again in a moment.')
+        announce('Output for ' + labelText + ' isn\u2019t available.')
+        return
+      }
+
+      if (options.updateHash) {
+        // `replaceState` when the hash already matches, so repeated
+        // clicks on the current selection don't grow the history stack.
+        var nextHash = '#' + targetId
+        try {
+          if (window.location.hash === nextHash) window.history.replaceState({}, '', nextHash)
+          else window.history.pushState({}, '', nextHash)
+        } catch (e) { /* no-op */ }
+      }
+
+      scrollToTarget(targetEl)
+      highlightTarget(targetEl)
+      announce('Loaded ' + labelText + ' output.')
+    }
+
+    function scrollToTarget (el) {
+      try {
+        el.scrollIntoView({
+          behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+          block: 'start'
+        })
+      } catch (e) {
+        el.scrollIntoView()
+      }
+      // Focus gives keyboard and screen-reader users the same anchor
+      // the scroll just gave everyone else. The message isn't a natural
+      // tab stop, so make it focusable for this one purpose, and don't
+      // let the focus move re-scroll on top of the smooth scroll.
+      if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1')
+      setTimeout(function () {
+        try { el.focus({ preventScroll: true }) } catch (e) { el.focus() }
+      }, 0)
+    }
+
+    function highlightTarget (el) {
+      if (highlightTimeoutId) {
+        window.clearTimeout(highlightTimeoutId)
+        highlightTimeoutId = 0
+      }
+      if (highlightTargetEl && highlightTargetEl !== el) {
+        highlightTargetEl.classList.remove('is-highlighted')
+      }
+      // Remove, flush, re-add — otherwise clicking the same tile twice
+      // doesn't replay the transition.
+      el.classList.remove('is-highlighted')
+      /* eslint-disable-next-line no-unused-expressions */
+      el.offsetWidth
+      el.classList.add('is-highlighted')
+      highlightTargetEl = el
+      highlightTimeoutId = window.setTimeout(function () {
+        el.classList.remove('is-highlighted')
+        highlightTimeoutId = 0
+        highlightTargetEl = null
+      }, HIGHLIGHT_MS)
+    }
+
+    function selectAnchor (anchor) {
+      var selected = panel.querySelectorAll('[data-sh-workflow-panel-run].is-selected')
+      for (var i = 0; i < selected.length; i++) {
+        selected[i].classList.remove('is-selected')
+        selected[i].removeAttribute('aria-current')
+      }
+      anchor.classList.add('is-selected')
+      anchor.setAttribute('aria-current', 'true')
+    }
+
+    // ── Retry ──────────────────────────────────────────────────
+    // Dispatched as a *cancelable* event so a live backend can call
+    // `preventDefault()` and own the retry. Nothing cancels it in the
+    // prototype, so the local mock runs instead — and says so, rather
+    // than implying the run was really re-queued.
+    var retryPending = {}
+    var retryBtns = panel.querySelectorAll('[data-sh-workflow-panel-run-retry]')
+    for (var rb = 0; rb < retryBtns.length; rb++) {
+      retryBtns[rb].addEventListener('click', function (event) {
+        var btn = event.currentTarget
+        var runId = btn.getAttribute('data-sh-workflow-panel-run-retry') || ''
+        if (retryPending[runId]) return
+        retryPending[runId] = true
+
+        var originalLabel = btn.textContent
+        btn.disabled = true
+        btn.setAttribute('aria-busy', 'true')
+        btn.textContent = 'Retrying\u2026'
+
+        var restore = function () {
+          retryPending[runId] = false
+          btn.disabled = false
+          btn.removeAttribute('aria-busy')
+          btn.textContent = originalLabel
+        }
+
+        // Built inline rather than through `dispatch()`, which doesn't
+        // hand back the event needed to read `defaultPrevented`.
+        var evt = null
+        try {
+          evt = new CustomEvent('sh:workflow-action', {
+            bubbles: true,
+            cancelable: true,
+            detail: {
+              action: 'retry',
+              workflowId: workflowId,
+              runId: runId,
+              source: 'panel-retry'
+            }
+          })
+          panel.dispatchEvent(evt)
+        } catch (e) { /* legacy browser: no-op */ }
+
+        if (evt && evt.defaultPrevented) {
+          restore()
+          return
+        }
+
+        announce('Retry started for ' + runId + ' (local prototype).')
+        window.setTimeout(function () {
+          restore()
+          announce('Retry finished (local prototype).')
+        }, RETRY_MOCK_MS)
+      })
+    }
+
+    // ── Activity filters ───────────────────────────────────────
+    // Client-side, against each tile's own status + startedAt
+    // attributes. A range the runs all fall outside of is a real
+    // answer, so the no-match line takes over the list rather than
+    // leaving the section looking broken.
+    var statusFilter = panel.querySelector('[data-sh-workflow-panel-filter="status"]')
+    var rangeFilter = panel.querySelector('[data-sh-workflow-panel-filter="range"]')
+    var runItems = panel.querySelectorAll('[data-sh-workflow-panel-run-item]')
+    var noMatchEl = panel.querySelector('[data-sh-workflow-panel-no-match]')
+    var MS_PER_DAY = 24 * 60 * 60 * 1000
+
+    function applyFilters () {
+      var statusVal = statusFilter ? statusFilter.value : 'all'
+      var rangeVal = rangeFilter ? rangeFilter.value : 'last_30_days'
+      var now = Date.now()
+      var rangeMs = rangeVal === 'today' ? MS_PER_DAY
+        : rangeVal === 'last_7_days' ? 7 * MS_PER_DAY
+          : rangeVal === 'last_30_days' ? 30 * MS_PER_DAY
+            : Infinity
+      var shown = 0
+
+      for (var i = 0; i < runItems.length; i++) {
+        var item = runItems[i]
+        var status = item.getAttribute('data-sh-workflow-panel-run-status') || ''
+        var startedRaw = item.getAttribute('data-sh-workflow-panel-run-started-at') || ''
+        var startedAt = startedRaw ? Date.parse(startedRaw) : NaN
+
+        var statusMatch = statusVal === 'all' || status === statusVal
+        // An unparseable or absent timestamp is never filtered out —
+        // hiding a run because its date is malformed loses information
+        // the seller has no way to get back.
+        var rangeMatch = !isFinite(rangeMs) || isNaN(startedAt) || (now - startedAt) <= rangeMs
+
+        if (statusMatch && rangeMatch) {
+          item.removeAttribute('hidden')
+          shown++
+        } else {
+          item.setAttribute('hidden', '')
+        }
+      }
+
+      if (noMatchEl) noMatchEl.hidden = shown > 0
+    }
+
+    if (statusFilter) statusFilter.addEventListener('change', applyFilters)
+    if (rangeFilter) rangeFilter.addEventListener('change', applyFilters)
+    applyFilters()
+  }
+
+  // The header's Activity button — the way back after the panel has
+  // been closed. Clearing the stored preference is the point: the
+  // seller has just overridden the "stay closed" choice, so it
+  // shouldn't come back collapsed on the next visit.
+  //
+  // Visibility is CSS's job (see the compound selector on
+  // `.seller-home__conv-layout.is-panel-collapsed`), so this only has
+  // to handle activation.
+  function bindReopenPanel () {
+    var btn = document.querySelector('[data-sh-conv-header-reopen]')
+    if (!btn) return
+
+    btn.addEventListener('click', function () {
+      var layout = document.querySelector('[data-sh-conv-layout]')
+      if (!layout) return
+      var wfId = layout.getAttribute('data-sh-conv-workflow-id') || ''
+      if (!wfId) return // defensive: CSS should have kept this hidden
+
+      layout.classList.remove('is-panel-collapsed')
+      try {
+        if (window.localStorage) window.localStorage.removeItem('sh:convPanel:' + wfId)
+      } catch (e) { /* no-op */ }
+
+      // Land focus on the first labelled control inside the region
+      // that just appeared, a tick later so the class change above
+      // doesn't intercept the move.
+      var panel = document.querySelector('[data-sh-workflow-panel]:not([hidden])')
+      var close = panel && panel.querySelector('[data-sh-workflow-panel-close]')
+      if (close && typeof close.focus === 'function') {
+        setTimeout(function () { close.focus() }, 0)
+      }
+    })
   }
 
   window._shShowToast = showToast

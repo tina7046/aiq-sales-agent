@@ -1,0 +1,359 @@
+{#
+  Workflow-details side panel
+  =====================================================================
+  Right-hand rail on `/home_conversation.html` when the active
+  conversation carries a `workflowContext` block (see
+  `index.json → conversations[id].workflowContext`).
+
+  Layout
+  ------
+  Fixed 25 rem (400 px) column, right-anchored inside
+  `.seller-home__conv-layout`. Peer of the conversation column, NOT a
+  descendant — so the Activity list scrolls independently of the
+  thread, and closing the panel reflows the thread to fill the width
+  without any transform math.
+
+    ┌──────────────────────────────────┐
+    │  Header (title + ⋮ + ×)          │  border-b-1
+    ├──────────────────────────────────┤
+    │  Description                     │
+    │  Activity                        │
+    │  ┌─ Statuses ─┐  ┌─ Dates ─┐     │
+    │  ┌──────────────────────────┐    │  run tile, completed
+    │  │ August 7 at 8:04 AM  [✓] │    │  (selected: surface-2 fill)
+    │  │ 68 opportunities …       │    │
+    │  │ View Output              │    │
+    │  ├──────────────────────────┤    │  run tile, failed
+    │  │ August 3 at 9:00 AM  [!] │    │
+    │  │ Salesforce access …      │    │
+    │  │ Retry                    │    │
+    │  └──────────────────────────┘    │
+    └──────────────────────────────────┘
+
+  Data contract
+  -------------
+  Four Nunjucks-scoped vars, set by the caller before `{% include %}`:
+
+    • workflowContext            the object from
+                                 `conversations[id].workflowContext`.
+                                 Owns description, filters,
+                                 filterOptions, runs.
+    • workflowId                 stable `wf-…` id, used on the overflow
+                                 menu so `sh:workflow-action` payloads
+                                 name the right target.
+    • workflowTitle              visible header title. Defaults to the
+                                 conversation title so a rename
+                                 propagates automatically.
+    • workflowConversationId     which conversation this panel belongs
+                                 to. `switchPanel` in
+                                 home_conversation.js matches it
+                                 against `?id=` to pick the one panel
+                                 to reveal.
+
+  Row actions reuse `scheduled.json → rowActions` via `readData`, so
+  the panel menu and the Scheduled list menu stay one data edit. The
+  empty-array fallback keeps the panel rendering if that dataset is
+  ever renamed.
+
+  Accessibility
+  -------------
+  • `role="region"` + `aria-labelledby` — a labelled landmark, NOT a
+    modal. Tab passes through it; there is no focus trap.
+  • Status pills are text-first; the colored fills are supplementary.
+  • Completed runs are native `<a href="#msg-…">`, so Enter and
+    Cmd/middle-click behave natively. The controller intercepts plain
+    pointer activation to smooth-scroll, but the semantics survive
+    with JS off.
+#}
+
+{% set _scheduled = readData("scheduled") or {} %}
+{% set _workflowActions = _scheduled.rowActions or [] %}
+
+<aside
+  class="seller-home__conv-side"
+  data-sh-workflow-panel
+  data-sh-workflow-panel-id="{{ workflowId }}"
+  data-sh-workflow-panel-conversation-id="{{ workflowConversationId or '' }}"
+  role="region"
+  aria-labelledby="workflow-side-panel-title-{{ workflowId }}"
+  {% if workflowInitialHidden %}hidden aria-hidden="true"{% endif %}
+>
+  {# ── Header ─────────────────────────────────────────────────────
+     Title on the left, action cluster (⋮ + ×) on the right. Both
+     icon controls use the SLDS `slds-button_icon-container` bordered
+     variant at `_x-small` so the row clocks in at ~32 px, matching
+     the conversation header band next to it. #}
+  <header class="seller-home__conv-side-header">
+    <h2
+      id="workflow-side-panel-title-{{ workflowId }}"
+      class="seller-home__conv-side-title"
+      title="{{ workflowTitle }}"
+    >{{ workflowTitle }}</h2>
+
+    <div
+      class="seller-home__conv-side-header-actions"
+      role="group"
+      aria-label="Workflow actions"
+    >
+      {# Overflow menu. Items dispatch the same `sh:workflow-action`
+         event the Scheduled list row menu uses, so one listener can
+         serve both surfaces. The list controller in home.js scopes
+         itself to the list root and won't see these hooks, so the
+         dropdown itself is run by `bindWorkflowSidePanel`. #}
+      {% set panelMenuId = "workflow-side-panel-" ~ workflowId ~ "-menu" %}
+      <div
+        class="seller-home__conv-side-menu"
+        data-sh-workflow-panel-menu
+      >
+        <button
+          type="button"
+          class="slds-button slds-button_icon slds-button_icon-container slds-button_icon-x-small seller-home__conv-side-menu-trigger"
+          data-sh-workflow-panel-menu-trigger
+          aria-haspopup="menu"
+          aria-expanded="false"
+          aria-controls="{{ panelMenuId }}"
+          aria-label="More actions for {{ workflowTitle }}"
+          title="More actions"
+        >
+          <svg class="slds-button__icon" aria-hidden="true">
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
+          </svg>
+          <span class="slds-assistive-text">More actions</span>
+        </button>
+        <div
+          class="seller-home__conv-side-menu-list"
+          id="{{ panelMenuId }}"
+          role="menu"
+          aria-label="Workflow actions"
+          data-sh-workflow-panel-menu-list
+          hidden
+        >
+          <ul class="seller-home__conv-side-menu-items" role="none">
+            {% for action in _workflowActions %}
+              <li role="none">
+                <button
+                  type="button"
+                  class="seller-home__conv-side-menu-item"
+                  role="menuitem"
+                  data-sh-workflow-panel-action="{{ action.id }}"
+                >
+                  {% if action.icon %}
+                    <svg class="seller-home__conv-side-menu-item-icon" aria-hidden="true">
+                      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
+                    </svg>
+                  {% endif %}
+                  <span class="seller-home__conv-side-menu-item-label">{{ action.label }}</span>
+                </button>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      {# Close collapses the panel by adding `is-panel-collapsed` to
+         the layout wrapper. The choice is remembered per workflow in
+         `localStorage['sh:convPanel:<workflowId>']`, and the header's
+         Activity button brings it back. #}
+      <button
+        type="button"
+        class="slds-button slds-button_icon slds-button_icon-container slds-button_icon-x-small seller-home__conv-side-close"
+        data-sh-workflow-panel-close
+        aria-label="Close workflow details"
+        title="Close workflow details"
+      >
+        <svg class="slds-button__icon" aria-hidden="true">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+        </svg>
+        <span class="slds-assistive-text">Close workflow details</span>
+      </button>
+    </div>
+  </header>
+
+  {# ── Body ───────────────────────────────────────────────────────
+     The only scroll surface inside the panel, so the Activity list
+     can grow while the header stays pinned above it. #}
+  <div class="seller-home__conv-side-body" data-sh-workflow-panel-body>
+
+    {# Off-screen live region. Empty at render; the controller writes
+       "Loaded August 7 output." here when a run is selected. #}
+    <div
+      class="slds-assistive-text"
+      data-sh-workflow-panel-announce
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    ></div>
+
+    {# Non-destructive error slot, revealed by the controller when a
+       selected run's output can't be found in the thread. Lives
+       inside the scroll area so the Activity list stays visible
+       behind it. Auto-dismisses after 6 s. #}
+    <div
+      class="seller-home__conv-side-error"
+      data-sh-workflow-panel-error
+      role="alert"
+      hidden
+    >
+      <svg class="seller-home__conv-side-error-icon" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#warning"></use>
+      </svg>
+      <span
+        class="seller-home__conv-side-error-text"
+        data-sh-workflow-panel-error-text
+      ></span>
+      <button
+        type="button"
+        class="seller-home__conv-side-error-dismiss"
+        data-sh-workflow-panel-error-dismiss
+        aria-label="Dismiss error"
+      >
+        <svg class="seller-home__conv-side-error-dismiss-icon" aria-hidden="true">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+        </svg>
+      </button>
+    </div>
+
+    {% if workflowContext.description %}
+    <p class="seller-home__conv-side-description">{{ workflowContext.description }}</p>
+    {% endif %}
+
+    {# Activity renders even with no runs — the empty-state paragraph
+       replaces the tile list so the panel never collapses to a bare
+       header. #}
+    <section class="seller-home__conv-side-activity" aria-labelledby="workflow-side-panel-activity-heading-{{ workflowId }}">
+      <h3
+        id="workflow-side-panel-activity-heading-{{ workflowId }}"
+        class="seller-home__conv-side-activity-heading"
+      >Activity</h3>
+
+      {# Two picklists — Statuses + Dates. Native `<select>` under the
+         SLDS classes, so keyboard behaviour comes from the element
+         rather than from script. The controller filters the tile list
+         client-side against each run's status + startedAt. #}
+      {% if workflowContext.filterOptions %}
+      <div class="seller-home__conv-side-filters" role="group" aria-label="Filter activity">
+        {% set _statuses = workflowContext.filterOptions.status or [] %}
+        {% set _ranges   = workflowContext.filterOptions.range or [] %}
+        {% set _selectedStatus = (workflowContext.filters and workflowContext.filters.status) or "all" %}
+        {% set _selectedRange  = (workflowContext.filters and workflowContext.filters.range)  or "last_30_days" %}
+
+        {% if _statuses | length > 0 %}
+        <label class="slds-form-element seller-home__conv-side-filter">
+          <span class="slds-assistive-text">Filter by status</span>
+          <div class="slds-form-element__control">
+            <div class="slds-select_container">
+              <select
+                class="slds-select seller-home__conv-side-filter-select"
+                data-sh-workflow-panel-filter="status"
+                aria-label="Filter activity by status"
+              >
+                {% for opt in _statuses %}
+                  <option value="{{ opt.value }}"{% if opt.value == _selectedStatus %} selected{% endif %}>{{ opt.label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </label>
+        {% endif %}
+
+        {% if _ranges | length > 0 %}
+        <label class="slds-form-element seller-home__conv-side-filter">
+          <span class="slds-assistive-text">Filter by date range</span>
+          <div class="slds-form-element__control">
+            <div class="slds-select_container">
+              <select
+                class="slds-select seller-home__conv-side-filter-select"
+                data-sh-workflow-panel-filter="range"
+                aria-label="Filter activity by date range"
+              >
+                {% for opt in _ranges %}
+                  <option value="{{ opt.value }}"{% if opt.value == _selectedRange %} selected{% endif %}>{{ opt.label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </label>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {# One tile per run, newest first.
+
+         Completed runs render as `<a href="#msg-…">` so keyboard and
+         Cmd/middle-click deep-linking work natively. Failed runs
+         render as a `<div>` with a Retry button — there is no output
+         to jump to, and a button inside an anchor would nest
+         interactives. `loop.first` seeds `.is-selected` so the panel
+         opens with the newest run highlighted. #}
+      {% if workflowContext.runs and workflowContext.runs | length > 0 %}
+      <ul
+        class="seller-home__conv-side-run-list"
+        data-sh-workflow-panel-run-list
+      >
+        {% for run in workflowContext.runs %}
+        <li
+          class="seller-home__conv-side-run-item"
+          data-sh-workflow-panel-run-item
+          data-sh-workflow-panel-run-status="{{ run.status }}"
+          data-sh-workflow-panel-run-started-at="{{ run.startedAt or '' }}"
+        >
+          {% if run.status == 'completed' and run.messageId %}
+          <a
+            class="seller-home__conv-side-run-card{% if loop.first %} is-selected{% endif %}"
+            href="#{{ run.messageId }}"
+            data-sh-workflow-panel-run="{{ run.runId }}"
+            data-sh-workflow-panel-run-target="{{ run.messageId }}"
+            aria-label="Jump to {{ run.label }} output"
+          >
+            <div class="seller-home__conv-side-run-header">
+              <span class="seller-home__conv-side-run-timestamp">{{ run.label }}</span>
+              {# Extends the `slds-badge` blueprint — padding, radius,
+                 and typography come from the design system. The BEM
+                 modifier only remaps the badge's background / text
+                 custom properties to the success family. #}
+              <span class="slds-badge seller-home__conv-side-run-badge seller-home__conv-side-run-badge--completed">Completed</span>
+            </div>
+            <p class="seller-home__conv-side-run-summary">{{ run.summary }}</p>
+            {# Not itself clickable — activation comes from the parent
+               anchor, and the cascading hover rule deepens its color
+               with the tile. #}
+            <span class="slds-text-link seller-home__conv-side-run-cta seller-home__conv-side-run-cta--completed">View Output</span>
+          </a>
+          {% else %}
+          <div
+            class="seller-home__conv-side-run-card seller-home__conv-side-run-card--failed"
+            data-sh-workflow-panel-run="{{ run.runId }}"
+          >
+            <div class="seller-home__conv-side-run-header">
+              <span class="seller-home__conv-side-run-timestamp">{{ run.label }}</span>
+              <span class="slds-badge seller-home__conv-side-run-badge seller-home__conv-side-run-badge--failed">Failed</span>
+            </div>
+            <p class="seller-home__conv-side-run-summary">{{ run.summary }}</p>
+            {# Retry fires `sh:workflow-action { action: 'retry',
+               workflowId, runId }` — the same event name the
+               Scheduled list uses. #}
+            <button
+              type="button"
+              class="slds-text-link seller-home__conv-side-run-cta seller-home__conv-side-run-cta--retry"
+              data-sh-workflow-panel-run-retry="{{ run.runId }}"
+              aria-label="Retry {{ run.label }}"
+            >Retry</button>
+          </div>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {# Shown by the controller when a filter combination matches no
+         runs. Separate from the "no runs at all" case below so the
+         copy can differ. #}
+      <p
+        class="seller-home__conv-side-empty"
+        data-sh-workflow-panel-no-match
+        hidden
+      >No activity matches these filters.</p>
+      {% else %}
+      <p class="seller-home__conv-side-empty">No activity yet.</p>
+      {% endif %}
+    </section>
+  </div>
+</aside>

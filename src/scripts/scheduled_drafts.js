@@ -11,6 +11,12 @@
 // per record above the authored ones, then re-counts the tab pills so
 // the numbers match what's in the list.
 //
+// A record is skipped when the list already shows it — matched on
+// workflow id, and on title for the case the id can't catch (see
+// `existingTitles`). Scheduling a skill that ships an authored row is
+// the normal way a seller hits that, and two rows with one name reads
+// as a bug rather than as two workflows.
+//
 // Rows are built here rather than cloned from a hidden template because
 // the list's markup is a Nunjucks macro
 // (`renderScheduledWorkflowRow` in _scheduled_workflow_list.html) —
@@ -71,6 +77,28 @@
     for (var i = 0; i < rows.length; i++) {
       var id = rows[i].getAttribute('data-sh-workflow-id')
       if (id) out[id] = true
+    }
+    return out
+  }
+
+  function normalizeTitle (value) {
+    return String(value || '').replace(/^\s+|\s+$/g, '').toLowerCase()
+  }
+
+  // Titles already in the list. The id guard above can't catch the
+  // common duplicate: scheduling a skill that ALREADY has an authored
+  // row in scheduled.json produces a record under its own id
+  // (`wf-draft-<skill>-<stamp>`) rather than the authored `wf-<skill>`,
+  // so both rows render and the list reads as if the seller has the
+  // same workflow twice. Authored rows carry no skill id in the DOM —
+  // only `data-sh-workflow-id` and the visible title — so the title is
+  // the key both sides actually share.
+  function existingTitles (listEl) {
+    var out = {}
+    var titles = listEl.querySelectorAll('.seller-home__scheduled-workflow-title')
+    for (var i = 0; i < titles.length; i++) {
+      var key = normalizeTitle(titles[i].textContent)
+      if (key) out[key] = true
     }
     return out
   }
@@ -232,6 +260,7 @@
     // Ids already on the page — an authored row, or one this script
     // spliced on an earlier pass — so a re-run can't double a schedule.
     var seen = existingIds(listEl)
+    var seenTitles = existingTitles(listEl)
     var frag = document.createDocumentFragment()
     // Newest first, so the schedule the seller just confirmed is the
     // row at the top of the list they land on.
@@ -239,6 +268,14 @@
       var record = records[i]
       if (!record || !record.id) continue
       if (seen[record.id]) continue
+      // Same workflow by name as a row already in the list. Only
+      // checked for records that actually carry a title, so two
+      // untitled records — which would both fall back to the same
+      // placeholder in `buildRow` — still get a row each and stay
+      // distinguishable by cadence.
+      var titleKey = normalizeTitle(record.title)
+      if (titleKey && seenTitles[titleKey]) continue
+      if (titleKey) seenTitles[titleKey] = true
       seen[record.id] = true
       frag.appendChild(buildRow(listEl, record))
     }
