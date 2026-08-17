@@ -270,12 +270,11 @@
 					{% endif %}
 				</section>
 
-				{# Chat composer — HIDDEN (not deleted). Uncomment the include to
-				   restore the top chat box; the god-rays shader falls back to
-				   `focalFallbackPx` when no composer is present (see the shader
-				   script below). Config lives in the `composer` key in
-				   data/index.json. #}
-				{# {% include "_home_composer.html" %} #}
+				{# Chat composer — reads its config from the `composer` key in
+				   data/index.json. The god-rays shader anchors its focal point
+				   to this element (`focalOffsetPx`); it falls back to
+				   `focalFallbackPx` only when no composer is on the page. #}
+				{% include "_home_composer.html" %}
 
 				{# Feed (Ready / Running / Scheduled) — rows come from
 				   `feed.readyItems`, `feed.runningItems`, `feed.scheduledItems`. #}
