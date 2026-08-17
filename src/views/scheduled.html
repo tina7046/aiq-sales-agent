@@ -278,6 +278,16 @@
 {% endblock %}
 
 {% block scripts_extra %}
+  {# Schedules the seller set up in a conversation. The store is owned
+     by schedule_conversation.js, so it loads first; scheduled_drafts.js
+     then splices a row per record into the list above.
+
+     Both run BEFORE home.js on purpose: `bindScheduled` caches the row
+     list and applies the active tab's filter when it binds, so rows
+     that are already in the DOM by then need no separate wiring. #}
+  <script src="/scripts/schedule_conversation.js"></script>
+  <script src="/scripts/scheduled_drafts.js"></script>
+
   {# home.js drives the shared shell: nav collapse toggle, composer,
      and (in a follow-up step) the Scheduled tab controller. Its
      Briefing / Knowledge-search handlers no-op on this page because

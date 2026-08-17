@@ -131,6 +131,15 @@
     userTemplate:     '[data-sh-conv-user-template]',
     thinkingTemplate: '[data-sh-conv-thinking-template]',
     thinkingItem:     '[data-sh-conv-thinking]',
+    // The Schedule flow's reply, and the pieces JS fills in a clone of
+    // it. Unlike a scripted turn, the copy arrives from the state
+    // machine at send time — see `runScheduleTurn`.
+    scheduleTemplate:     '[data-sh-conv-schedule-template]',
+    scheduleChipTemplate: '[data-sh-conv-schedule-chip-template]',
+    scheduleSummary:      '[data-sh-conv-summary]',
+    scheduleSummaryValue: '[data-sh-conv-summary-value]',
+    scheduleChips:        '[data-sh-conv-chips]',
+    scheduleChip:         '[data-sh-conv-chip]',
     // Per-conversation templates. Every conversation in the registry
     // renders its own set, so these are always narrowed by the active
     // id (see `scopedSelector`) before being queried.
@@ -156,9 +165,37 @@
   var MODAL_TRANSITION    = '.t-modal'
   // Class the composer carries while a scripted turn is in flight.
   var BUSY_CLASS = 'is-busy'
+  // Skill chip inside the composer. Also the hook the CSS styles and
+  // the marker the text serializer uses to tell a chip apart from the
+  // seller's own typing, so it lives here rather than inline.
+  var PILL_CLASS = 'seller-home__conv-composer-pill'
+  // Chip glyph, built with DOM calls rather than a markup string so a
+  // skill name can never become an injection path. These two paths are
+  // the same glyph the skill chips on /skills.html use, so the
+  // composer's chip and the on-page ones stay identical. Module scope
+  // because the composer seeds a chip during binding, before a
+  // function-scoped `var` would have been assigned.
+  var SVG_NS = 'http://www.w3.org/2000/svg'
+  var PILL_ICON_PATHS = [
+    {
+      transform: 'translate(0.616 0.9232)',
+      evenodd: true,
+      d: 'M11.4591 0C12.434 0 13.2409 0.758083 13.3017 1.73107L13.8242 10.0922H13.8462C14.3702 10.0922 14.7692 10.5235 14.7692 11.0231V12.277C14.7692 13.2992 13.9569 14.1538 12.9231 14.1538H5.23077V14.153C5.21938 14.1532 5.20797 14.1538 5.19652 14.1538C4.19111 14.1538 3.39997 13.3304 3.38523 12.3402L2.92969 4.61538H0.923077C0.413277 4.61538 0 4.20212 0 3.69231V1.84615C0 0.826551 0.826551 0 1.84615 0H11.4591ZM7.0084 12.3119C7.0084 12.5253 6.97191 12.731 6.90535 12.9231H12.9231C13.2487 12.9231 13.5384 12.6482 13.5385 12.277V11.323H7.0084V12.3119ZM3.88643 1.23077C3.95646 1.42473 3.99597 1.63301 3.99911 1.84916L4.61418 12.2758L4.61538 12.2939V12.3119C4.61538 12.6638 4.88978 12.923 5.19652 12.9231C5.50326 12.9231 5.77763 12.6638 5.77763 12.3119V11.0231C5.77763 10.5235 6.17674 10.0923 6.70071 10.0922H12.591L12.0733 1.80769C12.053 1.4834 11.7841 1.23077 11.4591 1.23077H3.88643ZM1.84615 1.23077C1.50629 1.23077 1.23077 1.50629 1.23077 1.84615V3.38462H2.85726L2.77043 1.91316L2.76923 1.89513V1.8768C2.76917 1.50559 2.47945 1.23077 2.15385 1.23077H1.84615Z'
+    },
+    {
+      transform: 'translate(5.8464 3.6928)',
+      evenodd: false,
+      d: 'M2.80839 0.135688C2.89334 -0.0416965 3.14762 -0.0461579 3.23867 0.128181L3.8826 1.36166C4.07491 1.73298 4.3835 2.03049 4.76153 2.2096L6.01722 2.80997C6.19473 2.89483 6.1991 3.14889 6.02473 3.23993L4.79067 3.88387C4.41913 4.07609 4.12131 4.38437 3.94211 4.76218L3.34143 6.01729C3.25651 6.1947 3.00223 6.19917 2.91116 6.0248L2.26691 4.79132C2.07463 4.42006 1.7663 4.12249 1.38833 3.94338L0.135619 3.3427C-0.0416732 3.25778 -0.046135 3.00409 0.128111 2.91304L1.36217 2.2691C1.73371 2.07689 2.03147 1.76535 2.21073 1.3908L2.80839 0.135688Z'
+    }
+  ]
   // Fallback thinking duration when a turn omits `thinkingMs` (or
   // ships an unparseable one).
   var DEFAULT_THINKING_MS = 2000
+  // The Schedule flow's own beat. A scripted turn's 2 s stands in for
+  // work the demo isn't doing; the state machine really does answer
+  // immediately, so this is short — just long enough for the working
+  // row to read as a beat rather than a flicker.
+  var SCHEDULE_THINKING_MS = 600
   // Custom-event names. Kept as string constants so future
   // consumers can subscribe without importing this module.
   var EVT_ROW_SELECT = 'sh:conv-row-select'
@@ -276,28 +313,60 @@
     var has = function (key) {
       return !!key && Object.prototype.hasOwnProperty.call(map, key)
     }
-    if (!has(id)) id = root.getAttribute(ATTR_DEFAULT_CONV)
-    if (!has(id) || !ID_PATTERN.test(id)) id = null
+
+    // An id the registry doesn't know may still name a scheduling draft
+    // held client-side (the Schedule button mints one and links here).
+    // Resolve that BEFORE the default-conversation fallback below, which
+    // would otherwise drop the seller into an unrelated thread.
+    var draft = null
+    if (!has(id) && id && window.SellerHomeScheduling &&
+        typeof window.SellerHomeScheduling.readDraft === 'function') {
+      draft = window.SellerHomeScheduling.readDraft(id)
+    }
+
+    // A draft has no build-time thread or reply script, so it opens as a
+    // genuinely empty conversation: leaving `id` null keeps the stage and
+    // turn lookups empty, which leaves the thread on its placeholder and
+    // puts the composer in echo-only mode. That is the correct shape for
+    // a conversation the seller is starting right now.
+    var draftId = draft ? id : null
+    if (draft) {
+      id = null
+      root.setAttribute('data-sh-conversation-id', draft.id)
+    } else {
+      if (!has(id)) id = root.getAttribute(ATTR_DEFAULT_CONV)
+      if (!has(id) || !ID_PATTERN.test(id)) id = null
+      if (id) root.setAttribute('data-sh-conversation-id', id)
+    }
 
     var entry = id ? map[id] : null
-    if (id) root.setAttribute('data-sh-conversation-id', id)
 
     // What the seller typed on Seller Home, if they arrived that way.
     var query = readQueryFromUrl()
 
     // Their own words title the thread when they wrote them — the
     // conversation's authored title is the fallback for every other
-    // way in.
-    var heading = query || (entry && entry.title)
+    // way in, and a draft carries its own ("Schedule <skill>").
+    var heading = query || (entry && entry.title) || (draft && draft.title)
     var titleEl = root.querySelector(SELECTORS.title)
     if (heading && titleEl) {
       titleEl.textContent = heading
       titleEl.setAttribute('title', heading)
     }
+    // A draft's thread isn't in the build, so the served <title> is the
+    // generic one. Match the tab to the header for it — the other paths
+    // already agree, and rewriting theirs would be a behaviour change.
+    if (draft && heading) {
+      try { document.title = heading } catch (e) { /* noop */ }
+    }
 
-    // Recent highlight + intercept redundant clicks.
-    applyActiveRecent(id)
-    bindRecentClicks(id)
+    // Recent highlight + intercept redundant clicks. Keyed on the
+    // conversation in the URL, which for a draft is `draftId` — `id` is
+    // deliberately null there, and passing that would strip the
+    // highlight off the row the seller just arrived on.
+    var openId = draftId || id
+    applyActiveRecent(openId)
+    bindRecentClicks(openId)
 
     // Wire the tables + reviews the server rendered. The same
     // function runs again on anything cloned in later, so build-time
@@ -313,7 +382,7 @@
     // It owns the thread mutations and the busy state, so the opening
     // sequence plays through the handle it returns rather than
     // reaching into the thread itself.
-    var conv = bindConvComposer(root, map, id)
+    var conv = bindConvComposer(root, map, id, draftId)
     if (conv) conv.playOpening(query)
   }
 
@@ -400,7 +469,11 @@
   //
   // Nothing here talks to a server. Text the seller types is written
   // with `textContent`, so it's data in every path.
-  function bindConvComposer (root, convMap, convId) {
+  // `scheduleDraftId`, when set, names a scheduling draft in
+  // `SellerHomeScheduling` rather than a build-time conversation. It is
+  // the source of the composer's opening prompt and is retired on the
+  // first send; see the prefill block below and `submit`.
+  function bindConvComposer (root, convMap, convId, scheduleDraftId) {
     var form        = root.querySelector(SELECTORS.composer)
     var input       = root.querySelector(SELECTORS.composerInput)
     var send        = root.querySelector(SELECTORS.composerSend)
@@ -410,6 +483,8 @@
 
     var userTpl     = root.querySelector(SELECTORS.userTemplate)
     var thinkingTpl = root.querySelector(SELECTORS.thinkingTemplate)
+    var scheduleTpl     = root.querySelector(SELECTORS.scheduleTemplate)
+    var scheduleChipTpl = root.querySelector(SELECTORS.scheduleChipTemplate)
 
     // Every conversation in the registry rendered its own templates,
     // so each lookup below is narrowed to the active one. An unknown
@@ -444,27 +519,88 @@
     }
 
     autosize()
+    refreshEmptyState()
     updateSendState()
+
+    // ── Scheduling prefill ───────────────────────────────────
+    // Arriving from a skill's Schedule button, the composer opens
+    // pre-loaded with "Schedule <chip> everyday at 8am." so the seller
+    // can read it, edit it, or send it as-is.
+    //
+    // The read is idempotent and the draft is only cleared on the first
+    // send, so a reload before sending restores the prompt in place
+    // rather than dropping the seller into an empty composer.
+    //
+    // Skipped when the composer already holds something: a browser that
+    // restored form state across a refresh, or anything the seller
+    // managed to type first, outranks the prefill.
+    if (scheduleDraftId && window.SellerHomeScheduling &&
+        typeof window.SellerHomeScheduling.readComposerDraft === 'function' &&
+        !hasPill() && !getComposerText().trim()) {
+      var prefill = window.SellerHomeScheduling.readComposerDraft(scheduleDraftId)
+      if (prefill) {
+        seedComposer(prefill.prefix, prefill.pills, prefill.text)
+        // Deferred a frame so the caret lands after any focus the rest
+        // of boot is still competing for.
+        window.requestAnimationFrame(function () { caretToEnd() })
+      }
+    }
 
     input.addEventListener('input', function () {
       autosize()
+      refreshEmptyState()
       updateSendState()
     })
 
-    // Enter → send, Shift+Enter → newline (browser default). During
-    // IME composition Enter is committing a candidate, NOT sending,
-    // so bail on `isComposing` (plus the `keyCode === 229` fallback
-    // for engines that don't set it).
+    // Enter → send, Shift+Enter → newline. During IME composition Enter
+    // is committing a candidate, NOT sending, so bail on `isComposing`
+    // (plus the `keyCode === 229` fallback for engines that don't set
+    // it).
     input.addEventListener('keydown', function (event) {
-      if (event.key !== 'Enter') return
-      if (event.shiftKey) return
-      if (event.isComposing || event.keyCode === 229) return
+      if (event.key === 'Enter') {
+        if (event.isComposing || event.keyCode === 229) return
+        if (event.shiftKey) {
+          // Insert a real newline. Left to the browser, contenteditable
+          // wraps the caret in a <div>, which breaks both the visual
+          // rhythm and the <br> → '\n' pass in getComposerText.
+          event.preventDefault()
+          insertPlainText('\n')
+          refreshEmptyState()
+          updateSendState()
+          return
+        }
+        event.preventDefault()
+        // Prefer `requestSubmit` so a real `submit` event fires and any
+        // other listener on the form still sees it; fall back to the
+        // handler directly on engines that lack it (Safari < 16).
+        if (typeof form.requestSubmit === 'function') form.requestSubmit()
+        else submit()
+        return
+      }
+
+      // A chip deletes in one press from either side of the caret.
+      var bare = !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey
+      if (bare && (event.key === 'Backspace' || event.key === 'Delete')) {
+        var pill = findAdjacentPill(event.key === 'Backspace' ? -1 : 1)
+        if (pill) {
+          event.preventDefault()
+          removePill(pill)
+          refreshEmptyState()
+          updateSendState()
+        }
+      }
+    })
+
+    // Force plain-text paste, so copying from a rich source (a doc, a
+    // web page) can't drop styled markup into the composer. Safari is
+    // already covered by `-webkit-user-modify` in the stylesheet;
+    // Chromium ignores that and needs this.
+    input.addEventListener('paste', function (event) {
+      if (!event.clipboardData) return
       event.preventDefault()
-      // Prefer `requestSubmit` so a real `submit` event fires and any
-      // other listener on the form still sees it; fall back to the
-      // handler directly on engines that lack it (Safari < 16).
-      if (typeof form.requestSubmit === 'function') form.requestSubmit()
-      else submit()
+      insertPlainText(event.clipboardData.getData('text/plain') || '')
+      refreshEmptyState()
+      updateSendState()
     })
 
     form.addEventListener('submit', function (event) {
@@ -502,31 +638,74 @@
       var prompt = button.getAttribute('data-sh-conv-suggestion-prompt') ||
         (button.textContent || '').trim()
       if (!prompt) return
-      input.value = prompt
+      setComposerText(prompt)
       autosize()
       updateSendState()
-      if (typeof input.focus === 'function') input.focus()
       // Caret to the end so typing continues the sentence rather than
       // overwriting a selection.
-      if (typeof input.setSelectionRange === 'function') {
-        input.setSelectionRange(prompt.length, prompt.length)
-      }
+      caretToEnd()
+    })
+
+    // A chip under a scheduling reply is the opposite bargain: it IS
+    // the reply, so clicking one sends it. Same path as typing the
+    // label and pressing Send — one send route, so the busy guard, the
+    // echo, and the state machine all behave identically either way.
+    threadInner.addEventListener('click', function (event) {
+      var chip = event.target && event.target.closest
+        ? event.target.closest(SELECTORS.scheduleChip)
+        : null
+      if (!chip || chip.disabled) return
+      event.preventDefault()
+      // A turn already in flight owns the thread; let it land first.
+      if (state.busy) return
+      var label = chip.getAttribute('data-sh-conv-chip') ||
+        (chip.textContent || '').trim()
+      if (!label) return
+      // Spent, so the strip stops inviting a second click — the button
+      // component paints the greyed-out state, and disabling also drops
+      // it from the tab order. It stays in the thread rather than being
+      // removed: this is a transcript, and a chip that vanishes reads as
+      // a glitch.
+      //
+      // Set before the send rather than after: `state.busy` already
+      // covers the double-click race, but a click that looks dead for
+      // the length of a beat doesn't.
+      chip.disabled = true
+      setComposerText(label)
+      updateSendState()
+      submit()
     })
 
     function submit () {
       // Guard rather than trust the button's disabled state — Enter
       // and `requestSubmit` can both reach here around it.
       if (state.busy) return
-      var raw = input.value
-      var text = raw == null ? '' : raw.trim()
+      var text = getComposerText().trim()
       if (!text) return
 
       state.sent++
       removeEmptyPlaceholder()
       var userItem = appendUserMessage(text)
 
-      input.value = ''
+      clearComposer()
       autosize()
+
+      // Retire the prefill once the seller has actually sent something.
+      // Until this point a reload is meant to restore the prompt, so the
+      // draft is cleared here rather than when it is read.
+      if (scheduleDraftId && window.SellerHomeScheduling &&
+          typeof window.SellerHomeScheduling.clearComposerDraft === 'function') {
+        window.SellerHomeScheduling.clearComposerDraft(scheduleDraftId)
+      }
+
+      // A scheduling draft has no scripted turns: its replies are
+      // decided per send by the state machine, which reads what the
+      // seller just said and answers with the next question, a summary
+      // to confirm, or the confirmation itself.
+      if (scheduleDraftId && scheduleResponder()) {
+        runScheduleTurn(text, userItem)
+        return
+      }
 
       var turnTpl = turns[state.nextTurn] || null
       if (!turnTpl) {
@@ -584,6 +763,133 @@
         // Hand the caret back so a follow-up doesn't need a click.
         if (typeof input.focus === 'function') input.focus()
       }, anchor)
+    }
+
+    // ── The Schedule flow's turn ─────────────────────────────────
+    // `playBeat`'s shape — working row, pause, reply, and both scrolls
+    // on the same anchor — over a reply that doesn't exist until the
+    // state machine builds it. Kept beside `playBeat` rather than
+    // taught to it: there's no template to clone per turn, a payload
+    // to fill instead, and a failure mode a scripted turn can't have.
+    function runScheduleTurn (userText, anchor) {
+      var respond = scheduleResponder()
+      if (!respond) return
+
+      setBusy(true)
+      // No label argument — the template's own copy is the right
+      // wording for this beat too, and one working row for every kind
+      // of turn is the point of that template.
+      var indicator = appendThinking('')
+      if (anchor) scrollAnchorToTop(anchor)
+      else        scrollToLatest()
+
+      window.setTimeout(function () {
+        if (indicator && indicator.parentNode) {
+          indicator.parentNode.removeChild(indicator)
+        }
+        var reply
+        try {
+          reply = respond(scheduleDraftId, userText)
+        } catch (e) {
+          // The state machine reads and writes localStorage, which
+          // throws outright in a locked-down browser. Say so in the
+          // thread rather than leaving the seller looking at their own
+          // message with nothing under it.
+          reply = { text: 'Something went wrong setting up the schedule.' }
+        }
+        appendScheduleReply(reply)
+        if (anchor) scrollAnchorToTop(anchor)
+        else        scrollToLatest()
+        setBusy(false)
+        if (typeof input.focus === 'function') input.focus()
+      }, SCHEDULE_THINKING_MS)
+    }
+
+    // The state-machine step, or null when schedule_conversation.js
+    // isn't on the page. Resolved per call rather than held from bind
+    // time so script order can't decide whether the flow works.
+    function scheduleResponder () {
+      var api = window.SellerHomeScheduling
+      if (!api || typeof api.advanceScheduling !== 'function') return null
+      return api.advanceScheduling
+    }
+
+    // Fill a clone of the schedule template from the state machine's
+    // `{ text, summary?, chips? }`. Slots the turn has nothing for stay
+    // hidden, so asking a question renders as one paragraph while
+    // proposing a schedule renders as prose over a summary and chips.
+    function appendScheduleReply (reply) {
+      var frag = cloneTemplate(scheduleTpl)
+      if (!frag) return null
+      var id = 'msg-live-schedule-' + state.sent
+
+      var item = frag.querySelector('[data-sh-conv-item]')
+      if (item) item.setAttribute('data-sh-conv-item', id)
+      var msg = frag.querySelector('[data-sh-conv-msg]')
+      if (msg) msg.setAttribute('data-sh-conv-msg', id)
+
+      var text = reply && reply.text ? String(reply.text) : ''
+      var textEl = frag.querySelector('[data-sh-conv-msg-text]')
+      if (textEl && text) {
+        textEl.textContent = text
+        textEl.removeAttribute('hidden')
+      }
+
+      fillScheduleSummary(frag, reply && reply.summary)
+      fillScheduleChips(frag, reply && reply.chips)
+
+      threadInner.appendChild(frag)
+      return item
+    }
+
+    // Reveal the summary rows this turn has values for. The card stays
+    // hidden when none of them do, so an empty payload can't paint an
+    // empty box.
+    function fillScheduleSummary (frag, summary) {
+      var card = frag.querySelector(SELECTORS.scheduleSummary)
+      if (!card || !summary) return
+
+      var keys = ['skill', 'cadence', 'time', 'timezone']
+      var shown = 0
+      for (var i = 0; i < keys.length; i++) {
+        var value = summary[keys[i]] ? String(summary[keys[i]]) : ''
+        if (!value) continue
+        // Term and value both, or the row leaves a gap in its column.
+        var halves = card.querySelectorAll(
+          '[data-sh-conv-summary-row="' + keys[i] + '"]'
+        )
+        for (var h = 0; h < halves.length; h++) {
+          halves[h].removeAttribute('hidden')
+          if (halves[h].hasAttribute('data-sh-conv-summary-value')) {
+            halves[h].textContent = value
+          }
+        }
+        shown++
+      }
+      if (shown) card.removeAttribute('hidden')
+    }
+
+    // One chip per suggested reply, cloned from the chip template. The
+    // label goes on the attribute as well as in the button so the
+    // delegated handler reads what was authored rather than whatever
+    // the browser made of the text node.
+    function fillScheduleChips (frag, chips) {
+      var strip = frag.querySelector(SELECTORS.scheduleChips)
+      if (!strip || !chips || !chips.length) return
+
+      var added = 0
+      for (var i = 0; i < chips.length; i++) {
+        var label = chips[i] == null ? '' : String(chips[i])
+        if (!label) continue
+        var chipFrag = cloneTemplate(scheduleChipTpl)
+        var button = chipFrag ? chipFrag.querySelector(SELECTORS.scheduleChip) : null
+        if (!button) continue
+        button.textContent = label
+        button.setAttribute('data-sh-conv-chip', label)
+        strip.appendChild(chipFrag)
+        added++
+      }
+      if (added) strip.removeAttribute('hidden')
     }
 
     // Open the thread: paint what doesn't wait, echo the seller's
@@ -715,17 +1021,257 @@
       updateSendState()
     }
 
-    function updateSendState () {
-      var hasText = !!(input.value && input.value.trim())
-      send.disabled = state.busy || !hasText
+    // ── Composer contents ────────────────────────────────────
+    // The input is a contenteditable holding text nodes and atomic
+    // skill chips, so there is no `.value` to read. Everything below
+    // is the replacement for it: read, write, clear, and the empty
+    // test that drives the placeholder.
+    function isPillEl (node) {
+      return !!node &&
+        node.nodeType === 1 &&
+        !!node.classList &&
+        node.classList.contains(PILL_CLASS)
     }
 
-    // Grow the textarea to fit its content. `max-height` in the
-    // stylesheet caps it and hands off to internal scrolling, so the
-    // composer can't push the thread off-screen.
-    function autosize () {
-      input.style.height = 'auto'
-      input.style.height = input.scrollHeight + 'px'
+    function hasPill () {
+      return !!input.querySelector('.' + PILL_CLASS)
+    }
+
+    // Whether a serialized chip needs a space appended to stand in for
+    // the visual gap its `margin-right` draws. Nothing following, or
+    // something already starting with whitespace, needs no help.
+    function needsSpaceAfterPill (pill) {
+      var next = pill.nextSibling
+      if (!next) return false
+      if (next.nodeType === 3) return !/^[\s\u00a0]/.test(next.nodeValue || '')
+      if (next.nodeType === 1 && next.tagName === 'BR') return false
+      return true
+    }
+
+    // Serialize the composer to plain text in document order, with each
+    // chip contributing its skill name. The chip label has to be part
+    // of the string: it carries the subject of the sentence, so a
+    // message echoed without it would read "Schedule everyday at 8am."
+    // and lose the skill entirely.
+    function getComposerText () {
+      var out = ''
+      for (var i = 0; i < input.childNodes.length; i++) {
+        var node = input.childNodes[i]
+        if (node.nodeType === 3) {
+          out += node.nodeValue
+        } else if (node.nodeType === 1) {
+          if (isPillEl(node)) {
+            out += node.getAttribute('data-skill-name') || node.textContent || ''
+            // The gap after a chip is drawn by its `margin-right`, not by
+            // a space in the DOM, so serializing has to supply one or the
+            // label collides with the next word ("Snapshoteveryday").
+            // Only when what follows doesn't already start with space.
+            if (needsSpaceAfterPill(node)) out += ' '
+          } else if (node.tagName === 'BR') {
+            // Matches how a textarea serialized a Shift+Enter break.
+            out += '\n'
+          } else {
+            // Inline formatting a browser injected despite the paste
+            // handler — take the text and drop the markup.
+            out += node.textContent || ''
+          }
+        }
+      }
+      // Non-breaking spaces are contenteditable's way of holding a
+      // trailing gap open; they would survive `.trim()` and read as
+      // content, so fold them back to ordinary spaces first.
+      return out.replace(/\u00a0/g, ' ').replace(/\r/g, '')
+    }
+
+    function clearComposer () {
+      while (input.firstChild) input.removeChild(input.firstChild)
+      refreshEmptyState()
+    }
+
+    function setComposerText (text) {
+      clearComposer()
+      if (text) input.appendChild(document.createTextNode(String(text)))
+      refreshEmptyState()
+    }
+
+    // Toggles the class the stylesheet hangs the placeholder off.
+    function refreshEmptyState () {
+      if (hasPill() || getComposerText().trim()) input.classList.remove('is-empty')
+      else input.classList.add('is-empty')
+    }
+
+    function updateSendState () {
+      // A chip on its own is a legal message — "schedule this" needs no
+      // accompanying prose — so either chips or text arms Send.
+      var hasContent = !!getComposerText().trim() || hasPill()
+      send.disabled = state.busy || !hasContent
+    }
+
+    // The composer is a contenteditable, which grows on its own; the
+    // stylesheet's `max-height` caps it and hands off to internal
+    // scrolling. Kept as a no-op so the call sites below still read as
+    // "content changed, resize" and a future swap back to a sized
+    // element has one place to land.
+    function autosize () { /* contenteditable auto-grows */ }
+
+    // ── Caret + insertion ────────────────────────────────────
+    function caretToEnd () {
+      try {
+        input.focus()
+        var sel = window.getSelection()
+        var range = document.createRange()
+        range.selectNodeContents(input)
+        range.collapse(false)   // to the END of the contents
+        sel.removeAllRanges()
+        sel.addRange(range)
+      } catch (e) {
+        // Older engines: leaving focus alone is an acceptable outcome.
+        if (typeof input.focus === 'function') input.focus()
+      }
+    }
+
+    // Insert text at the caret as plain text. Used by the paste handler
+    // and by Shift+Enter, both of which would otherwise let the browser
+    // put styled markup or a wrapper <div> into the composer.
+    function insertPlainText (text) {
+      var sel = window.getSelection ? window.getSelection() : null
+      if (!sel || !sel.rangeCount) {
+        input.appendChild(document.createTextNode(text))
+        caretToEnd()
+        return
+      }
+      var range = sel.getRangeAt(0)
+      if (!input.contains(range.commonAncestorContainer)) {
+        input.appendChild(document.createTextNode(text))
+        caretToEnd()
+        return
+      }
+      range.deleteContents()
+      var node = document.createTextNode(text)
+      range.insertNode(node)
+      range.setStartAfter(node)
+      range.setEndAfter(node)
+      sel.removeAllRanges()
+      sel.addRange(range)
+    }
+
+    // ── Skill chips ──────────────────────────────────────────
+    function buildPillIcon () {
+      var svg = document.createElementNS(SVG_NS, 'svg')
+      svg.setAttribute('class', PILL_CLASS + '-icon')
+      svg.setAttribute('viewBox', '0 0 16 16')
+      svg.setAttribute('fill', 'currentColor')
+      svg.setAttribute('aria-hidden', 'true')
+      svg.setAttribute('focusable', 'false')
+      for (var i = 0; i < PILL_ICON_PATHS.length; i++) {
+        var spec = PILL_ICON_PATHS[i]
+        var g = document.createElementNS(SVG_NS, 'g')
+        g.setAttribute('transform', spec.transform)
+        var path = document.createElementNS(SVG_NS, 'path')
+        path.setAttribute('d', spec.d)
+        if (spec.evenodd) {
+          path.setAttribute('fill-rule', 'evenodd')
+          path.setAttribute('clip-rule', 'evenodd')
+        }
+        g.appendChild(path)
+        svg.appendChild(g)
+      }
+      return svg
+    }
+
+    // `contenteditable="false"` is what makes the chip atomic: the
+    // caret steps over it as one unit and cannot land inside the label.
+    // Removal is therefore keyboard-driven (see the Backspace / Delete
+    // branch in the keydown handler) rather than via a close button.
+    function buildPill (ref) {
+      var name = (ref && ref.name) ? String(ref.name) : ''
+      var pill = document.createElement('span')
+      pill.className = PILL_CLASS
+      pill.setAttribute('contenteditable', 'false')
+      pill.setAttribute('data-skill-id', (ref && ref.skillId) ? String(ref.skillId) : '')
+      pill.setAttribute('data-skill-name', name)
+      pill.setAttribute('role', 'group')
+      pill.setAttribute('aria-label', 'Skill: ' + name)
+
+      pill.appendChild(buildPillIcon())
+
+      var label = document.createElement('span')
+      label.className = PILL_CLASS + '-label'
+      label.textContent = name
+      pill.appendChild(label)
+
+      return pill
+    }
+
+    // Lay out the composer as prefix text, then chips, then suffix
+    // text. Wipes first so a re-seed (a reload mid-edit) replaces the
+    // prompt instead of stacking a second copy after it.
+    function seedComposer (prefix, pills, suffix) {
+      clearComposer()
+      if (prefix) input.appendChild(document.createTextNode(String(prefix)))
+      if (pills) {
+        for (var i = 0; i < pills.length; i++) input.appendChild(buildPill(pills[i]))
+      }
+      // No separating space: the chip's own `margin-right` supplies the
+      // gap, and a space here would stack with it and read as a double.
+      if (suffix) input.appendChild(document.createTextNode(String(suffix)))
+      refreshEmptyState()
+      updateSendState()
+    }
+
+    // Which chip, if any, the caret is resting against — looking behind
+    // it for Backspace (direction -1) and ahead for Delete (+1).
+    // Browsers disagree on deleting a `contenteditable=false` node (some
+    // remove it, some select it first), so the composer decides instead.
+    function findAdjacentPill (direction) {
+      var sel = window.getSelection ? window.getSelection() : null
+      if (!sel || !sel.rangeCount) return null
+      var range = sel.getRangeAt(0)
+      if (!range.collapsed) return null
+      if (!input.contains(range.startContainer)) return null
+
+      var container = range.startContainer
+      var offset = range.startOffset
+      var target = null
+
+      if (container === input) {
+        // Caret sits between children: the offset IS a child index.
+        target = input.childNodes[direction < 0 ? offset - 1 : offset] || null
+      } else if (container.nodeType === 3) {
+        // Caret sits inside a text node: only an offset at the very
+        // edge puts it against a sibling.
+        if (direction < 0 && offset === 0) target = container.previousSibling
+        else if (direction > 0 && offset === container.length) target = container.nextSibling
+      }
+      return isPillEl(target) ? target : null
+    }
+
+    // Drop the caret into the gap the chip occupied. Without setting the
+    // range explicitly the selection can be left inside the detached
+    // node, which strands the caret and swallows the next keystroke.
+    function removePill (pill) {
+      var parent = pill.parentNode
+      if (!parent) return
+      var before = pill.previousSibling
+      parent.removeChild(pill)
+      try {
+        var sel = window.getSelection()
+        var range = document.createRange()
+        if (before && before.nodeType === 3) {
+          var end = before.nodeValue ? before.nodeValue.length : 0
+          range.setStart(before, end)
+          range.setEnd(before, end)
+        } else if (before) {
+          range.setStartAfter(before)
+          range.setEndAfter(before)
+        } else {
+          range.setStart(input, 0)
+          range.setEnd(input, 0)
+        }
+        sel.removeAllRanges()
+        sel.addRange(range)
+        input.focus()
+      } catch (e) { /* best-effort caret restore */ }
     }
 
     function scrollThreadTo (top) {

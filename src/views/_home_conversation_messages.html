@@ -153,6 +153,106 @@
 {% endmacro %}
 
 
+{# ── Scheduling reply ─────────────────────────────────────────────
+   The agent's side of the Schedule flow, and the one message in this
+   file with no entry in the registry: its copy comes from the state
+   machine in schedule_conversation.js at send time, so this renders
+   once as an empty shell into a <template> and JS fills a clone per
+   turn — the same arrangement `userMessage` is under.
+
+   An agent article with two slots under the prose, both empty and
+   `hidden` until a turn brings content:
+     • summary — what the seller is about to confirm, as a <dl> so AT
+                 pairs each term with its value ("Cadence: Every
+                 weekday at 8:00 AM PST"). Every row is rendered here
+                 and JS reveals the ones the turn has a value for.
+     • chips   — the suggested replies. Filled from
+                 `scheduleChip` below, so the count is per turn.
+
+   Distinct from the `suggestions` macro further down on purpose:
+   a suggestion loads the composer for the seller to edit, while a
+   chip here IS the reply — clicking one sends it.
+#}
+{% macro scheduleReply() %}
+<li class="seller-home__conv-thread-item" data-sh-conv-item="msg-live-schedule">
+  <article
+    class="seller-home__conv-msg seller-home__conv-msg--agent"
+    data-sh-conv-msg="msg-live-schedule"
+    data-sh-conv-msg-type="agent"
+    aria-label="Agent response"
+  >
+    {# `textContent` on the clone, so the state machine's copy — which
+       carries a skill name — can never land as markup. #}
+    <p class="seller-home__conv-msg-agent-text" data-sh-conv-msg-text hidden></p>
+
+    {# Terms and values are grid children of the <dl>, so a row hides
+       by hiding BOTH of its halves — hence the shared
+       `data-sh-conv-summary-row` key on each pair. #}
+    <div
+      class="seller-home__conv-msg-summary"
+      data-sh-conv-summary
+      role="group"
+      aria-label="Schedule summary"
+      hidden
+    >
+      <dl class="seller-home__conv-msg-summary-list">
+        {{ scheduleSummaryRow("Skill", "skill") }}
+        {{ scheduleSummaryRow("Cadence", "cadence") }}
+        {{ scheduleSummaryRow("Time", "time") }}
+        {{ scheduleSummaryRow("Timezone", "timezone") }}
+      </dl>
+    </div>
+
+    <div
+      class="seller-home__conv-msg-chips"
+      data-sh-conv-chips
+      role="group"
+      aria-label="Suggested replies"
+      hidden
+    ></div>
+  </article>
+</li>
+{% endmacro %}
+
+
+{# One term/value pair in the summary above. `key` is what JS matches
+   on to fill the value and to reveal the pair; both halves carry it
+   because they're grid children of the <dl>, so a row that stayed
+   `hidden` on one side would leave a gap in the column it belongs to. #}
+{% macro scheduleSummaryRow(term, key) %}
+<dt
+  class="seller-home__conv-msg-summary-term"
+  data-sh-conv-summary-row="{{ key }}"
+  hidden
+>{{ term }}</dt>
+<dd
+  class="seller-home__conv-msg-summary-value"
+  data-sh-conv-summary-row="{{ key }}"
+  data-sh-conv-summary-value
+  hidden
+></dd>
+{% endmacro %}
+
+
+{# One suggested reply. Cloned per chip; JS writes the label into both
+   `textContent` and `data-sh-conv-chip`, and the delegated handler in
+   home_conversation.js reads the attribute — so a chip click travels
+   the same path as typing the label and pressing Send.
+
+   A stock SLDS2 neutral button, like the review actions further down
+   and the Schedule button that starts this flow: the theme already
+   gives buttons a pill radius, so the component needs no help to look
+   like a chip. It also owns the hover lift, the focus ring, and — once
+   JS disables a spent chip — the greyed-out treatment. #}
+{% macro scheduleChip() %}
+<button
+  type="button"
+  class="slds-button slds-button_neutral seller-home__conv-msg-chip"
+  data-sh-conv-chip
+></button>
+{% endmacro %}
+
+
 {# ── Agent message ────────────────────────────────────────────────
    Left-aligned agent block. Contains:
      • A text paragraph (`text`).

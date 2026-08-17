@@ -39,8 +39,17 @@ const toggleParent = (element) => toggle(element.parentNode)
 /**
  * Dropdown menus
  * https://www.lightningdesignsystem.com/components/menus/
+ *
+ * `data-slds-dropdown-manual` opts a trigger OUT of this blanket
+ * binder. Some pages ship a dropdown that needs more than an
+ * open/close class flip — focus management, filtering, arrow-key
+ * roving — and wire their own handler on the same button. Without
+ * the opt-out both handlers fire on one click and cancel each
+ * other out, leaving the menu permanently shut.
  */
-const dropdownButtons = document.querySelectorAll('.slds-dropdown-trigger_click > .slds-button')
+const dropdownButtons = document.querySelectorAll(
+  '.slds-dropdown-trigger_click:not([data-slds-dropdown-manual]) > .slds-button'
+)
 
 Array.from(dropdownButtons)
   .forEach((button) =>

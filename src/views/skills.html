@@ -1,0 +1,402 @@
+{% extends "_template.html" %}
+
+{#
+  Seller Home — Skills library landing
+  =====================================================================
+  Reached from the Seller Home left nav's "Skills" item (see
+  home.json → navPrimary). Shares the same `.seller-home` shell
+  (left nav + right column) that /home.html, /knowledge.html, and
+  /scheduled.html use so the global header + left nav stay visually
+  pinned as the user moves between Seller Home surfaces.
+
+  Design source: Figma "Skills" (Issa's Explorations, referenced
+  during the 2026-07-31 build).
+
+  Left-nav content (navPrimary, navFooter, recents) is hydrated at
+  build time from index.json via the `readData` Nunjucks global —
+  one authoritative list feeds every Seller Home page so a nav
+  item added to index.json shows up here automatically.
+  `navActive = "skills"` is set below so the shared nav partial
+  highlights the Skills item.
+
+  Layout skeleton — mirrors knowledge.html and scheduled.html.
+  Restructured on 2026-08-11 to match the Figma "Coworker – Skills"
+  frame: the header band gains a right-anchored "Create Skill" pill
+  (parity with `/knowledge.html`'s "New Knowledge"), the intro
+  description paragraph and the "Start a skill" composer are
+  removed, an educational banner replaces them at the top of the
+  scroll region, and the two-column card grid is swapped for a
+  single-column list. Tabs + filter behavior is preserved verbatim
+  so tab counts, deep links, filter-button dispatch, and the
+  overflow / connected-skills popovers keep working with no JS
+  changes.
+
+    ┌──────────────────────────────────────────────────────────┐
+    │  ┌ header (48 px, flex-shrink 0) ────────────────────┐   │
+    │  │ Skills                            [+ Create Skill]│   │
+    │  ├───────────────────────────────────────────────────┤   │
+    │  │ body <section> (flex: 1 1 auto, scroll surface)   │   │
+    │  │                                                   │   │
+    │  │             ┌─────────────────────────────┐       │   │
+    │  │             │  50rem inner column          │       │   │
+    │  │             │                              │       │   │
+    │  │             │  Educational banner (hero)   │       │   │
+    │  │             │  Tabs + filter button        │       │   │
+    │  │             │  Skill list                  │       │   │
+    │  │             └─────────────────────────────┘       │   │
+    │  └───────────────────────────────────────────────────┘   │
+    └──────────────────────────────────────────────────────────┘
+
+  All chrome (page shell, header band, body scroll) reuses
+  Knowledge's CSS by adopting the same `.seller-home__knowledge-*`
+  class stack — exactly the pattern Scheduled uses. Skills-only
+  concerns (list, row, badges, popover, tools row) live under their
+  own `.seller-home__skills-*` / `.seller-home__skill-*` namespace
+  in skills.scss.
+
+  Duplicate-not-shared strategy: this page deliberately does NOT
+  reuse Scheduled's `.seller-home__scheduled-*` toolbar / card
+  selectors. That keeps Scheduled 100% untouched by the Skills
+  build (confirmed decision during the 2026-07-31 plan). Any
+  future refactor to merge the two into one neutral namespace
+  can happen as a separate pass without regressing either surface.
+
+  `navActive = "skills"` drives the nav highlight; `pageTitle`
+  drives the `role="main"` region's accessible name.
+#}
+
+{% set navActive = "skills" %}
+
+{% set navPrimary = readData("index").navPrimary %}
+{% set navFooter  = readData("index").navFooter %}
+{% set recents    = readData("index").recents %}
+
+{% block styles %}
+  {# home.css — the `.seller-home` shell (left nav, composer, shared
+     chrome). knowledge.css — the page container, 48px header band,
+     scrolling body, and 50rem inner column this page borrows, same
+     as /scheduled.html. skills.css — everything under the
+     `.seller-home__skill*` namespace. #}
+  <link rel="stylesheet" href="/styles/home.css" />
+  <link rel="stylesheet" href="/styles/knowledge.css" />
+  <link rel="stylesheet" href="/styles/skills.css" />
+{% endblock %}
+
+{% block content %}
+  {# `.seller-home--skills` scopes the viewport-lock rule
+     (`overflow: hidden`) to this page only, exactly like
+     `.seller-home--knowledge` and `.seller-home--scheduled` do
+     for their respective surfaces. Without it the outer container
+     would grow to fit its children and the body-section's
+     `overflow-y: auto` would never engage.
+
+     We deliberately also apply `.seller-home--knowledge` so this
+     page inherits Knowledge's already-tuned column widths, body
+     scroll, and header-band styling without duplicating rules.
+     `.seller-home--skills` is reserved for Skills-only overrides
+     (composer margin above the tabs, tab-row spacing, card grid
+     layout). #}
+  <div class="seller-home seller-home--knowledge seller-home--skills" data-sh-root>
+    {# Left navigation — same partial Seller Home / Knowledge /
+       Scheduled use. `navActive = "skills"` set above drives the
+       highlight. #}
+    {% include "_home_left_nav.html" %}
+
+    {# ── Right column ────────────────────────────────────────────────
+       Sibling to the left nav; fills the remaining width. Reuses
+       Knowledge's `.seller-home__knowledge` class so the outer
+       column layout, header band, and body scroll behavior stay
+       identical between Knowledge / Scheduled / Skills.
+       `role="main"` + `aria-label="Skills"` give AT users a
+       meaningful region label; `tabindex="-1"` makes the region
+       a programmatic focus target (for skip-links) without
+       pulling it into the natural tab order. #}
+    <div
+      class="seller-home__knowledge seller-home__skills"
+      role="main"
+      aria-label="{{ pageTitle }}"
+      tabindex="-1"
+      data-sh-skills-root
+    >
+      {# ── Header band (48 px) ─────────────────────────────────────
+         Structural clone of `/knowledge.html`'s header (see
+         `.seller-home__knowledge-header` for the flex / spacing /
+         gap rules). Title anchors left; a right-anchored "Create
+         Skill" pill mirrors Knowledge's "New Knowledge" pill 1:1 —
+         same SLDS 2 `slds-button_neutral` shape so height, radius,
+         padding, colors, and hover / focus-visible states all cascade
+         from tokens (`--slds-c-button-*` → `--slds-s-button-*` →
+         `--slds-g-color-*` / `--slds-g-radius-*`). No new CSS is
+         required for the button's core visuals.
+
+         Click dispatches `sh:skills-create` on the Skills root so a
+         future creation flow (modal, wizard, or a real /skills/new
+         route) can bind without touching this template — same
+         event-delegation contract Knowledge's "New Knowledge"
+         button uses. #}
+      <header
+        class="seller-home__knowledge-header"
+        data-sh-skills-header
+      >
+        <h1 class="seller-home__knowledge-header-title">{{ header.heading }}</h1>
+        <button
+          type="button"
+          class="slds-button slds-button_neutral seller-home__skills-new"
+          data-sh-skills-create
+        >
+          <svg class="slds-button__icon slds-button__icon_left" aria-hidden="true">
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
+          </svg>
+          {{ header.actionLabel }}
+        </button>
+      </header>
+
+      {# ── Body section ────────────────────────────────────────────
+         Same scrollable pattern as Knowledge and Scheduled. The
+         inner column is capped at 50 rem (800 px) via the shared
+         `.seller-home__knowledge-body-inner` rule. Content order
+         mirrors the Figma exactly:
+           1. Educational banner (hero)
+           2. Tabs + filter button
+           3. Skill list
+         The intro description paragraph and the "Start a skill"
+         composer that used to sit above the toolbar were removed on
+         2026-08-11 (see the header docblock at the top of this file
+         for context). The composer partial still exists — Home /
+         Scheduled continue to use it — but it is no longer
+         included here. #}
+      <section
+        class="seller-home__knowledge-body"
+        aria-label="{{ pageTitle }}"
+      >
+        <div class="seller-home__knowledge-body-inner">
+          {# ── Educational banner ───────────────────────────────────
+             Brand-blue hero introducing what Skills are. Copy comes
+             from `skills.json` → `banner`; markup lives in the
+             shared `_seller_home_banner.html` partial (also consumed
+             by /scheduled.html). Semantic `<section role="region">`
+             with an `aria-labelledby` pointing at the banner
+             heading, so assistive tech treats the banner as a
+             labeled landmark rather than dead decoration.
+
+             The include is guarded on `banner.title` so removing
+             the block from JSON (or shipping an empty title) hides
+             the banner entirely without a template edit.
+
+             `bannerHeadingId` is passed explicitly so each landing
+             page owns a stable, page-scoped id — pages that pick
+             up the shared partial won't collide on aria-labelledby
+             even if the same page ever renders two banners. #}
+          {% if banner and banner.title %}
+            {% set bannerHeadingId = "seller-home-skills-banner-heading" %}
+            {% set bannerVariant   = "skills" %}
+            {% include "_seller_home_banner.html" %}
+          {% endif %}
+
+          {# ── Skills toolbar (tabs + filter button) ─────────────
+             Structural clone of Scheduled's toolbar, namespaced
+             separately (`.seller-home__skills-*`) so a Scheduled-
+             only tweak can't accidentally regress Skills and vice
+             versa (duplicate-not-shared strategy, confirmed
+             decision 2026-07-31).
+
+             ARIA note: these are filter chips over one grid, NOT
+             SLDS tabpanel-swapping tabs. So we use
+             `role="radiogroup"` + `role="radio"` per the WAI-ARIA
+             authoring practices for "pick one option that changes
+             what's shown" — `role="tab"` implies a
+             `role="tabpanel"` sibling per option, which this
+             design doesn't have (the grid stays in place; only
+             row visibility flips).
+
+             Counts are rendered server-side by iterating
+             `skills` per tab: Nunjucks's outer-scope `{% set %}`
+             DOES propagate through this build (probed on the
+             Scheduled build 2026-07-30), so first-paint counts
+             are always in sync with the JSON without a JS
+             hydration step. `bindSkills()` in Step 5 also
+             recomputes counts client-side so any future
+             JS-driven skill add/remove keeps them correct.
+
+             `defaultTabId` from skills.json controls the first-
+             paint active row (server-side). URL hash drives the
+             runtime active tab; `bindSkills()` reads
+             `location.hash` on load and updates the highlight +
+             card filter to match. #}
+          <div
+            class="seller-home__skills-toolbar"
+            data-sh-skills-toolbar
+          >
+            {# ── Tab chips ────────────────────────────────────── #}
+            <div
+              class="seller-home__skills-tabs"
+              role="radiogroup"
+              aria-label="Filter skills by collection"
+              data-sh-skills-tabs
+            >
+              {% for tab in tabs.items %}
+                {# `hidden: true` on a tab entry keeps it in the
+                   authored order for easy re-enablement but skips
+                   both the SSR render AND the JS controller's
+                   pickup (nothing to query without the DOM node),
+                   so URL hashes pointing at a hidden tab id fall
+                   back to the default tab. Used to park the "All"
+                   tab out of view without deleting it from JSON. #}
+                {% if not (tab.hidden == true) %}
+                {# Count for this tab. `tab.ownerships` empty
+                   means "match every skill" (the "All" tab).
+                   Server-side count aligns with the card-
+                   visibility rule in bindSkills() so first paint
+                   and later filters never disagree. Counts come
+                   straight from skills[] — no hardcoding — so
+                   duplicating / deleting a skill in JSON keeps
+                   every tab count in sync automatically. #}
+                {% set count = 0 %}
+                {% for s in skills %}
+                  {% if not (s.hidden == true) %}
+                    {% if (tab.ownerships | length) == 0 or s.ownership in tab.ownerships %}
+                      {% set count = count + 1 %}
+                    {% endif %}
+                  {% endif %}
+                {% endfor %}
+                {% set isActive = (tab.id == tabs.defaultTabId) %}
+                <button
+                  type="button"
+                  class="seller-home__skills-tab{% if isActive %} is-active{% endif %}"
+                  role="radio"
+                  aria-checked="{% if isActive %}true{% else %}false{% endif %}"
+                  aria-controls="seller-home-skills-list"
+                  data-sh-skills-tab="{{ tab.id }}"
+                  data-sh-skills-tab-ownerships="{{ tab.ownerships | join(',') }}"
+                  {# Roving tabindex — only the active radio is
+                     in the natural tab order; the rest are
+                     reached via Left/Right arrow (wired in
+                     Step 5). Matches the WAI-ARIA radiogroup
+                     keyboard convention. #}
+                  tabindex="{% if isActive %}0{% else %}-1{% endif %}"
+                >
+                  <span class="seller-home__skills-tab-label">{{ tab.label }}</span>
+                  <span
+                    class="seller-home__skills-tab-count"
+                    data-sh-skills-tab-count
+                    aria-hidden="true"
+                  >{{ count }}</span>
+                  {# Screen-reader-only companion so AT users
+                     hear "My Skills, 4 skills" instead of just
+                     "My Skills, 4" (the visible pill is
+                     decorative). #}
+                  <span class="slds-assistive-text">
+                    {{ count }} skill{% if count != 1 %}s{% endif %}
+                  </span>
+                </button>
+                {% endif %}
+              {% endfor %}
+            </div>
+
+            {# ── Filter icon-button ────────────────────────────────
+               Bordered icon button per Figma "Coworker – Skills"
+               (node 9723:17362) — the design shows a circular
+               affordance with a visible neutral border, not the
+               transparent `icon-bare` shell Scheduled ships with.
+               Uses SLDS 2's `slds-button_icon-border` so the border
+               color, radius, hover fill, and focus-visible ring
+               come from tokens (`--slds-c-button-*` /
+               `--slds-g-color-border-2`) without a bespoke
+               override.
+
+               Click dispatches `sh:skills-filter` on the Skills
+               root so a future filter menu can bind without
+               touching this markup. The prior popover
+               implementation (checkbox facets for State + Tools)
+               was withdrawn 2026-07-31 to hold the tab strip alone
+               as the visible filter affordance; `filters` +
+               `emptyState.filtered` remain in `skills.json` as
+               dormant schema so re-introducing the popover is a
+               JSON + JS edit, not a re-author of the toolbar. #}
+            <button
+              type="button"
+              class="slds-button slds-button_icon slds-button_icon-border seller-home__skills-filter"
+              data-sh-skills-filter
+              title="{{ filterAction.label }}"
+              aria-label="{{ filterAction.label }}"
+            >
+              <svg class="slds-button__icon" aria-hidden="true">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ filterAction.icon }}"></use>
+              </svg>
+              <span class="slds-assistive-text">{{ filterAction.label }}</span>
+            </button>
+          </div>
+
+          {# ── Live-region — announces tab-switch results ─────────
+             Visually hidden. bindSkills() writes a phrase like
+             "Showing 4 My Skills" here whenever the active tab
+             changes, so AT users hear the count without the
+             visible layout having to shift. Kept as a sibling
+             of the toolbar (not inside it) so a re-render of
+             the toolbar can't accidentally clobber the region
+             node.
+
+             `role="status"` + `aria-live="polite"` gives us the
+             standard "announce but don't interrupt" contract;
+             the Scheduled tab controller uses the same pattern. #}
+          <div
+            id="seller-home-skills-status"
+            class="slds-assistive-text"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            data-sh-skills-status
+          ></div>
+
+          {# ── Skill list + empty state ─────────────────────────
+             Renders the single-column list via `_skill_list.html`.
+             Region carries `data-sh-skills-list-region` so the tab
+             controller in home.js can find its list root without
+             walking the DOM; the tab chips above reference this
+             region via `aria-controls`.
+
+             The list partial preserves the same `data-sh-skill-*`
+             attribute contract the prior card partial exposed —
+             `data-sh-skill-grid` on the outer <ul>, plus
+             `data-sh-skill-item / -id / -ownership`,
+             `data-sh-skill-open`, `data-sh-skill-menu` /
+             `-menu-trigger` / `-menu-list` / `-action`,
+             `data-sh-skill-uses` + `-uses-popover`, and
+             `data-sh-skill-stop`. That means `bindSkills`,
+             `skillOverflowController`, `skillUsesPopoverController`,
+             `skillActionRouter`, and the two dialogs in
+             `_skills_dialogs.html` all continue to work with no
+             JS edits after the layout change. #}
+          <div
+            id="seller-home-skills-list"
+            data-sh-skills-list-region
+          >
+            {% include "_skill_list.html" %}
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  {# ── Dialogs ──────────────────────────────────────────────────
+     Overflow-menu actions (Edit / Schedule / Share, Delete) route
+     through two SLDS 2 modals defined in _skills_dialogs.html.
+     Rendered as siblings of `.seller-home` (not children) so their
+     `position: fixed` frame is anchored to the viewport rather
+     than to the scrolling body inside the page shell. Hidden by
+     default; home.js opens them in response to `sh:skill-action`
+     events and manages focus trap + focus restore. #}
+  {% include "_skills_dialogs.html" %}
+{% endblock %}
+
+{% block scripts_extra %}
+  {# home.js drives the shared shell: nav collapse toggle and
+     composer. Its Briefing / Knowledge-search / Scheduled handlers
+     no-op here because those roots don't exist on this page. #}
+  <script src="/scripts/home.js"></script>
+
+  {# skills.js owns this page: the tab radiogroup, per-row overflow
+     menus, the connected-skills popover, and the action router that
+     drives the dialogs included above. #}
+  <script src="/scripts/skills.js"></script>
+{% endblock %}

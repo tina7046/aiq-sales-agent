@@ -1,0 +1,96 @@
+{#
+  Seller Home — Shared educational banner
+  =====================================================================
+  Brand-blue hero band used on both /skills.html and /scheduled.html to
+  introduce what the surface does. One partial, one CSS block
+  (`.seller-home__banner*`), one accessibility contract — pages differ
+  only in copy + illustration asset.
+
+  Renamed 2026-08-11 from `_skills_banner.html`. The Skills-specific
+  markup lived here for its first ~two weeks; the Scheduled refactor
+  brought a second consumer, so the partial was generalised in place.
+
+  ── Contract ─────────────────────────────────────────────────────────
+  Callers pass a `banner` object with these fields:
+    • title            — string. Required. Visible <h2> heading. Also
+                         becomes the region's accessible name via
+                         `aria-labelledby`.
+    • description      — string. Required. Supporting copy beneath
+                         the title.
+    • imageSrc         — string. Optional. Path to the full-bleed
+                         illustration (gradient + mascot + sparkles
+                         all baked into one image). Rendered as a
+                         `background-image` on the banner surface
+                         rather than an `<img>`, so the illustration
+                         tucks behind the title gracefully at narrow
+                         widths without a visibility toggle. Falls
+                         back cleanly to the SLDS accent-2
+                         background-color when omitted.
+    • imageAlt         — string. Optional. Reserved for a future
+                         alt-text field IF the illustration ever
+                         communicates additional information. Today
+                         the illustration is DECORATIVE on every
+                         consumer (aria-hidden implicitly via CSS
+                         `background-image`), so this is captured in
+                         the JSON schema for forward compatibility
+                         but not surfaced in the markup.
+
+  Callers may also pass:
+    • bannerHeadingId  — string. Optional. Explicit id for the <h2>.
+                         Defaults to `seller-home-banner-heading`;
+                         every landing page picks a unique id so
+                         multiple banners on one route (never
+                         current, but future-proofed) never collide
+                         on `aria-labelledby`.
+    • bannerVariant    — string. Optional. Adds a modifier class
+                         (`seller-home__banner_<variant>`) so a page-
+                         specific tweak (say, a different mascot
+                         crop) can land as a CSS override without a
+                         markup fork. Not consumed by CSS today.
+
+  ── Accessibility ────────────────────────────────────────────────────
+  • `role="region"` promotes the banner to a labeled landmark. AT
+    users can jump in / skip past it.
+  • `aria-labelledby` points at the banner's own heading.
+  • The illustration is DECORATIVE. Browsers correctly hide CSS
+    `background-image` from AT by default, so nothing extra is
+    needed in markup. If a future consumer needs the illustration
+    to carry meaning, migrate to a real `<img>` with the JSON's
+    `imageAlt` populated.
+  • Colour contrast: SLDS accent-2 (#0176FA) + on-accent-1 (white)
+    hold above WCAG AA at font-scale-3 semibold for the title and
+    font-size-base regular for the description. Do not lower the
+    description alpha below solid white without re-checking
+    contrast against the illustration's darkest right-edge pixels.
+
+  ── Placement ────────────────────────────────────────────────────────
+  Rendered inside `.seller-home__knowledge-body-inner` on the two
+  hosts. Scrolls with the list rather than sticking to the viewport
+  top. Upstream `{% if banner and banner.title %}` guards mean a
+  JSON without banner copy renders the page without the banner — a
+  one-line JSON edit to remove the block.
+#}
+
+{% set bannerHeadingId = bannerHeadingId or "seller-home-banner-heading" %}
+{% set bannerVariantClass = ("seller-home__banner_" ~ bannerVariant) if bannerVariant else "" %}
+<section
+  class="seller-home__banner {{ bannerVariantClass }}"
+  role="region"
+  aria-labelledby="{{ bannerHeadingId }}"
+  data-sh-seller-home-banner
+  {# Inline `background-image` keeps the asset path in JSON —
+     switching to a different illustration is a JSON edit only, no
+     CSS rebuild required. Falls back cleanly to the CSS-declared
+     `background-color` (accent-2) when `imageSrc` is empty. #}
+  {% if banner.imageSrc %}
+  style="background-image: url('{{ banner.imageSrc }}');"
+  {% endif %}
+>
+  <div class="seller-home__banner-copy">
+    <h2
+      id="{{ bannerHeadingId }}"
+      class="seller-home__banner-title"
+    >{{ banner.title }}</h2>
+    <p class="seller-home__banner-description">{{ banner.description }}</p>
+  </div>
+</section>
