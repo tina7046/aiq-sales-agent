@@ -1,0 +1,415 @@
+{#
+  Seller Home — Skills page dialogs
+  =====================================================================
+  Two SLDS 2 modal shells that back the overflow-menu actions on
+  /skills.html:
+
+    1. `#skills-placeholder-modal`
+       Reusable "not-yet-built" dialog for the Edit / Schedule /
+       Share actions. Body copy is set from JS at open time so ONE
+       modal serves all three actions — no per-action markup churn
+       when a real editor / scheduler / share sheet lands.
+
+    2. `#skills-delete-modal`
+       Destructive-confirm dialog for the Delete action. Copy is
+       fixed per spec ("Delete this skill?" / "This removes the
+       skill from your Skills page. This action can't be undone.").
+       The primary action is styled destructive; secondary is
+       neutral. Focus starts on the secondary button (Cancel) so a
+       stray Enter press doesn't destroy anything.
+
+  Both modals share:
+    • `.slds-modal` + `.slds-modal__container` + `.slds-modal__header`
+      + `.slds-modal__content` + `.slds-modal__footer` shell (same
+      pattern _rename_source_modal.html uses).
+    • `aria-modal="true"`, `role="dialog"`, `tabindex="-1"` so the
+      dialog itself is the initial focus target when JS opens it.
+    • A `.slds-backdrop` sibling that JS toggles in lock-step with
+      `.slds-fade-in-open` on the modal.
+    • `data-sh-skills-dialog-close` on every dismiss control (X,
+      Cancel) so home.js can bind ONE delegated click handler.
+
+  The dialogs are rendered as siblings of `.seller-home` so their
+  `position: fixed` frame is anchored to the viewport, not to any
+  scrolling parent inside the page shell.
+#}
+
+{# ── Placeholder dialog (Edit / Schedule / Share) ─────────────────
+   Title + body text are `data-sh-skills-placeholder-*` targets;
+   home.js writes them at open time from an in-JS lookup table. The
+   dialog stays a single node so the "which action opened this"
+   detail lives in JS, not in duplicated markup. #}
+<section
+  role="dialog"
+  tabindex="-1"
+  aria-modal="true"
+  aria-labelledby="skills-placeholder-heading"
+  aria-describedby="skills-placeholder-body"
+  class="slds-modal slds-modal_prompt slds-hide"
+  id="skills-placeholder-modal"
+  data-sh-skills-dialog="placeholder"
+>
+  <div class="slds-modal__container">
+    <button
+      type="button"
+      class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+      data-sh-skills-dialog-close
+      aria-label="Cancel and close"
+    >
+      <svg class="slds-button__icon slds-button__icon_large" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+      </svg>
+    </button>
+
+    <div class="slds-modal__header">
+      <h1
+        id="skills-placeholder-heading"
+        class="slds-modal__title slds-hyphenate"
+        data-sh-skills-placeholder-title
+      >
+        Placeholder
+      </h1>
+    </div>
+
+    <div class="slds-modal__content slds-p-around_medium">
+      <p
+        id="skills-placeholder-body"
+        class="seller-home__skills-dialog-body"
+        data-sh-skills-placeholder-body
+      >
+        This prototype doesn't ship this action yet.
+      </p>
+    </div>
+
+    <div class="slds-modal__footer">
+      <button
+        type="button"
+        class="slds-button slds-button_brand"
+        data-sh-skills-dialog-close
+      >
+        Close
+      </button>
+    </div>
+  </div>
+</section>
+<div
+  class="slds-backdrop slds-hide"
+  id="skills-placeholder-backdrop"
+  data-sh-skills-dialog-backdrop="placeholder"
+  role="presentation"
+></div>
+
+{# ── Discard-unsaved-changes dialog (detail page Cancel action) ────
+   Replaces the browser-native `window.confirm()` shim the initial
+   build shipped with. Opened from the toolbar Cancel button when the
+   editor is dirty; ALSO consumed by the save-flow when a user
+   triggers a navigation while unsaved changes exist. Copy is fixed
+   per spec ("Discard unsaved changes?" / "Your edits to this skill
+   will be lost." / "Discard changes" / "Keep editing").
+
+   Focus starts on the SECONDARY button ("Keep editing") so a stray
+   Enter press doesn't destroy work — same safety the delete
+   confirmation uses. The primary action carries
+   `data-sh-skills-discard-confirm` so the skill_detail.js discard
+   handler can wire it without matching on label text. #}
+<section
+  role="alertdialog"
+  tabindex="-1"
+  aria-modal="true"
+  aria-labelledby="skills-discard-heading"
+  aria-describedby="skills-discard-body"
+  class="slds-modal slds-modal_prompt slds-hide"
+  id="skills-discard-modal"
+  data-sh-skills-dialog="discard"
+>
+  <div class="slds-modal__container">
+    <button
+      type="button"
+      class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+      data-sh-skills-dialog-close
+      aria-label="Cancel and close"
+    >
+      <svg class="slds-button__icon slds-button__icon_large" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+      </svg>
+    </button>
+
+    <div class="slds-modal__header">
+      <h1
+        id="skills-discard-heading"
+        class="slds-modal__title slds-hyphenate"
+      >
+        Discard unsaved changes?
+      </h1>
+    </div>
+
+    <div class="slds-modal__content slds-p-around_medium">
+      <p
+        id="skills-discard-body"
+        class="seller-home__skills-dialog-body"
+      >
+        Your edits to this skill will be lost.
+      </p>
+    </div>
+
+    <div class="slds-modal__footer">
+      <button
+        type="button"
+        class="slds-button slds-button_neutral"
+        data-sh-skills-dialog-close
+      >
+        Keep editing
+      </button>
+      <button
+        type="button"
+        class="slds-button slds-button_destructive"
+        data-sh-skills-discard-confirm
+      >
+        Discard changes
+      </button>
+    </div>
+  </div>
+</section>
+<div
+  class="slds-backdrop slds-hide"
+  id="skills-discard-backdrop"
+  data-sh-skills-dialog-backdrop="discard"
+  role="presentation"
+></div>
+
+{# ── Leave-without-saving dialog (Schedule / navigate-away flow) ───
+   Opened by skill_detail.js when a Schedule click (or any other
+   affordance that would navigate away from the detail page) fires
+   while the editor is dirty. Three-button prompt per the Schedule
+   spec — copy is fixed here so the dialog stays a single node:
+
+     Title:   "Leave without saving?"
+     Body:    "You have unsaved changes to this skill."
+     Actions: Save and leave       (primary,  brand)
+              Discard changes      (destructive)
+              Keep editing         (secondary, neutral)
+
+   Focus starts on "Keep editing" so a stray Enter press preserves
+   the draft — same safety pattern as the Discard and Delete
+   dialogs. The primary action calls `data-sh-skills-leave-save`
+   so the JS handler can wire the save-and-leave path without
+   matching on label text; the destructive one carries
+   `data-sh-skills-leave-discard`. #}
+<section
+  role="alertdialog"
+  tabindex="-1"
+  aria-modal="true"
+  aria-labelledby="skills-leave-heading"
+  aria-describedby="skills-leave-body"
+  class="slds-modal slds-modal_prompt slds-hide"
+  id="skills-leave-modal"
+  data-sh-skills-dialog="leave"
+>
+  <div class="slds-modal__container">
+    <button
+      type="button"
+      class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+      data-sh-skills-dialog-close
+      aria-label="Cancel and close"
+    >
+      <svg class="slds-button__icon slds-button__icon_large" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+      </svg>
+    </button>
+
+    <div class="slds-modal__header">
+      <h1
+        id="skills-leave-heading"
+        class="slds-modal__title slds-hyphenate"
+      >
+        Leave without saving?
+      </h1>
+    </div>
+
+    <div class="slds-modal__content slds-p-around_medium">
+      <p
+        id="skills-leave-body"
+        class="seller-home__skills-dialog-body"
+      >
+        You have unsaved changes to this skill.
+      </p>
+    </div>
+
+    <div class="slds-modal__footer">
+      <button
+        type="button"
+        class="slds-button slds-button_neutral"
+        data-sh-skills-dialog-close
+      >
+        Keep editing
+      </button>
+      <button
+        type="button"
+        class="slds-button slds-button_destructive"
+        data-sh-skills-leave-discard
+      >
+        Discard changes
+      </button>
+      <button
+        type="button"
+        class="slds-button slds-button_brand"
+        data-sh-skills-leave-save
+      >
+        Save and leave
+      </button>
+    </div>
+  </div>
+</section>
+<div
+  class="slds-backdrop slds-hide"
+  id="skills-leave-backdrop"
+  data-sh-skills-dialog-backdrop="leave"
+  role="presentation"
+></div>
+
+{# ── Title-mismatch confirmation dialog (Save flow) ────────────────
+   Opened by skill_detail.js when validation surfaces a WARNING that
+   the document's H1 doesn't match the skill's display name. Copy
+   for the H1 + display name is populated from JS at open time so
+   the dialog stays a single node while quoting the actual values.
+
+   Primary action ("Save anyway") calls
+   `data-sh-skills-title-mismatch-confirm` — the save-flow handler
+   proceeds to persist. Secondary ("Return to editor") dismisses
+   with the standard close hook and leaves the draft intact so the
+   user can rename the H1 or the skill title before retrying. #}
+<section
+  role="alertdialog"
+  tabindex="-1"
+  aria-modal="true"
+  aria-labelledby="skills-title-mismatch-heading"
+  aria-describedby="skills-title-mismatch-body"
+  class="slds-modal slds-modal_prompt slds-hide"
+  id="skills-title-mismatch-modal"
+  data-sh-skills-dialog="title-mismatch"
+>
+  <div class="slds-modal__container">
+    <button
+      type="button"
+      class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+      data-sh-skills-dialog-close
+      aria-label="Cancel and close"
+    >
+      <svg class="slds-button__icon slds-button__icon_large" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+      </svg>
+    </button>
+
+    <div class="slds-modal__header">
+      <h1
+        id="skills-title-mismatch-heading"
+        class="slds-modal__title slds-hyphenate"
+      >
+        Save with a different title?
+      </h1>
+    </div>
+
+    <div class="slds-modal__content slds-p-around_medium">
+      <p
+        id="skills-title-mismatch-body"
+        class="seller-home__skills-dialog-body"
+        data-sh-skills-title-mismatch-body
+      >
+        The document&rsquo;s title doesn&rsquo;t match this skill&rsquo;s display name.
+      </p>
+    </div>
+
+    <div class="slds-modal__footer">
+      <button
+        type="button"
+        class="slds-button slds-button_neutral"
+        data-sh-skills-dialog-close
+      >
+        Return to editor
+      </button>
+      <button
+        type="button"
+        class="slds-button slds-button_brand"
+        data-sh-skills-title-mismatch-confirm
+      >
+        Save anyway
+      </button>
+    </div>
+  </div>
+</section>
+<div
+  class="slds-backdrop slds-hide"
+  id="skills-title-mismatch-backdrop"
+  data-sh-skills-dialog-backdrop="title-mismatch"
+  role="presentation"
+></div>
+
+{# ── Delete confirmation dialog ───────────────────────────────────
+   Copy is fixed per spec. Destructive-primary + neutral-secondary
+   pattern; the destructive button carries `slds-button_destructive`
+   AND `data-sh-skills-delete-confirm` so home.js can wire it as
+   the confirm action without matching on label text. #}
+<section
+  role="alertdialog"
+  tabindex="-1"
+  aria-modal="true"
+  aria-labelledby="skills-delete-heading"
+  aria-describedby="skills-delete-body"
+  class="slds-modal slds-modal_prompt slds-hide"
+  id="skills-delete-modal"
+  data-sh-skills-dialog="delete"
+>
+  <div class="slds-modal__container">
+    <button
+      type="button"
+      class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+      data-sh-skills-dialog-close
+      aria-label="Cancel and close"
+    >
+      <svg class="slds-button__icon slds-button__icon_large" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+      </svg>
+    </button>
+
+    <div class="slds-modal__header">
+      <h1
+        id="skills-delete-heading"
+        class="slds-modal__title slds-hyphenate"
+      >
+        Delete this skill?
+      </h1>
+    </div>
+
+    <div class="slds-modal__content slds-p-around_medium">
+      <p
+        id="skills-delete-body"
+        class="seller-home__skills-dialog-body"
+      >
+        This removes the skill from your Skills page. This action can&rsquo;t be undone.
+      </p>
+    </div>
+
+    <div class="slds-modal__footer">
+      <button
+        type="button"
+        class="slds-button slds-button_neutral"
+        data-sh-skills-dialog-close
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="slds-button slds-button_destructive"
+        data-sh-skills-delete-confirm
+      >
+        Delete
+      </button>
+    </div>
+  </div>
+</section>
+<div
+  class="slds-backdrop slds-hide"
+  id="skills-delete-backdrop"
+  data-sh-skills-dialog-backdrop="delete"
+  role="presentation"
+></div>

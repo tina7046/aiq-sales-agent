@@ -1,0 +1,1085 @@
+{% extends "_template.html" %}
+
+{#
+  Seller Home — Skill detail / editor
+  =====================================================================
+  Reached from a skill row on /skills.html — every row's `<a>` points
+  here with a `?id=<skill.id>` query param (see `_skill_list.html`).
+  Composes the same `.seller-home` shell as /skills.html so the global
+  header + left nav stay pinned as the seller drills from the list
+  into a specific skill.
+
+  Data sources:
+    • index.json   — nav content (navPrimary + navFooter + recents),
+                     pulled via `readData("index")` so both this page
+                     and /index.html render an identical left nav.
+    • skills.json  — the shared skill catalog + `detail` block of
+                     page-level UI copy. Pulled via `readData("skills")`
+                     so the list page and the detail page read from
+                     ONE source of truth. The full `skills[]` catalog
+                     is inlined as an `<script type="application/json">`
+                     below so the glue script (skill_detail.js) can
+                     resolve `?id=<id>` without a second fetch.
+
+  Structural parity with /knowledge_document_detail.html — same shell
+  classes, same body region, same commit cluster, same aria-live
+  region. Skill-specific overrides layer on top via the parent
+  modifier `.seller-home--skill-detail`, so the shared editor +
+  toolbar CSS in knowledge.scss keeps working verbatim and the only
+  new rules (in skills.scss) cover the header three-cluster layout,
+  the editor canvas, supporting-skill chip styling, and
+  breadcrumb/metadata typography.
+
+  Editor contract:
+    • The page loads with `data-knowledge-view="edit"` pre-set. The
+      shared `KnowledgeDocumentView` module is invoked with
+      `alwaysEdit: true` + `livePreview: true`, so the editor + the
+      rendered mirror are both visible at once (side-by-side at ≥
+      60rem, stacked below). There is no Preview/Edit toggle in the
+      header — this is a single always-editable canvas.
+    • Save + Cancel land in the right cluster of the header. They
+      start `hidden`; the first `onDirtyChange(true)` reveals them
+      and save/cancel re-hide them. Identical wiring to Knowledge.
+#}
+
+{% set navPrimary       = readData("index").navPrimary %}
+{% set navFooter        = readData("index").navFooter %}
+{% set recents          = readData("index").recents %}
+{% set skillsData       = readData("skills") %}
+{% set catalog          = skillsData.skills %}
+{% set toolLibrary      = skillsData.toolLibrary %}
+{% set agentLibrary     = skillsData.agentLibrary %}
+{% set statusLibrary    = skillsData.statusLibrary %}
+{% set detail           = skillsData.detail %}
+{% set pageTitle        = detail.pageTitle %}
+{% set navActive        = detail.navActive %}
+{% set breadcrumb       = detail.breadcrumb %}
+{% set switcher         = detail.switcher %}
+{% set tabs             = skillsData.tabs %}
+{% set back             = detail.back %}
+{% set fallbackTitle    = detail.fallbackTitle %}
+{% set metadataTemplate = detail.metadataTemplate %}
+{% set actionsCopy      = detail.actions %}
+{% set notFound         = detail.notFound %}
+{% set save             = detail.save %}
+{% set cancel           = detail.cancel %}
+{% set status           = detail.status %}
+
+{% block styles %}
+  {# home.css — the `.seller-home` shell. knowledge.css — the
+     doc-detail column, header band, editor chrome, and the
+     `.hunter-agent-knowledge__article*` prose classes the rendered
+     Markdown uses. skills.css — the "Skill detail — drill-in styles"
+     block (header clusters, switcher panel, canvas, chips, toast). #}
+  <link rel="stylesheet" href="/styles/home.css" />
+  <link rel="stylesheet" href="/styles/knowledge.css" />
+  <link rel="stylesheet" href="/styles/skills.css" />
+{% endblock %}
+
+{% block content %}
+  {# `.seller-home--knowledge-detail` scopes the viewport-lock rule
+     (`overflow: hidden`) to this page so only the body region
+     scrolls. `.seller-home--skill-detail` layers on top so the
+     header three-cluster + split editor/preview overrides only
+     apply here — /knowledge_document_detail.html stays untouched. #}
+  <div class="seller-home seller-home--knowledge-detail seller-home--skill-detail" data-sh-root>
+    {% include "_home_left_nav.html" %}
+
+    {# ── Right column ────────────────────────────────────────────────
+       Reuses `.seller-home__knowledge-doc-detail` so all the shared
+       header + body + editor CSS applies without duplication.
+       `.seller-home__skill-detail` layers on top for skill-specific
+       tweaks. `data-knowledge-view="edit"` primes the shared module
+       into edit mode from the first paint — combined with
+       `alwaysEdit: true` at the JS layer, the Preview/Edit toggle is
+       skipped entirely. #}
+    <div
+      class="seller-home__knowledge-doc-detail seller-home__skill-detail"
+      role="main"
+      aria-label="{{ pageTitle }}"
+      tabindex="-1"
+      data-sh-skill-detail
+      data-knowledge-view="edit"
+    >
+      {# ── Header band ────────────────────────────────────────────────
+         Two horizontal clusters, aligned to the top edge:
+
+           1. Lead cluster — stacks a title row (`Skills` link + `/`
+              separator + current-skill name + a small chevron, then
+              the owning-agent badge) over a metadata caption
+              (`Created by ... · V8`). Semantics live on the inner
+              `<nav>` (breadcrumb) and the caption `<p>`; visually
+              they read as a single 2-row block per the Figma frame.
+           2. Actions cluster — Use in Chat, Schedule split-button,
+              and the kebab (Duplicate / Share / Delete). Wired to
+              the same `sh:skill-action` router the list page uses.
+              The commit cluster (Save + Cancel, hidden until the
+              module fires `onDirtyChange(true)`) rides here too.
+
+         Aria-live status is a visually-hidden sibling of the commit
+         cluster; the glue script writes save / cancel / draft-restore
+         messages into it after each transition. #}
+      <header
+        class="seller-home__knowledge-doc-detail-header seller-home__skill-detail-header"
+        data-sh-skill-detail-header
+      >
+        <div class="seller-home__knowledge-doc-detail-header-lead seller-home__skill-detail-header-lead">
+          {# ── Breadcrumb + page title ────────────────────────────
+             Renders "Skills / <current skill>" inline as a large
+             (font-scale-3 / 20px semibold) title row.
+
+             Semantic story:
+             - Wrapped in `<nav aria-label="Breadcrumb">` per the
+               ARIA authoring practices for breadcrumb navigation,
+               with an inner ordered list so assistive tech reads
+               the hierarchy as "Skills, then Daily Pipeline
+               Snapshot, current page".
+             - The current-skill list item hosts the page's `<h1>`
+               (the primary heading of the document). Its stable
+               ID lets the shared `_knowledge_document.html`
+               partial's `aria-labelledby="hunter-agent-knowledge-
+               title"` on the article still resolve to a real
+               element after the redesign.
+             - The `/` separator is decorative (aria-hidden). The
+               ordered-list markup already communicates the
+               hierarchy semantically; the visible `/` is chrome.
+             - The chevron beside the title is a REAL control: it
+               opens the skill switcher (scope picklist + search +
+               catalog list) so a seller can move between skills
+               without going back to /skills.html. It lives inside
+               the current-page `<li>` rather than as its own crumb
+               because it acts ON the current crumb — adding a
+               fourth `<li>` would tell assistive tech the
+               hierarchy is one level deeper than it is.
+             #}
+          <nav
+            class="seller-home__skill-detail-breadcrumb"
+            aria-label="Breadcrumb"
+          >
+            <ol class="seller-home__skill-detail-breadcrumb-list">
+              <li class="seller-home__skill-detail-breadcrumb-item">
+                <a
+                  class="seller-home__skill-detail-breadcrumb-root"
+                  href="{{ breadcrumb.rootHref }}"
+                >{{ breadcrumb.rootLabel }}</a>
+              </li>
+              <li
+                class="seller-home__skill-detail-breadcrumb-separator"
+                aria-hidden="true"
+              >/</li>
+              <li class="seller-home__skill-detail-breadcrumb-item">
+                <h1
+                  id="hunter-agent-knowledge-title"
+                  class="seller-home__skill-detail-breadcrumb-current"
+                  aria-current="page"
+                  data-sh-skill-detail-crumb
+                  data-sh-skill-detail-title
+                >{{ fallbackTitle }}</h1>
+
+                {# ── Skill switcher ──────────────────────────────
+                   Disclosure button + popup panel. Deliberately NOT
+                   `aria-haspopup="menu"`: the popup holds a
+                   picklist, a search field, and a list of links —
+                   not a menu widget — and the generic dropdown
+                   binder in skill_detail.js keys off that exact
+                   attribute, so keeping it off leaves this control
+                   to its own handler. `aria-expanded` +
+                   `aria-controls` give AT the disclosure contract.
+
+                   The panel ships empty; skill_detail.js fills the
+                   scope options and the skill list from the inlined
+                   catalog on boot and again on every filter change,
+                   so the markup carries no duplicated skill copy. #}
+                <div
+                  class="slds-dropdown-trigger slds-dropdown-trigger_click seller-home__skill-detail-switcher"
+                  data-slds-dropdown-manual
+                  data-sh-skill-switcher
+                >
+                  <button
+                    type="button"
+                    class="slds-button slds-button_icon seller-home__skill-detail-switcher-trigger"
+                    aria-expanded="false"
+                    aria-controls="sh-skill-switcher-panel"
+                    title="{{ switcher.triggerLabel }}"
+                    data-sh-skill-switcher-trigger
+                  >
+                    <svg class="slds-button__icon" aria-hidden="true" focusable="false">
+                      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevrondown"></use>
+                    </svg>
+                    <span class="slds-assistive-text">{{ switcher.triggerLabel }}</span>
+                  </button>
+
+                  <div
+                    id="sh-skill-switcher-panel"
+                    class="slds-dropdown slds-dropdown_left seller-home__skill-detail-switcher-panel"
+                    aria-label="{{ switcher.panelLabel }}"
+                    data-sh-skill-switcher-panel
+                  >
+                    {# Scope picklist + create button.
+
+                       Figma pattern (10625:61336 → "Group header"):
+                       the scope name, count chip, and picker glyph
+                       all ride INSIDE the combobox box; a bordered
+                       icon button sits to the right for creating a
+                       new skill. The native `<select>` announces the
+                       scope; the count chip repeats that number
+                       visually inside the input surface, and an
+                       assistive-text sibling makes the same count
+                       reach screen readers as prose so the AT flow
+                       is "My Skills, 4 skills in this list" rather
+                       than "My Skills, 4" with the badge as label.
+
+                       The trailing glyph is a real SVG `<use>` of
+                       `jump_to_bottom` — not a CSS-masked triangle —
+                       so it matches the SLDS 2 spec and inherits
+                       `currentColor` for hover/focus states. #}
+                    <div class="seller-home__skill-detail-switcher-head">
+                      <label class="slds-assistive-text" for="sh-skill-switcher-scope">
+                        {{ switcher.scopeLabel }}
+                      </label>
+                      <div class="slds-select_container seller-home__skill-detail-switcher-scope">
+                        <select
+                          class="slds-select seller-home__skill-detail-switcher-scope-select"
+                          id="sh-skill-switcher-scope"
+                          data-sh-skill-switcher-scope
+                        ></select>
+                        <span
+                          class="seller-home__skill-detail-switcher-scope-count"
+                          aria-hidden="true"
+                          data-sh-skill-switcher-count
+                        ></span>
+                        <svg
+                          class="seller-home__skill-detail-switcher-scope-icon"
+                          aria-hidden="true"
+                          focusable="false"
+                          viewBox="0 0 520 520"
+                        >
+                          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#jump_to_bottom"></use>
+                        </svg>
+                      </div>
+                      <span class="slds-assistive-text" data-sh-skill-switcher-count-sr></span>
+
+                      <button
+                        type="button"
+                        class="slds-button slds-button_icon slds-button_icon-border seller-home__skill-detail-switcher-new"
+                        title="{{ switcher.newLabel }}"
+                        data-sh-skill-switcher-new
+                      >
+                        <svg class="slds-button__icon" aria-hidden="true" focusable="false">
+                          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
+                        </svg>
+                        <span class="slds-assistive-text">{{ switcher.newLabel }}</span>
+                      </button>
+                    </div>
+
+                    <div class="seller-home__skill-detail-switcher-search">
+                      <label class="slds-assistive-text" for="sh-skill-switcher-search">
+                        {{ switcher.searchLabel }}
+                      </label>
+                      <svg
+                        class="seller-home__skill-detail-switcher-search-icon"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#search"></use>
+                      </svg>
+                      <input
+                        type="search"
+                        id="sh-skill-switcher-search"
+                        class="slds-input seller-home__skill-detail-switcher-search-input"
+                        placeholder="{{ switcher.searchPlaceholder }}"
+                        autocomplete="off"
+                        data-sh-skill-switcher-search
+                      />
+                    </div>
+
+                    <ul
+                      class="seller-home__skill-detail-switcher-list"
+                      data-sh-skill-switcher-list
+                    ></ul>
+
+                    <p
+                      class="seller-home__skill-detail-switcher-empty"
+                      role="status"
+                      data-sh-skill-switcher-empty
+                      hidden
+                    >{{ switcher.emptyLabel }}</p>
+                  </div>
+                </div>
+              </li>
+            </ol>
+          </nav>
+
+          {# ── Header badges ─────────────────────────────────────
+             Pills annotating the title: who owns this skill (Figma
+             9923:31084) and where it sits in its publishing
+             lifecycle (Figma 9744:24364 → 11054:23957), in that
+             order. Both ship empty + `hidden`, like the metadata
+             caption below, because the page is generic until `?id=`
+             resolves; skill_detail.js fills each label, appends the
+             per-key variant class, reveals it — and re-hides it for
+             a skill missing that key, or a dead id.
+
+             The cluster is a SIBLING of the `<nav>`, not a crumb
+             inside it, on both semantic and visual grounds. Neither
+             pill is a step in the hierarchy — the same argument the
+             switcher docblock above makes for keeping the chevron
+             out of its own `<li>` — and Figma draws them OUTSIDE the
+             switcher pill. That pill IS the current-crumb `<li>` (it
+             grows a border + shadow whenever the switcher opens), so
+             a badge nested in there would get visually swallowed by
+             the open state.
+
+             The wrapper exists so the badges spend ONE column of the
+             `.seller-home__skill-detail-header-lead` grid between
+             them: it keeps the grid at "crumb | badges | remainder"
+             no matter how many pills land here, and it puts the 8px
+             pill-to-pill gap under flex `gap`, which — unlike a grid
+             column-gap or SLDS's `.slds-badge + .slds-badge` margin
+             — leaves no phantom space when the first pill is hidden.
+             See home.scss for both halves of that. #}
+          <span class="seller-home__skill-detail-header-badges">
+            {# Owning agent. Same `.slds-badge` +
+               `.seller-home__skill-agent-badge` pair the list rows
+               use, so the two surfaces cannot drift on shape, type,
+               or tint; only the size modifier differs.
+
+               The assistive-text prefix gives the pill a sentence of
+               its own for screen readers — the list page folds the
+               same label into its row anchor's aria-label, but there
+               is no anchor here, so the context has to live in the
+               badge. #}
+            <span
+              class="slds-badge seller-home__skill-agent-badge seller-home__skill-detail-agent-badge"
+              data-sh-skill-detail-agent
+              hidden
+            >
+              <span class="slds-assistive-text">Owned by </span>
+              <span data-sh-skill-detail-agent-label></span>
+            </span>
+
+            {# Lifecycle status. A different pill family than the
+               agent badge, per Figma: hairline border, regular (not
+               semibold) weight, neutral text, and a 6px status dot —
+               deliberately less colorful than the agent tint, since
+               "Published" is the expected state and shouldn't shout.
+               The dot is a CSS circle rather than an inline SVG (the
+               asset is a plain filled disc) and takes `.slds-badge__
+               icon` so its color rides the component's own
+               `--slds-c-badge-icon-color-foreground` hook.
+
+               The hooks are `*-status-badge`, NOT `*-status`: that
+               one is already spoken for by the visually-hidden
+               aria-live region further down this file, which
+               announces save / cancel results. #}
+            <span
+              class="slds-badge seller-home__skill-status-badge"
+              data-sh-skill-detail-status-badge
+              hidden
+            >
+              <span
+                class="slds-badge__icon seller-home__skill-status-badge-dot"
+                aria-hidden="true"
+              ></span>
+              <span class="slds-assistive-text">Status, </span>
+              <span data-sh-skill-detail-status-badge-label></span>
+            </span>
+          </span>
+
+          {# ── Metadata caption ──────────────────────────────────
+             Small secondary line below the title. Follows the same
+             template as the article-body metadata used to (Created
+             by X · Last updated Y by Z · V8) — but now lives in
+             the header exclusively; the article body no longer
+             repeats it, per the Figma frame. Hidden by default
+             (no text). The glue script fills + reveals it once the
+             row resolves. #}
+          <p
+            class="seller-home__skill-detail-header-metadata"
+            data-sh-skill-detail-metadata
+            hidden
+          ></p>
+        </div>
+
+        <div class="seller-home__knowledge-doc-detail-header-actions seller-home__skill-detail-header-actions">
+          {# ── Skill actions button group ─────────────────────────
+             Per Figma frame 9744:24372, Use in Chat + Schedule +
+             the Schedule chevron form ONE `slds-button-group`
+             (`<lightning-button-group>` in LWC). The group carries
+             `role="group"` + an accessible name so assistive tech
+             announces the three affordances as a related set, and
+             the SLDS 2 cascade handles the border joining +
+             corner-radius reset automatically:
+               • First button (Use in Chat): rounded outer-left,
+                 square inner-right, no right border.
+               • Middle button (Schedule primary): all corners
+                 square, no right border.
+               • Last button (chevron, nested inside
+                 `.slds-dropdown-trigger` so the schedule menu
+                 anchors to it): rounded outer-right — applied via
+                 a scoped override in home.scss because SLDS's own
+                 `:last-child` selector doesn't cross the
+                 dropdown-trigger wrapper.
+
+             The kebab stays OUTSIDE this group — it's an
+             unrelated affordance (destructive + duplicate + share
+             + edit metadata), so grouping it visually would over-
+             promote it and confuse the "related-actions" semantic
+             the button-group communicates. #}
+          <div
+            class="slds-button-group seller-home__skill-detail-action-group"
+            role="group"
+            aria-label="Skill actions"
+          >
+            {# ── Use in Chat ─────────────────────────────────────
+               Neutral button with a leading `chat` glyph. Fires
+               `sh:skill-use-in-chat` on `document` (carries
+               `skillId`) and opens the labeled placeholder dialog
+               because no `/home.html#skill=<id>` consumer exists
+               yet. When that consumer ships, the placeholder
+               fallback in skill_detail.js flips back to a real
+               navigation. #}
+            <button
+              type="button"
+              class="slds-button slds-button_neutral seller-home__skill-detail-action seller-home__skill-detail-action_use"
+              data-sh-skill-detail-use-in-chat
+              title="{{ actionsCopy.useInChat.assistiveText }}"
+              aria-label="{{ actionsCopy.useInChat.assistiveText }}"
+            >
+              <svg class="slds-button__icon slds-button__icon_left" aria-hidden="true" focusable="false">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chat"></use>
+              </svg>
+              <span>{{ actionsCopy.useInChat.label }}</span>
+            </button>
+
+            {# ── Schedule (primary of the split control) ─────────
+               Neutral button with a leading `event` glyph. Primary
+               click opens the existing "Schedule skill" placeholder
+               from _skills_dialogs.html via the shared
+               `sh:skill-action` router — reuses the same modal the
+               list page uses, so there's no second scheduling
+               pattern to maintain. #}
+            <button
+              type="button"
+              class="slds-button slds-button_neutral seller-home__skill-detail-action seller-home__skill-detail-action_schedule"
+              data-sh-skill-detail-schedule
+              title="{{ actionsCopy.schedule.assistiveText }}"
+              aria-label="{{ actionsCopy.schedule.assistiveText }}"
+            >
+              <svg class="slds-button__icon slds-button__icon_left" aria-hidden="true" focusable="false">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#event"></use>
+              </svg>
+              <span>{{ actionsCopy.schedule.label }}</span>
+            </button>
+
+            {# ── Schedule chevron (secondary of the split) ───────
+               Icon-only button that opens a small SLDS dropdown
+               seeded with "Schedule…" + "Manage schedule". Wrapped
+               in `.slds-dropdown-trigger` so the menu positions
+               against the chevron. Accessible name comes from
+               `aria-label` (SLDS's `.slds-assistive-text` inside
+               the button is redundant when `aria-label` is set,
+               but preserved so a legacy screen-reader path that
+               ignored `aria-label` still hears the label).
+
+               `data-slds-dropdown-manual` keeps app.js's blanket
+               `.slds-dropdown-trigger_click > .slds-button` binder
+               off this button: `initDropdownListeners` in
+               skill_detail.js already owns the open/close (plus
+               sibling-menu dismissal and focus handling), and two
+               handlers toggling the same class on one click left
+               the menu unable to open at all. #}
+            <div
+              class="slds-dropdown-trigger slds-dropdown-trigger_click seller-home__skill-detail-schedule-trigger"
+              data-slds-dropdown-manual
+            >
+              <button
+                type="button"
+                class="slds-button slds-button_icon slds-button_icon-border-filled seller-home__skill-detail-schedule-chevron"
+                aria-haspopup="menu"
+                aria-expanded="false"
+                data-sh-skill-detail-schedule-menu
+                title="{{ actionsCopy.schedule.menuLabel }}"
+                aria-label="{{ actionsCopy.schedule.menuLabel }}"
+              >
+                <svg class="slds-button__icon" aria-hidden="true" focusable="false">
+                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#down"></use>
+                </svg>
+                <span class="slds-assistive-text">{{ actionsCopy.schedule.menuLabel }}</span>
+              </button>
+              <div class="slds-dropdown slds-dropdown_right slds-dropdown_small">
+                <ul
+                  class="slds-dropdown__list"
+                  role="menu"
+                  aria-label="{{ actionsCopy.schedule.menuLabel }}"
+                >
+                  {% for item in actionsCopy.schedule.items %}
+                    <li class="slds-dropdown__item" role="presentation">
+                      <a
+                        href="#"
+                        role="menuitem"
+                        tabindex="{% if loop.first %}0{% else %}-1{% endif %}"
+                        data-sh-skill-detail-schedule-item="{{ item.id }}"
+                      >
+                        <span class="slds-truncate" title="{{ item.label }}">{{ item.label }}</span>
+                      </a>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {# Visually-hidden aria-live status region — mirrors
+             Knowledge's implementation exactly. The commit cluster
+             (Save + Cancel) moved to the editor toolbar per Figma;
+             this status node stays in the header cluster so screen
+             readers hear "Saved / Draft restored" adjacent to the
+             actions they just performed. #}
+          <span
+            class="slds-assistive-text"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            data-sh-skill-detail-status
+          ></span>
+        </div>
+      </header>
+
+      {# ── Body ──────────────────────────────────────────────────────
+         Per Figma frame 9744:24896, the body is a SINGLE bordered
+         "Rich Text Editor" card:
+
+           • Card container    — 12-px radius, 1-px hairline border
+                                 (`--slds-g-color-border-1` = #c9c9c9),
+                                 sits inside 16-px lateral gutters so
+                                 it never touches the shell edges.
+           • Toolbar strip     — 48-px tall band with a `#f7f8fa` fill
+                                 and 12-px top corner rounding. Hosts
+                                 the formatting controls (undo, redo,
+                                 bold, italic, heading dropdown, link,
+                                 image, ordered list, unordered list,
+                                 code block, table). Wraps on narrow
+                                 widths.
+           • Editor canvas     — White surface below the toolbar. The
+                                 document content itself is a single
+                                 800-px-wide column, centered inside
+                                 the canvas, with dividers between
+                                 top-level sections. When
+                                 `canEdit === true`, the article
+                                 element flips into `contenteditable`;
+                                 when it's false, the same DOM
+                                 renders as an inert read-only
+                                 surface with no toolbar affordances.
+
+         There is NO Preview/Edit toggle, NO raw-Markdown textarea,
+         NO side-by-side split. The Markdown source remains the
+         canonical stored format — the `SkillMarkdownEditor` module
+         parses it into DOM on load and serializes back to Markdown
+         on every edit, keeping `savedMarkdown` (baseline) and
+         `draftMarkdown` (current) distinct.
+
+         Not-found panel is a sibling of the canvas so the glue
+         script can hide the whole editor without touching its
+         internal state when `?id=` misses. #}
+      <section
+        class="seller-home__knowledge-doc-detail-body seller-home__skill-detail-body"
+        aria-label="{{ pageTitle }}"
+        data-sh-skill-detail-body
+      >
+        <div
+          class="seller-home__skill-canvas"
+          data-sh-skill-canvas
+        >
+          {# ── Toolbar ────────────────────────────────────────────
+             Formatting controls above the canvas. Restyled 2026-08-11
+             to match the Knowledge MDX editor's toolbar (see
+             `_knowledge_editor.html`) so a seller who authors a
+             Knowledge article and a Skill sees the same visual
+             family — compact 28-px flat buttons on a `#f6f8fa`
+             strip, three groups (History / Format / Blocks) with
+             a hairline divider between each. The two prior
+             divider-heavy 5-group shape shipped in the initial
+             build was withdrawn per Figma direction to align with
+             Knowledge.
+
+             Every button still carries `data-sh-editor-cmd="<op>"`
+             (or `data-sh-editor-history` for undo / redo) so the
+             glue script's central dispatcher looks up the right
+             handler without any per-button re-wiring. Icon-only
+             controls carry a `title` + a `slds-assistive-text`
+             label so hover tooltips and screen-reader names both
+             resolve.
+
+             Buttons are disabled when `canEdit === false` (the
+             glue script flips `disabled` on hydration); the
+             visible cluster stays as a hint that the affordances
+             exist for editors, and to avoid a layout jump when
+             the seller regains edit permission. #}
+          <div
+            class="seller-home__skill-canvas-toolbar"
+            role="toolbar"
+            aria-label="Formatting toolbar"
+            aria-controls="sh-skill-editor-doc"
+            data-sh-skill-editor-toolbar
+          >
+            {# ── History group ────────────────────────────────── #}
+            <div class="seller-home__skill-canvas-toolbar-group" role="group" aria-label="History">
+              <button
+                type="button"
+                class="seller-home__skill-canvas-tool"
+                data-sh-editor-history="undo"
+                title="Undo"
+                aria-label="Undo"
+              >
+                <svg aria-hidden="true" focusable="false">
+                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#undo"></use>
+                </svg>
+                <span class="slds-assistive-text">Undo</span>
+              </button>
+              <button
+                type="button"
+                class="seller-home__skill-canvas-tool"
+                data-sh-editor-history="redo"
+                title="Redo"
+                aria-label="Redo"
+              >
+                <svg aria-hidden="true" focusable="false">
+                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#redo"></use>
+                </svg>
+                <span class="slds-assistive-text">Redo</span>
+              </button>
+            </div>
+
+            <div class="seller-home__skill-canvas-toolbar-divider" aria-hidden="true"></div>
+
+            {# ── Format group ─────────────────────────────────────
+               Bold, Italic, Heading dropdown, Link, Image — same
+               contents Knowledge groups together, so a labeled
+               Heading pill sits between the two pairs of icon
+               buttons. #}
+            <div class="seller-home__skill-canvas-toolbar-group" role="group" aria-label="Format">
+              <button
+                type="button"
+                class="seller-home__skill-canvas-tool"
+                data-sh-editor-cmd="bold"
+                title="Bold"
+                aria-label="Bold"
+                aria-pressed="false"
+              >
+                <svg aria-hidden="true" focusable="false">
+                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#bold"></use>
+                </svg>
+                <span class="slds-assistive-text">Bold</span>
+              </button>
+              <button
+                type="button"
+                class="seller-home__skill-canvas-tool"
+                data-sh-editor-cmd="italic"
+                title="Italic"
+                aria-label="Italic"
+                aria-pressed="false"
+              >
+                <svg aria-hidden="true" focusable="false">
+                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#italic"></use>
+                </svg>
+                <span class="slds-assistive-text">Italic</span>
+              </button>
+
+              {# Heading dropdown. `slds-dropdown-trigger_click` is
+                 the SLDS click-open contract; the shared dropdown
+                 binder in `app.js` handles open / close by toggling
+                 `slds-is-open` on the trigger wrapper. The button
+                 itself uses the labeled tool variant (`_labeled`)
+                 so it reads as a small pill with the current
+                 heading level and a trailing chevron — matches
+                 Knowledge's `.knowledge-editor__toolbar-btn_labeled`
+                 exactly. #}
+              <div class="slds-dropdown-trigger slds-dropdown-trigger_click seller-home__skill-canvas-heading-trigger">
+                <button
+                  type="button"
+                  class="seller-home__skill-canvas-tool seller-home__skill-canvas-tool_labeled"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  data-sh-editor-heading-menu
+                  title="Heading"
+                  aria-label="Heading level"
+                >
+                  <span class="seller-home__skill-canvas-tool-label" data-sh-editor-heading-label>Heading</span>
+                  <svg class="seller-home__skill-canvas-tool-chevron" aria-hidden="true" focusable="false">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#down"></use>
+                  </svg>
+                </button>
+                <div class="slds-dropdown slds-dropdown_left slds-dropdown_x-small seller-home__skill-canvas-heading-dropdown">
+                  <ul
+                    class="slds-dropdown__list"
+                    role="menu"
+                    aria-label="Heading level"
+                  >
+                    <li class="slds-dropdown__item" role="presentation">
+                      <a href="#" role="menuitem" tabindex="0" data-sh-editor-cmd="heading" data-sh-editor-arg="p"><span class="slds-truncate" title="Paragraph">Paragraph</span></a>
+                    </li>
+                    <li class="slds-dropdown__item" role="presentation">
+                      <a href="#" role="menuitem" tabindex="-1" data-sh-editor-cmd="heading" data-sh-editor-arg="h1"><span class="slds-truncate" title="Heading 1">Heading 1</span></a>
+                    </li>
+                    <li class="slds-dropdown__item" role="presentation">
+                      <a href="#" role="menuitem" tabindex="-1" data-sh-editor-cmd="heading" data-sh-editor-arg="h2"><span class="slds-truncate" title="Heading 2">Heading 2</span></a>
+                    </li>
+                    <li class="slds-dropdown__item" role="presentation">
+                      <a href="#" role="menuitem" tabindex="-1" data-sh-editor-cmd="heading" data-sh-editor-arg="h3"><span class="slds-truncate" title="Heading 3">Heading 3</span></a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                class="seller-home__skill-canvas-tool"
+                data-sh-editor-cmd="link"
+                title="Link"
+                aria-label="Insert link"
+              >
+                <svg aria-hidden="true" focusable="false">
+                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#link"></use>
+                </svg>
+                <span class="slds-assistive-text">Insert link</span>
+              </button>
+              <button
+                type="button"
+                class="seller-home__skill-canvas-tool"
+                data-sh-editor-cmd="image"
+                title="Image"
+                aria-label="Insert image"
+              >
+                <svg aria-hidden="true" focusable="false">
+                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#image"></use>
+                </svg>
+                <span class="slds-assistive-text">Insert image</span>
+              </button>
+            </div>
+
+            <div class="seller-home__skill-canvas-toolbar-divider" aria-hidden="true"></div>
+
+            {# ── Blocks group ─────────────────────────────────────
+               UL, OL, Quote, Code block, Table — mirrors
+               Knowledge's third group. Glyphs (`#quote`, `#apex`)
+               swapped to match Knowledge's choices for
+               blockquote and code block so both toolbars carry
+               the same visual vocabulary. #}
+            <div class="seller-home__skill-canvas-toolbar-group" role="group" aria-label="Blocks">
+              <button
+                type="button"
+                class="seller-home__skill-canvas-tool"
+                data-sh-editor-cmd="ul"
+                title="Bulleted list"
+                aria-label="Bulleted list"
+                aria-pressed="false"
+              >
+                <svg aria-hidden="true" focusable="false">
+                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#richtextbulletedlist"></use>
+                </svg>
+                <span class="slds-assistive-text">Bulleted list</span>
+              </button>
+              <button
+                type="button"
+                class="seller-home__skill-canvas-tool"
+                data-sh-editor-cmd="ol"
+                title="Numbered list"
+                aria-label="Numbered list"
+                aria-pressed="false"
+              >
+                <svg aria-hidden="true" focusable="false">
+                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#richtextnumberedlist"></use>
+                </svg>
+                <span class="slds-assistive-text">Numbered list</span>
+              </button>
+              <button
+                type="button"
+                class="seller-home__skill-canvas-tool"
+                data-sh-editor-cmd="quote"
+                title="Quote"
+                aria-label="Blockquote"
+                aria-pressed="false"
+              >
+                <svg aria-hidden="true" focusable="false">
+                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#quote"></use>
+                </svg>
+                <span class="slds-assistive-text">Blockquote</span>
+              </button>
+              <button
+                type="button"
+                class="seller-home__skill-canvas-tool"
+                data-sh-editor-cmd="code"
+                title="Code block"
+                aria-label="Code block"
+                aria-pressed="false"
+              >
+                <svg aria-hidden="true" focusable="false">
+                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#apex"></use>
+                </svg>
+                <span class="slds-assistive-text">Code block</span>
+              </button>
+              <button
+                type="button"
+                class="seller-home__skill-canvas-tool"
+                data-sh-editor-cmd="table"
+                title="Table"
+                aria-label="Insert table"
+              >
+                <svg aria-hidden="true" focusable="false">
+                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#table"></use>
+                </svg>
+                <span class="slds-assistive-text">Insert table</span>
+              </button>
+            </div>
+
+            {# ── Commit cluster (Cancel + Save) ─────────────────────
+               Lives at the trailing edge of the toolbar per the
+               latest Figma direction. `margin-inline-start: auto`
+               (see the `.seller-home__skill-canvas-toolbar
+               &__skill-detail-commit` rule) pushes it to the right
+               regardless of how many formatting groups precede it,
+               so it stays right-aligned as the toolbar wraps at
+               narrow widths.
+
+               Hidden by default; revealed by `onDirtyChange(true)`
+               and re-hidden on save() / cancel(). The selector +
+               data-hooks (`data-sh-skill-detail-commit`,
+               `data-sh-skill-detail-cancel`, `data-sh-skill-
+               detail-save`) are unchanged, so all glue-script
+               wiring in skill_detail.js applies verbatim. #}
+            <div
+              class="seller-home__knowledge-doc-detail-header-commit seller-home__skill-detail-commit seller-home__skill-canvas-toolbar-commit"
+              data-sh-skill-detail-commit
+              hidden
+            >
+              <button
+                type="button"
+                class="slds-button slds-button_neutral seller-home__knowledge-doc-detail-cancel"
+                data-sh-skill-detail-cancel
+                title="{{ cancel.assistiveText }}"
+                aria-label="{{ cancel.assistiveText }}"
+              >{{ cancel.label }}</button>
+              <button
+                type="button"
+                class="slds-button slds-button_brand seller-home__knowledge-doc-detail-save"
+                data-sh-skill-detail-save
+                title="{{ save.assistiveText }}"
+                aria-label="{{ save.assistiveText }}"
+              >{{ save.label }}</button>
+            </div>
+          </div>
+
+          {# ── Editor canvas ──────────────────────────────────────
+             The rendered document IS the editing surface. On load
+             the glue script:
+               1. Reads `savedMarkdown` from JSON (or the session
+                  saved value if one exists).
+               2. Parses it into HTML via the shared
+                  `KnowledgeDocumentView.renderMarkdown()` and
+                  injects that HTML into the `<article>` below.
+               3. Post-processes the DOM to add supporting-skill
+                  chips and Connections/access chips.
+               4. Sets `contenteditable="true"` on the article
+                  when `skill.canEdit === true`.
+
+             `role="document"` is intentional even when editable —
+             assistive tech reads the region as a document surface
+             (with its own heading structure) and the editor
+             behavior is layered on top via
+             `contenteditable="true"`. The article uses the SAME
+             typographic classes the Knowledge preview uses
+             (`hunter-agent-knowledge__article-*`) so headings,
+             paragraphs, lists, and inline treatments render
+             consistently with the read-only Knowledge document
+             surface. #}
+          <div
+            class="seller-home__skill-canvas-body"
+            data-sh-skill-canvas-body
+          >
+            {# ── Inline save-error banner ─────────────────────────
+               Anchored at the TOP of the canvas body so a failed
+               save surfaces above the editor without pushing the
+               toolbar's Save + Cancel buttons off-screen. Focus
+               moves here on failure (via `tabindex="-1"` +
+               `focus()`), so keyboard users don't have to hunt
+               for the message. Idle state is `hidden` so the
+               banner never occupies layout for the healthy
+               case. Copy is written from JS at open time —
+               validation failures cite the offending rule;
+               storage failures cite the store's error message.
+
+               `role="alert"` + `aria-live="assertive"` so the
+               announcement is interruptive: the seller was mid-
+               save when this appeared, and they need to know now
+               rather than after the next polite update. #}
+            <div
+              class="seller-home__skill-detail-save-error"
+              data-sh-skill-detail-save-error
+              role="alert"
+              aria-live="assertive"
+              tabindex="-1"
+              hidden
+            >
+              <svg class="seller-home__skill-detail-save-error-icon" aria-hidden="true" focusable="false">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#error"></use>
+              </svg>
+              <div class="seller-home__skill-detail-save-error-body">
+                <p
+                  class="seller-home__skill-detail-save-error-title"
+                  data-sh-skill-detail-save-error-title
+                ></p>
+                <p
+                  class="seller-home__skill-detail-save-error-message"
+                  data-sh-skill-detail-save-error-message
+                ></p>
+              </div>
+              <button
+                type="button"
+                class="slds-button slds-button_icon slds-button_icon-small seller-home__skill-detail-save-error-dismiss"
+                data-sh-skill-detail-save-error-dismiss
+                aria-label="Dismiss error"
+                title="Dismiss error"
+              >
+                <svg class="slds-button__icon" aria-hidden="true" focusable="false">
+                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+                </svg>
+              </button>
+            </div>
+
+            <article
+              id="sh-skill-editor-doc"
+              class="hunter-agent-knowledge__article seller-home__skill-canvas-doc"
+              role="document"
+              spellcheck="true"
+              aria-labelledby="hunter-agent-knowledge-title"
+              data-sh-skill-editor
+              data-sh-skill-editor-doc
+            ></article>
+          </div>
+        </div>
+
+        {# ── Success toast ───────────────────────────────────────────
+           Lightweight SLDS-styled toast rendered ONCE at the page
+           level. Skill save success shows "Skill saved" for ~4s and
+           auto-dismisses. Not a full SLDS `slds-notify` because we
+           don't need the docked-composer / manual-dismiss variants;
+           this is a single-line status confirmation.
+
+           `role="status"` + `aria-live="polite"` so screen readers
+           announce the message without interrupting other updates.
+           `data-sh-skill-detail-toast` is the write target for
+           skill_detail.js. Idle state is `hidden` — the toast never
+           takes layout when there's nothing to say. #}
+        <div
+          class="seller-home__skill-detail-toast"
+          data-sh-skill-detail-toast
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          hidden
+        >
+          <svg class="seller-home__skill-detail-toast-icon" aria-hidden="true" focusable="false">
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#success"></use>
+          </svg>
+          <span
+            class="seller-home__skill-detail-toast-message"
+            data-sh-skill-detail-toast-message
+          ></span>
+        </div>
+
+        {# ── Not-found state ────────────────────────────────────────
+           Shown when `?id=` is missing on the URL or doesn't match
+           any row in the catalog. Copy comes from JSON so future
+           first-run or permission-denied variants are a data-only
+           edit. `href` reuses `back.href` so the action link
+           always returns the seller to /skills.html. #}
+        <div
+          class="seller-home__knowledge-doc-detail-notfound"
+          data-sh-skill-detail-notfound
+          hidden
+        >
+          <p class="seller-home__knowledge-doc-detail-notfound-title">{{ notFound.title }}</p>
+          <p class="seller-home__knowledge-doc-detail-notfound-description">{{ notFound.description }}</p>
+          <a
+            class="seller-home__knowledge-doc-detail-notfound-action"
+            href="{{ back.href }}"
+          >{{ notFound.actionLabel }}</a>
+        </div>
+      </section>
+
+      {# ── Inlined catalog + page-level bindings ──────────────────────
+         The glue script (skill_detail.js) reads this blob at boot to:
+           1. Look up the row whose `id` matches `?id=<id>`.
+           2. Read the metadata template + not-found copy.
+           3. Read `cancel.confirmMessage` + `status.*` messages.
+           4. Read `toolLibrary` so the "Connections and access"
+              bullets in the rendered Markdown can be enriched with
+              tool icons after render.
+           5. Read `tabs` + the full `catalog` so the breadcrumb
+              skill switcher can build its scope picklist and its
+              list of every other skill the seller can open.
+           6. Read `agentLibrary` so the resolved skill's `agent` key
+              can be turned into the header badge's label + tint —
+              the same registry `_skill_list.html` resolves against
+              at render time on the list page.
+           7. Read `statusLibrary` for the same reason, one key over:
+              the resolved skill's `status` becomes the lifecycle
+              pill beside the agent badge.
+
+         `tojson | safe` JSON-escapes values so quotes / newlines /
+         unicode survive the round-trip. `type="application/json"`
+         is inert but keeps the payload addressable via
+         `document.getElementById`. #}
+      <script type="application/json" id="sh-skill-detail-config">
+        {
+          "catalog":      {{ catalog | tojson | safe }},
+          "toolLibrary":  {{ toolLibrary | tojson | safe }},
+          "agentLibrary": {{ agentLibrary | tojson | safe }},
+          "statusLibrary": {{ statusLibrary | tojson | safe }},
+          "tabs":         {{ tabs | tojson | safe }},
+          "detail":       {{ detail | tojson | safe }}
+        }
+      </script>
+
+      {# Dialogs partial — hosts the placeholder "Schedule skill"
+         modal + delete confirmation used by the actions router. #}
+      {% include "_skills_dialogs.html" %}
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts_extra %}
+  {# home.js drives the shared shell (nav collapse toggle, persisted
+     state). Its list-page handlers no-op on this page because those
+     roots don't exist here. skills.js is deliberately NOT loaded:
+     this page has no skill list, and skill_detail.js owns its own
+     dialog + dropdown wiring for the partial included above. #}
+  <script src="/scripts/home.js"></script>
+
+  {# The always-editable Markdown canvas. Self-contained — it ships
+     its own `renderMarkdown()`, so `KnowledgeDocumentView` is not
+     needed here (nothing on this page calls `.create()`, the only
+     thing that module exposes). #}
+  <script src="/scripts/skill_markdown_editor.js"></script>
+
+  {# Isolated persistence layer. Detail page NEVER reads/writes
+     committed saves to storage directly — it goes through
+     `SkillStore.load()` / `SkillStore.save()`. Prototype-scoped
+     (localStorage-backed); a real API drops in behind the same
+     method signatures. Loaded BEFORE skill_detail.js so the
+     controller can reference `window.SkillStore` at boot. #}
+  <script src="/scripts/skill_store.js"></script>
+
+  {# Backs the Schedule button. `wireScheduleAction` in skill_detail.js
+     calls `SellerHomeScheduling.createDraftForSkill(skill)` to mint the
+     draft envelope, then navigates to the conversation panel the
+     envelope's `url` points at, where home_conversation.js reads the
+     draft back out and prefills the composer. Must load BEFORE
+     skill_detail.js so the global exists at boot. If it were missing,
+     the button falls back to a labeled placeholder dialog rather than
+     dead-ending the seller. #}
+  <script src="/scripts/schedule_conversation.js"></script>
+
+  <script src="/scripts/skill_detail.js"></script>
+{% endblock %}

@@ -142,6 +142,18 @@
   // off the bottom.
   var RECENTS_MAX = 12
 
+  // Conversations the seller started from a skill's Schedule button.
+  // They're created before the conversation is ever opened, so they
+  // can't come in through the arrival-recording above — and the store
+  // is localStorage, because a schedule outlives the tab that set it up
+  // in a way an ordinary thread doesn't.
+  //
+  // Owned and written by schedule_conversation.js, which isn't loaded
+  // on every surface the nav renders on; this file is, so the key is
+  // read directly here. It's a read-only dependency — nothing in this
+  // file writes to that store.
+  var DRAFT_LIST_KEY = 'sh:convDrafts:list:v1'
+
   // Whether the knowledge banner has been dismissed this session.
   // sessionStorage for the same reason as Recents: the dismissal should
   // survive moving around the app — drilling into a doc and coming back
@@ -245,6 +257,67 @@
     list = list.slice(0, RECENTS_MAX)
     writeRecents(list)
     return list
+  }
+
+  // Schedule-flow conversations, newest first, in the same shape
+  // `recordRecent` stores. No `query` — a draft's name comes from the
+  // skill it schedules, not from anything typed into a composer.
+  function readDraftRecents () {
+    try {
+      var raw = window.localStorage.getItem(DRAFT_LIST_KEY)
+      if (!raw) return []
+      var parsed = JSON.parse(raw)
+      if (Object.prototype.toString.call(parsed) !== '[object Array]') return []
+
+      var out = []
+      for (var i = 0; i < parsed.length; i++) {
+        var entry = parsed[i]
+        if (!entry || !entry.conversationId) continue
+        out.push({
+          id: 'rec-' + entry.conversationId,
+          label: entry.label || entry.conversationId,
+          conversationId: entry.conversationId,
+          query: null
+        })
+      }
+      return out
+    } catch (e) {
+      // Unreadable, malformed, or a browser refusing storage — the rail
+      // still renders whatever this session has.
+      return []
+    }
+  }
+
+  // The name a Schedule-flow conversation goes by, or '' when the id
+  // isn't one. Used to title the row for a draft the registry has never
+  // heard of — see `currentConversation`.
+  function draftRecentLabel (convId) {
+    if (!convId) return ''
+    var drafts = readDraftRecents()
+    for (var i = 0; i < drafts.length; i++) {
+      if (drafts[i].conversationId === convId) return drafts[i].label
+    }
+    return ''
+  }
+
+  // Drafts on top of this session's history. Where both have the same
+  // conversation, the session copy wins: it's the one `recordRecent`
+  // keeps current, so it holds the newer name after a schedule is
+  // confirmed and the draft is renamed from "Schedule Foo" to "Foo".
+  function withDraftRecents (recents) {
+    var seen = {}
+    for (var i = 0; i < recents.length; i++) {
+      if (recents[i] && recents[i].conversationId) {
+        seen[recents[i].conversationId] = true
+      }
+    }
+
+    var drafts = readDraftRecents()
+    var out = []
+    for (var d = 0; d < drafts.length; d++) {
+      if (!seen[drafts[d].conversationId]) out.push(drafts[d])
+    }
+    return out.concat(recents).slice(0, RECENTS_MAX)
   }
 
   // One or two letters standing in for a Recents label in the collapsed
@@ -371,6 +444,11 @@
       } catch (e) {
         // Fall back to the raw id rather than dropping the row.
       }
+      // A Schedule-flow conversation is created at runtime, so it's in
+      // neither the registry nor the URL's `?q=`. Its name lives with
+      // the draft — without this the rail would advertise the row by
+      // its id.
+      if (label === id) label = draftRecentLabel(id) || id
     }
 
     return { id: 'rec-' + id, label: label, conversationId: id, query: query || null }
@@ -506,7 +584,28 @@
       consumeResetFlag()
       var current = currentConversation(root)
       var recents = current ? recordRecent(current) : readRecents()
-      renderRecents(nav, recents, current ? current.conversationId : null)
+      var activeConvId = current ? current.conversationId : null
+      renderRecents(nav, withDraftRecents(recents), activeConvId)
+
+      // Confirming a schedule renames its conversation — "Schedule
+      // Daily Pipeline Snapshot" becomes "Daily Pipeline Snapshot",
+      // since the thread is no longer about setting one up. Re-record
+      // under the new name (in place: `recordRecent` keeps a row's
+      // position) and repaint, so the rail updates without a reload.
+      document.addEventListener('sh:schedule-confirmed', function (event) {
+        var detail = event && event.detail
+        var convId = detail && detail.conversationId
+        var label = detail && detail.workflow && detail.workflow.title
+        var next = (convId && label)
+          ? recordRecent({
+            id: 'rec-' + convId,
+            label: label,
+            conversationId: convId,
+            query: null
+          })
+          : readRecents()
+        renderRecents(nav, withDraftRecents(next), activeConvId)
+      })
     }
 
     // Nav rows with no destination yet (Skills, Tools, Feedback and

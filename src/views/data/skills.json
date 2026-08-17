@@ -1,0 +1,1030 @@
+// Seller Home — Skills library
+// =====================================================================
+// Data source for /skills.html. Read at build time by
+// gulpfile.js:getData() because the filename matches the .html stem.
+//
+// ── The Skill / RecentChat split ──────────────────────────────────
+// A Skill is a REUSABLE CAPABILITY. It is a static catalog entry —
+// nothing on a Skill describes how any particular run is going. Run-
+// time state (running / completed / failed, in-flight progress, live
+// aria-labels for a progress ring) belongs to `RecentChat` — see
+// `recent_chats.json` for that data model and its own runStatuses
+// registry.
+//
+// The rule the codebase follows, everywhere:
+//
+//     Do NOT derive a Skill card's visual state from an active run.
+//
+// SkillCard always renders the same leading indicator (an "add"
+// glyph inside a neutral outline circle), regardless of whether an
+// execution of this skill is currently in flight somewhere in the
+// system. If a RecentChat happens to be running THIS skill, its
+// progress ring surfaces on the RecentChat row — not on the Skill.
+//
+// This split lets the Skills page read as a stable, browsable
+// catalog of things Sales Agent can do, while activity monitoring
+// lives on a separate surface tuned for that job. The two data
+// models never share a field — no `runtimeState`, no `progress`,
+// no `runStatus` on a Skill; conversely no `ownership`, no
+// `connectedSkills`, no `canEdit` on a RecentChat.
+//
+// ── Data-model contract ───────────────────────────────────────────
+// Every top-level key documented below is part of the Skills page's
+// public data contract. Renderers (template + JS) reference these
+// keys by name; a rename requires a matching template edit. Skill
+// cards are NEVER hardcoded in the markup — the entire grid is
+// projected from `skills[]` through the shared macros in
+// `_skill_card_grid.html`.
+//
+// Fields on each `skills[]` entry (schema — order below matches
+// the render order in the card macro so authors can reason about
+// what shows up on the card by scrolling top-to-bottom):
+//
+//   id             — string. Stable DOM + event key. Kebab-cased,
+//                     prefixed `sk-` so it's easy to grep for.
+//                     Preserved across renames so a route like
+//                     `/skills/:id` never breaks when the display
+//                     name changes.
+//   name           — string. Semibold card title.
+//   agent          — string, optional. A KEY into `agentLibrary`
+//                     (see below) naming the agent that owns this
+//                     skill. Renders as a tinted pill immediately to
+//                     the right of the title in TWO places: the list
+//                     row (Figma "Source Tile", node 9723:17395 →
+//                     11020:23685) and the skill-detail header, next
+//                     to the breadcrumb switcher (Figma 9923:31084).
+//                     The list resolves the label in the template;
+//                     the detail page resolves it in skill_detail.js,
+//                     because `?id=` is what decides the owner there.
+//                     Purely additive: omit the key and both surfaces
+//                     render a bare title — each gates the whole pill
+//                     on the lookup resolving, so a missing key and a
+//                     typo'd one both degrade to no badge rather than
+//                     an empty pill. Assistive tech reaches the label
+//                     differently per surface: the row folds it into
+//                     the anchor's aria-label ("Open skill, {name},
+//                     {agent label}"), since an anchor's label
+//                     overrides its inner text; the detail header has
+//                     no anchor, so the pill carries a visually-
+//                     hidden "Owned by" prefix instead. One agent per
+//                     skill — the design shows a single badge, and the
+//                     pill does not wrap or truncate.
+//   status         — string, optional. A KEY into `statusLibrary`
+//                     (see below) naming where the skill sits in its
+//                     publishing lifecycle. Renders as a second pill
+//                     right of the agent badge, in the skill-detail
+//                     header ONLY (Figma 9744:24364) — the list rows
+//                     deliberately don't repeat it, since a catalog of
+//                     published skills would show the same pill on
+//                     every row. Resolves and degrades exactly like
+//                     `agent`: an unknown key renders no badge.
+//   description    — string. 12-px muted body copy; the card
+//                     applies a 2-line clamp with ellipsis so long
+//                     descriptions truncate visibly rather than
+//                     wrapping unbounded.
+//   category       — "mine" | "shared" | "learned". Presentation
+//                     bucket the skill belongs to. Preferred field
+//                     name going forward; the legacy `ownership`
+//                     field below MIRRORS this value 1:1 until every
+//                     downstream consumer (tab-count SSR loop in
+//                     `skills.html`, `data-sh-skill-ownership`
+//                     attribute in `_skill_list.html`, and
+//                     `home.js`'s ownership filter) is migrated
+//                     to `category`. Dual-writing today keeps the
+//                     schema forward-compatible without a
+//                     synchronized template + JS + JSON edit; a
+//                     future cleanup can drop `ownership` in one
+//                     pass. Kept as a required string so the tab
+//                     count is always deterministic.
+//   ownership      — "mine" | "shared" | "learned". LEGACY mirror
+//                     of `category` (see above). Retained because
+//                     the tab-count SSR loop in `skills.html` and
+//                     the `data-sh-skill-ownership` filter
+//                     attribute both read this key today. Adding a
+//                     new bucket is a two-line change: append a
+//                     value here + `category` above, and add a
+//                     matching tab entry in `tabs.items` with its
+//                     `ownerships` list.
+//   referencedSkillCount
+//                  — integer. Number of sub-skills this skill
+//                     coordinates. Kept in sync with
+//                     `connectedSkills.length` so downstream views
+//                     (skill detail card, condensed row variants,
+//                     future search facets) can render a compact
+//                     "Referred N other skills" surface without
+//                     iterating the sub-skill array. 0 for
+//                     standalone skills. The list template still
+//                     reads `.length` for the visible chip label —
+//                     the two fields are additive, not competing.
+//   connectedTools — array<string>. Each entry is a KEY into
+//                     `toolLibrary` (see below). Rendered as small
+//                     icon chips beneath the description in the
+//                     order authored. Missing keys are silently
+//                     skipped so a typo can't break the whole card.
+//                     Kept as key references (not embedded
+//                     objects) so the icon assets are swappable
+//                     without touching skills[].
+//   nextRun        — string | null. Display value for a future
+//                     "Next run …" affordance. Not rendered on the
+//                     card today (the design ships without it);
+//                     kept in the data model so a future revision
+//                     can pick it up without a schema migration.
+//                     Reserved for RecentChat- or Schedule-shaped
+//                     surfaces, not the Skill card — the Skill /
+//                     RecentChat split (see below) rules run-time
+//                     metadata off Skill cards.
+//   sharedBy       — string | null. Person or team who shared a
+//                     `ownership: "shared"` skill. Rendered on
+//                     detail views (not on the grid card).
+//   connectedSkills — array<{id, name}> | undefined. Sub-skills
+//                     this skill coordinates.
+//                       • Renders as a right-anchored "Uses N other
+//                         skill(s)" link in the card's footer row
+//                         (secondary-link styling — not a status
+//                         badge).
+//                       • Hover / focus on that link opens an
+//                         SLDS 2 popover (role="tooltip") listing
+//                         each sub-skill by NAME — see
+//                         `_skill_card_grid.html`.
+//                     Omit or leave empty for standalone skills;
+//                     both the link AND the popover are suppressed
+//                     when the array is missing / empty. Count comes
+//                     from `connectedSkills.length` so add / remove
+//                     is a one-line JSON edit and the singular /
+//                     plural label ("skill" vs. "skills") flips
+//                     automatically in the template. `id` is
+//                     forward-facing (future deep link to each sub-
+//                     skill's detail page); nothing currently
+//                     requires it to resolve to an entry in
+//                     `skills[]` — the template only reads `name`
+//                     for popover rendering and `.length` for the
+//                     link count.
+//   canEdit        — boolean. Whether the current user may edit
+//                     this skill. Consumed by the overflow menu
+//                     to gate Edit / Schedule / Duplicate.
+//   canShare       — boolean. Whether the user may share it.
+//                     Consumed by the overflow menu (Share).
+//   canDelete      — boolean. Whether the user may delete it.
+//                     Consumed by the overflow menu (Delete).
+//   actions        — array<string>. Denormalized list of action
+//                     ids the CURRENT USER can invoke on this
+//                     skill, derived from the permission booleans
+//                     above cross-referenced against
+//                     `rowActions[].requires`. Kept as an explicit
+//                     scalar so detail views + future surfaces can
+//                     render an "Actions on this skill" cluster
+//                     without repeating the permission-filter
+//                     computation the overflow-menu macro already
+//                     does. Order matches the authored order in
+//                     `rowActions[]` so a rendering that surfaces
+//                     these directly preserves the intended
+//                     display order without a sort step. Rebuilt
+//                     whenever the permission booleans change.
+//   linked         — boolean, optional. UI-only flag — `false`
+//                     opts the card out of drill-in (renders as
+//                     an inert `<div>` with no chevron and no
+//                     card-activation handler). Every card in this
+//                     increment ships `linked: true` per the
+//                     SkillCard spec ("Make the complete card
+//                     interactive"). Detail view isn't wired yet,
+//                     so the click-handler in bindSkills()
+//                     preventDefault's `href="#"` and dispatches
+//                     `sh:skill-open` as a stand-in until the
+//                     detail route lands.
+//
+// ── Fields DELIBERATELY ABSENT ────────────────────────────────────
+// The following fields USED to live on `skills[i]` and were removed
+// on 2026-08-03 as part of the Skill / RecentChat split:
+//
+//   runtimeState   — Was "idle" | "running" | "scheduled" | "paused".
+//                     Now conceptually a RecentChat's `runStatus`.
+//                     See `recent_chats.json`.
+//   progress       — Was 0-100. Now lives on RecentChat only, since
+//                     progress is a property of a specific run, not
+//                     of the reusable capability.
+//   lastRun        — Was a display-ready "Last run …" string
+//                     rendered in the card footer's right column.
+//                     Removed as a follow-on cleanup: "when did this
+//                     capability last execute" is a property of a
+//                     specific run, not the capability itself.
+//                     Surfaces instead on the running-chat row in
+//                     the Recents nav (see `renderRunningRing` in
+//                     `_home_left_nav.html`); a future "completed
+//                     X ago" affordance on a completed RecentChat
+//                     is where a matching non-running variant will
+//                     land.
+//
+// The paired `runtimeStates` registry that used to sit at the top
+// level of this file (mapping state keys to indicator variant /
+// badge / progress-ring aria) was likewise moved — see
+// `recent_chats.json`'s `runStatuses` registry.
+//
+// If you find yourself wanting to add a run-flavored field to a
+// Skill entry, that's the signal to add it to RecentChat instead.
+//
+// Field-by-field for the top-level registries:
+//
+//   • toolLibrary   — keyed registry of connector-tool icons.
+//                      Fields:
+//                        name      — display name (SR + tooltip)
+//                        iconRef   — path to the 32×32 icon asset
+//                                    in /assets/images/skill-tools/
+//                      Cards reference tools by key
+//                      (`skills[i].connectedTools`). Renaming an
+//                      icon or swapping its SVG is a one-line edit
+//                      here; cards don't need to know the path.
+//                      Filenames use the `tools_*` prefix that
+//                      matches the delivered asset set.
+//
+// Other top-level keys (unchanged from prior schema — comments
+// live inline where useful):
+//   pageTitle, header, composer, tabs, rowActions, filterAction,
+//   emptyState.
+{
+  "pageTitle": "Skills",
+
+  // Header band on /skills.html.
+  //   heading     — <h1> at the left of the header band.
+  //   actionLabel — Label + accessible name of the right-anchored
+  //                 "Create Skill" pill (Figma "Coworker – Skills").
+  //                 Rendered by `skills.html` using the same SLDS 2
+  //                 `slds-button_neutral` shape `/knowledge.html`'s
+  //                 "New Knowledge" button uses, so height, radius,
+  //                 padding, colors, and states come from SLDS
+  //                 tokens without a bespoke button rule.
+  //
+  // The prior `description` string powered the intro paragraph that
+  // sat between the header band and the composer. That paragraph
+  // was removed on 2026-08-11 when the Skills page adopted the
+  // list + banner shape; the string is intentionally dropped to
+  // avoid a dormant field on the schema (the educational banner
+  // below now carries the equivalent copy).
+  "header": {
+    "heading":     "Skills",
+    "actionLabel": "Create Skill"
+  },
+
+  // ── Educational banner (Figma "Turn your regular tasks into
+  //     reusable skills")
+  // ------------------------------------------------------------
+  // Renders as a brand-blue hero band beneath the header. Copy is
+  // authored here so translators / product edits stay in JSON;
+  // markup lives in `_skills_banner.html`.
+  //
+  //   title       — SLDS Titles/font-scale-3 semibold, white.
+  //   description — SLDS Body/font-scale-1 regular, white at ~85%
+  //                 alpha (matches the muted-on-accent treatment
+  //                 SLDS uses on filled surfaces).
+  //   imageSrc    — Path to the mascot cutout (SVG or PNG). Kept
+  //                 optional so the banner still renders a clean
+  //                 text-only surface when the asset is missing —
+  //                 useful during design iteration before the
+  //                 final artwork lands.
+  //   imageAlt    — Empty string keeps the mascot decorative
+  //                 (aria-hidden="true" in the template); the
+  //                 banner's aria-labelledby → heading gives
+  //                 assistive tech the region label.
+  "banner": {
+    "title":       "Turn your regular tasks into reusable skills",
+    "description": "Let Agentforce Coworker take on the work, like meeting prep or project updates. Create skills for yourself or the whole team.",
+    // Full-width banner artwork — brand-blue gradient with the
+    // Agentforce mascot + sparkles baked in on the right. Applied
+    // as a `background-image` on the banner surface rather than an
+    // `<img>` element so the mascot can hide behind the title
+    // gracefully at narrow widths without a JS-driven visibility
+    // toggle. `imageAlt` stays empty because the banner heading
+    // (`aria-labelledby` in the partial) is the accessible name;
+    // the mascot itself is decorative.
+    "imageSrc":    "/assets/images/skills-banner.jpg",
+    "imageAlt":    ""
+  },
+
+  // Composer config — DORMANT after 2026-08-11. The composer include
+  // was removed from `skills.html` when the page adopted the list +
+  // banner shape (Skills is a browsable catalog now, not a "start a
+  // chat" surface). Kept here as-is so re-adding the composer is a
+  // one-line template edit (`{% include "_home_composer.html" %}`)
+  // without a JSON migration. Home / Scheduled continue to use
+  // this same shape.
+  "composer": {
+    "placeholder":   "Start a skill",
+    "ariaLabel":     "Start a skill",
+    "samplePrompts": [],
+    "actions": {
+      "start": [
+        { "id": "add",          "label": "Add",              "icon": "add" },
+        { "id": "quick_action", "label": "Quick action",     "icon": "fallback" },
+        { "id": "skills",       "label": "Skills and tools", "icon": "apps" }
+      ],
+      "end": [
+        { "id": "voice",        "label": "Voice input",      "icon": "unmuted" }
+      ]
+    }
+  },
+
+  // First-paint active tab. `my_skills` is the leftmost visible
+  // tab after "All" was hidden via `hidden: true` below; when
+  // "All" comes back, flip its `hidden` flag and (optionally)
+  // change `defaultTabId` back to `"all"`. Any id below is valid;
+  // the tab controller falls back to the first authored item if
+  // this key ever names an unknown / hidden id.
+  "tabs": {
+    "defaultTabId": "my_skills",
+    "items": [
+      // "All" is parked with `hidden: true` — the template skips
+      // rendering the button but the entry stays in the authored
+      // order so re-enabling is a one-line JSON flip. `bindSkills`
+      // never sees a DOM node for a hidden tab, so URL hashes
+      // pointing at `#tab=all` gracefully fall back to
+      // `defaultTabId`. Kept as a dormant schema slot rather than
+      // deleted so we don't lose the intent.
+      { "id": "all",             "label": "All",             "ownerships": [],         "hidden": true },
+      { "id": "my_skills",       "label": "Your Skills",     "ownerships": ["mine"]    },
+      // `learned_skills` is parked with `hidden: true` while the
+      // learned-skills surface design is still being iterated on.
+      // The three seeded `ownership: "learned"` skills (Review
+      // Deal Health, Identify Pipeline Changes, Recommend Next
+      // Actions) stay reachable via direct URL and via the
+      // supporting-skill chips on Daily Pipeline Snapshot's detail
+      // page — they just don't appear under any visible tab while
+      // this flag is on. Flip `hidden` to `false` to re-expose the
+      // tab, no JS change required.
+      { "id": "learned_skills",  "label": "Learned Skills",  "ownerships": ["learned"], "hidden": true },
+      { "id": "shared_with_me",  "label": "Shared with you", "ownerships": ["shared"]  }
+    ]
+  },
+
+  // ── Keyed agent registry ──────────────────────────────────────
+  // The agent that OWNS a skill. Skills reference an entry by key via
+  // `skills[i].agent`; `label` renders in a pill next to the skill
+  // name on the list row (Figma "Source Tile" → badge 11020:23685 for
+  // Sales, 11020:23693 for CoWorker) and again in the skill-detail
+  // header (Figma 9923:31084).
+  //
+  // Both surfaces read THIS object: the list macro is handed it as a
+  // parameter, and skill_detail.html inlines it into the page config
+  // blob for skill_detail.js. Neither keeps its own copy of a label.
+  //
+  // The KEY doubles as the visual variant: both surfaces emit
+  // `.seller-home__skill-agent-badge--<key>`, and home.scss gives
+  // each key its own tint so agents stay visually distinguishable at
+  // a glance. Adding an agent is therefore a two-step change — an
+  // entry here plus a matching variant block in home.scss. Skip the
+  // CSS and the pill still renders correctly in a neutral tint (the
+  // base rule owns a fallback), so a new agent can never ship an
+  // unreadable badge.
+  //
+  // Labels live here rather than on each skill so the string is
+  // authored once; renaming an agent is a one-line edit even when
+  // dozens of skills point at it.
+  //
+  // The labels deliberately OMIT the word "Agent" (directed in review
+  // on 2026-08-14): the pill's job is to say which agent, and "Agent"
+  // repeated on every row is the part that carries no information. Do
+  // not add it back to make the strings read like full product names —
+  // prose elsewhere still says "Sales Agent", and that is fine, but the
+  // badge is a label, not a sentence.
+  "agentLibrary": {
+    "sales":    { "label": "Sales"    },
+    "coworker": { "label": "CoWorker" },
+    "tableau":  { "label": "Tableau"  }
+  },
+
+  // ── Keyed lifecycle-status registry ───────────────────────────
+  // Where a skill sits in its publishing lifecycle. Skills reference
+  // an entry by key via `skills[i].status`, and `label` renders in a
+  // second pill immediately right of the agent badge in the
+  // skill-detail header (Figma 9744:24364 → badge 11054:23957).
+  //
+  // Same registry shape and same resolution rules as `agentLibrary`
+  // above — key doubles as the CSS variant
+  // (`.seller-home__skill-status-badge--<key>`), the label is
+  // authored once, and a key that resolves to nothing renders no
+  // badge at all.
+  //
+  // ONE entry today, which is the point: the badge says "Published"
+  // because that is a STATE, and a state implies the others. When
+  // Draft / Archived / Needs review arrive, they are an entry here
+  // plus a variant block in home.scss — the template and
+  // skill_detail.js need no change. Note the tint lives entirely in
+  // the variant (the base pill is colorless), so a second status
+  // cannot accidentally inherit "published green".
+  "statusLibrary": {
+    "published": { "label": "Published" }
+  },
+
+  // Keyed connector-tool registry. Cards reference by key via
+  // `skills[i].connectedTools`. Swap `iconRef` here to replace an
+  // icon asset without touching skills[].
+  "toolLibrary": {
+    "sf":       { "name": "Salesforce",      "iconRef": "/assets/images/skill-tools/tools_sf.png"       },
+    "slack":    { "name": "Slack",           "iconRef": "/assets/images/skill-tools/tools_slack.svg"    },
+    "gmail":    { "name": "Gmail",           "iconRef": "/assets/images/skill-tools/tools_gmail.png"    },
+    "gcal":     { "name": "Google Calendar", "iconRef": "/assets/images/skill-tools/tools_gcal.svg"     },
+    "zoominfo": { "name": "ZoomInfo",        "iconRef": "/assets/images/skill-tools/tools_zoominfo.svg" }
+  },
+
+  // Six mock skills — order + labels match Figma "Coworker – Skills"
+  // (node 9723:17362), 2026-08-11 refactor.
+  //
+  // Only Daily Pipeline Snapshot ships a `connectedSkills` list
+  // AND a matching `referencedSkillCount: 3`; the rest are
+  // standalone (empty `connectedSkills` implied, `referenced-
+  // SkillCount: 0`) and render as simple title + description
+  // rows.
+  //
+  // Each `ownership: "mine"` entry names its owning agent via
+  // `agent` (a key into `agentLibrary` above): the first five belong
+  // to `sales`, and Make Powerpoint belongs to `coworker`. The mix is
+  // deliberate — this surface lists skills owned by DIFFERENT agents,
+  // and the badge tint is what tells them apart.
+  //
+  // The three `ownership: "learned"` entries below deliberately carry
+  // no `agent`: they are sub-skills of Daily Pipeline Snapshot rather
+  // than agent-level capabilities, and their tab is parked behind
+  // `hidden: true`. Give them one here if the Learned Skills tab is
+  // ever re-exposed and the design calls for it — no template or CSS
+  // change is needed.
+  //
+  // Field order below matches the schema docblock at the top of
+  // this file so authors can eyeball each entry against the
+  // documented contract. IDs are stable — treat them as
+  // permanent, since a future `/skills/:id` detail route depends
+  // on them.
+  //
+  // Every field on the entry maps directly to a rendered surface
+  // via the row macro OR a downstream detail view; run-flavored
+  // fields (runtimeState, progress, lastRun) are DELIBERATELY
+  // absent — see the note at the top of this file — those live
+  // on RecentChat.
+  //
+  // ── Denormalized fields (audit note, 2026-08-11) ───────────────
+  // `referencedSkillCount` and `actions` are denormalized: both
+  // could be derived at render time from `connectedSkills.length`
+  // and the permission booleans respectively. They're carried
+  // explicitly so consumers other than the list row macro
+  // (skill detail card, condensed variants, future search
+  // facets) don't have to re-run the same computation. Whenever
+  // the underlying source of truth changes (add / remove a
+  // connectedSkill, flip a permission), the denormalized field
+  // must be updated in the same commit — the schema docblock
+  // above spells out the invariant.
+  "skills": [
+    {
+      "id":                   "sk-daily-pipeline-snapshot",
+      "name":                 "Daily Pipeline Snapshot",
+      "agent":                "sales",
+      "status":               "published",
+      "description":          "Get a prioritized daily view of pipeline changes, at-risk deals, and the actions most likely to move them forward.",
+      "category":             "mine",
+      "ownership":            "mine",
+      "connectedTools":       ["sf", "slack", "gmail"],
+      // Coordinating skill — invokes three sub-skills as part of
+      // its recipe. `name` is the string the SkillCard popover
+      // renders; `id` is forward-facing (future deep link to each
+      // sub-skill's detail page) and isn't required to resolve to
+      // an entry in `skills[]` today. When real dependency
+      // authoring lands, replace with the actual sub-skills the
+      // recipe references and the popover / link light up
+      // automatically. `referencedSkillCount` MUST stay in sync
+      // with the length of this array — see the denormalized-
+      // fields note above.
+      "connectedSkills": [
+        { "id": "sk-review-deal-health",         "name": "Review Deal Health"         },
+        { "id": "sk-identify-pipeline-changes",  "name": "Identify Pipeline Changes"  },
+        { "id": "sk-recommend-next-actions",     "name": "Recommend Next Actions"     }
+      ],
+      "referencedSkillCount": 3,
+      "nextRun":              null,
+      "sharedBy":             null,
+      "canEdit":              true,
+      "canShare":             true,
+      "canDelete":            true,
+      "actions":              ["edit", "schedule", "duplicate", "share", "delete"],
+      // ── Detail-page fields ──────────────────────────────────
+      // `createdBy` / `updatedBy` / `updatedAt` / `version` feed
+      // the metadata caption on /skill_detail.html; `markdown` is
+      // the source-of-truth body that the always-editable
+      // `SkillMarkdownEditor` module renders on load and
+      // re-serializes to Markdown on every edit. Supporting-skill
+      // references are authored as regular
+      // `[label](/skill_detail.html?id=<id>)` links so the file
+      // stays valid Markdown; a small post-render pass in
+      // skill_detail.js decorates them with the chip styling
+      // seen in Figma. Because chip labels come from the LINK
+      // TEXT (not from the target skill's `name`), a chip's
+      // visible copy is authored here — the target must exist
+      // in the catalog for the link to remain interactive, but
+      // the link text is preserved verbatim regardless of
+      // resolution.
+      "createdBy":            "Caroline Alix",
+      "updatedBy":            "Zubin Keith",
+      "updatedAt":            "yesterday at 4:00 PM",
+      "version":              "V8",
+      "markdown":             "# Daily Pipeline Snapshot\n\nGet a concise daily view of your Salesforce pipeline\u2014what changed, what needs attention, and which actions will have the greatest impact.\n\n## What this skill does\n\nDaily Pipeline Snapshot analyzes your Salesforce opportunities and creates a prioritized briefing for the day. It highlights meaningful pipeline movement, emerging risks, stalled deals, and recommended next actions so you can focus on the opportunities that need you most.\n\n## How this skill works\n\nCoordinates three supporting Skills to build the snapshot:\n\n[Review Deal Health](/skill_detail.html?id=sk-review-deal-health) [Identify Pipeline Changes](/skill_detail.html?id=sk-identify-pipeline-changes) [Recommend Next Actions](/skill_detail.html?id=sk-recommend-next-actions)\n\n## Instructions\n\n1. Analyze the current user's open opportunities for the current quarter by default. If the user specifies a different time period, segment, territory, or pipeline view, use that scope instead.\n2. Retrieve the seller's open opportunities from Salesforce.\n3. Default to records owned by the current user and expected to close this quarter.\n4. Compare the current pipeline with the latest available snapshot.\n5. Identify material changes in stage, amount, probability, close date, and status.\n6. Evaluate momentum, engagement, risk, and next-step readiness.\n7. Prioritize high-impact opportunities that are immediately actionable.\n8. Recommend a specific next action for each priority opportunity.\n9. Explain risks and recommendations using available Salesforce evidence.\n10. Clearly separate confirmed facts from inferred risks.\n11. Never update records or contact customers without explicit approval.\n\n## Connections and access\n\n- Salesforce\n- Gmail\n\n## Guardrails\n\n- Never invent customer activity, deal changes, or pipeline values.\n- Label recommendations and inferred risks clearly.\n- Show data source and freshness when relevant.\n- Exclude closed opportunities unless they changed during the comparison period.\n- Respect Salesforce permissions and sharing rules.\n- Ask for clarification when pipeline scope is ambiguous.\n\n## Example output\n\nA typical morning briefing surfaces the two or three opportunities where a specific next action is most likely to move the deal forward, each paired with the pipeline signal that raised it and a suggested draft the seller can accept or edit before sending.\n",
+      "linked":               true
+    },
+    {
+      "id":                   "sk-daily-deal-summary",
+      "name":                 "Daily Deal Summary",
+      "agent":                "sales",
+      "status":               "published",
+      "description":          "Summarizes important deal activity, changes, risks, and recommended next steps.",
+      "category":             "mine",
+      "ownership":            "mine",
+      "connectedTools":       ["sf", "slack", "gmail"],
+      "referencedSkillCount": 0,
+      "nextRun":              null,
+      "sharedBy":             null,
+      "canEdit":              true,
+      "canShare":             true,
+      "canDelete":            true,
+      "actions":              ["edit", "schedule", "duplicate", "share", "delete"],
+      "createdBy":            "Caroline Alix",
+      "updatedBy":            "Caroline Alix",
+      "updatedAt":            "3 days ago",
+      "version":              "V4",
+      "markdown":             "# Daily Deal Summary\n\nSummarizes important deal activity, stage changes, risks, and recommended next steps across the seller's active opportunities.\n\n## What this skill does\n\nDaily Deal Summary reviews the seller's active opportunities and produces a compact recap of what moved in the last 24 hours. It surfaces stage transitions, amount adjustments, close-date shifts, new activity from buyers, and any risks that emerged since the previous run.\n\n## Instructions\n\n1. Pull the seller's active opportunities from Salesforce.\n2. Compare each record against its state 24 hours ago.\n3. Note stage changes, amount changes, probability shifts, and close-date changes.\n4. Include new Salesforce activity (calls, meetings, emails, notes) since the previous run.\n5. Flag any opportunity where momentum has stalled for more than five business days.\n6. Recommend a specific next step for each highlighted opportunity.\n7. Keep the recap brief\u2014one to two sentences per deal.\n\n## Connections and access\n\n- Salesforce\n- Slack\n- Gmail\n\n## Guardrails\n\n- Report only Salesforce-sourced activity; do not invent interactions.\n- Preserve exact numbers when reporting amount or probability changes.\n- Never modify Salesforce records or send outreach as part of the summary.\n- Respect Salesforce sharing rules and per-record visibility.\n\n## Example output\n\nA morning summary lists two or three deals with a one-line recap for each\u2014what changed, why it matters, and the single next step the seller should take before mid-day.\n",
+      "linked":               true
+    },
+    {
+      "id":                   "sk-buyer-engage",
+      "name":                 "Buyer Engage",
+      "agent":                "sales",
+      "status":               "published",
+      "description":          "Monitors buyer activity and drafts personalized outreach when meaningful engagement signals appear.",
+      "category":             "mine",
+      "ownership":            "mine",
+      "connectedTools":       ["sf", "slack", "gmail"],
+      "referencedSkillCount": 0,
+      "nextRun":              null,
+      "sharedBy":             null,
+      "canEdit":              true,
+      "canShare":             true,
+      "canDelete":            true,
+      "actions":              ["edit", "schedule", "duplicate", "share", "delete"],
+      "createdBy":            "Caroline Alix",
+      "updatedBy":            "Priya Rao",
+      "updatedAt":            "yesterday at 10:12 AM",
+      "version":              "V6",
+      "markdown":             "# Buyer Engage\n\nMonitors buyer activity across connected sources and drafts personalized outreach when meaningful engagement signals appear.\n\n## What this skill does\n\nBuyer Engage watches for specific engagement signals\u2014website visits to high-intent pages, email opens on stalled threads, LinkedIn activity from a champion, or Salesforce activity from a decision maker\u2014and drafts an outreach message the seller can accept, edit, or discard.\n\n## Instructions\n\n1. Watch the seller's active opportunities and target-account contacts.\n2. Trigger on strong engagement signals only\u2014ignore low-value noise (unsubscribes, out-of-office, generic newsletter opens).\n3. When a signal fires, gather the relevant context: opportunity stage, last touch, buyer role, and the signal itself.\n4. Draft a short, personalized message referencing the signal and a clear next step.\n5. Match the seller's usual tone; keep the draft under 90 words.\n6. Present the draft for review before any send.\n\n## Connections and access\n\n- Salesforce\n- Slack\n- Gmail\n\n## Guardrails\n\n- Never send outreach without seller approval.\n- Do not reference private buyer information the seller wouldn't already know from Salesforce.\n- Skip signals that arrive outside the buyer's likely working hours.\n- Respect any \"do not contact\" flag on the Salesforce contact record.\n\n## Example output\n\nWhen a champion revisits the pricing page on a stalled opportunity, the seller sees a proposed follow-up referencing the revisit and offering a concise, single next step\u2014no boilerplate.\n",
+      "linked":               true
+    },
+    {
+      "id":                   "sk-prepare-for-meetings",
+      "name":                 "Prepare for Meetings",
+      "agent":                "sales",
+      "status":               "published",
+      "description":          "Researches the account, attendees, recent activity, and open opportunities to create a meeting brief.",
+      "category":             "mine",
+      "ownership":            "mine",
+      "connectedTools":       ["sf", "gcal", "gmail"],
+      "referencedSkillCount": 0,
+      "nextRun":              null,
+      "sharedBy":             null,
+      "canEdit":              true,
+      "canShare":             true,
+      "canDelete":            true,
+      "actions":              ["edit", "schedule", "duplicate", "share", "delete"],
+      "createdBy":            "Caroline Alix",
+      "updatedBy":            "Zubin Keith",
+      "updatedAt":            "last week",
+      "version":              "V3",
+      "markdown":             "# Prepare for Meetings\n\nResearches the account, attendees, recent activity, and open opportunities to create a concise meeting brief before every customer conversation.\n\n## What this skill does\n\nAhead of each scheduled meeting with a customer or prospect, Prepare for Meetings assembles a one-page brief: attendees and their roles, the account's current state in Salesforce, open opportunities, recent activity across email and calendar, and the two or three most important questions to ask.\n\n## Instructions\n\n1. Pull upcoming meetings from Google Calendar for the current day and the following business day.\n2. For each meeting, identify the linked Salesforce account and any linked opportunities.\n3. Enrich the attendee list with role, title, and last-touch information from Salesforce.\n4. Summarize the account's current state in three to five bullets\u2014stage, momentum, key stakeholders, open risks.\n5. List the last five relevant activities (calls, emails, meetings, notes) in reverse chronological order.\n6. Propose two or three prepared questions grounded in the current opportunity stage.\n7. Deliver the brief no later than 15 minutes before the meeting starts.\n\n## Connections and access\n\n- Salesforce\n- Google Calendar\n- Gmail\n\n## Guardrails\n\n- Include only information the seller is authorized to view in Salesforce.\n- Do not surface private notes flagged as sensitive.\n- Skip meetings marked as personal in the seller's calendar.\n- Never send the brief to attendees; it is for the seller only.\n\n## Example output\n\nThe day-before brief lists the two most consequential meetings, a five-bullet snapshot of each account, the attendees with roles, and three prepared questions tuned to the current stage.\n",
+      "linked":               true
+    },
+    {
+      // The one Tableau Agent skill on this surface (Figma "Source
+      // Tile" node 9723:17458). Analytics authoring is the Tableau
+      // Agent's domain rather than a selling motion, hence the orange
+      // badge tint.
+      "id":                   "sk-build-dashboard",
+      "name":                 "Build Dashboard",
+      "agent":                "tableau",
+      "status":               "published",
+      "description":          "Turns pipeline and activity data into a dashboard with the views, filters, and breakdowns you ask for.",
+      "category":             "mine",
+      "ownership":            "mine",
+      // Salesforce only. `toolLibrary` ships no Tableau connector
+      // today; add one there (with its 32 x 32 icon asset) and append
+      // the key here when a real integration lands.
+      "connectedTools":       ["sf"],
+      "referencedSkillCount": 0,
+      "nextRun":              null,
+      "sharedBy":             null,
+      "canEdit":              true,
+      "canShare":             true,
+      "canDelete":            true,
+      "actions":              ["edit", "schedule", "duplicate", "share", "delete"],
+      "createdBy":            "Zubin Keith",
+      "updatedBy":            "Zubin Keith",
+      "updatedAt":            "3 days ago",
+      "version":              "V2",
+      "markdown":             "# Build Dashboard\n\nTurns pipeline and activity data into a dashboard with the views, filters, and breakdowns you ask for.\n\n## What this skill does\n\nBuild Dashboard translates a question about the business \u2014 \"where is my quarter at risk?\", \"which segments are converting?\" \u2014 into a working dashboard. It picks the measures and dimensions that answer the question, proposes a layout, and wires up the filters a reader will reach for first.\n\n## Instructions\n\n1. Start from the question the dashboard needs to answer, not the chart type.\n2. Confirm the audience, the time grain, and the scope (team, territory, segment) before building.\n3. Identify the Salesforce objects and fields that carry the measures involved.\n4. Propose a layout and wait for confirmation before assembling the full dashboard.\n5. Lead with the single headline metric; put supporting breakdowns below it.\n6. Choose the chart type that fits the comparison \u2014 trend over time, share of total, distribution.\n7. Add filters for the dimensions the audience will actually slice by, and set sensible defaults.\n8. Label every axis and state the refresh cadence on the dashboard itself.\n\n## Connections and access\n\n- Salesforce\n\n## Guardrails\n\n- Never present a computed metric without making its definition inspectable.\n- Flag measures whose underlying Salesforce fields are sparsely populated.\n- Do not blend data sources at different grains without calling out the join.\n- Respect Salesforce permissions and sharing rules \u2014 a dashboard must not widen access to records the viewer cannot already see.\n- Present the layout for approval before publishing or sharing.\n\n## Example output\n\nA \"where is my quarter at risk?\" request comes back as a four-panel layout \u2014 committed versus closed to date, deals slipping stage, aging in current stage, and coverage against quota \u2014 with a segment filter defaulted to the seller's own book and each measure's definition one click away.\n",
+      "linked":               true
+    },
+    {
+      // The one CoWorker Agent skill on this surface (Figma "Source
+      // Tile" node 9723:17471). Deck-building is a general
+      // productivity capability rather than a selling motion, which
+      // is why it sits with the CoWorker Agent and not the Sales
+      // Agent — and why its badge renders in the info tint.
+      "id":                   "sk-make-powerpoint",
+      "name":                 "Make Powerpoint",
+      "agent":                "coworker",
+      "status":               "published",
+      "description":          "Builds a presentation-ready deck from account context, deal history, and the points you want to land.",
+      "category":             "mine",
+      "ownership":            "mine",
+      // Salesforce only. `toolLibrary` ships no slide-authoring
+      // connector today; add one there (with its 32 x 32 icon asset)
+      // and append the key here when a real integration lands.
+      "connectedTools":       ["sf"],
+      "referencedSkillCount": 0,
+      "nextRun":              null,
+      "sharedBy":             null,
+      "canEdit":              true,
+      "canShare":             true,
+      "canDelete":            true,
+      "actions":              ["edit", "schedule", "duplicate", "share", "delete"],
+      "createdBy":            "Priya Rao",
+      "updatedBy":            "Priya Rao",
+      "updatedAt":            "today at 9:15 AM",
+      "version":              "V1",
+      "markdown":             "# Make Powerpoint\n\nBuilds a presentation-ready deck from account context, deal history, and the points you want to land.\n\n## What this skill does\n\nMake Powerpoint assembles a slide deck for a specific audience \u2014 a customer QBR, an internal deal review, a renewal pitch \u2014 by pulling the relevant Salesforce records and shaping them into a narrative. It proposes an outline first, then fills each slide with the supporting numbers and a suggested talk track.\n\n## Instructions\n\n1. Ask for the deck's purpose and audience before generating anything.\n2. Identify the accounts or opportunities in scope from Salesforce.\n3. Propose a slide outline and wait for confirmation before building the full deck.\n4. Open with the single most important takeaway rather than an agenda slide.\n5. Put one idea on each slide; move supporting detail into the speaker notes.\n6. Cite the Salesforce record behind every figure that appears on a slide.\n7. Keep the deck under twelve slides unless a longer format is requested.\n\n## Connections and access\n\n- Salesforce\n\n## Guardrails\n\n- Never invent metrics, quotes, or customer commitments to fill a slide.\n- Flag any slide where the underlying Salesforce data is stale or incomplete.\n- Leave pricing and contractual terms out unless they are explicitly requested.\n- Respect Salesforce permissions and sharing rules when sourcing content.\n- Present the outline for approval before producing the finished deck.\n\n## Example output\n\nA QBR request comes back as a nine-slide outline \u2014 headline takeaway, adoption trend, open risks, and a closing ask \u2014 with each figure traced to the opportunity or usage record it came from and a short talk track in the notes.\n",
+      "linked":               true
+    },
+    // ── Supporting building-block skills (referenced by Daily
+    //    Pipeline Snapshot) ───────────────────────────────────────
+    // These three entries back the supporting-skill chips shown in
+    // the /skill_detail.html Figma frame (`9744:24896`). They live
+    // in the `learned` category so:
+    //   • The "My Skills" tab count stays at 6 (matches the plan).
+    //   • The "Learned Skills" tab (previously empty) picks up
+    //     these three, showing a populated state instead of the
+    //     empty-state copy.
+    // They're deliberately shallow — a lead paragraph + brief
+    // "What this skill does" section — so a seller who drills in
+    // from the chip lands on a coherent detail page rather than a
+    // dead end. No `agent` (nothing in Figma claims these three) but
+    // they do carry `status`: the two keys are independent, and a
+    // seller who drills in from a chip should still see the same
+    // lifecycle pill every other detail page shows.
+    {
+      "id":                   "sk-review-deal-health",
+      "name":                 "Review Deal Health",
+      "status":               "published",
+      "description":          "Scores each open opportunity on the signals that predict close, and flags the ones that need attention.",
+      "category":             "learned",
+      "ownership":            "learned",
+      "connectedTools":       ["sf"],
+      "referencedSkillCount": 0,
+      "nextRun":              null,
+      "sharedBy":             null,
+      "canEdit":              true,
+      "canShare":             true,
+      "canDelete":            true,
+      "actions":              ["edit", "schedule", "duplicate", "share", "delete"],
+      "createdBy":            "Caroline Alix",
+      "updatedBy":            "Caroline Alix",
+      "updatedAt":            "2 weeks ago",
+      "version":              "V2",
+      "markdown":             "# Review Deal Health\n\nScores each open opportunity on the signals that predict close, and flags the ones that need attention.\n\n## What this skill does\n\nReview Deal Health inspects each of the seller's active opportunities and evaluates momentum (activity cadence, stage age), engagement (buyer-side email + meeting activity), and risk (stalled stages, close-date slips) to produce a per-deal health score with a short narrative reason.\n\n## Connections and access\n\n- Salesforce\n",
+      "linked":               true
+    },
+    {
+      "id":                   "sk-identify-pipeline-changes",
+      "name":                 "Identify Pipeline Changes",
+      "status":               "published",
+      "description":          "Detects meaningful movement across the seller's pipeline since the last snapshot.",
+      "category":             "learned",
+      "ownership":            "learned",
+      "connectedTools":       ["sf"],
+      "referencedSkillCount": 0,
+      "nextRun":              null,
+      "sharedBy":             null,
+      "canEdit":              true,
+      "canShare":             true,
+      "canDelete":            true,
+      "actions":              ["edit", "schedule", "duplicate", "share", "delete"],
+      "createdBy":            "Caroline Alix",
+      "updatedBy":            "Caroline Alix",
+      "updatedAt":            "2 weeks ago",
+      "version":              "V2",
+      "markdown":             "# Identify Pipeline Changes\n\nDetects meaningful movement across the seller's pipeline since the last snapshot.\n\n## What this skill does\n\nIdentify Pipeline Changes compares the current pipeline state against the previous snapshot and surfaces every change that would materially affect a seller's day: stage transitions, amount adjustments, close-date shifts, probability moves, and freshly added opportunities.\n\n## Connections and access\n\n- Salesforce\n",
+      "linked":               true
+    },
+    {
+      "id":                   "sk-recommend-next-actions",
+      "name":                 "Recommend Next Actions",
+      "status":               "published",
+      "description":          "Turns the health + change signals into a specific, prioritized next action per high-impact deal.",
+      "category":             "learned",
+      "ownership":            "learned",
+      "connectedTools":       ["sf", "gmail"],
+      "referencedSkillCount": 0,
+      "nextRun":              null,
+      "sharedBy":             null,
+      "canEdit":              true,
+      "canShare":             true,
+      "canDelete":            true,
+      "actions":              ["edit", "schedule", "duplicate", "share", "delete"],
+      "createdBy":            "Caroline Alix",
+      "updatedBy":            "Caroline Alix",
+      "updatedAt":            "2 weeks ago",
+      "version":              "V2",
+      "markdown":             "# Recommend Next Actions\n\nTurns the health + change signals into a specific, prioritized next action per high-impact deal.\n\n## What this skill does\n\nRecommend Next Actions consumes the outputs of Review Deal Health and Identify Pipeline Changes, ranks the seller's opportunities by expected impact, and recommends a single specific next step per high-impact deal.\n\n## Connections and access\n\n- Salesforce\n- Gmail\n",
+      "linked":               true
+    }
+  ],
+
+  // Overflow-menu action list (per-card ⋮). Rendered by the
+  // SkillCard macro into the trailing menu that appears on hover
+  // / focus-within.
+  //
+  // Each action gates on ONE facet — permission on the skill
+  // (`requires`: "canEdit" | "canShare" | "canDelete" | null; null
+  // → always allowed). There is NO state-scoped gating: Skill is
+  // a static catalog entry, so every allowed action is applicable
+  // to every card that has the permission for it.
+  //
+  // Historical note: the earlier schema shipped Pause / Resume
+  // actions gated by `applicableStates: ["running"]` / `["paused"]`.
+  // Those were removed on 2026-08-03 along with the rest of the
+  // run-state surface — pausing a SKILL doesn't mean anything; the
+  // pause / resume affordance for an in-flight execution now lives
+  // on RecentChat (see `recent_chats.json`).
+  //
+  // Order below is the AUTHORED display order: Edit, Schedule,
+  // Duplicate, Share, Delete. Delete last so the destructive
+  // action is furthest from the trigger — reduces the chance of
+  // an accidental pointer-slide onto it after opening the menu.
+  "rowActions": [
+    { "id": "edit",      "label": "Edit",      "icon": "edit",   "requires": "canEdit"   },
+    { "id": "schedule",  "label": "Schedule",  "icon": "event",  "requires": "canEdit"   },
+    { "id": "duplicate", "label": "Duplicate", "icon": "copy",   "requires": "canEdit"   },
+    { "id": "share",     "label": "Share",     "icon": "share",  "requires": "canShare"  },
+    { "id": "delete",    "label": "Delete",    "icon": "delete", "requires": "canDelete" }
+  ],
+
+  "filterAction": {
+    "id":    "filter",
+    "label": "Filter skills",
+    "icon":  "filterList"
+  },
+
+  // ── Skill detail / editor drill-in copy ────────────────────────────
+  // Page-level UI strings consumed by /skill_detail.html + its glue
+  // script (`src/scripts/skill_detail.js`). Structure mirrors
+  // `knowledge_document_detail.json` 1:1 so the two detail experiences
+  // stay consistent (a seller drilling into a Knowledge doc and a
+  // Skill sees the same header / save / cancel / status affordances).
+  //
+  //   pageTitle             — `<title>` + <main aria-label> when a
+  //                            row resolves. If `?id=` misses, this
+  //                            + `notFound` copy render.
+  //   navActive             — id of the currently-active left-nav
+  //                            item; reuses "skills" so the same
+  //                            left-nav item that lit up on
+  //                            /skills.html stays highlighted while
+  //                            the seller edits a specific skill.
+  //   breadcrumb            — `rootLabel` + `rootHref` for the
+  //                            "Skills / <name>" crumb trail. Kept
+  //                            as data so a future "back to <origin>"
+  //                            (search, drill-in from Home) can be
+  //                            swapped without a template edit.
+  //   back                  — fallback text-only back link used on
+  //                            the not-found panel + on ultra-narrow
+  //                            widths where the breadcrumb collapses.
+  //   fallbackTitle         — SSR title text; the glue script
+  //                            overwrites with the resolved skill's
+  //                            `name` once the row hydrates.
+  //   metadataTemplate      — format string for the "Created by …
+  //                            · Last updated … by … · V8" caption
+  //                            below the title. `{createdBy}`,
+  //                            `{updatedBy}`, `{updatedAt}`,
+  //                            `{version}` are token slots the JS
+  //                            replaces at render time.
+  //   actions               — labels for the header-right cluster.
+  //                            Each item carries `label` (visible)
+  //                            + `assistiveText` (aria-label + title
+  //                            for icon-only affordances).
+  //   notFound              — copy for the "skill not found" panel
+  //                            (missing `?id=` or unknown id).
+  //   save / cancel         — dirty-state commit copy — mirrors
+  //                            knowledge_document_detail.json so the
+  //                            two save flows read identically.
+  //   status                — visually-hidden aria-live announcements
+  //                            after save / cancel / draft restore.
+  "detail": {
+    "pageTitle": "Skill",
+    "navActive": "skills",
+    "breadcrumb": {
+      "rootLabel": "Skills",
+      "rootHref":  "/skills.html"
+    },
+
+    // ── Skill switcher (breadcrumb chevron → skill picker) ─────────
+    // The chevron beside the current skill name opens a panel that
+    // lists the catalog so a seller can hop between skills without
+    // returning to /skills.html. Panel contents are built at runtime
+    // by skill_detail.js from the inlined `catalog` + `tabs` blocks,
+    // so adding a skill to `skills[]` lights it up here for free.
+    //
+    //   scope*        — the ownership picklist at the top of the
+    //                   panel. Options come from `tabs.items` (the
+    //                   same My / Learned / Shared split the list
+    //                   page uses); `scopeCountLabel` names the
+    //                   count that rides beside the selected scope.
+    //   search*       — the filter field. Matches on skill name and
+    //                   description, case-insensitive.
+    //   updatedTemplate / usesTemplate* — the two supporting-line
+    //                   fragments under each skill name. Parts whose
+    //                   placeholder resolves empty are dropped, and
+    //                   the survivors join with `metaSeparator` —
+    //                   same resilience rule as the header metadata
+    //                   caption above. `usesTemplateOne` handles the
+    //                   singular so a 1-skill recipe doesn't read
+    //                   "Uses 1 other skills".
+    //   new*          — the "+" button. Creation isn't wired in this
+    //                   prototype, so it opens the shared placeholder
+    //                   dialog rather than dead-ending the seller.
+    "switcher": {
+      "triggerLabel":        "Switch skill",
+      "panelLabel":          "Switch to another skill",
+      "scopeLabel":          "Filter skills by owner",
+      "scopeCountLabel":     "skills in this list",
+      "searchLabel":         "Search skills",
+      "searchPlaceholder":   "Search...",
+      "emptyLabel":          "No skills match your search.",
+      "metaSeparator":       " \u00b7 ",
+      "updatedTemplate":     "Updated {updatedAt}",
+      "usesTemplate":        "Uses {referencedSkillCount} other skills",
+      "usesTemplateOne":     "Uses 1 other skill",
+      "newLabel":            "Create skill",
+      "newPlaceholderTitle": "Create skill",
+      "newPlaceholderBody":  "Creating a skill isn\u2019t wired up yet. When it ships, this button will open the skill builder with a blank definition."
+    },
+
+    "back": {
+      "label": "Back to Skills",
+      "href":  "/skills.html"
+    },
+    "fallbackTitle":    "Skill",
+
+    // Header metadata caption. Split into individual PARTS so the
+    // client assembles the line at render time from the underlying
+    // fields on the skill record — no single pre-composed sentence
+    // lives in JSON. Each part carries a label template with
+    // `{placeholder}` slots that resolve against
+    // `{ createdBy, updatedBy, updatedAt, version }` on the skill.
+    // If ANY placeholder in a part resolves to an empty value, the
+    // whole part is dropped from the rendered caption. Remaining
+    // parts are joined by `separator`. This keeps the surface
+    // resilient to partial data (e.g. a skill with no `version` or
+    // no `updatedAt` yet) without falling back to a broken string.
+    //
+    // Adding a new part is data-only: append an object with a
+    // stable `id`, a `template` referencing skill fields, and the
+    // client will render it in list order.
+    "metadata": {
+      "separator": " \u00b7 ",
+      "parts": [
+        { "id": "createdBy", "template": "Created by {createdBy}" },
+        { "id": "updated",   "template": "Last updated {updatedAt} by {updatedBy}" },
+        { "id": "version",   "template": "{version}" }
+      ]
+    },
+    "actions": {
+      "useInChat": {
+        "label":         "Use in Chat",
+        "assistiveText": "Use this skill in a chat",
+        // No `/home.html` handler consumes `#skill=<id>` today, so
+        // firing the header button would silently navigate away
+        // and leave the seller stranded. The detail page opens a
+        // labeled placeholder dialog instead until a chat consumer
+        // exists. When that consumer ships, remove
+        // `placeholderTitle` + `placeholderBody` and switch the
+        // handler back to the navigation path.
+        "placeholderTitle": "Use in Chat",
+        "placeholderBody":  "Opening this skill inside a chat isn\u2019t wired up yet. When it ships, this button will start a chat with the current skill preselected."
+      },
+      "schedule": {
+        "label":         "Schedule",
+        "assistiveText": "Schedule this skill",
+        "menuLabel":     "Schedule options",
+        "items": [
+          { "id": "schedule_new",    "label": "Schedule\u2026" },
+          { "id": "schedule_manage", "label": "Manage schedule" }
+        ]
+      },
+      "more": {
+        "label":         "More actions",
+        "assistiveText": "More actions for this skill",
+        // Kebab menu item copy. Rendered by skill_detail.js from
+        // the resolved skill's `actions` array + gated by the
+        // per-skill permission flags (`canEdit`, `canShare`,
+        // `canDelete`). Order below matches the render order.
+        "items": {
+          "edit":      { "label": "Edit metadata" },
+          "duplicate": { "label": "Duplicate" },
+          "share":     { "label": "Share" },
+          "delete":    { "label": "Delete" }
+        }
+      }
+    },
+    "notFound": {
+      "title":       "Skill not found",
+      "description": "The skill you were looking for isn't in this library. It may have been renamed, moved, or removed.",
+      "actionLabel": "Return to Skills"
+    },
+    "save": {
+      "label":         "Save",
+      "assistiveText": "Save changes",
+      // Label on the Save button while an in-flight persist is
+      // pending. Kept short so the button doesn't reflow width.
+      "savingLabel":   "Saving\u2026"
+    },
+    "cancel": {
+      "label":         "Cancel",
+      "assistiveText": "Discard unsaved changes",
+      // Retained as a fallback string only. The live Cancel flow
+      // now opens the SLDS `#skills-discard-modal` dialog defined
+      // in `_skills_dialogs.html` — `window.confirm()` is no
+      // longer used.
+      "confirmMessage": "You have unsaved changes. Discard them?"
+    },
+    "status": {
+      "savedMessage":     "Changes saved.",
+      "discardedMessage": "Unsaved changes discarded.",
+      "restoredMessage":  "Restored unsaved changes from your previous session.",
+      "unloadMessage":    "You have unsaved changes.",
+      // Aria-live announcement text mirrored to the visually-
+      // hidden `data-sh-skill-detail-status` region. Separate from
+      // the toast copy below so screen-reader phrasing can be
+      // tuned independently of the visual toast label.
+      "savingMessage":    "Saving your changes\u2026",
+      "saveErrorMessage": "Save failed. Your draft is preserved."
+    },
+    // Copy for the success toast. `label` is the visible pill text;
+    // `assistiveText` is the announcement mirrored to AT via the
+    // toast's `role="status"` container. `dismissAfterMs` is the
+    // auto-dismiss delay — set to 0 to require an explicit dismiss.
+    "toast": {
+      "savedLabel":         "Skill saved",
+      "assistiveText":      "Skill saved.",
+      "dismissAfterMs":     4000
+    },
+    // Copy for the save-error inline banner. Two lines: a short
+    // title + a longer message. Populated at open time so the
+    // message can quote the specific validation failure.
+    "saveError": {
+      "titleValidation":  "Can\u2019t save yet",
+      "titleServer":      "We couldn\u2019t save your changes",
+      "genericMessage":   "Please try again. If the problem persists, refresh the page and retry."
+    },
+    // Copy for the H1-vs-display-name mismatch dialog. Body copy is
+    // a template — skill_detail.js writes it at open time with the
+    // actual H1 and skill name substituted in.
+    "titleMismatch": {
+      "bodyTemplate":
+        "The document\u2019s title (\u201c{h1}\u201d) doesn\u2019t match this skill\u2019s display name (\u201c{name}\u201d). Save anyway?"
+    },
+    // Validation rules — displayed inline via the save-error banner
+    // when the corresponding check fails. Kept as separate keys so
+    // future rules land without a controller edit.
+    "validation": {
+      "emptyDocument":    "Add some content before saving. The document can\u2019t be empty.",
+      "missingH1":        "Add a top-level heading (H1) that names this skill before saving.",
+      "unsafeHtml":       "Remove embedded HTML like <script>, <iframe>, or <style> tags. Scripts and framed content aren\u2019t allowed.",
+      "unsafeLink":       "One or more links use an unsafe protocol. Only http, https, mailto, tel, and site-relative URLs are allowed."
+    }
+  },
+
+  // Two-variant empty state.
+  //   • `tab`      — LIVE. Rendered when the active ownership tab
+  //                   has zero skills in the dataset (e.g. "Shared
+  //                   with me" on a fresh account). Copy is
+  //                   author-focused: points the user toward
+  //                   creating / accepting a shared skill.
+  //   • `filtered` — DORMANT. Would fire when the tab has skills
+  //                   but state/tool filters trim the visible set
+  //                   to zero. Not reachable today because the
+  //                   filter popover was withdrawn 2026-07-31 and
+  //                   the state facet was removed 2026-08-03 (state
+  //                   is no longer a skill concept — see the
+  //                   Skill / RecentChat split note at the top of
+  //                   this file). Kept so re-introducing tool /
+  //                   ownership facet filters restores the two-
+  //                   variant pattern with no template edit.
+  "emptyState": {
+    "tab": {
+      "title":       "No skills here yet",
+      "description": "Create a skill or add one shared by your team."
+    },
+    "filtered": {
+      "title":       "No skills match these filters",
+      "description": "Adjust or clear your filters to see more skills."
+    }
+  }
+}

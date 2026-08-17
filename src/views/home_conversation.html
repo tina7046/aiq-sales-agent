@@ -216,13 +216,29 @@
            • thinking — the transient working row, used by every beat
                         (opening stages and scripted replies alike).
                         JS rewrites its label before each use, so one
-                        template serves them all. #}
+                        template serves them all.
+           • schedule — the agent's side of the Schedule flow, whose
+                        copy is decided at send time by the state
+                        machine in schedule_conversation.js rather
+                        than authored in the registry. Shell only:
+                        prose, a summary card, and a chip strip, all
+                        empty. Its chips vary in number per turn, so
+                        one chip rides in a template of its own and
+                        JS clones it per label. #}
       <template data-sh-conv-user-template>
         {{ convo.messageItem({ id: "msg-live-user", type: "user", text: "" }) }}
       </template>
 
       <template data-sh-conv-thinking-template>
         {{ convo.thinkingIndicator(thinkingLabel) }}
+      </template>
+
+      <template data-sh-conv-schedule-template>
+        {{ convo.scheduleReply() }}
+      </template>
+
+      <template data-sh-conv-schedule-chip-template>
+        {{ convo.scheduleChip() }}
       </template>
 
       {# ── Per-conversation content ────────────────────────────────
@@ -356,17 +372,36 @@
         <div class="seller-home__conv-composer-inner">
           <div class="seller-home__conv-composer-editor">
             <div class="seller-home__conv-composer-content">
-              <label for="seller-home-conv-input" class="slds-assistive-text">
+              {# Contenteditable rather than a <textarea> so skill
+                 chips can flow INLINE with the seller's free text. The
+                 Schedule hand-off seeds "Schedule [skill] everyday at
+                 8am." as text + chip + text, which a textarea cannot
+                 represent. `bindConvComposer` in home_conversation.js
+                 makes the div behave like the textarea it replaces:
+                 placeholder toggle, Enter-to-send, plaintext paste,
+                 caret placement, and chip removal.
+
+                 The placeholder rides on `data-placeholder` + an
+                 `is-empty` class instead of the native `placeholder`
+                 attribute, which contenteditable doesn't support. The
+                 class starts ON because the field starts empty; JS
+                 owns it from the first input event. `:empty` is not
+                 usable here — Chromium injects a stray <br> on focus,
+                 which would silently drop the placeholder. #}
+              <label id="seller-home-conv-input-label" for="seller-home-conv-input" class="slds-assistive-text">
                 {{ pageTitle }}
               </label>
-              <textarea
+              <div
                 id="seller-home-conv-input"
-                class="seller-home__conv-composer-textarea"
-                placeholder="{{ composerPlaceholder }}"
-                rows="1"
-                aria-label="{{ pageTitle }}"
+                class="seller-home__conv-composer-textarea is-empty"
+                contenteditable="true"
+                role="textbox"
+                aria-multiline="true"
+                aria-labelledby="seller-home-conv-input-label"
                 data-sh-conv-composer-input
-              ></textarea>
+                data-placeholder="{{ composerPlaceholder }}"
+                spellcheck="true"
+              ></div>
             </div>
 
             <div
@@ -601,6 +636,15 @@
   <script src="/scripts/home.js"></script>
   <script src="/scripts/home_conversation_lookups.js"></script>
   <script src="/scripts/home_conversation_cadence.js"></script>
+
+  {# Draft-envelope store shared with the Skill detail page. When the
+     seller arrives here from a skill's Schedule button, the `?id=`
+     names a draft this module holds rather than a build-time
+     conversation, and home_conversation.js reads the title + composer
+     prefill back out of it. Loaded BEFORE home_conversation.js so the
+     global exists at boot; the page degrades to a normal conversation
+     if it is absent. #}
+  <script src="/scripts/schedule_conversation.js"></script>
   <script src="/scripts/home_conversation.js"></script>
 
   {# Tools modal for the composer's "View all". GSAP (vendored) loads

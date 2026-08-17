@@ -1,0 +1,449 @@
+{#
+  Seller Home — SkillListRow component
+  =====================================================================
+  Single-column replacement for the two-column card grid that used to
+  live in `_skill_card_grid.html`. Introduced on 2026-08-11 to match
+  the Figma "Coworker – Skills" frame: rows read as a scannable list
+  instead of a grid of self-contained cards.
+
+  Owned by skills.html; consumes:
+    • skills[]      — the rows to render (see skills.json for the
+                       field-level contract).
+    • agentLibrary  — keyed registry of owning agents; each row's
+                       `agent` key resolves to the badge label here.
+    • rowActions    — overflow-menu action list.
+    • emptyState    — two-variant empty-state copy.
+
+  ── What changed from the card partial ────────────────────────────
+  • The row is horizontally laid out: [title/description block]
+    [right-anchored meta: "Uses N other skills" chip + overflow ⋮
+    + trailing chevron].
+  • The leading "+" indicator glyph and the connector-tool chip
+    footer are NOT rendered. The underlying data
+    (`skill.connectedTools`, `toolLibrary`) is kept in JSON so a
+    future detail view can pick it up without a schema migration.
+  • The list surface itself carries no card border / radius / hover
+    fill — hover is a subtle background lift and a right-side
+    chevron reveal, matching the Figma reference.
+
+  ── What did NOT change (contract-preserving surgery) ─────────────
+  Every `data-sh-skill-*` attribute the JS controllers read is
+  preserved verbatim, so `bindSkills`, `skillOverflowController`,
+  `skillUsesPopoverController`, and `skillActionRouter` (all in
+  `home.js`) continue to work with no code changes:
+
+    • `data-sh-skill-grid`        — delegation root on the outer <ul>.
+    • `data-sh-skill-item`        — each row (also the positioning
+                                     parent for the sibling menu).
+    • `data-sh-skill-id`          — stable id (event dispatch, deep
+                                     links).
+    • `data-sh-skill-ownership`   — "mine" | "shared" | "learned"
+                                     (tab-count / filter driver).
+    • `data-sh-skill-open`        — anchor that fires `sh:skill-open`.
+    • `data-sh-skill-menu` / -menu-trigger / -menu-list / -action /
+      -stop                        — overflow menu contract.
+    • `data-sh-skill-uses` / -uses-popover
+                                    — "Referred N other skills" popover.
+
+  ── Row structure — one shape for every row ───────────────────────
+
+    ┌──────────────────────────────────────────────────────────────┐
+    │ Name  (Sales)                       Referred 3 other …   ⋮  › │
+    │ Description that clamps to one line with an ellipsis.        │
+    └──────────────────────────────────────────────────────────────┘
+
+  The pill after the name names the agent that OWNS the skill, driven
+  by `skills[i].agent` → `agentLibrary` — see the schema docblock in
+  `skills.json`. Rows on this page can belong to different agents, and
+  the pill's tint is what distinguishes them.
+                                                        ⋮ + chevron
+                                                        revealed on
+                                                        hover / focus
+#}
+
+{#
+  Tool chip.
+  ---------------------------------------------------------------------
+  Kept as a dormant macro so a future row shape that DOES render
+  connector-tool icons can call it without re-authoring. Not
+  currently invoked from renderSkillRow — the Figma list row omits
+  tool chips.
+#}
+{% macro renderSkillToolChip(toolKey, toolLibrary) %}
+  {% set tool = toolLibrary[toolKey] %}
+  {% if tool %}
+    <img
+      class="seller-home__skill-tool-chip"
+      src="{{ tool.iconRef }}"
+      alt="{{ tool.name }}"
+      title="{{ tool.name }}"
+      width="32"
+      height="32"
+      loading="lazy"
+      data-sh-skill-tool="{{ toolKey }}"
+    />
+  {% endif %}
+{% endmacro %}
+
+{#
+  Skill list row.
+  ---------------------------------------------------------------------
+  <li> is the row cell AND the positioning parent for the sibling
+  overflow menu (home.scss sets `position: relative` on
+  `.seller-home__skill-item`). The visible row is a native <a>
+  (linked branch) or <div> (unlinked branch); the overflow menu
+  is an absolute-positioned sibling so it sits ON TOP of the row
+  visually while never being NESTED inside an <a> (which HTML
+  forbids).
+
+  Overflow menu contents are computed here at template time — the
+  action list is filtered by permission (`canEdit` / `canShare` /
+  `canDelete`) so the menu shows only what makes sense for THIS
+  skill. Every allowed action is universally applicable — there is
+  no state-scoped gating (pausing / resuming a SKILL is not a
+  meaningful operation; those verbs live on RecentChat).
+
+  Overflow-menu id namespacing: each menu carries the skill id so
+  aria-controls / aria-labelledby stay unique across the list —
+  no cross-row bleed if two menus open in rapid succession.
+#}
+{% macro renderSkillRow(skill, rowActions, agentLibrary) %}
+  {% set isLinked = not (skill.linked == false) %}
+
+  {# Owning agent, resolved from the registry. `agentLibrary` is
+     passed in rather than read off the template context — the same
+     reason `renderSkillToolChip` takes `toolLibrary` as a parameter:
+     a Nunjucks macro only sees its arguments and globals, not the
+     including template's locals.
+
+     An absent `skill.agent` AND an unrecognized key both leave this
+     undefined, which suppresses the pill entirely. That's the
+     intended degradation: a typo shows no badge instead of an empty
+     one or a raw key. #}
+  {% set agent = (agentLibrary or {})[skill.agent] %}
+  {# Route selection: prefer an explicit `skill.href` (used by
+     bespoke rows that need to jump elsewhere), fall back to the
+     skill-detail route keyed on the row's stable `id`, and finally
+     fall back to `#` so the anchor never emits an empty href. The
+     home.js `bindSkills()` handler lets real hrefs fall through to
+     native navigation and only intercepts `#`, so this switch alone
+     is enough to open /skill_detail.html on row activation. #}
+  {% set skillHref = skill.href or ("/skill_detail.html?id=" ~ skill.id) or "#" %}
+
+  {# Menu id (used both by the trigger's aria-controls and the menu
+     container's id). Namespaced with the skill id so list-wide id
+     collisions can't happen. #}
+  {% set menuId = "skill-" ~ skill.id ~ "-menu" %}
+
+  {# Compute the ALLOWED action list at template time via one
+     permission gate (`requires` → canEdit / canShare / canDelete
+     on the skill). No state-scoped filtering — Skills are static,
+     so every permitted action is always applicable. #}
+  {% set allowedActions = [] %}
+  {% for action in (rowActions or []) %}
+    {% set gated = action.requires %}
+    {% set permitted = (not gated)
+                        or (gated == "canEdit"   and skill.canEdit)
+                        or (gated == "canShare"  and skill.canShare)
+                        or (gated == "canDelete" and skill.canDelete) %}
+    {% if permitted %}
+      {% set _ = allowedActions.push(action) %}
+    {% endif %}
+  {% endfor %}
+
+  <li
+    class="seller-home__skill-item"
+    data-sh-skill-item
+    data-sh-skill-id="{{ skill.id }}"
+    data-sh-skill-ownership="{{ skill.ownership }}"
+  >
+    {% if isLinked %}
+      {# Linked branch — the row body is a native <a>. It contains
+         the title / description block, the "Uses N other skills"
+         wrap, and the trailing chevron, so clicking anywhere on
+         the row activates the anchor. bindSkills() intercepts
+         `href="#"` clicks and dispatches `sh:skill-open` so no
+         scroll-to-top happens.
+
+         The aria-label reads "Open skill, {name}" plus the agent
+         badge when one is authored — an anchor's aria-label
+         replaces its inner text for assistive tech, so the badge
+         pill would otherwise never be announced. No state
+         fragment: state is not a Skill concept. #}
+      <a
+        class="seller-home__skill-row"
+        href="{{ skillHref }}"
+        aria-label="Open skill, {{ skill.name }}{% if agent %}, {{ agent.label }}{% endif %}"
+        data-sh-skill-open
+      >
+    {% else %}
+      {# Unlinked branch — inert <div>. No aria-label because
+         there's nothing to open. #}
+      <div
+        class="seller-home__skill-row seller-home__skill-row--unlinked"
+        title="{{ skill.name }}"
+      >
+    {% endif %}
+      <div class="seller-home__skill-body">
+        {# Title row — skill name plus the owning-agent pill, to the
+           immediate right of the name per Figma "Source Tile" (node
+           9723:17395 for a Sales Agent skill, 9723:17471 for a
+           CoWorker Agent one).
+
+           `<span>`s, not a heading / interactive element: the whole
+           row is already an <a>, and HTML forbids interactive
+           descendants of an anchor. The badge is decorative-
+           adjacent (it duplicates no visible copy elsewhere on the
+           row) and reaches assistive tech through the anchor's
+           aria-label above, so it carries no ARIA of its own.
+
+           The pill is an SLDS 2 `.slds-badge`; the local classes only
+           re-skin it via the component's `--slds-c-badge-*` styling
+           hooks (see home.scss). The agent KEY is emitted as a
+           variant modifier so each agent carries its own tint —
+           that tint is the only thing distinguishing one agent from
+           another at a glance, since the pill shape is shared.
+
+           Gated on `agent` resolving — an entry with no (or an
+           unknown) agent renders the bare title exactly as before.
+           Still no RUNTIME-state badge here; state is not a Skill
+           concept. #}
+        <span class="seller-home__skill-title-row">
+          <span class="seller-home__skill-title">{{ skill.name }}</span>
+          {% if agent %}
+            <span class="slds-badge seller-home__skill-agent-badge seller-home__skill-agent-badge--{{ skill.agent }}">{{ agent.label }}</span>
+          {% endif %}
+        </span>
+
+        {# Description. `title` carries the full copy so users can
+           see everything the 1-line clamp elided — matches the
+           tooltip pattern used across Knowledge / Scheduled rows.
+           Screen readers get the full text in the source order
+           (the <p> renders the entire string; only the visual
+           clamp hides overflow). #}
+        <p
+          class="seller-home__skill-description"
+          title="{{ skill.description }}"
+        >{{ skill.description }}</p>
+      </div>
+
+      {# ── Right-anchored meta cluster ─────────────────────────
+         Optional "Uses N other skills" chip. Gated by a non-empty
+         `skill.connectedSkills` array; the count is derived from
+         `.length` (never hard-coded) and the singular / plural
+         label flips automatically at N == 1. #}
+      {% set connectedSkillCount = (skill.connectedSkills or []) | length %}
+      {% set hasConnectedMeta    = connectedSkillCount > 0 %}
+      {% if hasConnectedMeta %}
+        {% set usesPopoverId = "skill-" ~ skill.id ~ "-uses-popover" %}
+        {# Trigger + popover wrapper.
+           ------------------------------------------------
+           The wrapper is `position: relative` so the popover can
+           absolute-position off the trigger without needing an
+           offset library.
+
+           Trigger is a `<span>` — the whole row is already inside
+           an `<a>`, and HTML forbids interactive descendants of
+           an anchor. We deliberately make it keyboard-focusable
+           (`tabindex="0"`) so the popover can also open on Tab,
+           per spec ("Open on hover and keyboard focus"). The
+           nested tabindex is a minor spec caveat (validators
+           flag it, browsers render it), but the alternative —
+           restructuring the row so the trigger sits as a sibling
+           of the anchor — would be a disproportionate refactor
+           for a prototype affordance. The WAI-ARIA "tooltip"
+           pattern (trigger + `aria-describedby` → element with
+           `role="tooltip"`) still resolves correctly. #}
+        <span class="seller-home__skill-uses-wrap">
+          <span
+            class="seller-home__skill-uses-link"
+            data-sh-skill-uses
+            tabindex="0"
+            aria-describedby="{{ usesPopoverId }}"
+          >Referred {{ connectedSkillCount }} other skill{% if connectedSkillCount != 1 %}s{% endif %}</span>
+
+          {# SLDS 2 popover shell (`.slds-popover` +
+             `.slds-popover__body`) so we inherit the component's
+             border, radius, elevation, and inner padding directly
+             from SLDS design tokens. `role="tooltip"` matches the
+             information-only nature of the disclosure. `slds-
+             nubbin_top-right` positions the arrow at the top-
+             right so it visually points UP-AND-LEFT toward the
+             trigger when the popover hangs below-and-right of
+             the link.
+
+             `hidden` is authoritative — the JS controller toggles
+             it via `element.hidden = …`. Nothing inside is
+             focusable, so no focus trap needed; hover / focus of
+             the trigger drives open/close entirely. #}
+          <div
+            class="slds-popover slds-nubbin_top-right seller-home__skill-uses-popover"
+            role="tooltip"
+            id="{{ usesPopoverId }}"
+            data-sh-skill-uses-popover
+            hidden
+          >
+            <div class="slds-popover__body seller-home__skill-uses-popover-body">
+              <p class="seller-home__skill-uses-popover-title">This skill uses</p>
+              <ul class="seller-home__skill-uses-popover-list">
+                {% for sub in skill.connectedSkills %}
+                  <li class="seller-home__skill-uses-popover-item">{{ sub.name }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+        </span>
+      {% endif %}
+
+      {# Trailing chevron — HIDDEN by default; revealed via CSS on
+         hover / focus-within / is-menu-open of the <li> wrapper.
+         Rendered on linked rows only; unlinked / inert rows ship
+         no drill-in glyph so the affordance can't mis-signal. #}
+      {% if isLinked %}
+        <span class="seller-home__skill-chevron" aria-hidden="true">
+          <svg class="seller-home__skill-chevron-glyph" focusable="false">
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
+          </svg>
+        </span>
+      {% endif %}
+    {% if isLinked %}</a>{% else %}</div>{% endif %}
+
+    {# ── Overflow menu ────────────────────────────────────────────
+       SIBLING of the anchor. Absolute-positioned via home.scss
+       (right side, z-index above the anchor) so the trigger sits
+       on top of the row visually while the anchor still receives
+       clicks everywhere else. `data-sh-skill-stop` marks the whole
+       menu container as an "inside" zone so the outside-click
+       dismisser doesn't fire on trigger / list clicks.
+
+       The menu button + list are always rendered but hidden by
+       default; CSS reveals the trigger on hover / focus-within /
+       menu-open. Skipped entirely when the skill has zero
+       applicable actions so we never render an empty popover. #}
+    {% if allowedActions | length %}
+      <div
+        class="seller-home__skill-menu"
+        data-sh-skill-menu
+        data-sh-skill-stop
+      >
+        <button
+          type="button"
+          class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger"
+          data-sh-skill-menu-trigger
+          aria-haspopup="menu"
+          aria-expanded="false"
+          aria-controls="{{ menuId }}"
+          aria-label="More actions for {{ skill.name }}"
+          title="More actions"
+        >
+          <svg class="slds-button__icon" aria-hidden="true">
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
+          </svg>
+          <span class="slds-assistive-text">More actions</span>
+        </button>
+
+        <div
+          class="seller-home__skill-menu-list"
+          id="{{ menuId }}"
+          role="menu"
+          aria-label="{{ skill.name }} actions"
+          data-sh-skill-menu-list
+          hidden
+        >
+          <ul class="seller-home__skill-menu-items" role="none">
+            {% for action in allowedActions %}
+              {# Destructive actions get a modifier class so the
+                 label / icon can pick up a red foreground. Delete
+                 is currently the only destructive action; the
+                 pattern generalizes if others land later. #}
+              {% set isDestructive = action.id == "delete" %}
+              <li
+                role="none"
+                class="seller-home__skill-menu-row{% if isDestructive %} seller-home__skill-menu-row--destructive{% endif %}"
+              >
+                <button
+                  type="button"
+                  class="seller-home__skill-menu-item{% if isDestructive %} seller-home__skill-menu-item--destructive{% endif %}"
+                  role="menuitem"
+                  tabindex="-1"
+                  data-sh-skill-action="{{ action.id }}"
+                >
+                  {% if action.icon %}
+                    <svg class="seller-home__skill-menu-item-icon" aria-hidden="true">
+                      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
+                    </svg>
+                  {% endif %}
+                  <span class="seller-home__skill-menu-item-label">{{ action.label }}</span>
+                </button>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    {% endif %}
+  </li>
+{% endmacro %}
+
+
+{#
+  Outer list.
+  ---------------------------------------------------------------------
+  Semantic <ul> — a list of skills, not a selection widget. Each
+  row's <a> (or <div> in the unlinked branch) is the meaningful
+  interactive element.
+
+  `data-sh-skill-grid` is the delegation root for bindSkills() in
+  home.js so everything inside is handled via event delegation and
+  future rows added at runtime need no per-row binding. The name
+  reads "grid" for legacy reasons — the JS controller was authored
+  for the card grid and the attribute name was kept when the list
+  refactor landed to avoid churning every controller reference.
+#}
+<ul
+  class="seller-home__skill-list"
+  data-sh-skill-grid
+>
+  {% for skill in skills %}
+    {% if not (skill.hidden == true) %}
+      {{ renderSkillRow(skill, rowActions, agentLibrary) }}
+    {% endif %}
+  {% endfor %}
+</ul>
+
+{#
+  Empty states — TWO companion panels to the list, both siblings
+  of the <ul>. bindSkills() reveals exactly one based on whether
+  any state / tool filter is active:
+
+    • data-sh-skill-empty-tab      — tab has zero skills in the
+                                      dataset (ownership filter
+                                      alone). Copy points the user
+                                      toward authoring / accepting
+                                      a shared skill.
+    • data-sh-skill-empty-filtered — tab has skills but the state /
+                                      tools popover trims to zero.
+                                      Copy points the user toward
+                                      loosening filters.
+
+  Plain <div> (no role="alert" / role="status") — the tab
+  controller announces the count change through its own aria-live
+  region on the toolbar; adding a second live region here would
+  double-announce on every filter change.
+#}
+<div
+  class="seller-home__skill-empty seller-home__skill-empty--tab"
+  data-sh-skill-empty-tab
+  hidden
+>
+  <p class="seller-home__skill-empty-title">{{ emptyState.tab.title }}</p>
+  <p class="seller-home__skill-empty-description">{{ emptyState.tab.description }}</p>
+</div>
+
+<div
+  class="seller-home__skill-empty seller-home__skill-empty--filtered"
+  data-sh-skill-empty-filtered
+  hidden
+>
+  <p class="seller-home__skill-empty-title">{{ emptyState.filtered.title }}</p>
+  <p class="seller-home__skill-empty-description">{{ emptyState.filtered.description }}</p>
+</div>
