@@ -6,13 +6,23 @@
   the Figma "Coworker – Skills" frame: rows read as a scannable list
   instead of a grid of self-contained cards.
 
-  Owned by skills.html; consumes:
+  Owned by the Skills landing bodies (`_skills_body_v1.html` /
+  `_skills_body_v2.html`); consumes:
     • skills[]      — the rows to render (see skills.json for the
                        field-level contract).
     • agentLibrary  — keyed registry of owning agents; each row's
                        `agent` key resolves to the badge label here.
     • rowActions    — overflow-menu action list.
     • emptyState    — two-variant empty-state copy.
+    • skillListVariant
+                    — which landing VERSION is asking for the row:
+                       unset / "v1" → Version A's two-line row,
+                       "v2" → Version B's card (object tile, object
+                       stamp, "From … • Edited …" footer). Added
+                       2026-08-17; see the `renderSkillRow` docblock
+                       for both shapes.
+    • rowMeta       — label + icon copy Version B's stamp and footer
+                       render. Ignored by Version A.
 
   ── What changed from the card partial ────────────────────────────
   • The row is horizontally laid out: [title/description block]
@@ -86,6 +96,32 @@
 {% endmacro %}
 
 {#
+  Title row — skill name + owning-agent pill.
+  ---------------------------------------------------------------------
+  Its own macro because BOTH row variants render it identically and
+  neither may drift: the pill's presence gate, its variant class, and
+  the name's ellipsis hook are the parts a version is most likely to
+  break by re-typing them. Variants differ in where this row SITS
+  (Version A: first line of the body stack; Version B: beside the
+  object tile), never in what it contains.
+
+  Title row markup, verbatim from Version A — see the call sites in
+  `renderSkillRow` for the ARIA reasoning (the badge reaches assistive
+  tech through the anchor's aria-label, so it carries no ARIA of its
+  own; `<span>`s because HTML forbids interactive descendants of the
+  row anchor).
+#}
+{% macro renderSkillTitleRow(skill, agent) %}
+  <span class="seller-home__skill-title-row">
+    <span class="seller-home__skill-title">{{ skill.name }}</span>
+    {% if agent %}
+      <span class="slds-badge seller-home__skill-agent-badge seller-home__skill-agent-badge--{{ skill.agent }}">{{ agent.label }}</span>
+    {% endif %}
+  </span>
+{% endmacro %}
+
+
+{#
   Skill list row.
   ---------------------------------------------------------------------
   <li> is the row cell AND the positioning parent for the sibling
@@ -106,9 +142,42 @@
   Overflow-menu id namespacing: each menu carries the skill id so
   aria-controls / aria-labelledby stay unique across the list —
   no cross-row bleed if two menus open in rapid succession.
+
+  ── Row structure ─────────────────────────────────────────────────
+  Version A (default — `variant` unset or "v1"):
+
+    ┌──────────────────────────────────────────────────────────────┐
+    │ Name  (Sales)                       Referred 3 other …   ⋮  › │
+    │ Description that clamps to one line with an ellipsis.        │
+    └──────────────────────────────────────────────────────────────┘
+
+  Version B (`variant == "v2"`, Figma 11194:24307):
+
+    ┌──────────────────────────────────────────────────────────────┐
+    │ ┌──┐ Name  (Sales)                                           │
+    │ │▓▓│ ☁ Skill                                                 │
+    │ └──┘                                                         │
+    │ Description that clamps to one line with an ellipsis.        │
+    │ From Caroline Alix • Edited 3 days ago                       │
+    └──────────────────────────────────────────────────────────────┘
+                                          (same right-anchored
+                                          cluster, vertically
+                                          centered, as Version A)
+
+  Only the BODY STACK reads `variant` — the anchor, the overflow menu,
+  the connected-skills popover, the chevron, and every `data-sh-*` hook
+  are single-sourced below, so the two landing versions cannot drift on
+  behavior. `rowMeta` carries the labels Version B's stamp and footer
+  need; both arguments are optional, and omitting them is exactly what
+  Version A does.
 #}
-{% macro renderSkillRow(skill, rowActions, agentLibrary) %}
+{% macro renderSkillRow(skill, rowActions, agentLibrary, variant, rowMeta) %}
   {% set isLinked = not (skill.linked == false) %}
+
+  {# `variant` names the LANDING VERSION asking for the row (set by
+     `_skills_body_v1.html` / `_skills_body_v2.html`), not a state of
+     the skill itself. #}
+  {% set isV2 = (variant == "v2") %}
 
   {# Owning agent, resolved from the registry. `agentLibrary` is
      passed in rather than read off the template context — the same
@@ -129,6 +198,33 @@
      native navigation and only intercepts `#`, so this switch alone
      is enough to open /skill_detail.html on row activation. #}
   {% set skillHref = skill.href or ("/skill_detail.html?id=" ~ skill.id) or "#" %}
+
+  {# Version B's footer values. Read from the SAME fields
+     /skill_detail.html's metadata caption uses, so a row can never
+     claim a different author or edit date than the page it opens.
+     `hasMeta` folds the variant gate in, so the footer markup below
+     needs no second `isV2` test, and a Version B row whose skill is
+     missing both fields simply renders no footer instead of an empty
+     one. #}
+  {% set ownerName  = skill.createdBy %}
+  {% set editedWhen = skill.updatedAt %}
+  {% set hasMeta    = isV2 and (ownerName or editedWhen) %}
+
+  {# Accessible name for the linked row, assembled up front because
+     an anchor's aria-label REPLACES its inner text for assistive
+     tech: anything the row shows visually has to be restated here or
+     it goes unannounced. Version B shows two extra facts, so it
+     announces two extra clauses. #}
+  {% set rowLabel = "Open skill, " ~ skill.name %}
+  {% if agent %}
+    {% set rowLabel = rowLabel ~ ", " ~ agent.label %}
+  {% endif %}
+  {% if hasMeta and ownerName %}
+    {% set rowLabel = rowLabel ~ ", from " ~ ownerName %}
+  {% endif %}
+  {% if hasMeta and editedWhen %}
+    {% set rowLabel = rowLabel ~ ", edited " ~ editedWhen %}
+  {% endif %}
 
   {# Menu id (used both by the trigger's aria-controls and the menu
      container's id). Namespaced with the skill id so list-wide id
@@ -168,12 +264,14 @@
          The aria-label reads "Open skill, {name}" plus the agent
          badge when one is authored — an anchor's aria-label
          replaces its inner text for assistive tech, so the badge
-         pill would otherwise never be announced. No state
+         pill would otherwise never be announced. Assembled in
+         `rowLabel` above so Version B's extra facts join the same
+         sentence instead of a second copy of the anchor. No state
          fragment: state is not a Skill concept. #}
       <a
         class="seller-home__skill-row"
         href="{{ skillHref }}"
-        aria-label="Open skill, {{ skill.name }}{% if agent %}, {{ agent.label }}{% endif %}"
+        aria-label="{{ rowLabel }}"
         data-sh-skill-open
       >
     {% else %}
@@ -208,23 +306,101 @@
            unknown) agent renders the bare title exactly as before.
            Still no RUNTIME-state badge here; state is not a Skill
            concept. #}
-        <span class="seller-home__skill-title-row">
-          <span class="seller-home__skill-title">{{ skill.name }}</span>
-          {% if agent %}
-            <span class="slds-badge seller-home__skill-agent-badge seller-home__skill-agent-badge--{{ skill.agent }}">{{ agent.label }}</span>
-          {% endif %}
-        </span>
+        {% if isV2 %}
+          {# ── Version B lead: object tile + title stack ──────────
+             Figma 11194:24307. The tile is a 32-px indigo rounded
+             square carrying a white glyph, and the title stack beside
+             it holds the name/badge row over the object stamp.
 
-        {# Description. `title` carries the full copy so users can
-           see everything the 1-line clamp elided — matches the
-           tooltip pattern used across Knowledge / Scheduled rows.
-           Screen readers get the full text in the source order
-           (the <p> renders the entire string; only the visual
-           clamp hides overflow). #}
+             The tile is `aria-hidden`: it is a type marker for a list
+             where every row is the same type, so announcing it would
+             add one identical word per row. The glyph is the asset
+             Figma exports (committed under /assets/images/, since it
+             is not an SLDS sprite icon) and is sized explicitly in
+             CSS — the file ships `preserveAspectRatio="none"`, so a
+             box with the wrong aspect would visibly stretch it.
+
+             The stamp's cloud comes from the SLDS utility sprite this
+             prototype already loads (`rowMeta.object.icon`) rather
+             than from a second exported asset: Figma's node IS that
+             SLDS icon, so the sprite is the same glyph by
+             provenance. #}
+          <span class="seller-home__skill-lead">
+            <span class="seller-home__skill-object-tile" aria-hidden="true">
+              <img
+                class="seller-home__skill-object-tile-glyph"
+                src="/assets/images/skill-object-glyph.svg"
+                alt=""
+                width="18"
+                height="17"
+              />
+            </span>
+
+            <span class="seller-home__skill-lead-text">
+              {{ renderSkillTitleRow(skill, agent) }}
+
+              {% if rowMeta and rowMeta.object and rowMeta.object.label %}
+                <span class="seller-home__skill-source">
+                  {% if rowMeta.object.icon %}
+                    <svg class="seller-home__skill-source-icon" aria-hidden="true" focusable="false">
+                      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ rowMeta.object.icon }}"></use>
+                    </svg>
+                  {% endif %}
+                  <span class="seller-home__skill-source-label">{{ rowMeta.object.label }}</span>
+                </span>
+              {% endif %}
+            </span>
+          </span>
+        {% else %}
+          {# Version A: the title row is the first line of the stack,
+             with no tile and no stamp. #}
+          {{ renderSkillTitleRow(skill, agent) }}
+        {% endif %}
+
+        {# Description — authored once for both variants (they differ
+           only in type size, which is CSS). `title` carries the full
+           copy so users can see everything the 1-line clamp elided —
+           matches the tooltip pattern used across Knowledge /
+           Scheduled rows. Screen readers get the full text in the
+           source order (the <p> renders the entire string; only the
+           visual clamp hides overflow). #}
         <p
           class="seller-home__skill-description"
           title="{{ skill.description }}"
         >{{ skill.description }}</p>
+
+        {% if hasMeta %}
+          {# ── Version B footer: author + last edit ───────────────
+             Two label/value pairs split by a bullet. Labels are
+             muted, values are near-black, per Figma — the pair reads
+             as one phrase, so the label deliberately does NOT get its
+             own colon or bold treatment.
+
+             The bullet is `aria-hidden` and the whole footer is
+             already restated in the anchor's aria-label, so nothing
+             here is announced twice or announced as punctuation. Each
+             half is independently gated, so the separator can never
+             end up leading or trailing. #}
+          <span class="seller-home__skill-meta">
+            {% if ownerName %}
+              <span class="seller-home__skill-meta-item">
+                <span class="seller-home__skill-meta-label">{{ rowMeta.ownerLabel or "From" }}</span>
+                <span class="seller-home__skill-meta-value">{{ ownerName }}</span>
+              </span>
+            {% endif %}
+
+            {% if ownerName and editedWhen %}
+              <span class="seller-home__skill-meta-separator" aria-hidden="true">•</span>
+            {% endif %}
+
+            {% if editedWhen %}
+              <span class="seller-home__skill-meta-item">
+                <span class="seller-home__skill-meta-label">{{ rowMeta.editedLabel or "Edited" }}</span>
+                <span class="seller-home__skill-meta-value">{{ editedWhen }}</span>
+              </span>
+            {% endif %}
+          </span>
+        {% endif %}
       </div>
 
       {# ── Right-anchored meta cluster ─────────────────────────
@@ -398,6 +574,11 @@
   reads "grid" for legacy reasons — the JS controller was authored
   for the card grid and the attribute name was kept when the list
   refactor landed to avoid churning every controller reference.
+
+  `skillListVariant` + `rowMeta` come from the including body partial
+  (`_skills_body_v1.html` / `_skills_body_v2.html`) and pick the row's
+  body layout. Both are undefined on any other surface that includes
+  this file, which lands on Version A's row — the historical default.
 #}
 <ul
   class="seller-home__skill-list"
@@ -405,7 +586,7 @@
 >
   {% for skill in skills %}
     {% if not (skill.hidden == true) %}
-      {{ renderSkillRow(skill, rowActions, agentLibrary) }}
+      {{ renderSkillRow(skill, rowActions, agentLibrary, skillListVariant, rowMeta) }}
     {% endif %}
   {% endfor %}
 </ul>

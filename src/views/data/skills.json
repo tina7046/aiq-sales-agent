@@ -236,10 +236,19 @@
 //                      Filenames use the `tools_*` prefix that
 //                      matches the delivered asset set.
 //
-// Other top-level keys (unchanged from prior schema — comments
-// live inline where useful):
+// Other top-level keys (comments live inline where useful):
 //   pageTitle, header, composer, tabs, rowActions, filterAction,
 //   emptyState.
+//
+// TWO URLs project from this one file: /skills.html (Version A) and
+// /skills-v2.html (Version B), added 2026-08-17 to review two card
+// designs side by side. The v2 stem does NOT match this filename, so
+// that page reads this file explicitly with `readData("skills")` — see
+// `_skills_body_v1.html`. Consequence worth knowing before you rename
+// a key: neither URL holds its own copy of any skill, label, or count.
+// `prototypeVersions` (the switcher) and `rowMeta` (Version B's stamp
+// and footer labels) exist only for that comparison and are meant to
+// be deleted together once a direction is chosen.
 {
   "pageTitle": "Skills",
 
@@ -259,6 +268,68 @@
   // list + banner shape; the string is intentionally dropped to
   // avoid a dormant field on the schema (the educational banner
   // below now carries the equivalent copy).
+  // ── Prototype-only design-version switcher ───────────────────
+  // ------------------------------------------------------------
+  // Feeds `_prototype_version_switcher.html`, the bottom-right
+  // control that hops between the two design versions of this
+  // landing page. Strip this block and the partial together when the
+  // design question is settled — nothing else reads it, and the
+  // switcher hides itself if fewer than two entries survive.
+  //
+  //   label — Visible chip-group text. Purely a caption; the
+  //           control is a <nav> with its own aria-label, so this
+  //           string is aria-hidden in the partial.
+  //   items — Authored order; the chips render left to right as
+  //           listed.
+  //     label — Kept to "Version A" / "Version B" rather than the
+  //             URL's v1 / v2 because the switcher is read by design
+  //             reviewers, not by whoever typed the route. A → v1
+  //             and B → v2, deliberately.
+  //     href  — Absolute path. Authored here so the two versions can
+  //             never disagree about where the other one lives: both
+  //             pages render the same list, and each marks the entry
+  //             matching its own `skillsVersion` as current. Version
+  //             A points at /skills.html — the left nav's own
+  //             destination — so there is exactly one URL per design
+  //             rather than an alias route.
+  //     id    — Matches the `skillsVersion` string the page templates
+  //             set (`v1` / `v2`).
+  "prototypeVersions": {
+    "label": "Design",
+    "items": [
+      { "id": "v1", "label": "Version A", "href": "/skills.html" },
+      { "id": "v2", "label": "Version B", "href": "/skills-v2.html" }
+    ]
+  },
+
+  // ── Row metadata copy (Version B rows only) ──────────────────
+  // ------------------------------------------------------------
+  // Labels for the object stamp and the footer that Version B's card
+  // adds (Figma 11194:24307). Version A ignores this block entirely.
+  // Only LABELS live here — the values come from each skill's own
+  // `createdBy` / `updatedAt`, the same fields /skill_detail.html's
+  // metadata caption reads, so a row can never claim a different
+  // author or edit date than the page it opens.
+  //
+  //   object.label — The stamp under the skill name. "Skill" names
+  //                  the object type, matching how record pages stamp
+  //                  their object above the record name.
+  //   object.icon  — SLDS utility sprite id. Figma's node IS this
+  //                  SLDS icon, so the sprite is the same glyph by
+  //                  provenance — no second exported asset.
+  //   ownerLabel / editedLabel
+  //                — The muted halves of "From {name}" and
+  //                  "Edited {when}". Authored so the phrasing can
+  //                  change without touching the row markup.
+  "rowMeta": {
+    "object": {
+      "label": "Skill",
+      "icon":  "salesforce1"
+    },
+    "ownerLabel":  "From",
+    "editedLabel": "Edited"
+  },
+
   "header": {
     "heading":     "Skills",
     "actionLabel": "Create Skill"

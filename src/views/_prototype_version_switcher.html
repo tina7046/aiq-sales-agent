@@ -1,0 +1,81 @@
+{#
+  Prototype-only design-version switcher
+  =====================================================================
+  Fixed bottom-right control for hopping between the design versions of
+  the Skills landing (/skills.html ↔ /skills-v2.html). Included by both
+  version bodies and by nothing else.
+
+  SCAFFOLDING, NOT PRODUCT UI. It exists to make two designs
+  comparable in a review, and it is meant to be deleted along with the
+  `prototypeVersions` block in skills.json once a direction is chosen.
+  Deliberately kept off every other page: no other surface includes
+  this partial, and nothing global references it.
+
+  Two plain anchors, no JavaScript. A real page load per switch is the
+  point — each version is a separately-rendered document, so a
+  client-side swap would have to rebuild the whole body and re-run
+  `bindSkills()`, trading a small partial for a controller that could
+  drift from the templates. Full navigation also means the browser's
+  back button, bookmarks, and hard-refresh all behave, and the current
+  version is legible in the address bar during a screen share.
+
+  Context expected from the includer:
+    skillsData     — the parsed skills.json (for `prototypeVersions`).
+    skillsVersion  — this page's own version id (`v1` / `v2`), set by
+                     the page template. Used to mark the current chip;
+                     an unrecognized value simply leaves no chip
+                     current rather than breaking the control.
+
+  Accessibility: a labeled `<nav>` so the control is skippable and
+  announces as navigation rather than as loose links. The current
+  version's chip is a `<span aria-current="page">` instead of an
+  anchor — a link to the page you are already on is a dead control for
+  keyboard and screen-reader users, and dropping it from the tab order
+  matches how the breadcrumb's current crumb behaves elsewhere in this
+  prototype.
+#}
+
+{% set protoVersions = (skillsData or {}).prototypeVersions %}
+{% set protoItems    = (protoVersions or {}).items or [] %}
+
+{# Gate on TWO entries, not one. With a single version there is nothing
+   to switch to, so the control would be pure clutter; this also means
+   deleting one line from `prototypeVersions.items` retires the
+   switcher without touching any template. #}
+{% if (protoItems | length) > 1 %}
+  <nav
+    class="proto-version-switcher"
+    aria-label="Prototype design version"
+    data-proto-version-switcher
+  >
+    {% if protoVersions.label %}
+      <span class="proto-version-switcher__label" aria-hidden="true">
+        {{ protoVersions.label }}
+      </span>
+    {% endif %}
+
+    <ul class="proto-version-switcher__list">
+      {% for version in protoItems %}
+        {% set isCurrent = (version.id == skillsVersion) %}
+        <li class="proto-version-switcher__item">
+          {% if isCurrent %}
+            <span
+              class="proto-version-switcher__option proto-version-switcher__option--current"
+              aria-current="page"
+            >{{ version.label }}</span>
+          {% else %}
+            {# The href carries no query string or hash on purpose: the
+               tab filter lives in `location.hash`, and preserving it
+               across a version switch would need JS. Landing on the
+               other version's default tab is the honest default for a
+               design comparison. #}
+            <a
+              class="proto-version-switcher__option"
+              href="{{ version.href }}"
+            >{{ version.label }}</a>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </nav>
+{% endif %}

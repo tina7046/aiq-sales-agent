@@ -3368,3 +3368,370 @@
   object-fit: contain;
 }
 
+// ============================================================
+// Skills landing — VERSION B page-level styling
+// ============================================================
+// Version B's layout hook is `.seller-home--skills-v2` on the page
+// shell (see `_skills_body_v2.html`). Scope every Version B rule to
+// it — nested, like `.seller-home--skills-v2 { .foo { … } }`, or as a
+// descendant selector — so Version A and /skills.html cannot regress
+// no matter how far B diverges.
+//
+// Add rules under this banner rather than editing the shared
+// `.seller-home__skills-*` / `.seller-home__skill-*` blocks above —
+// those are what both versions paint from, so a "small tweak" there is
+// a change to Version A too.
+//
+// ── Skill card (Figma 11194:24307 "Source Tile") ──────────────────
+// B's card carries more of each skill than A's row does:
+//
+//     ┌──┐ Daily Pipeline Snapshot  (Sales)
+//     │▓▓│ ☁ Skill
+//     └──┘
+//     Get a prioritized daily view of pipeline changes, at-risk …
+//     From Caroline Alix • Edited 3 days ago
+//
+// Three additions (object tile, object stamp, author/edited footer)
+// plus a retuned title and description. The row's structure, hooks,
+// hover reveal, overflow menu, and "Referred N other skills" cluster
+// are UNCHANGED and keep coming from the shared rules above — the
+// markup branch is confined to the body stack in `_skill_list.html`.
+//
+// Everything here is nested under the version scope on purpose, even
+// the classes only B's markup emits (`__skill-lead`, `__skill-source`,
+// `__skill-meta`, …). Two reasons: the nesting is the documentation —
+// it says "this is Version B's card, not the Skills card" — and if
+// those elements ever appear in another version, its rules can't
+// inherit B's by accident.
+.seller-home--skills-v2 {
+  // Loosen the body rhythm from A's 2 px. Figma stacks the lead
+  // block, description, and footer 4 px apart (`--slds-g-spacing-1`)
+  // inside a card whose own padding does the heavier separating.
+  .seller-home__skill-body {
+    gap: var(--slds-g-spacing-1, 0.25rem);
+  }
+
+  // Object tile ↔ title stack, centered against each other. The tile
+  // is 32 px and the stack is 40 px (22 px title row + 14 px object
+  // stamp), so centering settles the tile a few px down rather than
+  // pinning it to the title's cap height.
+  //
+  // Centering accepts one trade: a long skill name that wraps the
+  // stack drags the tile down with it. No name in this catalog wraps
+  // at the 800-px column, and the pair reads better balanced. If
+  // wrapping titles ever become common, switch to `flex-start` here
+  // rather than adding a margin to the tile.
+  .seller-home__skill-lead {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-2, 0.5rem); // 8px, per Figma
+    min-width: 0;
+  }
+
+  // Object tile — 32 px indigo circle behind a white glyph.
+  //
+  // RADIUS: a full circle. `50%` rather than the 9999px the Figma
+  // frame names — the two are identical on a square box, and a
+  // percentage cannot leave a flat edge if the tile is ever resized,
+  // whereas a fixed 9999px silently becomes a stadium if the box stops
+  // being square. It is also safe from the RADIUS TRAP noted on the
+  // agent badge above (a percentage skewing into an ellipse) for
+  // exactly that reason: both axes are pinned to 2 rem below, so 50%
+  // resolves to the same 16 px on each.
+  //
+  // Figma draws this corner with a 9999px radius AND corner smoothing
+  // on, i.e. an iOS squircle. A circle is what the design reads as, so
+  // the smoothing is moot.
+  //
+  // `flex: 0 0 auto` keeps the tile at its intrinsic size while the
+  // adjacent text column absorbs all the flexing and ellipsizing.
+  .seller-home__skill-object-tile {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 2rem; // 32px
+    block-size: 2rem;
+    border-radius: 50%; // full circle — see RADIUS note above
+    // Indigo-30 per Figma. A `palette-*` token, which is what makes it
+    // safe across the two stylesheets this page loads: SLDS 1's
+    // unlayered declarations outrank slds2_agentic.css's layered ones,
+    // so a token that only SLDS 2 defines the way Figma expects would
+    // silently resolve to something else.
+    background-color: var(--slds-g-color-palette-indigo-30, #2f2cb7);
+  }
+
+  // The glyph is Figma's exported asset, and the file ships
+  // `preserveAspectRatio="none"` — so the box has to carry the
+  // asset's own 17.6 × 16.87 aspect or the artwork stretches. Both
+  // axes are pinned for that reason; neither may become `auto`.
+  .seller-home__skill-object-tile-glyph {
+    display: block;
+    inline-size: 1.1rem; // 17.6px — the asset's intrinsic width
+    block-size: 1.0542rem; // 16.87px
+  }
+
+  // Title stack: name/badge row over the object stamp.
+  //
+  // GAP 0, down from Figma's 4 px. Not as tight as it reads: both
+  // children are line boxes taller than their type (22 px around a
+  // 16 px title, 14 px around a 10 px stamp), so ~5 px of leading
+  // still separates the glyphs. Anything below 0 would need a negative
+  // margin, which is the wrong tool — reduce the stamp's `line-height`
+  // instead if the pair must sit closer still.
+  .seller-home__skill-lead-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-width: 0;
+  }
+
+  // Name ↔ badge tightens from A's 12 px to Figma's 8 px, which the
+  // larger title needs to still read as one unit with its pill.
+  .seller-home__skill-title-row {
+    gap: var(--slds-g-spacing-2, 0.5rem);
+  }
+
+  // Title — 16 px semibold accent blue, where A's is 14 px neutral.
+  // The link color is the point of B's card: the name is the thing
+  // you click, and A signals that only on hover.
+  //
+  // `accent-2` is SLDS 2-only (SLDS 1 never declares it), so unlike
+  // the palette tokens it carries no cross-stylesheet risk.
+  .seller-home__skill-title {
+    font-size: var(--slds-g-font-scale-2, 1rem); // 16px
+    line-height: 1.375rem; // 22px
+    color: var(--slds-g-color-accent-2, #0250d9);
+  }
+
+  // Object stamp — "☁ Skill". The record type, set as quietly as the
+  // type system allows (10 px regular) so it annotates the name
+  // instead of competing with it.
+  .seller-home__skill-source {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-1, 0.25rem); // 4px icon ↔ label
+    min-width: 0;
+  }
+
+  // Cloud icon from the SLDS utility sprite. `fill` (not `color`) is
+  // what a sprite `<use>` needs here — the symbol's path carries no
+  // fill of its own.
+  //
+  // Electric-blue-50 IS #066AFE, the color baked into Figma's export.
+  // Named off the palette ramp rather than `--slds-g-color-accent-1`,
+  // which resolves to the same value in SLDS 2: palette steps are
+  // declared identically in both stylesheets, semantic tokens are not.
+  .seller-home__skill-source-icon {
+    flex: 0 0 auto;
+    inline-size: 0.75rem; // 12px
+    block-size: 0.75rem;
+    fill: var(--slds-g-color-palette-electric-blue-50, #066afe);
+  }
+
+  .seller-home__skill-source-label {
+    font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+    font-size: var(--slds-g-font-scale-neg-2, 0.625rem); // 10px
+    font-weight: var(--slds-g-font-weight-4, 400);
+    line-height: 0.875rem; // 14px
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+    white-space: nowrap;
+  }
+
+  // Description grows a step (12 → 13 px) and picks up Figma's 18-px
+  // leading. 13 px is a literal: SLDS 2's scale steps over it (12 px
+  // at `neg-1`, 14 px at `1`), and Figma's `font/scale/base` is a
+  // file-local variable with no global counterpart.
+  .seller-home__skill-description {
+    font-size: 0.8125rem; // 13px
+    line-height: 1.125rem; // 18px
+  }
+
+  // ── Author / last-edited footer ────────────────────────────────
+  // "From Caroline Alix • Edited 3 days ago". Wraps as a whole
+  // label/value pair rather than mid-pair: each `__skill-meta-item`
+  // is its own flex box, so a narrow card breaks BETWEEN the two
+  // facts and never between a label and the name it introduces.
+  // `row-gap` is the 4 px that separates those wrapped lines.
+  .seller-home__skill-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--slds-g-spacing-1, 0.25rem) var(--slds-g-spacing-2, 0.5rem); // 4px / 8px
+    min-width: 0;
+  }
+
+  .seller-home__skill-meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-1, 0.25rem); // 4px label ↔ value
+    min-width: 0;
+  }
+
+  // Label and value are the same size and weight and differ only in
+  // tone — the pair has to read as one phrase ("From Caroline Alix"),
+  // so the label is dimmed rather than styled into a field name. No
+  // colon, no bold, per Figma.
+  .seller-home__skill-meta-label,
+  .seller-home__skill-meta-value {
+    font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+    font-size: 0.8125rem; // 13px — same literal as the description
+    font-weight: var(--slds-g-font-weight-4, 400);
+    line-height: 1.125rem; // 18px
+    white-space: nowrap;
+  }
+
+  .seller-home__skill-meta-label {
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  }
+
+  // Near-black, a shade darker than the label — Figma's Text/Default
+  // (#181818), which no SLDS global token carries.
+  //
+  // `overflow: hidden` + ellipsis so a long name truncates instead of
+  // pushing the bullet and the edit time out of the card. Capped at
+  // 14 rem, matching the 140-px max Figma puts on the name slot.
+  .seller-home__skill-meta-value {
+    color: #181818;
+    max-inline-size: 14rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  // Bullet between the two facts. 14 px semibold placeholder grey per
+  // Figma — bigger than the copy it divides, which is what makes a
+  // bullet register as a divider rather than as punctuation.
+  // `aria-hidden` in the template, so this is purely visual.
+  .seller-home__skill-meta-separator {
+    flex: 0 0 auto;
+    font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
+    font-weight: var(--slds-g-font-weight-6, 590);
+    line-height: 1.1875rem; // 19px
+    color: #747474; // Figma Text/Placeholder — no SLDS global equivalent
+  }
+}
+
+// ============================================================
+// Prototype-only design-version switcher
+// ============================================================
+// PROTOTYPE SCAFFOLDING — delete this whole block together with
+// `_prototype_version_switcher.html` and the `prototypeVersions` block
+// in skills.json when the A/B question is settled. Nothing else styles
+// or reads these classes.
+//
+// It lives at the END of skills.scss, outside every page namespace, for
+// that reason: the control belongs to the review process rather than
+// to any design, so it should lift out in one contiguous cut. That is
+// also why the class prefix is `proto-` and not `seller-home__` —
+// grep-visible as scaffolding, and it cannot collide with a real
+// component when someone later reads the Skills styles above.
+//
+// It ships in skills.scss rather than home.scss because the Skills
+// landing is its only consumer: the two version bodies are the only
+// templates that include the partial, and both load this sheet.
+//
+// `position: fixed` bottom-right. The page shell locks the viewport
+// (`.seller-home--knowledge` sets `overflow: hidden` and scrolls an
+// inner section), so a fixed element is the only way to stay put while
+// the list scrolls beneath it.
+//
+// Z-INDEX 500 is chosen to sit above the page and below SLDS overlays.
+// The action dialogs this page ships (`_skills_dialogs.html`) sit at
+// 9500, and the connected-skills popover at 6000 (see the
+// `--slds-c-popover-position-zindex` note earlier in this file), so the
+// switcher never covers an open dialog, its backdrop, or a popover —
+// while still clearing the row overflow menus, which top out at 5.
+.proto-version-switcher {
+  position: fixed;
+  inset-block-end: var(--slds-g-spacing-4, 1rem);
+  inset-inline-end: var(--slds-g-spacing-4, 1rem);
+  z-index: 500;
+
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+
+  padding: var(--slds-g-spacing-1, 0.25rem) var(--slds-g-spacing-2, 0.5rem);
+  border-radius: 999px;
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  background-color: var(--slds-g-color-surface-container-1, #fff);
+  // SLDS elevation 2 — the same three-shadow stack the floating panels
+  // in this prototype use, so the control reads as floating chrome
+  // rather than as part of the page.
+  box-shadow:
+    0 0 5px 0 rgba(0, 0, 0, 0.16),
+    0 3px 3px 0 rgba(0, 0, 0, 0.16),
+    0 -1px 2px 0 rgba(0, 0, 0, 0.09);
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+}
+
+.proto-version-switcher__label {
+  font-size: var(--slds-g-font-scale-neg-2, 0.625rem);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  // Uppercase + tracking marks this as a meta label, which keeps it
+  // from reading as one of the selectable options beside it.
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  padding-inline-start: var(--slds-g-spacing-1, 0.25rem);
+}
+
+.proto-version-switcher__list {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.proto-version-switcher__item {
+  display: flex;
+}
+
+// One rule paints both the anchor and the current-version `<span>`, so
+// the two chips share a box and only their colors differ. Sizing is
+// deliberately compact (12 px label in a 24 px chip): the control sits
+// on top of real content and should be reachable without competing
+// with it.
+.proto-version-switcher__option {
+  display: inline-flex;
+  align-items: center;
+  padding-inline: var(--slds-g-spacing-2, 0.5rem);
+  block-size: 1.5rem;
+  border-radius: 999px;
+
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  &:hover,
+  &:focus-visible {
+    background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+    text-decoration: none;
+  }
+
+  // The chips are links, so the SLDS focus ring has to be asked for
+  // explicitly — this control is outside any `.slds-button` cascade.
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-border-brand-1, #0176d3);
+    outline-offset: 1px;
+  }
+}
+
+// Current version. Filled rather than merely bolded because the
+// switcher is read at a glance from across a room during design
+// review, and weight alone doesn't carry at 12 px. Not a link (see the
+// partial), so it needs no hover or focus treatment.
+.proto-version-switcher__option--current {
+  background-color: var(--slds-g-color-palette-blue-95, #eef4ff);
+  color: var(--slds-g-color-palette-blue-30, #032d60);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  cursor: default;
+}
+

@@ -1,0 +1,135 @@
+{#
+  Seller Home — Skills landing, VERSION B body
+  =====================================================================
+  Rendered only by /skills-v2.html. Version A lives in
+  `_skills_body_v1.html`; read its docblock for the full split
+  rationale and the list of what the two versions share. In short:
+  data, copy, shell, banner, toolbar, rows, dialogs, and ALL behavior
+  come from shared partials + skills.json — a version body owns page
+  layout and nothing else.
+
+  STATUS: the page frame still matches Version A (same header band,
+  banner, toolbar, and body scroll); the SKILL CARD is where B has
+  diverged — Figma 11194:24307 adds an object tile, an object stamp
+  under the name, and a "From … • Edited …" footer. That card lives in
+  the shared `_skill_list.html` behind the `skillListVariant` flag set
+  below, not in a second copy of the row markup.
+
+  WHERE TO DIVERGE further
+    1. Rearrange the markup in this file — that is what it is for.
+    2. Style it under `.seller-home--skills-v2` in skills.scss. Scoping
+       to the root class means Version A cannot regress, so B is free
+       to repaint the header band, banner, toolbar, and rows — the
+       card's own Version B rules already live there.
+    3. Keep every `data-sh-*` hook below, and keep including
+       `_skills_toolbar.html` / `_skill_list.html` /
+       `_skills_dialogs.html`. They are the contract skills.js binds
+       to: tab switching, keyboard nav, row filtering, empty states,
+       hash sync, overflow menus, connected-skills popovers, and the
+       action dialogs all stop working the moment a hook is renamed or
+       a partial is replaced with hand-written markup.
+    4. If B needs different CONTENT (not layout), add it to skills.json
+       and read it in both versions — never inline copy here, or the
+       versions start telling different stories.
+#}
+
+{# Page data — see the matching block in `_skills_body_v1.html` for why
+   these bindings live in the body rather than in a shared data partial
+   (Nunjucks includes cannot write variables back to their includer).
+   Both versions bind the same names from the same JSON, so neither can
+   quietly render a different catalog. #}
+{% set header       = skillsData.header %}
+{% set banner       = skillsData.banner %}
+{% set tabs         = skillsData.tabs %}
+{% set skills       = skillsData.skills %}
+{% set rowActions   = skillsData.rowActions %}
+{% set agentLibrary = skillsData.agentLibrary %}
+{% set toolLibrary  = skillsData.toolLibrary %}
+{% set filterAction = skillsData.filterAction %}
+{% set emptyState   = skillsData.emptyState %}
+
+{# Version B's card shape (Figma 11194:24307): object tile, object
+   stamp, and the "From … • Edited …" footer. `_skill_list.html` reads
+   this flag to pick the body layout — the row's anchor, menus,
+   popovers, and hooks are single-sourced there, so this is the whole
+   opt-in. `rowMeta` carries the labels that layout needs.
+
+   Version A leaves both unset and renders the original two-line row.
+   That is why the flag lives here and not in the page file: it
+   describes the BODY's card design, and a future Version C gets its
+   own body partial with its own value. #}
+{% set skillListVariant = "v2" %}
+{% set rowMeta          = skillsData.rowMeta %}
+
+{# `.seller-home--knowledge` + `.seller-home--skills` are inherited
+   from Version A so the viewport lock, column widths, and body scroll
+   keep working while the frame is still shared.
+   `.seller-home--skills-v2` is B's own hook, and every Version B rule
+   in skills.scss hangs off it. Dropping either inherited class is a
+   legitimate move once B's layout diverges further; just expect to own
+   the scroll container yourself if you drop `--knowledge`. #}
+<div
+  class="seller-home seller-home--knowledge seller-home--skills seller-home--skills-v2"
+  data-sh-root
+>
+  {% include "_home_left_nav.html" %}
+
+  {# `data-sh-skills-root` is what makes skills.js adopt this page — it
+     is not decorative. #}
+  <div
+    class="seller-home__knowledge seller-home__skills"
+    role="main"
+    aria-label="{{ pageTitle }}"
+    tabindex="-1"
+    data-sh-skills-root
+  >
+    <header
+      class="seller-home__knowledge-header"
+      data-sh-skills-header
+    >
+      <h1 class="seller-home__knowledge-header-title">{{ header.heading }}</h1>
+      <button
+        type="button"
+        class="slds-button slds-button_neutral seller-home__skills-new"
+        data-sh-skills-create
+      >
+        <svg class="slds-button__icon slds-button__icon_left" aria-hidden="true">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
+        </svg>
+        {{ header.actionLabel }}
+      </button>
+    </header>
+
+    <section
+      class="seller-home__knowledge-body"
+      aria-label="{{ pageTitle }}"
+    >
+      <div class="seller-home__knowledge-body-inner">
+        {% if banner and banner.title %}
+          {% set bannerHeadingId = "seller-home-skills-banner-heading" %}
+          {% set bannerVariant   = "skills" %}
+          {% include "_seller_home_banner.html" %}
+        {% endif %}
+
+        {% include "_skills_toolbar.html" %}
+
+        {# The id is referenced by every tab chip's `aria-controls`, so
+           it travels with the toolbar contract — keep it even if the
+           region moves elsewhere in B's layout. #}
+        <div
+          id="seller-home-skills-list"
+          data-sh-skills-list-region
+        >
+          {% include "_skill_list.html" %}
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+{# Sibling of `.seller-home`, not a child — the modals are
+   `position: fixed` and must anchor to the viewport rather than to the
+   scrolling body inside the shell. #}
+{% include "_skills_dialogs.html" %}
+
+{% include "_prototype_version_switcher.html" %}
