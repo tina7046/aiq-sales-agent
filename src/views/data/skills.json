@@ -236,10 +236,18 @@
 //                      Filenames use the `tools_*` prefix that
 //                      matches the delivered asset set.
 //
-// Other top-level keys (unchanged from prior schema — comments
-// live inline where useful):
+// Other top-level keys (comments live inline where useful):
 //   pageTitle, header, composer, tabs, rowActions, filterAction,
 //   emptyState.
+//
+// TWO URLs project from this one file: /skills.html (Version A) and
+// /skills-v2.html (Version B), added 2026-08-17 to review two card
+// designs side by side. The v2 stem does NOT match this filename, so
+// that page reads this file explicitly with `readData("skills")` — see
+// `_skills_body_v1.html`. Consequence worth knowing before you rename
+// a key: neither URL holds its own copy of any skill, label, or count.
+// `prototypeVersions` (the switcher) exists only for that comparison and
+// is meant to be deleted once a direction is chosen.
 {
   "pageTitle": "Skills",
 
@@ -259,6 +267,76 @@
   // list + banner shape; the string is intentionally dropped to
   // avoid a dormant field on the schema (the educational banner
   // below now carries the equivalent copy).
+  // ── Prototype-only design-version switcher ───────────────────
+  // ------------------------------------------------------------
+  // Feeds `_prototype_version_switcher.html`, the bottom-right
+  // control that hops between the two design versions of this
+  // landing page. Strip this block and the partial together when the
+  // design question is settled — nothing else reads it, and the
+  // switcher hides itself if fewer than two entries survive.
+  //
+  //   label — Visible chip-group text. Purely a caption; the
+  //           control is a <nav> with its own aria-label, so this
+  //           string is aria-hidden in the partial.
+  //   items — Authored order; the chips render left to right as
+  //           listed.
+  //     label — Kept to "Version A" / "Version B" rather than the
+  //             URL's v1 / v2 because the switcher is read by design
+  //             reviewers, not by whoever typed the route. A → v1
+  //             and B → v2, deliberately.
+  //     href  — Absolute path. Authored here so the two versions can
+  //             never disagree about where the other one lives: both
+  //             pages render the same list, and each marks the entry
+  //             matching its own `skillsVersion` as current. Version
+  //             A points at /skills.html — the left nav's own
+  //             destination — so there is exactly one URL per design
+  //             rather than an alias route.
+  //     id    — Matches the `skillsVersion` string the page templates
+  //             set (`v1` / `v2`).
+  "prototypeVersions": {
+    "label": "Design",
+    "items": [
+      { "id": "v1", "label": "Version A", "href": "/skills.html" },
+      { "id": "v2", "label": "Version B", "href": "/skills-v2.html" }
+    ]
+  },
+
+  // Version B's card body carries NO data of its own. The 2026-08-18
+  // pass on Figma 11194:24307 settled it as a restack of facts Version A
+  // already renders — the skill name, its agent, and its
+  // connected-skills count — so the `rowMeta` block that fed the earlier
+  // object tile, object stamp, and "From … • Edited …" footer is gone
+  // rather than left dormant. Author and last-edit stay on
+  // /skill_detail.html, which reads each skill's own `createdBy` /
+  // `updatedAt` directly.
+  //
+  // ── "Use Skill" button (Version B rows only) ──────────────────
+  // ------------------------------------------------------------
+  // The primary half of the card's action cluster (Figma 11194:24333);
+  // the bordered kebab beside it is the same overflow menu Version A
+  // ships, so it needs no copy of its own. Version A ignores this block
+  // entirely, and dropping it degrades Version B's cluster to just the
+  // kebab rather than breaking the row.
+  //
+  //   id            — Action id emitted as `data-sh-skill-action`, which
+  //                   routes the click through the SAME
+  //                   `sh:skill-action` path the overflow items use.
+  //                   `use_in_chat` deliberately matches the verb the
+  //                   Skill detail page's own "Use in Chat" button
+  //                   fires, so both surfaces mean one thing.
+  //   label         — Visible button text. "Use Skill" per Figma, where
+  //                   the detail page says "Use in Chat" — the card has
+  //                   less room and more surrounding context.
+  //   assistiveText — Accessible name + tooltip. `{name}` is replaced
+  //                   with the skill's name at render time, so the
+  //                   button reads uniquely per row instead of nine
+  //                   identical "Use Skill" targets.
+  "useAction": {
+    "id":            "use_in_chat",
+    "label":         "Use Skill",
+    "assistiveText": "Use {name} in a new conversation"
+  },
+
   "header": {
     "heading":     "Skills",
     "actionLabel": "Create Skill"

@@ -1,0 +1,171 @@
+{#
+  Seller Home — Skills toolbar (tab chips + filter button + live region)
+  =====================================================================
+  Lifted verbatim out of `skills.html` on 2026-08-17, when the Skills
+  landing gained a second design version (`/skills-v2.html`; see
+  `_skills_body_v1.html` for the split's rationale). Both version
+  bodies include THIS file, so the tab contract exists exactly once:
+  one SSR count loop, one radiogroup ARIA pattern, one roving-tabindex
+  rule, one filter-button dispatch.
+
+  Version B is expected to RESTYLE this toolbar, not re-author it —
+  rules scoped to `.seller-home--skills-v2` in skills.scss can repaint
+  every element below without a second copy of the markup. Only reach
+  for a variant branch inside this file if a version needs different
+  STRUCTURE (an extra control, a different element order); anything
+  purely visual belongs in CSS, or the versions start drifting on
+  counts and keyboard behavior — which is what this extraction exists
+  to prevent.
+
+  Context expected from the includer (Nunjucks includes can read the
+  including template's variables, so each version body binds these
+  from `skillsData` before including):
+
+    tabs         — `{ items[], defaultTabId }` from skills.json.
+    skills       — the catalog array; counted per tab below.
+    filterAction — `{ label, icon }` for the trailing icon button.
+
+  DOM contract consumed by `bindSkills()` in skills.js — every hook
+  below is load-bearing, so keep the attribute names when restyling:
+  `data-sh-skills-toolbar`, `-tabs`, `-tab`, `-tab-ownerships`,
+  `-tab-count`, `-filter`, `-status`.
+#}
+
+{# ── Skills toolbar (tabs + filter button) ─────────────────────────
+   Structural clone of Scheduled's toolbar, namespaced separately
+   (`.seller-home__skills-*`) so a Scheduled-only tweak can't
+   accidentally regress Skills and vice versa (duplicate-not-shared
+   strategy, confirmed decision 2026-07-31).
+
+   ARIA note: these are filter chips over one list, NOT SLDS
+   tabpanel-swapping tabs. So we use `role="radiogroup"` +
+   `role="radio"` per the WAI-ARIA authoring practices for "pick one
+   option that changes what's shown" — `role="tab"` implies a
+   `role="tabpanel"` sibling per option, which this design doesn't
+   have (the list stays in place; only row visibility flips).
+
+   Counts are rendered server-side by iterating `skills` per tab:
+   Nunjucks's outer-scope `{% set %}` DOES propagate through this
+   build (probed on the Scheduled build 2026-07-30), so first-paint
+   counts are always in sync with the JSON without a JS hydration
+   step. `bindSkills()` also recomputes counts client-side so any
+   future JS-driven skill add/remove keeps them correct.
+
+   `defaultTabId` from skills.json controls the first-paint active
+   chip (server-side). URL hash drives the runtime active tab;
+   `bindSkills()` reads `location.hash` on load and updates the
+   highlight + row filter to match. #}
+<div
+  class="seller-home__skills-toolbar"
+  data-sh-skills-toolbar
+>
+  {# ── Tab chips ────────────────────────────────────── #}
+  <div
+    class="seller-home__skills-tabs"
+    role="radiogroup"
+    aria-label="Filter skills by collection"
+    data-sh-skills-tabs
+  >
+    {% for tab in tabs.items %}
+      {# `hidden: true` on a tab entry keeps it in the authored order
+         for easy re-enablement but skips both the SSR render AND the
+         JS controller's pickup (nothing to query without the DOM
+         node), so URL hashes pointing at a hidden tab id fall back
+         to the default tab. Used to park the "All" tab out of view
+         without deleting it from JSON. #}
+      {% if not (tab.hidden == true) %}
+      {# Count for this tab. `tab.ownerships` empty means "match
+         every skill" (the "All" tab). Server-side count aligns with
+         the row-visibility rule in bindSkills() so first paint and
+         later filters never disagree. Counts come straight from
+         skills[] — no hardcoding — so duplicating / deleting a skill
+         in JSON keeps every tab count in sync automatically. #}
+      {% set count = 0 %}
+      {% for s in skills %}
+        {% if not (s.hidden == true) %}
+          {% if (tab.ownerships | length) == 0 or s.ownership in tab.ownerships %}
+            {% set count = count + 1 %}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+      {% set isActive = (tab.id == tabs.defaultTabId) %}
+      <button
+        type="button"
+        class="seller-home__skills-tab{% if isActive %} is-active{% endif %}"
+        role="radio"
+        aria-checked="{% if isActive %}true{% else %}false{% endif %}"
+        aria-controls="seller-home-skills-list"
+        data-sh-skills-tab="{{ tab.id }}"
+        data-sh-skills-tab-ownerships="{{ tab.ownerships | join(',') }}"
+        {# Roving tabindex — only the active radio is in the natural
+           tab order; the rest are reached via Left/Right arrow.
+           Matches the WAI-ARIA radiogroup keyboard convention. #}
+        tabindex="{% if isActive %}0{% else %}-1{% endif %}"
+      >
+        <span class="seller-home__skills-tab-label">{{ tab.label }}</span>
+        <span
+          class="seller-home__skills-tab-count"
+          data-sh-skills-tab-count
+          aria-hidden="true"
+        >{{ count }}</span>
+        {# Screen-reader-only companion so AT users hear "My Skills,
+           4 skills" instead of just "My Skills, 4" (the visible pill
+           is decorative). #}
+        <span class="slds-assistive-text">
+          {{ count }} skill{% if count != 1 %}s{% endif %}
+        </span>
+      </button>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  {# ── Filter icon-button ────────────────────────────────
+     Bordered icon button per Figma "Coworker – Skills" (node
+     9723:17362) — the design shows a circular affordance with a
+     visible neutral border, not the transparent `icon-bare` shell
+     Scheduled ships with. Uses SLDS 2's `slds-button_icon-border`
+     so the border color, radius, hover fill, and focus-visible ring
+     come from tokens (`--slds-c-button-*` /
+     `--slds-g-color-border-2`) without a bespoke override.
+
+     Click dispatches `sh:skills-filter` on the Skills root so a
+     future filter menu can bind without touching this markup. The
+     prior popover implementation (checkbox facets for State +
+     Tools) was withdrawn 2026-07-31 to hold the tab strip alone as
+     the visible filter affordance; `filters` + `emptyState.filtered`
+     remain in `skills.json` as dormant schema so re-introducing the
+     popover is a JSON + JS edit, not a re-author of the toolbar. #}
+  <button
+    type="button"
+    class="slds-button slds-button_icon slds-button_icon-border seller-home__skills-filter"
+    data-sh-skills-filter
+    title="{{ filterAction.label }}"
+    aria-label="{{ filterAction.label }}"
+  >
+    <svg class="slds-button__icon" aria-hidden="true">
+      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ filterAction.icon }}"></use>
+    </svg>
+    <span class="slds-assistive-text">{{ filterAction.label }}</span>
+  </button>
+</div>
+
+{# ── Live-region — announces tab-switch results ─────────
+   Visually hidden. bindSkills() writes a phrase like "Showing 4 My
+   Skills" here whenever the active tab changes, so AT users hear the
+   count without the visible layout having to shift. Kept as a
+   SIBLING of the toolbar (not inside it) so a re-render of the
+   toolbar can't accidentally clobber the region node — that is why
+   it travels with the toolbar in this partial rather than being left
+   behind in the version bodies.
+
+   `role="status"` + `aria-live="polite"` gives us the standard
+   "announce but don't interrupt" contract; the Scheduled tab
+   controller uses the same pattern. #}
+<div
+  id="seller-home-skills-status"
+  class="slds-assistive-text"
+  role="status"
+  aria-live="polite"
+  aria-atomic="true"
+  data-sh-skills-status
+></div>
