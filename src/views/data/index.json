@@ -2838,9 +2838,27 @@
     // is no longer three potential rows (its last result, its current
     // run, its next run) — it's one row that carries its own state.
     //
-    // Row: { id, title, state, cadence, lastRun, nextRun?, startedAt?,
-    //        conversationId?, outputs?, error?, retryOutput?, workflow? }
+    // Row: { id, title, titles?, state, cadence, lastRun, nextRun?,
+    //        startedAt?, conversationId?, outputs?, error?,
+    //        retryOutput?, workflow? }
     //   • state   — one of `stateOrder`.
+    //   • title   — what the row reads in the state it renders in. A
+    //     completed run can say what it did ("Found new prospects"); a
+    //     scheduled one hasn't done anything yet, so it names the
+    //     artifact instead of claiming a past action.
+    //   • titles  — the other tenses that same row needs, because state
+    //     changes at runtime and a title stuck in one tense goes wrong
+    //     the moment someone presses the status button. "Run now" on a
+    //     completed row would otherwise leave it claiming to have found
+    //     the prospects it is still looking for.
+    //       running   present progressive ("Finding new prospects")
+    //       neutral   no claim either way ("Find new prospects"), used
+    //                 while paused — nothing is happening, so the row
+    //                 shouldn't assert that anything did
+    //     Both are optional; a row without them keeps `title` in every
+    //     state. The template hands all three to the same slot
+    //     mechanism the subline uses, so home.js swaps them with no
+    //     extra logic.
     //   • cadence — how often the workflow runs ("Weekly", "Daily").
     //     Shown as the left slot on `scheduled` rows only, but carried
     //     by every row so one can be rescheduled into that state.
@@ -2866,6 +2884,10 @@
         "id": "ri-01",
         "conversationId": "conv-001",
         "title": "Found new prospects",
+        "titles": {
+          "running": "Finding new prospects",
+          "neutral": "Find new prospects"
+        },
         "cadence": "Weekly",
         "nextRun": "Next run in 3 days",
         "lastRun": "Last run Thursday",
@@ -2879,6 +2901,10 @@
       {
         "id": "ri-02",
         "title": "Drafted proposals to send",
+        "titles": {
+          "running": "Drafting proposals to send",
+          "neutral": "Draft proposals to send"
+        },
         "cadence": "Daily",
         "nextRun": "Next run tomorrow at 6:00 AM",
         "lastRun": "Last run today",
@@ -2890,14 +2916,21 @@
       },
       {
         "id": "ri-03",
-        "title": "Prepared your weekly exec brief",
+        "title": "Weekly exec brief",
+        "titles": {
+          "running": "Preparing your weekly exec brief",
+          "neutral": "Weekly exec brief"
+        },
         "cadence": "Weekly",
         "nextRun": "Next run Friday at 5:00 AM",
         "lastRun": "Last run Friday",
-        "state": "completed",
+        "state": "scheduled",
+        // No `todayPrefix` here, unlike a completed row: it stamps today's
+        // date onto the label, and this run hasn't happened yet — the brief
+        // named below is what Friday will produce, not something that
+        // exists now.
         "outputs": [
-          // `todayPrefix` prepends the short date ("Aug 18") to the label.
-          { "icon": "doc", "label": "Quarterly Deal Pulse", "todayPrefix": true }
+          { "icon": "doc", "label": "Quarterly Deal Pulse" }
         ],
         "workflow": { "id": "", "label": "" }
       }
@@ -2916,6 +2949,10 @@
       {
         "id": "fail-01",
         "title": "Sync territory quota changes",
+        "titles": {
+          "running": "Syncing territory quota changes",
+          "neutral": "Sync territory quota changes"
+        },
         "cadence": "Daily",
         "lastRun": "Last run today at 6:00 AM",
         "state": "failed",
@@ -2926,6 +2963,10 @@
       {
         "id": "run-01",
         "title": "Researching 42 target accounts",
+        "titles": {
+          "running": "Researching 42 target accounts",
+          "neutral": "Research 42 target accounts"
+        },
         "cadence": "Weekly",
         "startedAt": "Started 12 min ago",
         "lastRun": "Last run Monday",
@@ -2938,6 +2979,10 @@
       {
         "id": "sch-01",
         "title": "Refresh account health scores",
+        "titles": {
+          "running": "Refreshing account health scores",
+          "neutral": "Refresh account health scores"
+        },
         "cadence": "Monthly",
         "nextRun": "Next run Monday at 6:00 AM",
         "lastRun": "Last run Jul 20",
@@ -2952,6 +2997,10 @@
       {
         "id": "pau-01",
         "title": "Re-engage stalled opportunities",
+        "titles": {
+          "running": "Re-engaging stalled opportunities",
+          "neutral": "Re-engage stalled opportunities"
+        },
         "cadence": "Weekly",
         // A paused row DISPLAYS "Paused" (the template substitutes it),
         // while the schedule underneath is what resuming restores — so

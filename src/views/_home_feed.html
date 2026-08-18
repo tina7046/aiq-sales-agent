@@ -269,6 +269,11 @@
    not just on outputs: a failed row has an error badge instead of pills
    and needs the same room around it. #}
 {% set hasThirdLine = item.error or (item.outputs and item.outputs|length) %}
+{# The title is a subline slot like the two halves below it, so the same
+   mechanism swaps its tense when the row changes state. A row without
+   `titles` keeps one wording everywhere. #}
+{% set runningTitle = item.titles.running if item.titles and item.titles.running else item.title %}
+{% set neutralTitle = item.titles.neutral if item.titles and item.titles.neutral else item.title %}
 <article
   class="seller-home__feed-item{% if hasThirdLine %} seller-home__feed-item--has-outputs{% endif %}"
   data-sh-feed-item="{{ item.id }}"
@@ -279,6 +284,10 @@
     {{ statusButton(item) }}
 
     <div class="seller-home__feed-item-body">
+      {# `aria-label` is only set when there's a workflow to append —
+         otherwise it would just restate the visible text, which costs
+         voice-control users the ability to say what they can see, and
+         would need re-syncing every time the title's tense changes. #}
       <h3 class="seller-home__feed-item-title">
         {% if item.conversationId %}
         <a
@@ -286,7 +295,14 @@
           class="seller-home__feed-item-title-action"
           data-sh-feed-item-link="{{ item.id }}"
           data-sh-feed-item-title
+          data-sh-feed-slot="title"
+          data-sh-feed-slot-default="{{ item.title }}"
+          data-sh-feed-slot-paused="{{ neutralTitle }}"
+          data-sh-feed-slot-running="{{ runningTitle }}"
+          {%- if hasWorkflow %}
           aria-label="{{ linkName }}"
+          data-sh-feed-item-name-suffix="{{ ', workflow: ' ~ item.workflow.label }}"
+          {%- endif %}
           aria-describedby="{{ descId }}"
         >{{ item.title }}</a>
         {% else %}
@@ -294,7 +310,14 @@
           type="button"
           class="seller-home__feed-item-title-action"
           data-sh-feed-item-title
+          data-sh-feed-slot="title"
+          data-sh-feed-slot-default="{{ item.title }}"
+          data-sh-feed-slot-paused="{{ neutralTitle }}"
+          data-sh-feed-slot-running="{{ runningTitle }}"
+          {%- if hasWorkflow %}
           aria-label="{{ linkName }}"
+          data-sh-feed-item-name-suffix="{{ ', workflow: ' ~ item.workflow.label }}"
+          {%- endif %}
           aria-describedby="{{ descId }}"
         >{{ item.title }}</button>
         {% endif %}

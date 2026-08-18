@@ -1504,6 +1504,10 @@
     // then pausing it would resume back into `failed`, undoing the retry.
     if (state !== 'paused') row.setAttribute('data-sh-feed-state-default', state)
 
+    // Three slots: the row's title and both halves of its subline. Each
+    // carries every string it may need as an attribute, so this picks
+    // between them and composes no wording of its own — which is what
+    // keeps all the copy in index.json.
     toArray(row.querySelectorAll('[data-sh-feed-slot]')).forEach(function (slot) {
       var value = slot.getAttribute('data-sh-feed-slot-' + key)
       if (value === null) return
@@ -1513,6 +1517,16 @@
       // row's current presentation, not the one the template rendered.
       if (state !== 'paused') slot.setAttribute('data-sh-feed-slot-default', value)
     })
+
+    // The title is one of those slots, so it may have just changed
+    // tense — and anything derived from it has to follow. The row only
+    // carries an `aria-label` when a workflow name had to be appended;
+    // without one the accessible name is the visible text and updates
+    // on its own.
+    if (title && title.hasAttribute('aria-label')) {
+      title.setAttribute('aria-label', title.textContent.trim() +
+        (title.getAttribute('data-sh-feed-item-name-suffix') || ''))
+    }
 
     if (toggle) {
       var label = (FEED_VERBS[state] || 'Pause ') +
