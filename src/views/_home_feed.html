@@ -463,4 +463,16 @@
       {% endfor %}
     {% endfor %}
   </ul>
+
+  {# Empty state. Always rendered; CSS shows it only when no rows are
+     left, so dismissing the last one reveals it with no JS involved and
+     a page that loads with an empty list is covered by the same rule.
+
+     `role="status"` because it appears in response to something the
+     seller just did — dismissing the last row — and nothing else would
+     announce that the list is now empty. #}
+  <div class="seller-home__feed-empty" role="status">
+    <p class="seller-home__feed-empty-heading">{{ feed.empty.heading }}</p>
+    <p class="seller-home__feed-empty-body">{{ feed.empty.body }}</p>
+  </div>
 </section>

@@ -93,14 +93,46 @@ $aaw-god-rays-overscan: 90px;
   padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-4, 1rem) 0;
   border-radius: var(--slds-g-radius-border-3, 0.75rem);
 
-  // Subtle top-to-bottom fade — 80% white at 7%, clear by 48%. Sits over
-  // the shader so the section reads as a slightly-more-opaque surface
-  // without needing a border to separate it from the rays.
+  position: relative; // containing block for the fade band below
+
+  // Height of the fade band. Raise it to push the wash further down the
+  // list, lower it to tighten it to the header.
+  --aaw-fade-height: 24.5rem;
+}
+
+// Subtle top-to-bottom fade — 80% white at 7%, clear by 48%. Sits over
+// the shader so the section reads as a slightly-more-opaque surface
+// without needing a border to separate it from the rays.
+//
+// On its own element rather than as the section's background, because a
+// background is painted into its element's box — so as rows were
+// dismissed and the section shrank, the wash was clipped shorter and
+// shorter, collapsing to a small block and then disappearing. An
+// absolutely-positioned band with its own fixed height doesn't take
+// part in that.
+.aaw::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  height: var(--aaw-fade-height);
+
+  pointer-events: none;
+  border-radius: inherit;
   background: linear-gradient(
     to bottom,
     rgba(255, 255, 255, 0.8) 7.169%,
     rgba(255, 255, 255, 0) 48.276%
   );
+}
+
+// The band is an absolutely-positioned child, which paints above static
+// in-flow content. Positioning the section's other children puts them
+// back on top of it by tree order. The list is already positioned, for
+// Flip.
+.aaw__header,
+.aaw__empty {
+  position: relative;
 }
 
 // ── Header ────────────────────────────────────────────────────────────
@@ -158,6 +190,54 @@ $aaw-god-rays-overscan: 90px;
 
   &:last-child {
     margin-bottom: 0;
+  }
+}
+
+// ── Empty state ───────────────────────────────────────────────────────
+// Stands in for the list once the last row is dismissed. `:has()` on the
+// section drives it, so there's no JS to keep in sync. The min-height is
+// the point: without it the section would collapse to its header the
+// moment the list emptied.
+.aaw__empty {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+
+  min-height: 9rem;
+  padding: var(--slds-g-spacing-6, 2rem) var(--slds-g-spacing-4, 1rem);
+  text-align: center;
+}
+
+.aaw:not(:has(.aaw__list-item)) .aaw__empty {
+  display: flex;
+  // Runs on reveal, since an element can't transition out of
+  // `display: none` — the last row has just animated away, and popping
+  // this in at full opacity reads as a jump.
+  animation: aaw-empty-in 220ms ease both;
+}
+
+.aaw__empty-heading {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.1875rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+.aaw__empty-body {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.3;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+@keyframes aaw-empty-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.25rem);
   }
 }
 
@@ -964,4 +1044,8 @@ $aaw-status-action: (
 
   // Dismiss and reshuffle opt out in JS (`canAnimate`) rather than here,
   // since skipping them means not running the timeline at all.
+
+  .aaw:not(:has(.aaw__list-item)) .aaw__empty {
+    animation: none;
+  }
 }
