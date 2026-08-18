@@ -24,8 +24,23 @@
       { "id": "review_settings", "label": "Review settings" }
     ],
 
-    // Shared per-card kebab actions.
+    // Shared per-card kebab actions. The run control leads — it's the
+    // one a seller reaches for — and dismiss is the destructive one, so
+    // it sits at the bottom where it's harder to hit by accident.
+    //
+    // `onlyForState` / `hideForState` scope an action to the states it
+    // makes sense in, and they're enforced in CSS off the row's
+    // `data-aaw-state` rather than at render time — a row can change
+    // state while its menu already exists. Here that means the top item
+    // reads "Run now" on every row except a running one, which offers
+    // "Pause" in the same slot instead.
+    //
+    // Both start or stop a run off-schedule, and both reuse transitions
+    // the status button already makes, so nothing here is a second way
+    // of doing something that already had one.
     "rowActions": [
+      { "id": "run_now", "label": "Run now", "icon": "play",  "hideForState": "running" },
+      { "id": "pause",   "label": "Pause",   "icon": "pause", "onlyForState": "running" },
       { "id": "dismiss", "label": "Dismiss", "icon": "close" }
     ],
 

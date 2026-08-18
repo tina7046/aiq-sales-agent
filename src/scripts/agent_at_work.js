@@ -84,8 +84,13 @@
   function bindMenu (trigger, list, onAction, actionAttr) {
     if (!trigger || !list) return
 
+    // Only the items actually on screen. Some are scoped to a row state
+    // and hidden with `display: none` (see the `data-aaw-action-only` /
+    // `-not` rules), and a hidden item can't take focus — left in the
+    // list, Arrow navigation would stall on it instead of stepping past.
     function items () {
       return Array.prototype.slice.call(list.querySelectorAll('[role="menuitem"]'))
+        .filter(function (el) { return el.offsetParent !== null })
     }
 
     function close (returnFocus) {
@@ -158,7 +163,13 @@
             actionId: actionId,
             cardId: card ? card.getAttribute('data-aaw-card') : null
           })
+
+          // The two run actions are the transitions the status button
+          // already makes, reached from the menu instead — so they go
+          // through the same path rather than inventing a second one.
           if (actionId === 'dismiss') dismiss(card)
+          else if (actionId === 'run_now' && card) changeState(root, card, 'running')
+          else if (actionId === 'pause' && card) changeState(root, card, 'paused')
         },
         'data-aaw-menu-action'
       )
@@ -330,6 +341,25 @@
     return 'paused'
   }
 
+  // Any state change can move the row — pausing sorts it to the bottom,
+  // resuming lifts it back, starting a run takes it out of whatever
+  // group it was in — so the change and the re-sort happen inside one
+  // Flip, and the row travels while everything it displaced slides
+  // around it.
+  function changeState (root, row, state) {
+    var li = row.closest('.aaw__list-item')
+
+    if (!li) {
+      applyState(row, state)
+      return
+    }
+
+    reshuffle(root, li, function () {
+      applyState(row, state)
+      placeRow(root, li)
+    })
+  }
+
   function bindRowControls (root) {
     root.addEventListener('click', function (event) {
       var toggle = event.target.closest('[data-aaw-run-toggle]')
@@ -345,21 +375,8 @@
       if (toggle) {
         var was = row.getAttribute('data-aaw-state')
         var now = nextState(row)
-        var li = row.closest('.aaw__list-item')
 
-        // Any state change can move the row: pausing sorts it to the
-        // bottom, resuming lifts it back, and retrying a failed row
-        // takes it out of the attention group at the top. So the state
-        // change and the re-sort happen inside one Flip, and the row
-        // travels while everything it displaced slides around it.
-        if (li) {
-          reshuffle(root, li, function () {
-            applyState(row, now)
-            placeRow(root, li)
-          })
-        } else {
-          applyState(row, now)
-        }
+        changeState(root, row, now)
 
         emit(root, 'aaw:run-toggle', {
           cardId: row.getAttribute('data-aaw-card'),

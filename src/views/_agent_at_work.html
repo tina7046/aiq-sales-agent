@@ -188,6 +188,61 @@
   it — with nothing here the card would drop to the compact two-line
   height mid-Flip, which reads as the row twitching.
 #}
+{#
+  Row kebab — shared by both row treatments so the two can't drift.
+
+  Actions can be scoped to a state: `onlyForState` shows the item in
+  that state alone, `hideForState` withholds it there. Both are CSS
+  rules keyed off the row's `data-aaw-state`, not template branches,
+  because a row changes state at runtime — "Run now" can put it into
+  `running`, at which point its own menu has to start offering Pause
+  instead. Rendering every item once and letting state pick is what
+  avoids rebuilding the menu on every transition.
+
+  `data-aaw-stop` is the opt-out marker the card click delegate looks
+  for, so menu clicks never select or navigate the row.
+#}
+{% macro aawRowMenu(menuId, rowActions, label) %}
+<div class="aaw-menu" data-aaw-menu data-aaw-stop>
+  <button
+    type="button"
+    class="slds-button slds-button_icon slds-button_icon-bare aaw-menu__trigger"
+    data-aaw-menu-trigger
+    aria-haspopup="menu"
+    aria-expanded="false"
+    aria-controls="{{ menuId }}"
+    aria-label="{{ label }}"
+    title="{{ label }}"
+  >
+    <svg class="slds-button__icon" aria-hidden="true">
+      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
+    </svg>
+  </button>
+
+  <div class="aaw-menu__list" id="{{ menuId }}" role="menu" aria-label="{{ label }}" data-aaw-menu-list hidden>
+    <ul class="aaw-menu__items" role="none">
+      {% for action in rowActions %}
+      <li
+        role="none"
+        {%- if action.onlyForState %} data-aaw-action-only="{{ action.onlyForState }}"{% endif %}
+        {%- if action.hideForState %} data-aaw-action-not="{{ action.hideForState }}"{% endif %}
+      >
+        <button type="button" class="aaw-menu__item" role="menuitem" data-aaw-menu-action="{{ action.id }}">
+          {% if action.icon %}
+          <svg class="aaw-menu__item-icon" aria-hidden="true">
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
+          </svg>
+          {% endif %}
+          <span>{{ action.label }}</span>
+        </button>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endmacro %}
+
+
 {% macro aawErrorLine(item, outputTypes) %}
 <div class="aaw-card__outputs">
   <span class="slds-badge slds-theme_error aaw-card__error">{{ item.error }}</span>
@@ -270,41 +325,7 @@
       <span aria-hidden="true"></span>
     {% endif %}
 
-    {# `data-aaw-stop` is the opt-out marker the card click delegate
-       looks for, so menu clicks never select / navigate the card. #}
-    <div class="aaw-menu" data-aaw-menu data-aaw-stop>
-      <button
-        type="button"
-        class="slds-button slds-button_icon slds-button_icon-bare aaw-menu__trigger"
-        data-aaw-menu-trigger
-        aria-haspopup="menu"
-        aria-expanded="false"
-        aria-controls="{{ menuId }}"
-        aria-label="More actions"
-        title="More actions"
-      >
-        <svg class="slds-button__icon" aria-hidden="true">
-          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-        </svg>
-      </button>
-
-      <div class="aaw-menu__list" id="{{ menuId }}" role="menu" aria-label="More actions" data-aaw-menu-list hidden>
-        <ul class="aaw-menu__items" role="none">
-          {% for action in rowActions %}
-          <li role="none">
-            <button type="button" class="aaw-menu__item" role="menuitem" data-aaw-menu-action="{{ action.id }}">
-              {% if action.icon %}
-              <svg class="aaw-menu__item-icon" aria-hidden="true">
-                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
-              </svg>
-              {% endif %}
-              <span>{{ action.label }}</span>
-            </button>
-          </li>
-          {% endfor %}
-        </ul>
-      </div>
-    </div>
+    {{ aawRowMenu(menuId, rowActions, "More actions") }}
   </div>
 </article>
 {% endmacro %}
@@ -381,39 +402,7 @@
       </svg>
     </button>
 
-    <div class="aaw-menu" data-aaw-menu data-aaw-stop>
-      <button
-        type="button"
-        class="slds-button slds-button_icon slds-button_icon-bare aaw-menu__trigger"
-        data-aaw-menu-trigger
-        aria-haspopup="menu"
-        aria-expanded="false"
-        aria-controls="{{ menuId }}"
-        aria-label="More task actions"
-        title="More task actions"
-      >
-        <svg class="slds-button__icon" aria-hidden="true">
-          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-        </svg>
-      </button>
-
-      <div class="aaw-menu__list" id="{{ menuId }}" role="menu" aria-label="More task actions" data-aaw-menu-list hidden>
-        <ul class="aaw-menu__items" role="none">
-          {% for action in rowActions %}
-          <li role="none">
-            <button type="button" class="aaw-menu__item" role="menuitem" data-aaw-menu-action="{{ action.id }}">
-              {% if action.icon %}
-              <svg class="aaw-menu__item-icon" aria-hidden="true">
-                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
-              </svg>
-              {% endif %}
-              <span>{{ action.label }}</span>
-            </button>
-          </li>
-          {% endfor %}
-        </ul>
-      </div>
-    </div>
+    {{ aawRowMenu(menuId, rowActions, "More task actions") }}
   </div>
 </article>
 {% endmacro %}

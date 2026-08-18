@@ -19,19 +19,20 @@
 //     `sh:composer-action` event so a future phase can bind a
 //     file-picker without touching this file. (There was a mic here
 //     too; it's been removed from the toolbar.)
-//   • Phase 4: Ready to Review + Tasks — tablist (WAI-ARIA "tabs
-//     with automatic activation": Left/Right + Home/End keyboard
-//     nav, roving tabindex, panels toggled via the `hidden`
-//     attribute), an inline overflow menu (Escape / click-outside
-//     close, Arrow-Up/Down within menu), and delegated row-click
-//     handling. Rows are workflow CARDS, not buttons: the visible
-//     interactive element is the title `<a>` (keyboard entry via
-//     Tab, activation via Enter), and any click within the
-//     surrounding `<article>` bubbles to the section root where
-//     we fire the row-select event. Rows dispatch
+//   • Phase 4: "Your agent at work" feed — one flat list of recurring
+//     workflows, sorted by state rather than split across tabs. Each
+//     row's `data-sh-feed-state` drives its status glyph, its per-state
+//     menu actions and its sort position, so pausing, resuming,
+//     retrying or running a row is one attribute write plus a GSAP
+//     Flip re-sort. Also an inline overflow menu (Escape /
+//     click-outside close, Arrow-Up/Down within menu) and delegated
+//     row-click handling. The visible interactive element is the title
+//     inside each row's heading — an `<a>` where the row leads
+//     somewhere, a `<button>` where it doesn't — stretched over the
+//     row in CSS, so the browser owns navigation. Rows dispatch
 //     `sh:feed-item-select`; menu items dispatch
-//     `sh:feed-overflow-action`; tab switches dispatch
-//     `sh:feed-tab-change`.
+//     `sh:feed-item-action` / `sh:feed-overflow-action`; the status
+//     button dispatches `sh:feed-run-toggle`.
   //   • Phase 5: Knowledge doc list (rendered on /knowledge.html,
   //     no-ops on /home.html). Rows are native `<a>` elements, so
   //     click / Enter / Cmd-click routing already lives in the
@@ -633,7 +634,7 @@
       bindComposer(composerRoot)
     }
 
-    // Phase 4 — Ready to Review + Tasks.
+    // Phase 4 — "Your agent at work" feed.
     var feedRoot = root.querySelector('[data-sh-feed-root]')
     if (feedRoot) {
       bindFeed(feedRoot)
@@ -1435,542 +1436,439 @@
   }
 
   // ══════════════════════════════════════════════════════════════════
-  // Ready to Review + Tasks
+  // Phase 4 — "Your agent at work" feed
   // ──────────────────────────────────────────────────────────────────
-  // Everything is wired lazily off the section root — three
-  // independent surfaces (tablist, overflow menu, row list) so the
-  // helpers below stay independently testable if any of them ever
-  // grows in scope.
+  // One flat list of recurring workflows. Everything hangs off the
+  // section root, and the row's `data-sh-feed-state` is the single
+  // source of truth: the status glyph, the per-state menu actions and
+  // the sort position are all selected off it, so a state change is one
+  // attribute write plus the two strings CSS can't produce (the
+  // subline, and the status button's accessible name).
   //
-  //   ready-tabs      → tablistController(tabs, panels)
-  //   ready-overflow  → overflowController(trigger, menu)
-  //   ready-list      → delegated row-click handler
+  //   overflow / row menus → bindFeedMenus(feedRoot)
+  //   status button        → bindFeedRowControls(feedRoot)
+  //   row activation       → bindFeedRowClicks(feedRoot)
+  //
+  // Everything is delegated on the section root, so rows added at
+  // runtime inherit the behaviour without a re-bind.
   // ══════════════════════════════════════════════════════════════════
-  function bindFeed (feedRoot) {
-    var tabs = toArray(feedRoot.querySelectorAll('[data-sh-feed-tab]'))
-    var panels = toArray(feedRoot.querySelectorAll('[data-sh-feed-panel]'))
-    if (tabs.length && panels.length) {
-      tablistController(tabs, panels)
-    }
 
-    // Cycler-tab bridge. When the header uses the Connections "cycler"
-    // treatment (`[data-sh-tabnav]`), the global tab_nav.js owns the
-    // active-chip + roving-tabindex + keyboard state and emits a
-    // bubbling `sh:tabnav-change` ({ index, label, value }). Map that
-    // value onto the ready panels so the card swaps content the same way
-    // the `tablistController` (pill treatment) does. Both treatments are
-    // rendered for the A/B comparison; the sync block below mirrors the
-    // active tab across them so flipping the control panel is seamless.
-    var tabnav = feedRoot.querySelector('[data-sh-tabnav]')
-    if (tabnav && panels.length) {
-      tabnav.addEventListener('sh:tabnav-change', function (event) {
-        var value = event.detail && event.detail.value
-        panels.forEach(function (panel) {
-          var on = panel.getAttribute('data-sh-feed-panel') === value
-          panel.classList.toggle('is-visible', on)
-          panel.hidden = !on
-        })
-        document.dispatchEvent(new CustomEvent('sh:feed-tab-change', {
-          detail: { tabId: value, source: 'ready' }
-        }))
-      })
-    }
+  // Two list motions, both GSAP:
+  //
+  //   dismiss    the row slides left and fades, then collapses its own
+  //              height and margin so the rows below close up over it
+  //   reshuffle  Flip records where every row is, one is moved in the
+  //              DOM, and Flip tweens them all to their new positions —
+  //              used whenever a state change re-sorts the list
+  //
+  // Both are optional. Every animated path has an instant one behind
+  // it, so a missing GSAP/Flip or `prefers-reduced-motion` degrades
+  // rather than breaks.
+  var FEED_MOTION = {
+    slide: 0.4,      // dismiss: travel out
+    collapse: 0.4,   // dismiss: close the space
+    shuffle: 0.5,    // reshuffle: reorder
+    offset: -300,    // dismiss: how far left the row travels
+    ease: 'power2.inOut'
+  }
 
-    // ── A/B/C tab-treatment comparison (prototype) ────────────────────
-    // All treatments render at once; a single `sh:feed-tab-change`
-    // listener mirrors the active tab across them so the floating control
-    // panel can flip between them without showing a stale selection. This
-    // block only mutates DOM (never dispatches), so there's no feedback
-    // loop. It also rewrites the cycler's `data-sh-tabnav-index` so
-    // ShTabNav's own "already selected" guard stays aligned.
-    var cyclerList = feedRoot.querySelector('[data-sh-tabnav]')
-    var cyclerChips = cyclerList
-      ? toArray(cyclerList.querySelectorAll('[data-sh-tabnav-value]'))
-      : []
+  function feedCanAnimate () {
+    return typeof gsap !== 'undefined' &&
+      typeof Flip !== 'undefined' &&
+      !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  }
 
-    // Option C — transitions.dev sliding pill (16-tabs-sliding). JS writes
-    // the active tab's offsetLeft/offsetWidth onto the pill; CSS tweens it.
-    var sliderBar = feedRoot.querySelector('[data-sh-feed-slider]')
-    var sliderPill = sliderBar ? sliderBar.querySelector('.t-tabs-pill') : null
-    var sliderTabs = sliderBar ? toArray(sliderBar.querySelectorAll('.t-tab')) : []
-    function sliderActiveTab () {
-      return sliderTabs.filter(function (t) {
-        return t.getAttribute('aria-selected') === 'true'
-      })[0] || sliderTabs[0]
+  // What the status button's accessible name says it will do. Anything
+  // not listed pauses.
+  var FEED_VERBS = { paused: 'Resume ', failed: 'Retry ' }
+
+  // Which set of subline strings a state reads. Every slot carries all
+  // three as attributes, so this picks a suffix rather than wording —
+  // which is what keeps the copy in index.json.
+  function feedSublineKey (state, home) {
+    if (state === 'paused') return 'paused'
+    if (state === 'running' && home !== 'running') return 'running'
+    return 'default'
+  }
+
+  function applyFeedState (row, state) {
+    var home = row.getAttribute('data-sh-feed-state-default') || 'scheduled'
+    var toggle = row.querySelector('[data-sh-feed-run-toggle]')
+    var title = row.querySelector('[data-sh-feed-item-title]')
+    var key = feedSublineKey(state, home)
+
+    row.setAttribute('data-sh-feed-state', state)
+
+    // "Home" is the last state the row was in that wasn't paused, not
+    // the one it first rendered in — otherwise retrying a failed row and
+    // then pausing it would resume back into `failed`, undoing the retry.
+    if (state !== 'paused') row.setAttribute('data-sh-feed-state-default', state)
+
+    toArray(row.querySelectorAll('[data-sh-feed-slot]')).forEach(function (slot) {
+      var value = slot.getAttribute('data-sh-feed-slot-' + key)
+      if (value === null) return
+
+      slot.textContent = value
+      // Same reason: the strings a resume returns to have to track the
+      // row's current presentation, not the one the template rendered.
+      if (state !== 'paused') slot.setAttribute('data-sh-feed-slot-default', value)
+    })
+
+    if (toggle) {
+      var label = (FEED_VERBS[state] || 'Pause ') +
+        (title ? title.textContent.trim() : '')
+      toggle.setAttribute('aria-label', label)
+      toggle.setAttribute('title', label)
     }
-    // Snap (animate=false: suspend transition + reflow so the pill doesn't
-    // fly in from translateX(0)/width:0) or tween (animate=true) the pill
-    // onto a tab. A `display:none` bar measures as 0, so bail unless
-    // Option C is the shown treatment (see the re-snap in applyTabStyle).
-    function sliderMoveTo (tab, animate) {
-      if (!tab || !sliderPill) return
-      if (feedRoot.getAttribute('data-feed-tabstyle') !== 'c') return
-      if (!animate) {
-        var prev = sliderPill.style.transition
-        sliderPill.style.transition = 'none'
-        sliderPill.style.transform = 'translateX(' + tab.offsetLeft + 'px)'
-        sliderPill.style.width = tab.offsetWidth + 'px'
-        void sliderPill.offsetWidth
-        sliderPill.style.transition = prev
-      } else {
-        sliderPill.style.transform = 'translateX(' + tab.offsetLeft + 'px)'
-        sliderPill.style.width = tab.offsetWidth + 'px'
+  }
+
+  // What pressing the status button turns the row into.
+  function nextFeedState (row) {
+    var state = row.getAttribute('data-sh-feed-state')
+    if (state === 'paused') {
+      return row.getAttribute('data-sh-feed-state-default') || 'scheduled'
+    }
+    if (state === 'failed') return 'running'
+    return 'paused'
+  }
+
+  // Where a row belongs, decided the same way the template decides it:
+  // group by `feed.stateOrder`, and within a group keep the order the
+  // list was built in. Each `<li>` is stamped with that build index at
+  // boot, so a row resumed after being paused returns to its original
+  // place among its neighbours rather than to the top of its group.
+  function feedSortKey (order, li) {
+    var row = li.querySelector('[data-sh-feed-item]')
+    var state = row ? row.getAttribute('data-sh-feed-state') : ''
+    var group = order.indexOf(state)
+
+    return {
+      group: group === -1 ? order.length : group,
+      built: Number(li.getAttribute('data-sh-feed-order')) || 0
+    }
+  }
+
+  function placeFeedRow (feedRoot, li) {
+    var list = li.parentElement
+    if (!list) return
+
+    var order = (feedRoot.getAttribute('data-sh-feed-state-order') || '').split(',')
+    var mine = feedSortKey(order, li)
+    var before = null
+
+    toArray(list.children).forEach(function (other) {
+      if (before || other === li) return
+      var theirs = feedSortKey(order, other)
+      if (theirs.group > mine.group ||
+         (theirs.group === mine.group && theirs.built > mine.built)) {
+        before = other
       }
+    })
+
+    if (before) list.insertBefore(li, before)
+    else list.appendChild(li)
+  }
+
+  // Flip needs the before-positions captured while the DOM is still in
+  // its old arrangement, so the caller hands us the move to perform
+  // rather than doing it first.
+  function feedReshuffle (li, move) {
+    var list = li.parentElement
+
+    if (!list || !feedCanAnimate()) {
+      move()
+      return
     }
-    sliderTabs.forEach(function (tab) {
-      tab.addEventListener('click', function () {
-        var tabId = tab.getAttribute('data-sh-feed-slidertab')
-        panels.forEach(function (panel) {
-          var on = panel.getAttribute('data-sh-feed-panel') === tabId
-          panel.classList.toggle('is-visible', on)
-          panel.hidden = !on
-        })
-        document.dispatchEvent(new CustomEvent('sh:feed-tab-change', {
-          detail: { tabId: tabId, source: 'ready' }
-        }))
-      })
-    })
-    window.addEventListener('resize', function () {
-      sliderMoveTo(sliderActiveTab(), false)
-    })
 
-    // Mirror the active tab across all three treatments on any change.
-    document.addEventListener('sh:feed-tab-change', function (event) {
-      if (!event.detail || event.detail.source !== 'ready') return
-      var tabId = event.detail.tabId
-      tabs.forEach(function (pill) {
-        var on = pill.getAttribute('data-sh-feed-tab') === tabId
-        pill.classList.toggle('is-active', on)
-        pill.setAttribute('aria-selected', on ? 'true' : 'false')
-        pill.setAttribute('tabindex', on ? '0' : '-1')
-      })
-      cyclerChips.forEach(function (chip, i) {
-        var on = chip.getAttribute('data-sh-tabnav-value') === tabId
-        chip.classList.toggle('slds-item-active', on)
-        chip.classList.toggle('slds-item-inactive', !on)
-        chip.setAttribute('aria-selected', on ? 'true' : 'false')
-        chip.setAttribute('tabindex', on ? '0' : '-1')
-        if (on && cyclerList) cyclerList.setAttribute('data-sh-tabnav-index', String(i))
-      })
-      sliderTabs.forEach(function (tab) {
-        var on = tab.getAttribute('data-sh-feed-slidertab') === tabId
-        tab.setAttribute('aria-selected', on ? 'true' : 'false')
-      })
-      sliderMoveTo(sliderActiveTab(), true)
-    })
+    var state = Flip.getState(list.querySelectorAll('[data-sh-feed-list-item]'))
+    move()
+    Flip.from(state, { duration: FEED_MOTION.shuffle, ease: FEED_MOTION.ease })
+  }
 
-    // Floating A/B/C control panel — flips `data-feed-tabstyle` on the
-    // section root (CSS shows the matching treatment) and remembers the
-    // choice in localStorage. When Option C becomes visible its pill must
-    // be snapped into place (a hidden bar measures as 0). Prototype-only.
-    var abPanel = feedRoot.querySelector('[data-sh-feed-abpanel]')
-    if (abPanel) {
-      var AB_KEY = 'sh-feed-tabstyle'
-      var abButtons = toArray(abPanel.querySelectorAll('[data-sh-feed-abstyle]'))
-      var applyTabStyle = function (style) {
-        if (style !== 'a' && style !== 'b' && style !== 'c') style = 'b'
-        feedRoot.setAttribute('data-feed-tabstyle', style)
-        abButtons.forEach(function (btn) {
-          btn.classList.toggle('is-active', btn.getAttribute('data-sh-feed-abstyle') === style)
-        })
-        try { window.localStorage.setItem(AB_KEY, style) } catch (e) {}
-        // Snap the slider pill once its bar is actually shown + measurable.
-        if (style === 'c') {
-          requestAnimationFrame(function () { sliderMoveTo(sliderActiveTab(), false) })
-        }
+  // Any state change can move the row — pausing sorts it to the bottom,
+  // resuming lifts it back, starting a run takes it out of whatever
+  // group it was in — so the change and the re-sort happen inside one
+  // Flip, and the row travels while everything it displaced slides
+  // around it.
+  function changeFeedState (feedRoot, row, state) {
+    var li = closest(row, '[data-sh-feed-list-item]')
+
+    if (!li) {
+      applyFeedState(row, state)
+      return
+    }
+
+    feedReshuffle(li, function () {
+      applyFeedState(row, state)
+      placeFeedRow(feedRoot, li)
+    })
+  }
+
+  // Dismiss. The row slides out on its own, then the `<li>` behind it
+  // collapses; the collapse starts before the slide finishes so the
+  // list is already closing while the row is still leaving, which reads
+  // as one gesture rather than two steps.
+  //
+  // The row and the `<li>` have different jobs on purpose: transforms
+  // on the row can't move its neighbours, and height on the `<li>` is
+  // what actually makes the rows below travel up.
+  function dismissListItem (li) {
+    if (!li) return
+
+    if (!feedCanAnimate()) {
+      if (li.parentNode) li.parentNode.removeChild(li)
+      return
+    }
+
+    var row = li.querySelector('[data-sh-feed-item]') || li
+
+    // The row overflows its shrinking `<li>` for most of the collapse,
+    // since it's still ~75% opaque when the height starts closing.
+    gsap.set(li, { overflow: 'hidden' })
+
+    gsap.timeline({
+      defaults: { ease: FEED_MOTION.ease },
+      onComplete: function () {
+        if (li.parentNode) li.parentNode.removeChild(li)
       }
-      var storedStyle = null
-      try { storedStyle = window.localStorage.getItem(AB_KEY) } catch (e) {}
-      applyTabStyle(storedStyle || feedRoot.getAttribute('data-feed-tabstyle') || 'b')
-      abButtons.forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          applyTabStyle(btn.getAttribute('data-sh-feed-abstyle'))
-        })
+    })
+      .to(row, {
+        x: FEED_MOTION.offset,
+        opacity: 0,
+        duration: FEED_MOTION.slide
       })
+      .to(li, {
+        height: 0,
+        marginBottom: 0,
+        duration: FEED_MOTION.collapse
+      }, '<+=0.1')
+  }
+
+  // ── Menus ─────────────────────────────────────────────────────────
+  // One delegated implementation for the section overflow and every row
+  // kebab; they differ only in which attributes they're found by.
+  var FEED_MENUS = [
+    {
+      scope: '[data-sh-feed-item-menu]',
+      trigger: '[data-sh-feed-item-menu-trigger]',
+      list: '[data-sh-feed-item-menu-list]',
+      action: 'data-sh-feed-item-menu-action',
+      event: 'sh:feed-item-action'
+    },
+    {
+      scope: '[data-sh-feed-overflow]',
+      trigger: '[data-sh-feed-overflow-trigger]',
+      list: '[data-sh-feed-overflow-menu]',
+      action: 'data-sh-feed-overflow-action',
+      event: 'sh:feed-overflow-action'
+    }
+  ]
+
+  // Only the items actually on screen. Some are scoped to a row state
+  // and hidden with `display: none` (see the `data-sh-feed-action-only`
+  // / `-not` rules), and a hidden item can't take focus — left in the
+  // list, Arrow navigation would stall on it instead of stepping past.
+  function feedMenuItems (list) {
+    return toArray(list.querySelectorAll('[role="menuitem"]'))
+      .filter(function (el) { return el.offsetParent !== null })
+  }
+
+  function closeFeedMenu (list, returnFocus) {
+    if (!list || list.hidden) return
+    var scope = list.parentElement
+    var trigger = scope ? scope.querySelector('[aria-expanded]') : null
+
+    list.hidden = true
+    list.classList.remove('is-open')
+    if (trigger) {
+      trigger.setAttribute('aria-expanded', 'false')
+      if (returnFocus) trigger.focus()
+    }
+  }
+
+  function closeAllFeedMenus (feedRoot, except) {
+    FEED_MENUS.forEach(function (kind) {
+      toArray(feedRoot.querySelectorAll(kind.list)).forEach(function (list) {
+        if (list !== except) closeFeedMenu(list, false)
+      })
+    })
+  }
+
+  function bindFeedMenus (feedRoot) {
+    function kindFor (node) {
+      for (var i = 0; i < FEED_MENUS.length; i++) {
+        if (closest(node, FEED_MENUS[i].scope)) return FEED_MENUS[i]
+      }
+      return null
     }
 
-    var overflow = feedRoot.querySelector('[data-sh-feed-overflow]')
-    if (overflow) {
-      overflowController(overflow)
-    }
-
-    // Per-row overflow menu (⋮) — one controller for every card in
-    // the panel, event-delegated off the section root so cards added
-    // by a future dynamic render pick up the behavior automatically.
-    perRowOverflowController(feedRoot)
-
-    // Row activation — delegated to the section root so future
-    // dynamically-added rows / tabs work without re-binding.
-    //
-    // Rows are `<article>` workflow cards (not buttons). Two ways to
-    // activate a row:
-    //
-    //   1. Mouse click anywhere on the card. Bubbles up to the
-    //      section root; we find the enclosing `[data-sh-feed-item]`
-    //      and fire the event.
-    //   2. Keyboard: the card's title `<a>` is the focusable entry
-    //      point. Enter triggers the anchor's default click; the
-    //      click also bubbles to the section root and matches the
-    //      same delegate.
-    //
-    // If the title link was involved (either mouse click ON it, or
-    // keyboard Enter on it), we `preventDefault()` so the `href="#"`
-    // doesn't scroll the page to the top. That's the only reason
-    // we bother identifying the link — the row-select event fires
-    // regardless.
-    //
-    // Future nested action buttons inside a card (Dismiss, Snooze,
-    // ⋮ menu…) should tag themselves with `[data-sh-feed-item-stop]`
-    // and call `event.stopPropagation()` in their own handlers to
-    // opt out of the card-level activation.
     feedRoot.addEventListener('click', function (event) {
-      // Per-row overflow menu owns its own click handling (see
-      // perRowOverflowController below). We opt those clicks out of
-      // the card-select delegate here so clicking the kebab or a
-      // menu item never fires a phantom row-select / navigates the
-      // card. `data-sh-feed-item-stop` is the shared opt-out marker
-      // — future nested controls (Snooze, Assign, inline actions)
-      // can adopt the same attribute to inherit this behavior.
+      var trigger = closest(event.target, '[data-sh-feed-item-menu-trigger]') ||
+        closest(event.target, '[data-sh-feed-overflow-trigger]')
+
+      if (trigger) {
+        var kind = kindFor(trigger)
+        if (!kind) return
+        var scope = closest(trigger, kind.scope)
+        var list = scope.querySelector(kind.list)
+        if (!list) return
+
+        event.preventDefault()
+        event.stopPropagation()
+
+        if (list.hidden) {
+          closeAllFeedMenus(feedRoot, list)
+          list.hidden = false
+          list.classList.add('is-open')
+          trigger.setAttribute('aria-expanded', 'true')
+          var first = feedMenuItems(list)[0]
+          if (first) first.focus()
+        } else {
+          closeFeedMenu(list, true)
+        }
+        return
+      }
+
+      // An action inside an open menu.
+      for (var i = 0; i < FEED_MENUS.length; i++) {
+        var spec = FEED_MENUS[i]
+        var item = closest(event.target, '[' + spec.action + ']')
+        if (!item) continue
+
+        event.preventDefault()
+        event.stopPropagation()
+
+        var actionId = item.getAttribute(spec.action)
+        var row = closest(item, '[data-sh-feed-item]')
+        var rowId = row ? row.getAttribute('data-sh-feed-item') : null
+
+        closeFeedMenu(closest(item, spec.list), false)
+
+        document.dispatchEvent(new CustomEvent(spec.event, {
+          detail: { action: actionId, rowId: rowId, source: 'feed' }
+        }))
+
+        // The two run actions are transitions the status button already
+        // makes, reached from the menu instead — so they go through the
+        // same path rather than inventing a second one.
+        if (actionId === 'dismiss') dismissListItem(closest(item, '[data-sh-feed-list-item]'))
+        else if (actionId === 'run_now' && row) changeFeedState(feedRoot, row, 'running')
+        else if (actionId === 'pause' && row) changeFeedState(feedRoot, row, 'paused')
+        return
+      }
+    })
+
+    feedRoot.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape' && event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+
+      var kind = kindFor(event.target)
+      if (!kind) return
+      var scope = closest(event.target, kind.scope)
+      var list = scope.querySelector(kind.list)
+      if (!list || list.hidden) return
+
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        closeFeedMenu(list, true)
+        return
+      }
+
+      var all = feedMenuItems(list)
+      if (!all.length) return
+      var at = all.indexOf(document.activeElement)
+
+      event.preventDefault()
+      if (event.key === 'ArrowDown') all[(at + 1) % all.length].focus()
+      else all[(at - 1 + all.length) % all.length].focus()
+    })
+
+    // Outside-click dismiss. Scoped to the menus rather than to the
+    // section, so clicking another row — still inside the feed — closes
+    // an open kebab instead of leaving it hanging over the list.
+    // Trigger and action clicks stop propagating before they reach here.
+    document.addEventListener('click', function (event) {
+      var inside = closest(event.target, '[data-sh-feed-item-menu]') ||
+        closest(event.target, '[data-sh-feed-overflow]')
+      if (inside) return
+      closeAllFeedMenus(feedRoot, null)
+    })
+  }
+
+  // ── Status button ─────────────────────────────────────────────────
+  // What it does depends on the row's state: a paused row resumes, a
+  // failed one retries, anything else pauses.
+  function bindFeedRowControls (feedRoot) {
+    feedRoot.addEventListener('click', function (event) {
+      var toggle = closest(event.target, '[data-sh-feed-run-toggle]')
+      if (!toggle) return
+
+      var row = closest(toggle, '[data-sh-feed-item]')
+      if (!row) return
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      var was = row.getAttribute('data-sh-feed-state')
+      var now = nextFeedState(row)
+
+      changeFeedState(feedRoot, row, now)
+
+      document.dispatchEvent(new CustomEvent('sh:feed-run-toggle', {
+        detail: {
+          rowId: row.getAttribute('data-sh-feed-item'),
+          from: was,
+          to: now,
+          paused: now === 'paused',
+          source: 'feed'
+        }
+      }))
+    })
+  }
+
+  // ── Whole-row click ───────────────────────────────────────────────
+  // Reporting only. Every row's title is a real control stretched over
+  // the row by CSS, so navigation is the browser's job — which is what
+  // keeps command-click and "open in new tab" working on the rows that
+  // lead somewhere.
+  function bindFeedRowClicks (feedRoot) {
+    feedRoot.addEventListener('click', function (event) {
       if (closest(event.target, '[data-sh-feed-item-stop]')) return
 
       var row = closest(event.target, '[data-sh-feed-item]')
       if (!row) return
 
-      // Rows that link to a real conversation route (title anchor
-      // href !== '#') let the browser handle navigation natively —
-      // that's what preserves back-button + scroll-restoration on
-      // return to Seller Home. We only preventDefault on placeholder
-      // `#` hrefs so those clicks don't jump-scroll the page.
-      //
-      // `closest` from the event target picks up clicks that landed
-      // ANYWHERE inside the card: on the title link directly, OR on
-      // the stretched ::after overlay (whose click bubbles up as if
-      // it originated on the anchor). Either way we've got the link.
-      var link = closest(event.target, '[data-sh-feed-item-link]')
-      if (link) {
-        var href = link.getAttribute('href') || ''
-        if (href === '' || href === '#') {
-          event.preventDefault()
-        }
-        // else: real URL — let the browser navigate.
-      }
-
-      var rowId = row.getAttribute('data-sh-feed-item')
-      var workflowId = row.getAttribute('data-sh-feed-workflow') || null
+      var link = row.querySelector('[data-sh-feed-item-link]')
 
       document.dispatchEvent(new CustomEvent('sh:feed-item-select', {
-        detail: { rowId: rowId, workflowId: workflowId, source: 'ready' }
-      }))
-      // eslint-disable-next-line no-console
-      console.info('[seller-home] review row selected:', rowId,
-        workflowId ? '(workflow: ' + workflowId + ')' : ''
-      )
-    })
-  }
-
-  // ── Tablist controller ────────────────────────────────────────────
-  // WAI-ARIA "tabs with automatic activation": Left/Right cycle,
-  // Home/End jump to ends. Roving tabindex is kept in sync with
-  // `aria-selected` + the `.is-active` visual class so the three
-  // sources of truth can't drift.
-  function tablistController (tabs, panels) {
-    var tablist = tabs[0].parentNode
-
-    tabs.forEach(function (tab) {
-      tab.addEventListener('click', function () { activate(tab) })
-    })
-
-    tablist.addEventListener('keydown', function (event) {
-      var idx = tabs.indexOf(document.activeElement)
-      if (idx < 0) return
-      var nextIdx = null
-      switch (event.key) {
-        case 'ArrowLeft':  nextIdx = (idx - 1 + tabs.length) % tabs.length; break
-        case 'ArrowRight': nextIdx = (idx + 1) % tabs.length; break
-        case 'Home':       nextIdx = 0; break
-        case 'End':        nextIdx = tabs.length - 1; break
-        default: return
-      }
-      event.preventDefault()
-      var next = tabs[nextIdx]
-      activate(next)
-      next.focus()
-    })
-
-    function activate (target) {
-      var targetId = target.getAttribute('data-sh-feed-tab')
-      tabs.forEach(function (tab) {
-        var on = tab === target
-        tab.classList.toggle('is-active', on)
-        tab.setAttribute('aria-selected', on ? 'true' : 'false')
-        tab.setAttribute('tabindex', on ? '0' : '-1')
-      })
-      panels.forEach(function (panel) {
-        var on = panel.getAttribute('data-sh-feed-panel') === targetId
-        panel.classList.toggle('is-visible', on)
-        panel.hidden = !on
-      })
-      document.dispatchEvent(new CustomEvent('sh:feed-tab-change', {
-        detail: { tabId: targetId, source: 'ready' }
-      }))
-    }
-  }
-
-  // ── Overflow menu controller ──────────────────────────────────────
-  // Open on trigger click; close on Escape, click-outside, and
-  // menu-item activation. Arrow-Up/Down inside the menu cycles
-  // focus. Open state = `menu.hidden === false`.
-  function overflowController (root) {
-    var trigger = root.querySelector('[data-sh-feed-overflow-trigger]')
-    var menu = root.querySelector('[data-sh-feed-overflow-menu]')
-    if (!trigger || !menu) return
-    var items = toArray(menu.querySelectorAll('[data-sh-feed-overflow-action]'))
-
-    trigger.addEventListener('click', function (event) {
-      event.stopPropagation()
-      var willOpen = menu.hidden
-      setOpen(willOpen)
-      if (willOpen && items.length) items[0].focus()
-    })
-
-    trigger.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape' && !menu.hidden) {
-        event.preventDefault()
-        setOpen(false)
-      }
-    })
-
-    menu.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        setOpen(false)
-        trigger.focus()
-        return
-      }
-      if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
-      var idx = items.indexOf(document.activeElement)
-      if (idx < 0) return
-      event.preventDefault()
-      var nextIdx = event.key === 'ArrowDown'
-        ? (idx + 1) % items.length
-        : (idx - 1 + items.length) % items.length
-      items[nextIdx].focus()
-    })
-
-    items.forEach(function (item) {
-      item.addEventListener('click', function () {
-        var actionId = item.getAttribute('data-sh-feed-overflow-action')
-        document.dispatchEvent(new CustomEvent('sh:feed-overflow-action', {
-          detail: { action: actionId, source: 'ready' }
-        }))
-        // eslint-disable-next-line no-console
-        console.info('[seller-home] review overflow action:', actionId)
-        setOpen(false)
-        trigger.focus()
-      })
-    })
-
-    // Outside-click dismiss — cheap document-level listener guarded
-    // by `menu.hidden` so it no-ops when nothing is open.
-    document.addEventListener('click', function (event) {
-      if (menu.hidden) return
-      if (root.contains(event.target)) return
-      setOpen(false)
-    })
-
-    function setOpen (isOpen) {
-      menu.hidden = !isOpen
-      menu.classList.toggle('is-open', isOpen)
-      trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false')
-    }
-  }
-
-  // ── Per-row overflow menu controller ──────────────────────────────
-  // One controller for the whole panel, event-delegated off the section
-  // root so N cards pay for zero-per-card listeners and any future
-  // dynamically-rendered card picks up the behavior automatically.
-  //
-  // Interaction contract (matches SLDS 2 menu component):
-  //   • Click trigger  → toggle its menu. Only ONE menu can be open at
-  //                      a time; opening a second one closes the first.
-  //                      First menuitem receives focus on open.
-  //   • Click item     → dispatch `sh:feed-item-action`, close the
-  //                      menu, and — for `dismiss` — animate the card
-  //                      collapsing out of the list.
-  //   • Escape         → close, focus returns to the trigger.
-  //   • ArrowUp/Down   → cycle focus within the open menu (wraps).
-  //   • Click-outside  → close (no focus return, matches native menus).
-  //
-  // State is a single {menu, trigger} pair kept in this closure. That's
-  // enough because SLDS menus are strictly one-at-a-time; if we ever
-  // grow a multi-open surface, promote this to a Map keyed by menu id.
-  //
-  // Card-level click-through opt-out lives on the delegated row-select
-  // handler above (`[data-sh-feed-item-stop]` check), not here — one
-  // fewer stopPropagation call and it applies uniformly to any nested
-  // control that opts in.
-  function perRowOverflowController (feedRoot) {
-    var openMenu = null
-    var openTrigger = null
-
-    function setMenuState (trigger, menu, isOpen) {
-      menu.hidden = !isOpen
-      menu.classList.toggle('is-open', isOpen)
-      trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false')
-      if (isOpen) {
-        openMenu = menu
-        openTrigger = trigger
-      } else if (openMenu === menu) {
-        openMenu = null
-        openTrigger = null
-      }
-    }
-
-    function closeOpenMenu (returnFocus) {
-      if (!openMenu) return
-      var trigger = openTrigger
-      setMenuState(openTrigger, openMenu, false)
-      if (returnFocus && trigger) trigger.focus()
-    }
-
-    feedRoot.addEventListener('click', function (event) {
-      var trigger = closest(event.target, '[data-sh-feed-item-menu-trigger]')
-      if (trigger) {
-        var container = closest(trigger, '[data-sh-feed-item-menu]')
-        var menu = container && container.querySelector('[data-sh-feed-item-menu-list]')
-        if (!menu) return
-
-        var willOpen = menu.hidden
-        // Close any other row's menu before opening this one — SLDS
-        // menus are one-at-a-time and having two open at once would
-        // trap the outside-click-to-close pattern.
-        if (openMenu && openMenu !== menu) closeOpenMenu(false)
-        setMenuState(trigger, menu, willOpen)
-        if (willOpen) {
-          var first = menu.querySelector('[data-sh-feed-item-menu-action]')
-          if (first) first.focus()
+        detail: {
+          rowId: row.getAttribute('data-sh-feed-item'),
+          href: link ? link.getAttribute('href') : null,
+          source: 'feed'
         }
-        return
-      }
-
-      var actionBtn = closest(event.target, '[data-sh-feed-item-menu-action]')
-      if (!actionBtn) return
-
-      var actionId = actionBtn.getAttribute('data-sh-feed-item-menu-action')
-      var row = closest(actionBtn, '[data-sh-feed-item]')
-      var rowId = row && row.getAttribute('data-sh-feed-item')
-      var listItem = closest(actionBtn, '[data-sh-feed-list-item]')
-
-      // Dispatch BEFORE mutating the DOM so a future subscriber can
-      // inspect the row / li node from the event target if needed.
-      document.dispatchEvent(new CustomEvent('sh:feed-item-action', {
-        detail: { action: actionId, rowId: rowId, source: 'ready' }
       }))
-      // eslint-disable-next-line no-console
-      console.info('[seller-home] review row action:', actionId,
-        rowId ? '(' + rowId + ')' : '')
-
-      // Close without returning focus to the trigger — the card is
-      // either about to disappear (dismiss) or the user has made a
-      // decision and expects to move on. Returning focus into a
-      // fading card would be jarring.
-      closeOpenMenu(false)
-
-      if (actionId === 'dismiss' && listItem) {
-        dismissListItem(listItem)
-      }
-    })
-
-    feedRoot.addEventListener('keydown', function (event) {
-      if (!openMenu) return
-
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        closeOpenMenu(true)
-        return
-      }
-
-      if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
-      // Only intercept arrows when focus is inside the open menu (or
-      // still on the trigger) — otherwise the section's tablist /
-      // page arrow keys would be stolen from unrelated surfaces.
-      if (!openMenu.contains(document.activeElement) &&
-          openTrigger !== document.activeElement) return
-
-      var items = toArray(openMenu.querySelectorAll('[data-sh-feed-item-menu-action]'))
-      if (!items.length) return
-      event.preventDefault()
-      var idx = items.indexOf(document.activeElement)
-      var nextIdx
-      if (idx < 0) {
-        nextIdx = event.key === 'ArrowDown' ? 0 : items.length - 1
-      } else {
-        nextIdx = event.key === 'ArrowDown'
-          ? (idx + 1) % items.length
-          : (idx - 1 + items.length) % items.length
-      }
-      items[nextIdx].focus()
-    })
-
-    // Outside-click dismiss. Cheap document-level listener guarded by
-    // `!openMenu` so it no-ops when nothing is open. `closest` on the
-    // event target catches clicks anywhere inside the open menu's
-    // container (trigger, menu panel, items) — those are handled by
-    // the delegated click listener above.
-    document.addEventListener('click', function (event) {
-      if (!openMenu) return
-      var container = closest(event.target, '[data-sh-feed-item-menu]')
-      if (container && container.contains(openMenu)) return
-      closeOpenMenu(false)
     })
   }
 
-  // ── Row dismissal animation ───────────────────────────────────────
-  // Collapses the list `<li>` to zero height + zero opacity over
-  // ~220 ms, then removes it from the DOM. Sibling rows reflow upward
-  // via the parent flex column throughout the collapse, so the visual
-  // matches Gmail / Salesforce list dismissals.
-  //
-  // The measured `offsetHeight` is pinned as inline `max-height`
-  // BEFORE flipping the `.is-dismissing` class — the class introduces
-  // the transition + a target `max-height: 0px`, and we need a
-  // concrete start value for the transition to run against. A single
-  // forced reflow between the two writes guarantees the "from"
-  // value is committed to the render tree before the "to" value lands.
-  //
-  // Both `transitionend` and a `setTimeout` fallback remove the node:
-  // most browsers fire transitionend reliably, but reduced-motion,
-  // display:none races, and old Safari WebKit versions can suppress
-  // it. The timeout is slightly longer than the longest transition
-  // (220 ms) so the animation always finishes before removal.
-  function dismissListItem (li) {
-    var height = li.offsetHeight
-    li.style.maxHeight = height + 'px'
-    // Force reflow so the pre-collapse max-height "sticks" before the
-    // class flip introduces the transition + target value on the same
-    // property. Without this, browsers batch the two writes and the
-    // element jumps straight to 0 with no animation.
-    void li.offsetHeight
-    li.classList.add('is-dismissing')
-    requestAnimationFrame(function () {
-      li.style.maxHeight = '0px'
-    })
+  // The order the list was built in, recorded before anything can move
+  // a row. It's the tiebreaker that lets a resumed row slot back in
+  // among its original neighbours instead of landing at the top of its
+  // group.
+  function stampFeedOrder (feedRoot) {
+    toArray(feedRoot.querySelectorAll('[data-sh-feed-list-item]'))
+      .forEach(function (li, index) {
+        li.setAttribute('data-sh-feed-order', index)
+      })
+  }
 
-    var removed = false
-    function remove () {
-      if (removed) return
-      removed = true
-      li.removeEventListener('transitionend', onEnd)
-      if (li.parentNode) li.parentNode.removeChild(li)
+  function bindFeed (feedRoot) {
+    if (typeof gsap !== 'undefined' && typeof Flip !== 'undefined') {
+      gsap.registerPlugin(Flip)
     }
-    function onEnd (event) {
-      // Wait for max-height specifically — opacity + margin finish
-      // sooner and would remove the item mid-collapse.
-      if (event.propertyName !== 'max-height') return
-      remove()
-    }
-    li.addEventListener('transitionend', onEnd)
-    setTimeout(remove, 300)
+
+    stampFeedOrder(feedRoot)
+    bindFeedMenus(feedRoot)
+    bindFeedRowControls(feedRoot)
+    bindFeedRowClicks(feedRoot)
   }
 
   // ── Phase 5: Knowledge doc list ───────────────────────────────────
@@ -2041,8 +1939,8 @@
     knowledgeDocOverflowController(listRoot)
   }
 
-  // Per-row overflow menu controller — parallels
-  // `perRowOverflowController` for Ready-to-Review. Kept as its own
+  // Per-row overflow menu controller — parallels `bindFeedMenus` for
+  // the "Your agent at work" feed. Kept as its own
   // function so the two controllers can diverge in the future
   // (different action semantics, different keyboard shortcuts)
   // without cross-referencing.
@@ -2453,7 +2351,7 @@
   // so the announcement reads as "Showing 5 Scheduled workflows"
   // (not "5 workflows for tab id 'scheduled'").
   function scheduledStatusText (count, activeTab) {
-    var labelNode = activeTab && activeTab.querySelector('.seller-home__feed-tab-label')
+    var labelNode = activeTab && activeTab.querySelector('.seller-home__scheduled-tab-label')
     var label = labelNode ? (labelNode.textContent || '').trim() : ''
     if (count === 0) return 'No workflows match this filter'
     return 'Showing ' + count + ' ' + (label ? label + ' ' : '') +

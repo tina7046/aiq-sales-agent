@@ -329,12 +329,20 @@
 	   hunter-main-main/src/scripts/home.js — it boots off `[data-sh-root]` and
 	   guards every controller on its own elements, so the sections it doesn't
 	   find here (left nav, knowledge list, scheduled workflows) no-op. #}
+	{# GSAP + the Flip plugin, vendored rather than pulled from a CDN so the
+	   proto keeps working offline. Flip is pinned to the same 3.12.5 as the
+	   core — a version skew between the two breaks the plugin.
+
+	   Loaded before the controllers that read them off the global: the tools
+	   modal, and the feed in home.js, which uses GSAP for the row dismiss and
+	   Flip to re-sort the list when a row changes state. `feedCanAnimate` in
+	   home.js checks for both, so a failed load degrades to instant DOM
+	   changes rather than a dead kebab. #}
+	<script src="/scripts/vendor/gsap.min.js"></script>
+	<script src="/scripts/vendor/Flip.min.js"></script>
+
 	<script src="/scripts/home.js"></script>
 
-	{# Tools modal. GSAP is vendored rather than pulled from a CDN so the
-	   proto keeps working offline; it has to load before the controller,
-	   which reads it off the global. #}
-	<script src="/scripts/vendor/gsap.min.js"></script>
 	<script src="/scripts/tools_filter.js"></script>
 	<script type="module" src="/scripts/tools_modal.js"></script>
 

@@ -154,7 +154,7 @@ $aaw-god-rays-overscan: 90px;
 // dismissing row has to collapse its own trailing space along with its
 // height, or the list would close up 8px short and then jump.
 .aaw__list-item {
-  margin-bottom: var(--slds-g-spacing-2, 0.5rem);
+  margin-bottom: var(--slds-g-spacing-3, 0.75rem);
 
   &:last-child {
     margin-bottom: 0;
@@ -251,6 +251,10 @@ $aaw-status-rest: (
   failed:    "warning",
 );
 
+// Every state a row can be in. Drives the kebab's per-state action
+// visibility further down as well as reading as the canonical list.
+$aaw-states: completed, running, scheduled, paused, failed;
+
 $aaw-status-action: (
   completed: "pause",
   running:   "pause",
@@ -306,6 +310,7 @@ $aaw-status-action: (
   padding-inline: var(--slds-g-spacing-4, 1rem);
 
   background: #ffffffa1;
+  border: 1px solid var(--slds-g-color-neutral-base-90, #fff);
   border-radius: var(--slds-g-radius-border-3, 0.75rem);
 
   cursor: pointer;
@@ -313,15 +318,18 @@ $aaw-status-action: (
 
   // Same lift for pointer hover and keyboard focus, so both input modes
   // get the same "this is interactive" signal.
-  // https://smoothshadows.com/#djEsMSw1LDAuMDgsMjQsMzIsMCwjYjFiYWQzLCNmYWZjZmYsI2ZmZmZmZiwy
   &:hover,
   &:focus-within {
-    box-shadow:
-      0px 1px 1px rgba(177, 186, 211, 0.02),
-      0px 5px 4px rgba(177, 186, 211, 0.03),
-      0px 12px 9px rgba(177, 186, 211, 0.05),
-      0px 20px 15px rgba(177, 186, 211, 0.06),
-      0px 32px 24px rgba(177, 186, 211, 0.08);
+    border: 1px solid var(--slds-g-color-neutral-base-90, #fff);
+
+    --shadow-color: 0deg 0% 73%;
+    --shadow-elevation-medium:
+      0px 0.7px 0.6px hsl(var(--shadow-color) / 0.4),
+      0px 1.6px 1.4px -1.3px hsl(var(--shadow-color) / 0.33),
+      0px 4.7px 4.2px -2.7px hsl(var(--shadow-color) / 0.25),
+      0px 12.8px 11.5px -4px hsl(var(--shadow-color) / 0.18);
+
+    box-shadow: var(--shadow-elevation-medium);
   }
 }
 
@@ -880,6 +888,21 @@ $aaw-status-action: (
   padding: 0;
   display: flex;
   flex-direction: column;
+}
+
+// Per-state menu actions. Every item is rendered once and state decides
+// which are live, so a row that changes state — "Run now" putting it
+// into `running`, say — has the right menu waiting without the markup
+// being rebuilt. `display: none` keeps a scoped-out item out of the a11y
+// tree; `bindMenu` in agent_at_work.js filters on `offsetParent` to keep
+// it out of Arrow-key navigation too, since focus can't land on it.
+//
+// Both attributes take a space-separated list of states, hence `~=`.
+@each $state in $aaw-states {
+  [data-aaw-state="#{$state}"] [data-aaw-action-not~="#{$state}"],
+  [data-aaw-state="#{$state}"] [data-aaw-action-only]:not([data-aaw-action-only~="#{$state}"]) {
+    display: none;
+  }
 }
 
 .aaw-menu__item {

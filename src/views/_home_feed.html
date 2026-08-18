@@ -1,160 +1,41 @@
 {#
-  Seller Home — Feed: Ready / Running / Scheduled   (Phase 4)
+  "Your agent at work" — Seller Home feed
   =====================================================================
-  Figma source: node 8615:375480 ("dynamic content").
-
-  Layout at a glance (per Figma 8615:375503 "Source Tile"):
+  One flat list, no tabs. Every row is a recurring workflow that
+  carries its own state, so a run in flight and a run already finished
+  sit in the same list instead of behind separate filters. What the
+  Completed / Running / Scheduled tabs used to filter is now the sort
+  (`feed.stateOrder`).
 
     ┌──────────────────────────────────────────────────────────────┐
-    │  ┌ Ready [5] ┐  Running [2]   Scheduled [3]               ⋮ │
-    │  └───────────┘                                               │
-    │                                                              │
-    │  ┌───────────────────────────────────────────────────────┐   │
-    │  │ ▨  12 hot prospects                       [Buyer Engage] │
-    │  │    Sales Agent found strong-fit contacts…                │
-    │  │    ( 12 prospects ) ( 8 accounts ) ( 12 drafts )         │
-    │  └───────────────────────────────────────────────────────┘   │
-    │  … four more rows …                                          │
+    │  Your agent at work   Tue Aug 18                           ⋮ │
+    │  ┌────────────────────────────────────────────────────────┐  │
+    │  │ ✓  Found new prospects                     [badge]  ⋮  │  │
+    │  │    Completed · Next run in 3 days                      │  │
+    │  │    ( ▨ 7 accounts imported ) ( ▨ 25 prospects )        │  │
+    │  └────────────────────────────────────────────────────────┘  │
     └──────────────────────────────────────────────────────────────┘
 
-  ── Architecture ─────────────────────────────────────────────────
-  One data collection per tab drives the surface —
-  `feed.readyItems`, `feed.runningItems`, `feed.scheduledItems` —
-  each bound to a `<tabpanel>` by that tab's `dataKey`. They stay
-  separate on `feed` so future phases can wire them to different
-  back-end APIs without renaming anything.
+  Every row's second line is two slots — "<status> · <time>" — and the
+  glyph on its left is a button: it shows what the row is doing and
+  pressing it pauses, resumes, or retries.
 
-  Rows are **workflow cards**, NOT buttons. Each row is an
-  `<article>` composed of three regions inside a flex row:
-
-      [ icon ] [ body ..................... ] [ workflow-slot ]
-               ├─ title (link)
-               ├─ description
-               └─ outputs row  ← only rendered when item has outputs
-
-  The card grows vertically as needed. Cards with no `outputs`
-  fall back to a compact 56 px min-height (title + description
-  only). Cards WITH outputs grow to fit the third row.
-
-  The primary keyboard entry point is still the title `<a>` — Tab
-  focuses it, Enter activates. Mouse clicks anywhere on the article
-  are delegated to the same event handler (see home.js
-  `bindFeed`), so the "full-row click" behavior works
-  without semantically making the row a button.
-
-  Nested actions (Dismiss, Snooze, inline menus…) can be added
-  later without a refactor — they just need to sit visually inside
-  the card and prevent event bubbling, or the delegate can check
-  `event.target` to skip when a nested control was hit.
-
-  Third-party primitives used from SLDS 2:
-    • `slds-icon_container` + `slds-icon-standard-{sprite}` — the
-      SLDS 2 object-icon pattern. Background color comes from
-      SLDS's `--slds-c-icon-color-background` token set by the
-      standard-icon modifier, so all rows automatically match the
-      canonical Salesforce object palette (lead = blue,
-      event = purple, partners = teal, account = indigo, etc.).
-    • `slds-badge` — SLDS 2 base badge for the workflow label.
-      Our own `.seller-home__feed-item-workflow` class only adds
-      the hover/focus reveal transition on top of it.
-    • `slds-badge slds-badge_lightest` — SLDS 2 "lightest" badge
-      variant for output pills. Our namespaced output-pill class
-      overrides the SLDS badge styling hooks (see home.scss) to
-      turn the pill into the compact "generated-output attachment"
-      chip Figma node 8797:228978 calls for: neutral-95 background,
-      no border, 4 px radius, dark-navy inline icon, link-blue
-      label. Every pill is neutral — the previously per-type
-      colored avatars are retired.
-
-  ── Contract ─────────────────────────────────────────────────────
-  Data comes from home.json → `feed.*`:
-    • defaultTabId       — string, initial tab
-    • tabs[]             — { id, label, dataKey }
-    • overflowActions[]  — { id, label }
-    • outputTypes        — { <icon> →
-                             { sprite, spriteFamily?, iconImage? } }
-                           registry consumed by `outputPill()`. Each
-                           entry supplies either an SLDS sprite id
-                           (with `spriteFamily` picking the sprite
-                           family — defaults to `utility`) or an
-                           `iconImage` raster path. Semantic categories:
-                           "table" | "message" | "document" | "pdf".
-    • readyItems[]       — rows for the "Ready" tab
-    • runningItems[]     — rows for the "Running" tab
-    • scheduledItems[]   — rows for the "Scheduled" tab
-  Row: { id, title, description,
-         icon:      { sprite },          ← SLDS 2 standard sprite name
-         outputs?:  [ { icon, label } … ], ← 0-N output pills; label is
-                                             the FULL string ("12 prospects"),
-                                             icon is a semantic category.
-         workflow?: { id, label } }      ← hover/focus-reveal SLDS badge
-
-  Icon background color is intentionally NOT in data — it's owned
-  by SLDS 2's `.slds-icon-standard-{sprite}` class. Output pills
-  intentionally carry only a semantic `icon` category (not an SLDS
-  sprite name) so a design update that swaps the sprite for a
-  category is a one-line edit in `feed.outputTypes`. Adding a
-  new semantic category is a two-file change: add an entry under
-  `feed.outputTypes` + reference it from any row's `outputs`.
+  Data: `feed.*` in data/index.json (see that file for the row
+  contract). Behaviour: `bindFeed` in scripts/home.js, which boots off
+  `[data-sh-feed-root]`.
 #}
 
 {#
-  Output-pill sub-component. Renders one entry from `item.outputs[]`
-  as an SLDS 2 "lightest" badge re-skinned into a compact
-  "attachment" chip — pre-colored doctype glyph + neutral-800 label —
-  per Figma node 8936:385144.
-
-    ┌───────────────────────┐
-    │  ▨  12 prospects      │   ← slds-badge_lightest, 4 px radius,
-    └───────────────────────┘     pre-colored glyph, #2E2E2E label
-
-  Data shape per output:
-    { icon: "<category>", label: "<full text>" }
-  `label` is the full display string ("12 prospects", not
-  { count: 12, label: "prospects" }) so the template stays a plain
-  render — no count/singularization logic — and multi-line labels
-  can flow through unchanged. `icon` is one of four SEMANTIC
-  categories:
-    • table    → structured records / lists (prospects, buyers…)
-    • message  → drafted outreach or replies
-    • document → in-flight artifacts (briefs, next steps)
-    • pdf      → polished distributable reports
-
-  The mapping from semantic category → glyph lives in ONE place —
-  `feed.outputTypes` in home.json — so a design change that
-  swaps e.g. `message → txt` for `message → email` is a one-line
-  edit that re-skins every message pill on the page.
-
-  Icon sourcing (mirrors the nav-item macro's contract):
-    • `sprite`      — SVG symbol id from a sprite family. The
-                      `spriteFamily` field picks which sprite file
-                      to load from (`utility`, `doctype`, etc.);
-                      defaults to `utility` when unset. Rendered as
-                      an inline `<svg><use>` so SLDS 2 doctype
-                      sprites keep their pre-baked multi-color
-                      fills (see the glyph CSS: no `currentColor`
-                      override).
-    • `iconImage`   — bespoke raster asset path. Rendered as an
-                      `<img>` when the category doesn't map cleanly
-                      to any shipped sprite. Wins over `sprite` if
-                      both are set. `alt=""` — the sibling label
-                      already carries the accessible name and the
-                      icon is decorative.
-
-  Rendering an unknown `output.icon` skips the glyph — the pill
-  degrades to a text-only chip rather than throwing.
+  Output pill — one entry from `item.outputs[]`. The glyph is purely
+  the output's own type: the row's run state is the status button's
+  job, so a running row doesn't spend its file-type icons on a spinner.
+  An unknown `output.icon` degrades to a text-only chip rather than
+  failing.
 #}
-{% macro outputPill(output, outputTypes, inProgress) %}
+{% macro outputPill(output, outputTypes) %}
 {% set typeInfo = outputTypes[output.icon] %}
-<span
-  class="slds-badge slds-badge_lightest seller-home__feed-item-output-pill"
-  title="{{ output.label }}"
->
-  {% if inProgress %}
-    {# In-progress (Running tab): the reusable spinner replaces the doctype
-       glyph to signal the output is still being generated. #}
-    <span class="sh-spinner" aria-hidden="true"></span>
-  {% elif typeInfo %}
+<span class="slds-badge slds-badge_lightest seller-home__feed-item-output-pill">
+  {% if typeInfo %}
     {% if typeInfo.iconImage %}
       <img
         class="seller-home__feed-item-output-pill-glyph seller-home__feed-item-output-pill-glyph--image"
@@ -169,254 +50,308 @@
       </svg>
     {% endif %}
   {% endif %}
-  <span class="seller-home__feed-item-output-pill-label"{% if output.todayPrefix %} data-sh-today-short{% endif %}>{% if output.todayPrefix %}{{ todayShort() }} {% endif %}{{ output.label }}</span>
+  <span
+    class="seller-home__feed-item-output-pill-label"
+    {%- if output.todayPrefix %} data-sh-today-short{% endif %}
+  >{% if output.todayPrefix %}{{ todayShort() }} {% endif %}{{ output.label }}</span>
 </span>
 {% endmacro %}
 
 
 {#
-  Row macro — the reusable item-row (card) component. Kept local to
-  this partial so callers can only invoke it where the surrounding
-  flex + reveal CSS is in scope. `panelId` is folded into every
-  `id` attribute so the same row id can appear in both tabs without
-  colliding.
+  Status button — the glyph at the head of every row. Two jobs in one
+  control: it shows what the row is doing, and pressing it changes that.
 
-  `rowActions` is the shared per-card overflow-menu action list from
-  home.json (`feed.rowActions`). Rendered inside the card as a
-  hover-revealed kebab (⋮) trigger + dropdown menu. Passed in from
-  the panel loop below so the macro stays a pure render — no data
-  fetching, and a future test can invoke it with a custom action list.
+    state       at rest    on hover / focus   pressing it
+    ─────────   ────────   ────────────────   ───────────
+    completed   check      pause              pauses
+    running     spinner    pause              pauses
+    scheduled   clock      pause              pauses
+    paused      pause      play               resumes
+    failed      warning    refresh            retries
+
+  A failed row is the one that doesn't offer pause. Pausing a schedule
+  that just errored is the rarer intent by a distance — what the seller
+  came to the row for is to run it again — so the hover glyph is the
+  retry arrow and the click starts a new run.
+
+  Every glyph is rendered and CSS picks the visible pair off the row's
+  `data-sh-feed-state`. That looks wasteful and buys two things: the
+  hover swap is a cross-fade between painted layers that can't lag the
+  pointer, and the state→glyph mapping lives in exactly one place (the
+  stylesheet) rather than being duplicated between this template and
+  the JS that flips the state at runtime.
+
+  Only the accessible name is left for JS to keep in sync, since CSS
+  can't write one.
 #}
-{% macro feedItem(item, panelId, outputTypes, rowActions, inProgress) %}
-{#
-  Build the title link's accessible name from title + workflow. The
-  workflow badge is visually hidden by default and its container is
-  aria-hidden, so if we don't include workflow context here,
-  keyboard/AT users never learn which workflow the card belongs to.
-  Description is exposed via `aria-describedby` so it's read AFTER
-  the accessible name when focus lands on the link.
-#}
-{% set titleId  = panelId ~ "-" ~ item.id ~ "-title" %}
-{% set descId   = panelId ~ "-" ~ item.id ~ "-desc" %}
-{% set linkName = item.title %}
-{% if item.workflow %}{% set linkName = linkName ~ ", workflow: " ~ item.workflow.label %}{% endif %}
-{#
-  Drill-in href.
-    • If the row has a `conversationId`, the title anchors at the
-      conversation route; the `--linked` modifier on the article
-      enables the stretched-link ::after so the whole card is
-      clickable while the title `<a>` stays the sole tab-stop and
-      screen-reader-announced link.
-    • Otherwise `href="#"` and home.js's click delegate keeps
-      preventDefault-ing so the URL doesn't get a phantom hash.
-#}
-{% set convHref = "/home_conversation.html?id=" ~ item.conversationId if item.conversationId else "#" %}
-{% set isLinked = item.conversationId is defined and item.conversationId %}
-<article
-  class="seller-home__feed-item{% if item.outputs and item.outputs|length %} seller-home__feed-item--has-outputs{% endif %}{% if isLinked %} seller-home__feed-item--linked{% endif %}"
-  data-sh-feed-item="{{ item.id }}"
-  {% if item.workflow %}data-sh-feed-workflow="{{ item.workflow.id }}"{% endif %}
+{% macro statusButton(item) %}
+{% if item.state == "failed" %}{% set verb = "Retry " %}
+{% elif item.state == "paused" %}{% set verb = "Resume " %}
+{% else %}{% set verb = "Pause " %}{% endif %}
+{% set label = verb ~ item.title %}
+<button
+  type="button"
+  class="seller-home__feed-item-status"
+  data-sh-feed-run-toggle
+  data-sh-feed-item-stop
+  aria-label="{{ label }}"
+  title="{{ label }}"
 >
-  {#
-    Object icon removed per design direction — the row now starts with
-    the body region. `item.icon.sprite` is still kept in home.json in
-    case the icon needs to come back later; re-add the span above and
-    the layout re-flows automatically (flex + gap on the parent).
-  #}
+  <span
+    class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--spinner sh-spinner"
+    aria-hidden="true"
+  ></span>
+  {% for glyph in ["check", "clock", "pause", "play", "warning", "refresh"] %}
+  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--{{ glyph }}" aria-hidden="true">
+    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ glyph }}"></use>
+  </svg>
+  {% endfor %}
+</button>
+{% endmacro %}
 
-  <div class="seller-home__feed-item-body">
-    {#
-      Title is a real `<a>` — Tab-navigable + Enter-activatable via
-      native HTML semantics. When the row has a `conversationId`, the
-      anchor points at the conversation route AND grows a stretched
-      ::after overlay (CSS) so a mouse click anywhere on the card
-      lands on the same link. Keyboard users still hit exactly one
-      focus stop (the title). Screen readers announce a single link.
 
-      aria-label carries "title, workflow: X" so AT users get
-      workflow context regardless of the visual reveal state.
-      aria-describedby points at the visible description so
-      screen readers read it after the accessible name.
+{#
+  Subline halves, resolved from the row's state.
 
-      Non-linked rows (`href="#"`) still fire the section root's
-      click delegate, which dispatches `sh:feed-item-select` — the
-      delegate preventDefaults ONLY on `#` hrefs so real conversation
-      links navigate natively (and the browser handles back-nav +
-      scroll restoration).
-    #}
-    <a
-      href="{{ convHref }}"
-      class="seller-home__feed-item-title"
-      id="{{ titleId }}"
-      data-sh-feed-item-link="{{ item.id }}"
-      aria-label="{{ linkName }}"
-      aria-describedby="{{ descId }}"
-      title="{{ item.title }}"
-    >{{ item.title }}</a>
-    <p
-      class="seller-home__feed-item-desc"
-      id="{{ descId }}"
-      title="{{ item.description }}"
-    >{{ item.description }}</p>
+  Left is the status word from `feed.statusLabels`, except on
+  `scheduled` rows, which show the cadence instead: a row that's merely
+  waiting has no status worth naming, and "Daily" also keeps it from
+  reading exactly like a `completed` row, since both name a next run on
+  the right.
 
-    {#
-      Third row — output pills. Only emitted when `item.outputs`
-      is a non-empty array. Rendering nothing when outputs are
-      absent is what keeps the compact 56 px card variant. The
-      whole row is aria-hidden because pill text is already
-      derivable from the accessible name (e.g. "Approve outreach
-      to 12 new prospects" already tells the user what's inside).
-      Screen readers announcing "12 prospects, 8 accounts, 12
-      drafts" on top would double-read the essence of the card.
-    #}
-    {% if item.outputs and item.outputs|length %}
-      <div class="seller-home__feed-item-outputs" aria-hidden="true">
-        {% for output in item.outputs %}
-          {#
-            Stable key = row id + output type — outputs never
-            repeat their type within a single row's data, so this
-            is unique per rendered pill and stable across renders.
-          #}
-          {{ outputPill(output, outputTypes, inProgress) }}
-        {% endfor %}
-      </div>
-    {% endif %}
+  Right is whichever time field that state actually has. They're
+  separate fields rather than one `time` string so a row can change
+  state without a data rewrite — pausing a running row needs its
+  `lastRun` to already be there.
+#}
+{% macro sublineStatus(item, statusLabels) %}{% if item.state == "scheduled" %}{{ item.cadence }}{% else %}{{ statusLabels[item.state] }}{% endif %}{% endmacro %}
+
+{% macro sublineTime(item) %}{% if item.state == "running" %}{{ item.startedAt }}{% elif item.state == "paused" or item.state == "failed" %}{{ item.lastRun }}{% else %}{{ item.nextRun }}{% endif %}{% endmacro %}
+
+
+{#
+  One subline slot, carrying every string it may ever need to show:
+
+    default   the row's own state, as rendered
+    paused    what it says once paused
+    running   what it says once a run is started off-schedule
+
+  `bindFeed` switches slots by key and never composes wording, which is
+  what keeps all the copy in index.json.
+#}
+{% macro sublineSlot(name, klass, rest, paused, running) %}
+<span
+  class="{{ klass }}"
+  data-sh-feed-slot="{{ name }}"
+  data-sh-feed-slot-default="{{ rest | trim }}"
+  data-sh-feed-slot-paused="{{ paused | trim }}"
+  data-sh-feed-slot-running="{{ running | trim }}"
+>{{ rest | trim }}</span>
+{% endmacro %}
+
+
+{#
+  Row kebab. Actions can be scoped to a state: `onlyForState` shows the
+  item in that state alone, `hideForState` withholds it there. Both are
+  CSS rules keyed off the row's `data-sh-feed-state`, not template
+  branches, because a row changes state at runtime — "Run now" can put
+  it into `running`, at which point its own menu has to start offering
+  Pause instead. Rendering every item once and letting state pick is
+  what avoids rebuilding the menu on every transition.
+
+  `data-sh-feed-item-stop` is the opt-out marker the row click delegate
+  looks for, so menu clicks never select or navigate the row.
+#}
+{% macro rowMenu(menuId, rowActions) %}
+<div class="seller-home__feed-item-menu" data-sh-feed-item-menu data-sh-feed-item-stop>
+  <button
+    type="button"
+    class="slds-button slds-button_icon slds-button_icon-bare seller-home__feed-item-menu-trigger"
+    data-sh-feed-item-menu-trigger
+    aria-haspopup="menu"
+    aria-expanded="false"
+    aria-controls="{{ menuId }}"
+    aria-label="More actions"
+    title="More actions"
+  >
+    <svg class="slds-button__icon" aria-hidden="true">
+      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
+    </svg>
+  </button>
+
+  <div
+    class="seller-home__feed-item-menu-list"
+    id="{{ menuId }}"
+    role="menu"
+    aria-label="More actions"
+    data-sh-feed-item-menu-list
+    hidden
+  >
+    <ul class="seller-home__feed-item-menu-items" role="none">
+      {% for action in rowActions %}
+      <li
+        role="none"
+        {%- if action.onlyForState %} data-sh-feed-action-only="{{ action.onlyForState }}"{% endif %}
+        {%- if action.hideForState %} data-sh-feed-action-not="{{ action.hideForState }}"{% endif %}
+      >
+        <button
+          type="button"
+          class="seller-home__feed-item-menu-item"
+          role="menuitem"
+          data-sh-feed-item-menu-action="{{ action.id }}"
+        >
+          {% if action.icon %}
+          <svg class="seller-home__feed-item-menu-item-icon" aria-hidden="true">
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
+          </svg>
+          {% endif %}
+          <span class="seller-home__feed-item-menu-item-label">{{ action.label }}</span>
+        </button>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endmacro %}
+
+
+{#
+  Third line for a failed row. Two things share it, and CSS shows
+  whichever the row's state calls for:
+
+    failed     the error, as a plain `slds-badge slds-theme_error`. No
+               glyph — the status button already carries a warning
+               icon, and a second one would be saying it twice.
+    retried    an ordinary output pill standing in for the run now
+               under way, from `item.retryOutput`.
+
+  Both are always in the DOM. Swapping them rather than hiding the
+  badge outright is what keeps the row exactly as tall after a retry as
+  before it — with nothing here the card would drop to the compact
+  two-line height mid-Flip, which reads as the row twitching.
+#}
+{% macro errorLine(item, outputTypes) %}
+<div class="seller-home__feed-item-outputs">
+  <span class="slds-badge slds-theme_error seller-home__feed-item-error">{{ item.error }}</span>
+  <span class="seller-home__feed-item-retry">{{ outputPill(item.retryOutput, outputTypes) }}</span>
+</div>
+{% endmacro %}
+
+
+{#
+  Row.
+
+  The interactive element sits INSIDE the `<h3>` and stretches to fill
+  the card via an ::after overlay, which is what keeps the row to a
+  single announcement ("heading level 3, <title>, link") instead of a
+  heading followed by a separate whole-row button saying the same
+  words.
+
+  Which element it is depends on the row, not the component: a row with
+  a `conversationId` goes somewhere, so it's an `<a>` and keeps
+  command-click, "copy link address" and the status-bar preview. A row
+  with nowhere to go is a `<button>` — these used to render as
+  `<a href="#">`, which announced a link, sat in the tab order as a
+  link, and then had its navigation cancelled in JS.
+#}
+{% macro feedItem(item, outputTypes, rowActions, statusLabels, retryTime) %}
+{% set descId = "seller-home-feed-" ~ item.id ~ "-desc" %}
+{% set menuId = "seller-home-feed-" ~ item.id ~ "-menu" %}
+{% set isPaused = item.state == "paused" %}
+{% set hasWorkflow = item.workflow and item.workflow.label %}
+{% set linkName = item.title ~ (", workflow: " ~ item.workflow.label if hasWorkflow else "") %}
+{# Where a resumed row returns to. A row that ships paused resumes into
+   the schedule rather than back into "paused". #}
+{% set homeState = "scheduled" if isPaused else item.state %}
+{# A third line under the subline — pills or an error badge — is what
+   turns the compact 56px card into the padded variant. Keyed on either,
+   not just on outputs: a failed row has an error badge instead of pills
+   and needs the same room around it. #}
+{% set hasThirdLine = item.error or (item.outputs and item.outputs|length) %}
+<article
+  class="seller-home__feed-item{% if hasThirdLine %} seller-home__feed-item--has-outputs{% endif %}"
+  data-sh-feed-item="{{ item.id }}"
+  data-sh-feed-state="{{ item.state }}"
+  data-sh-feed-state-default="{{ homeState }}"
+>
+  <div class="seller-home__feed-item-main">
+    {{ statusButton(item) }}
+
+    <div class="seller-home__feed-item-body">
+      <h3 class="seller-home__feed-item-title">
+        {% if item.conversationId %}
+        <a
+          href="/home_conversation.html?id={{ item.conversationId }}"
+          class="seller-home__feed-item-title-action"
+          data-sh-feed-item-link="{{ item.id }}"
+          data-sh-feed-item-title
+          aria-label="{{ linkName }}"
+          aria-describedby="{{ descId }}"
+        >{{ item.title }}</a>
+        {% else %}
+        <button
+          type="button"
+          class="seller-home__feed-item-title-action"
+          data-sh-feed-item-title
+          aria-label="{{ linkName }}"
+          aria-describedby="{{ descId }}"
+        >{{ item.title }}</button>
+        {% endif %}
+      </h3>
+
+      {# Subline — "<status> · <time>". #}
+      <p class="seller-home__feed-item-desc" id="{{ descId }}">
+        {{ sublineSlot("status", "seller-home__feed-item-desc-status", sublineStatus(item, statusLabels), statusLabels.paused, statusLabels.running) }}
+        <span class="seller-home__feed-item-desc-sep" aria-hidden="true">·</span>
+        {{ sublineSlot("time", "seller-home__feed-item-desc-time", sublineTime(item), item.lastRun, retryTime) }}
+      </p>
+
+      {# Readable, not aria-hidden. These counts are the row's payload
+         and they appear nowhere in its accessible name, so hiding them
+         published the row to a screen reader with its results removed. #}
+      {% if item.error %}
+        {{ errorLine(item, outputTypes) }}
+      {% elif item.outputs and item.outputs|length %}
+        <div class="seller-home__feed-item-outputs">
+          {% for output in item.outputs %}{{ outputPill(output, outputTypes) }}{% endfor %}
+        </div>
+      {% endif %}
+    </div>
   </div>
 
-  {#
-    Workflow slot — the 156 px right rail that holds the workflow
-    badge AND the per-card overflow menu (⋮). Layout per Figma
-    node 8615:375503 ("Source Tile"): `flex items-center
-    justify-between` — the badge pins to the left of the slot and
-    the kebab pins to the right, both vertically CENTER-aligned
-    with each other and with the card body.
-
-    Only the workflow BADGE is aria-hidden (its label is already
-    folded into the title link's aria-label). The overflow menu
-    inside this slot is an interactive control and MUST be exposed
-    to AT — so aria-hidden lives on the badge element itself, not
-    on this container.
-  #}
+  {# Right rail — fixed width so the hover-revealed badge and kebab
+     never shift the text to their left. #}
   <div class="seller-home__feed-item-workflow-slot">
-    {% if item.workflow %}
+    {% if hasWorkflow %}
       <span
-        class="slds-badge seller-home__feed-item-workflow"
+        class="seller-home__feed-item-workflow"
         title="{{ item.workflow.label }}"
         aria-hidden="true"
       >{{ item.workflow.label }}</span>
     {% else %}
-      {# Empty spacer so the kebab still pins to the right of the
-         slot via justify-between even when this row has no workflow
-         to badge. Kept as a zero-width span so it doesn't add any
-         intrinsic width to the slot. #}
       <span aria-hidden="true"></span>
     {% endif %}
 
-    {#
-      Per-card overflow menu (⋮). Sits at the right of the workflow
-      slot, vertically centered with the workflow badge on its left
-      — matches Figma node 8615:375503 exactly.
-
-      Reveal behavior mirrors the workflow badge: hidden by default,
-      faded in on card :hover / :focus-within so the card reads
-      clean until the user shows interest. Kept visible while the
-      menu is open (`aria-expanded="true"`) so the trigger doesn't
-      disappear the moment the cursor drifts off the card and into
-      the menu.
-
-      `data-sh-feed-item-stop` is the shared opt-out marker the
-      section-root click delegate looks for (see home.js
-      `bindFeed`) so clicking the trigger or any menu item
-      never dispatches a row-select / navigates the card.
-
-      The menu itself is a data-driven list of `{ id, label, icon? }`
-      entries from `feed.rowActions` in home.json. Today the sole
-      entry is "Dismiss"; new actions (Snooze, Assign, etc.) drop
-      in by adding to that array — no template or JS changes needed.
-
-      a11y:
-        • Trigger: aria-haspopup="menu", aria-expanded (JS-toggled),
-          aria-controls pointing at the menu's id, aria-label
-          "More actions".
-        • Menu: role="menu", items role="menuitem", visible focus
-          rings on hover/focus, ESC closes and returns focus to the
-          trigger, Arrow-Up/Down cycles focus, click-outside closes.
-    #}
-    {% set menuId = panelId ~ "-" ~ item.id ~ "-menu" %}
-    <div
-      class="seller-home__feed-item-menu"
-      data-sh-feed-item-menu
-      data-sh-feed-item-stop
-    >
-      <button
-        type="button"
-        class="slds-button slds-button_icon slds-button_icon-bare seller-home__feed-item-menu-trigger"
-        data-sh-feed-item-menu-trigger
-        aria-haspopup="menu"
-        aria-expanded="false"
-        aria-controls="{{ menuId }}"
-        aria-label="More actions"
-        title="More actions"
-      >
-        <svg class="slds-button__icon" aria-hidden="true">
-          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-        </svg>
-        <span class="slds-assistive-text">More actions</span>
-      </button>
-
-      <div
-        class="seller-home__feed-item-menu-list"
-        id="{{ menuId }}"
-        role="menu"
-        aria-label="More actions"
-        data-sh-feed-item-menu-list
-        hidden
-      >
-        <ul class="seller-home__feed-item-menu-items" role="none">
-          {% for action in rowActions %}
-          <li role="none">
-            <button
-              type="button"
-              class="seller-home__feed-item-menu-item"
-              role="menuitem"
-              data-sh-feed-item-menu-action="{{ action.id }}"
-            >
-              {% if action.icon %}
-              <svg class="seller-home__feed-item-menu-item-icon" aria-hidden="true">
-                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
-              </svg>
-              {% endif %}
-              <span class="seller-home__feed-item-menu-item-label">{{ action.label }}</span>
-            </button>
-          </li>
-          {% endfor %}
-        </ul>
-      </div>
-    </div>
+    {{ rowMenu(menuId, rowActions) }}
   </div>
 </article>
 {% endmacro %}
 
 
+{# ── Component ────────────────────────────────────────────────────── #}
+{# `data-sh-feed-state-order` hands the sort rule to the JS. Pausing a
+   row moves it to the end of the list and resuming puts it back, which
+   means the runtime needs the same ordering this template renders
+   with — and it should come from the data, not a second copy in
+   home.js. #}
 <section
   class="seller-home__feed"
   aria-labelledby="seller-home-ready-heading"
   data-sh-feed-root
-  {# A/B prototype: which tab treatment shows. Overridden pre-paint from
-     localStorage by the inline script after this section, then managed at
-     runtime by the floating control panel (see bindFeed). #}
-  data-feed-tabstyle="{{ feed.defaultTabStyle or 'b' }}"
+  data-sh-feed-state-order="{{ feed.stateOrder | join(',') }}"
 >
   <div class="seller-home__feed-header">
-    {#
-      Section title + date, per Figma "Spotlight with Simple Filtering"
-      (8363:275599). Was a tablist when this section had both "Ready to
-      Review" and "Tasks"; now that Tasks is gone (see home.json
-      `feed.tabs`), the header is a plain heading. If Tasks comes
-      back, restore the `<div role="tablist">…</div>` block that used
-      to live here — the panel loop below is still data-driven off
-      `feed.tabs`, so re-adding a tab entry re-emits its panel.
-    #}
     <div class="seller-home__feed-title-row">
       <h2 id="seller-home-ready-heading" class="seller-home__feed-heading">
         {{ feed.heading }}
@@ -483,165 +418,26 @@
     </div>
   </div>
 
-  {#
-    A/B tab-treatment comparison (prototype scaffolding). BOTH treatments
-    are rendered; the floating control panel below + a `sh-feed-tabstyle`
-    localStorage flag pick which one shows, via `data-feed-tabstyle` on
-    the section root (CSS hides the other). `bindFeed` keeps the
-    two in sync — one `sh:feed-tab-change` listener mirrors the active
-    tab across both — so flipping the control is a pure visibility swap
-    with no stale active state.
+  {# One flat list — no tabs, no panels. `role="list"` survives the
+     `list-style: none` in CSS, so AT still announces "list of N items",
+     which is the only count left now that the tab badges are gone.
 
-      • Option A — Scheduled/Knowledge pill tabs (underline + count).
-      • Option B — Connections "cycler" chips (ShTabNav, filled active).
-  #}
+     Rows are grouped by `feed.stateOrder` rather than taken in array
+     order, so the sequence holds no matter where a row is added to the
+     data. The nested loop is deliberate: it's O(states × rows) on a
+     list of this size, and it doesn't depend on a Nunjucks filter
+     being available.
 
-  {# Option A — pill tabs. `tablistController` (home.js) drives these via
-     `data-sh-feed-tab` → `data-sh-feed-panel`. #}
-  <div class="seller-home__feed-tabbar" data-sh-feed-tabstyle-view="a">
-    <div
-      class="seller-home__feed-tabs"
-      role="tablist"
-      aria-label="Filter reviews by state"
-    >
-      {% for tab in feed.tabs %}
-        {% set isActive = (tab.id == feed.defaultTabId) %}
-        {% set count = feed[tab.dataKey] | length %}
-        <button
-          type="button"
-          class="seller-home__feed-tab{% if isActive %} is-active{% endif %}"
-          role="tab"
-          id="seller-home-ready-tab-{{ tab.id }}"
-          aria-selected="{% if isActive %}true{% else %}false{% endif %}"
-          aria-controls="seller-home-ready-panel-{{ tab.id }}"
-          data-sh-feed-tab="{{ tab.id }}"
-          tabindex="{% if isActive %}0{% else %}-1{% endif %}"
-        >
-          <span class="seller-home__feed-tab-label">{{ tab.label }}</span>
-          <span class="seller-home__feed-tab-count" aria-hidden="true">{{ count }}</span>
-          <span class="slds-assistive-text">{{ count }} item{% if count != 1 %}s{% endif %}</span>
-        </button>
-      {% endfor %}
-    </div>
-  </div>
-
-  {# Option B — cycler chips. ShTabNav (tab_nav.js) auto-wires
-     `[data-sh-tabnav]`; the `sh:tabnav-change` → panel bridge lives in
-     `bindFeed`. Chip ids are namespaced `-chip-` so they don't
-     collide with Option A's `-tab-` ids above. #}
-  <div class="seller-home__feed-tabbar-cycler" data-sh-feed-tabstyle-view="b">
-    <ul
-      class="slds-list_horizontal slds-has-dividers_right tab-nav-cycler tool-categories"
-      data-sh-tabnav
-      data-sh-feed-tablist
-      aria-label="Filter reviews by state"
-    >
-      {% for tab in feed.tabs %}
-        {% set isActive = (tab.id == feed.defaultTabId) %}
-        {% set count = feed[tab.dataKey] | length %}
-        <li class="slds-item">
-          <div
-            class="{% if isActive %}slds-item-active{% else %}slds-item-inactive{% endif %}"
-            id="seller-home-ready-chip-{{ tab.id }}"
-            data-sh-tabnav-value="{{ tab.id }}"
-            aria-controls="seller-home-ready-panel-{{ tab.id }}"
-          >
-            <span class="seller-home__feed-cycler-label">{{ tab.label }}</span>
-            <span class="seller-home__feed-cycler-count" aria-hidden="true">{{ count }}</span>
-            <span class="slds-assistive-text">{{ count }} item{% if count != 1 %}s{% endif %}</span>
-          </div>
-        </li>
-      {% endfor %}
-    </ul>
-  </div>
-
-  {# Option C — transitions.dev sliding-pill segmented control
-     (transitions-dev skill, 16-tabs-sliding). `.t-tabs` + `.t-tabs-pill`
-     are the skill's verbatim hooks; `bindFeed` writes the active
-     `.t-tab`'s offsetLeft/offsetWidth onto the pill and CSS tweens it. #}
-  <div class="seller-home__feed-tabbar-slider" data-sh-feed-tabstyle-view="c">
-    <div class="t-tabs" role="tablist" aria-label="Filter reviews by state" data-sh-feed-slider>
-      <span class="t-tabs-pill" aria-hidden="true"></span>
-      {% for tab in feed.tabs %}
-        {% set isActive = (tab.id == feed.defaultTabId) %}
-        {% set count = feed[tab.dataKey] | length %}
-        <button
-          type="button"
-          class="t-tab"
-          role="tab"
-          aria-selected="{% if isActive %}true{% else %}false{% endif %}"
-          aria-controls="seller-home-ready-panel-{{ tab.id }}"
-          data-sh-feed-slidertab="{{ tab.id }}"
-        >
-          <span class="t-tab-label">{{ tab.label }}</span>
-          <span class="t-tab-count" aria-hidden="true">{{ count }}</span>
-          <span class="slds-assistive-text">{{ count }} item{% if count != 1 %}s{% endif %}</span>
-        </button>
-      {% endfor %}
-    </div>
-  </div>
-
-  {# Floating A/B/C switch — a mini control panel (à la the shader panel)
-     so all treatments can be polished in parallel before deciding.
-     Fixed, bottom-left; `bindFeed` wires the buttons + persists
-     the choice to localStorage. Prototype-only scaffolding — delete this
-     block (and the losing tab treatments) once a winner is picked. #}
-  <div
-    class="seller-home__feed-abpanel"
-    data-sh-feed-abpanel
-    role="group"
-    aria-label="Ready-to-Review tab style"
-  >
-    <span class="seller-home__feed-abpanel-title">Ready tabs</span>
-    <div class="seller-home__feed-abpanel-options">
-      <button type="button" class="seller-home__feed-abpanel-btn" data-sh-feed-abstyle="a">A · Tabs</button>
-      <button type="button" class="seller-home__feed-abpanel-btn" data-sh-feed-abstyle="b">B · Pills</button>
-      <button type="button" class="seller-home__feed-abpanel-btn" data-sh-feed-abstyle="c">C · Sliding</button>
-    </div>
-  </div>
-
-  {#
-    Panels — one per entry in `feed.tabs` (Ready / Running /
-    Scheduled). Only the default tab's panel is visible on first paint;
-    the rest ship `hidden`. `tablistController` in home.js flips the
-    `hidden` + `.is-visible` state as tabs are activated. Each panel is
-    a `role="tabpanel"` labelled by its matching tab; `<ul role="list">`
-    still gives AT a "list of N items" announcement.
-  #}
-  {% for tab in feed.tabs %}
-    {% set panelId = "seller-home-ready-panel-" ~ tab.id %}
-    {% set isActive = (tab.id == feed.defaultTabId) %}
-    <div
-      class="seller-home__feed-panel{% if isActive %} is-visible{% endif %}"
-      id="{{ panelId }}"
-      role="tabpanel"
-      aria-labelledby="seller-home-ready-tab-{{ tab.id }}"
-      data-sh-feed-panel="{{ tab.id }}"
-      {% if not isActive %}hidden{% endif %}
-    >
-      <ul class="seller-home__feed-list" role="list">
-        {% for item in feed[tab.dataKey] %}
+     `feed.itemsParked` is NOT rendered — see index.json. #}
+  <ul class="seller-home__feed-list" role="list">
+    {% for state in feed.stateOrder %}
+      {% for item in feed.items %}
+        {% if item.state == state %}
           <li class="seller-home__feed-list-item" data-sh-feed-list-item>
-            {{ feedItem(item, panelId, feed.outputTypes, feed.rowActions, tab.inProgress) }}
+            {{ feedItem(item, feed.outputTypes, feed.rowActions, feed.statusLabels, feed.retryTime) }}
           </li>
-        {% endfor %}
-      </ul>
-    </div>
-  {% endfor %}
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+  </ul>
 </section>
-
-{# Pre-paint restore of the A/B tab-style choice, so a saved preference
-   doesn't flash the default treatment first. Runs inline during parse
-   (the section above is already in the DOM). Mirrors the knowledge
-   banner's preload pattern. Prototype-only scaffolding. #}
-<script>
-  (function () {
-    try {
-      var s = window.localStorage.getItem('sh-feed-tabstyle');
-      if (s === 'a' || s === 'b') {
-        var el = document.querySelector('[data-sh-feed-root]');
-        if (el) el.setAttribute('data-feed-tabstyle', s);
-      }
-    } catch (e) {}
-  })();
-</script>
