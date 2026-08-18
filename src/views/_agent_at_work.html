@@ -152,23 +152,28 @@
 
 
 {#
-  Subline slot — one half of the pair, carrying every string it may ever
-  need to show as `data-aaw-<kind>-<key>` attributes:
+  A slot — a piece of text that changes with the row's state. Each one
+  carries every string it may ever need to show:
 
     default   the row's own state, as rendered
     paused    what it says once paused
-    running   what it says once a failed row is retried
+    running   what it says once a run is started off-schedule
 
-  The JS switches slots by key and never composes wording, which is what
+  Three per row: the title, and both halves of the subline. The JS
+  switches them all by key and never composes wording, which is what
   keeps all the copy in agent_at_work.json.
+
+  Only the subline halves get a wrapper element from this macro; the
+  title action is already an `<a>` / `<button>`, so it carries the same
+  attributes directly.
 #}
-{% macro sublineSlot(kind, klass, rest, paused, running) %}
+{% macro sublineSlot(name, klass, rest, paused, running) %}
 <span
   class="{{ klass }}"
-  data-aaw-{{ kind }}
-  data-aaw-{{ kind }}-default="{{ rest | trim }}"
-  data-aaw-{{ kind }}-paused="{{ paused | trim }}"
-  data-aaw-{{ kind }}-running="{{ running | trim }}"
+  data-aaw-slot="{{ name }}"
+  data-aaw-slot-default="{{ rest | trim }}"
+  data-aaw-slot-paused="{{ paused | trim }}"
+  data-aaw-slot-running="{{ running | trim }}"
 >{{ rest | trim }}</span>
 {% endmacro %}
 
@@ -265,6 +270,10 @@
    not just on outputs: a failed row has an error badge instead of pills
    and needs the same room around it. #}
 {% set hasThirdLine = item.error or (item.outputs and item.outputs|length) %}
+{# The title is a slot too, so the same mechanism swaps its tense when
+   the row changes state. A row without `titles` keeps one wording. #}
+{% set runningTitle = item.titles.running if item.titles and item.titles.running else item.title %}
+{% set neutralTitle = item.titles.neutral if item.titles and item.titles.neutral else item.title %}
 <article
   class="aaw-card{% if hasThirdLine %} aaw-card--has-outputs{% endif %}"
   data-aaw-card="{{ item.id }}"
@@ -275,6 +284,10 @@
     {{ aawStatusButton(item, "sm") }}
 
     <div class="aaw-card__body">
+      {# `aria-label` is only set when there's a workflow to append —
+         otherwise it would just restate the visible text, which costs
+         voice-control users the ability to say what they can see, and
+         would need re-syncing every time the title's tense changes. #}
       <h3 class="aaw-card__title">
         {% if item.conversationId %}
         <a
@@ -282,7 +295,14 @@
           class="aaw-card__title-action"
           data-aaw-card-link="{{ item.id }}"
           data-aaw-title
+          data-aaw-slot="title"
+          data-aaw-slot-default="{{ item.title }}"
+          data-aaw-slot-paused="{{ neutralTitle }}"
+          data-aaw-slot-running="{{ runningTitle }}"
+          {%- if hasWorkflow %}
           aria-label="{{ linkName }}"
+          data-aaw-name-suffix="{{ ', workflow: ' ~ item.workflow.label }}"
+          {%- endif %}
           aria-describedby="{{ descId }}"
         >{{ item.title }}</a>
         {% else %}
@@ -290,7 +310,14 @@
           type="button"
           class="aaw-card__title-action"
           data-aaw-title
+          data-aaw-slot="title"
+          data-aaw-slot-default="{{ item.title }}"
+          data-aaw-slot-paused="{{ neutralTitle }}"
+          data-aaw-slot-running="{{ runningTitle }}"
+          {%- if hasWorkflow %}
           aria-label="{{ linkName }}"
+          data-aaw-name-suffix="{{ ', workflow: ' ~ item.workflow.label }}"
+          {%- endif %}
           aria-describedby="{{ descId }}"
         >{{ item.title }}</button>
         {% endif %}
@@ -360,6 +387,8 @@
 {% set descId = "aaw-" ~ item.id ~ "-desc" %}
 {% set isPaused = item.state == "paused" %}
 {% set homeState = "scheduled" if isPaused else item.state %}
+{% set runningTitle = item.titles.running if item.titles and item.titles.running else item.title %}
+{% set neutralTitle = item.titles.neutral if item.titles and item.titles.neutral else item.title %}
 <article
   class="aaw-task"
   data-aaw-card="{{ item.id }}"
@@ -370,12 +399,17 @@
     {{ aawStatusButton(item) }}
 
     <div class="aaw-task__text">
+      {# No `aria-label`: it restated the visible text, and would need
+         re-syncing every time the title's tense changes. #}
       <h3 class="aaw-task__title">
         <button
           type="button"
           class="aaw-task__title-action"
           data-aaw-title
-          aria-label="{{ item.title }}"
+          data-aaw-slot="title"
+          data-aaw-slot-default="{{ item.title }}"
+          data-aaw-slot-paused="{{ neutralTitle }}"
+          data-aaw-slot-running="{{ runningTitle }}"
           aria-describedby="{{ descId }}"
         >{{ item.title }}</button>
       </h3>
