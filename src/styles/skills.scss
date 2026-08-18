@@ -3383,232 +3383,359 @@
 // a change to Version A too.
 //
 // ── Skill card (Figma 11194:24307 "Source Tile") ──────────────────
-// B's card carries more of each skill than A's row does:
+// B's card restacks A's row into three lines:
 //
-//     ┌──┐ Daily Pipeline Snapshot  (Sales)
-//     │▓▓│ ☁ Skill
-//     └──┘
+//     Daily Pipeline Snapshot
+//     Sales • Referred 3 other skills
 //     Get a prioritized daily view of pipeline changes, at-risk …
-//     From Caroline Alix • Edited 3 days ago
 //
-// Three additions (object tile, object stamp, author/edited footer)
-// plus a retuned title and description. The row's structure, hooks,
-// hover reveal, overflow menu, and "Referred N other skills" cluster
+// Same facts as Version A, moved: the agent leaves the tinted pill
+// beside the name, the connected-skills disclosure leaves the
+// right-anchored cluster, and both land on one 10-px muted attribute
+// line under the name. Author and last-edited are not shown at all.
+//
+// The row's structure, hooks, hover reveal, overflow menu, and chevron
 // are UNCHANGED and keep coming from the shared rules above — the
 // markup branch is confined to the body stack in `_skill_list.html`.
 //
+// The 2026-08-18 Figma pass retired the object tile, the "☁ Skill"
+// stamp, the 16-px accent-blue title, and the author/edited footer this
+// block used to style; those rules are deleted rather than left
+// dormant. The title now needs NO override: Figma's 14 px / 590 /
+// #2e2e2e is exactly what the shared `.seller-home__skill-title`
+// already ships.
+//
 // Everything here is nested under the version scope on purpose, even
-// the classes only B's markup emits (`__skill-lead`, `__skill-source`,
-// `__skill-meta`, …). Two reasons: the nesting is the documentation —
+// the classes only B's markup emits (`__skill-heading`,
+// `__skill-source*`). Two reasons: the nesting is the documentation —
 // it says "this is Version B's card, not the Skills card" — and if
 // those elements ever appear in another version, its rules can't
 // inherit B's by accident.
 .seller-home--skills-v2 {
-  // Loosen the body rhythm from A's 2 px. Figma stacks the lead
-  // block, description, and footer 4 px apart (`--slds-g-spacing-1`)
-  // inside a card whose own padding does the heavier separating.
+  // Card padding — 16 px inline, 12 px block per Figma, where the
+  // shared row is a flat 16 px. Three lines of type inside 16 px of
+  // block padding sat too tall against the 800-px column.
+  .seller-home__skill-row {
+    padding-block: var(--slds-g-spacing-3, 0.75rem); // 12px
+  }
+
+  // Loosen the body rhythm from A's 2 px to Figma's 4 px
+  // (`--slds-g-spacing-1`, node 11194:24315). This gap now applies at
+  // exactly one seam — heading block ↔ description — because the name
+  // and its attribute line are wrapped together below.
   .seller-home__skill-body {
     gap: var(--slds-g-spacing-1, 0.25rem);
   }
 
-  // Object tile ↔ title stack, centered against each other. The tile
-  // is 32 px and the stack is 40 px (22 px title row + 14 px object
-  // stamp), so centering settles the tile a few px down rather than
-  // pinning it to the title's cap height.
+  // Heading block — the name over its attribute line, GAP 0 per Figma
+  // (node 11194:24941). Not as tight as it reads: the 19-px and 14-px
+  // line boxes around 14-px and 10-px type leave ~5 px of leading
+  // between the glyphs. To close it further, reduce the attribute
+  // line's `line-height` rather than reaching for a negative margin.
   //
-  // Centering accepts one trade: a long skill name that wraps the
-  // stack drags the tile down with it. No name in this catalog wraps
-  // at the 800-px column, and the pair reads better balanced. If
-  // wrapping titles ever become common, switch to `flex-start` here
-  // rather than adding a margin to the tile.
-  .seller-home__skill-lead {
-    display: flex;
-    align-items: center;
-    gap: var(--slds-g-spacing-2, 0.5rem); // 8px, per Figma
-    min-width: 0;
-  }
-
-  // Object tile — 32 px indigo circle behind a white glyph.
-  //
-  // RADIUS: a full circle. `50%` rather than the 9999px the Figma
-  // frame names — the two are identical on a square box, and a
-  // percentage cannot leave a flat edge if the tile is ever resized,
-  // whereas a fixed 9999px silently becomes a stadium if the box stops
-  // being square. It is also safe from the RADIUS TRAP noted on the
-  // agent badge above (a percentage skewing into an ellipse) for
-  // exactly that reason: both axes are pinned to 2 rem below, so 50%
-  // resolves to the same 16 px on each.
-  //
-  // Figma draws this corner with a 9999px radius AND corner smoothing
-  // on, i.e. an iOS squircle. A circle is what the design reads as, so
-  // the smoothing is moot.
-  //
-  // `flex: 0 0 auto` keeps the tile at its intrinsic size while the
-  // adjacent text column absorbs all the flexing and ellipsizing.
-  .seller-home__skill-object-tile {
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    inline-size: 2rem; // 32px
-    block-size: 2rem;
-    border-radius: 50%; // full circle — see RADIUS note above
-    // Indigo-30 per Figma. A `palette-*` token, which is what makes it
-    // safe across the two stylesheets this page loads: SLDS 1's
-    // unlayered declarations outrank slds2_agentic.css's layered ones,
-    // so a token that only SLDS 2 defines the way Figma expects would
-    // silently resolve to something else.
-    background-color: var(--slds-g-color-palette-indigo-30, #2f2cb7);
-  }
-
-  // The glyph is Figma's exported asset, and the file ships
-  // `preserveAspectRatio="none"` — so the box has to carry the
-  // asset's own 17.6 × 16.87 aspect or the artwork stretches. Both
-  // axes are pinned for that reason; neither may become `auto`.
-  .seller-home__skill-object-tile-glyph {
-    display: block;
-    inline-size: 1.1rem; // 17.6px — the asset's intrinsic width
-    block-size: 1.0542rem; // 16.87px
-  }
-
-  // Title stack: name/badge row over the object stamp.
-  //
-  // GAP 0, down from Figma's 4 px. Not as tight as it reads: both
-  // children are line boxes taller than their type (22 px around a
-  // 16 px title, 14 px around a 10 px stamp), so ~5 px of leading
-  // still separates the glyphs. Anything below 0 would need a negative
-  // margin, which is the wrong tool — reduce the stamp's `line-height`
-  // instead if the pair must sit closer still.
-  .seller-home__skill-lead-text {
+  // This wrapper exists so the body stack's 4-px gap applies between
+  // the heading and the description ONLY, matching Figma's nesting.
+  .seller-home__skill-heading {
     display: flex;
     flex-direction: column;
-    gap: 0;
     min-width: 0;
   }
 
-  // Name ↔ badge tightens from A's 12 px to Figma's 8 px, which the
-  // larger title needs to still read as one unit with its pill.
-  .seller-home__skill-title-row {
-    gap: var(--slds-g-spacing-2, 0.5rem);
-  }
-
-  // Title — 16 px semibold accent blue, where A's is 14 px neutral.
-  // The link color is the point of B's card: the name is the thing
-  // you click, and A signals that only on hover.
-  //
-  // `accent-2` is SLDS 2-only (SLDS 1 never declares it), so unlike
-  // the palette tokens it carries no cross-stylesheet risk.
-  .seller-home__skill-title {
-    font-size: var(--slds-g-font-scale-2, 1rem); // 16px
-    line-height: 1.375rem; // 22px
-    color: var(--slds-g-color-accent-2, #0250d9);
-  }
-
-  // Object stamp — "☁ Skill". The record type, set as quietly as the
-  // type system allows (10 px regular) so it annotates the name
-  // instead of competing with it.
+  // ── Attribute line ───────────────────────────────────────────────
+  // "Sales • Referred 3 other skills" — where the skill came from and
+  // what it pulls in, set as quietly as the type system allows (10 px)
+  // so it annotates the name instead of competing with it.
   .seller-home__skill-source {
     display: flex;
     align-items: center;
-    gap: var(--slds-g-spacing-1, 0.25rem); // 4px icon ↔ label
+    gap: var(--slds-g-spacing-1, 0.25rem); // 4px between facts
     min-width: 0;
   }
 
-  // Cloud icon from the SLDS utility sprite. `fill` (not `color`) is
-  // what a sprite `<use>` needs here — the symbol's path carries no
-  // fill of its own.
+  // Every fact on the line shares one size, weight, leading, and tone
+  // so the line reads as a single phrase — the agent name here, and
+  // the connected-skills trigger, which is a `__skill-uses-link` the
+  // shared rules above tint indigo.
   //
-  // Electric-blue-50 IS #066AFE, the color baked into Figma's export.
-  // Named off the palette ramp rather than `--slds-g-color-accent-1`,
-  // which resolves to the same value in SLDS 2: palette steps are
-  // declared identically in both stylesheets, semantic tokens are not.
-  .seller-home__skill-source-icon {
-    flex: 0 0 auto;
-    inline-size: 0.75rem; // 12px
-    block-size: 0.75rem;
-    fill: var(--slds-g-color-palette-electric-blue-50, #066afe);
+  // 12 px / 17 px, matching the description below it: the 2026-08-18
+  // Figma revision stepped this line up from 10 px / 14 px, so the
+  // attribute line and the description now share one size and differ
+  // only in what they say. The bullet stayed at 10 px — see below.
+  .seller-home__skill-source-label,
+  .seller-home__skill-uses-link {
+    font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
+    font-weight: var(--slds-g-font-weight-4, 400);
+    line-height: 1.0625rem; // 17px
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+    white-space: nowrap;
   }
 
-  .seller-home__skill-source-label {
-    font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  // Bullet divider. Semibold, and the fixed 7-px box with centered text
+  // comes from Figma: a bullet needs more weight than the copy it
+  // divides to register as a divider rather than as punctuation, and
+  // pinning the width keeps the 4-px gaps optically even on both sides
+  // regardless of the font's own sidebearings. `aria-hidden` in the
+  // template, so this is purely visual.
+  //
+  // Deliberately still 10 px / 14 px while the facts around it moved to
+  // 12 px / 17 px — Figma holds the bullet at the smaller step, and its
+  // shorter line box centers against the taller ones (the line is
+  // `align-items: center`), which is what keeps the dot on the copy's
+  // optical midline instead of riding its baseline.
+  .seller-home__skill-source-separator {
+    flex: 0 0 auto;
+    inline-size: 0.4375rem; // 7px
     font-size: var(--slds-g-font-scale-neg-2, 0.625rem); // 10px
-    font-weight: var(--slds-g-font-weight-4, 400);
-    line-height: 0.875rem; // 14px
-    color: var(--slds-g-color-on-surface-2, #2e2e2e);
-    white-space: nowrap;
-  }
-
-  // Description grows a step (12 → 13 px) and picks up Figma's 18-px
-  // leading. 13 px is a literal: SLDS 2's scale steps over it (12 px
-  // at `neg-1`, 14 px at `1`), and Figma's `font/scale/base` is a
-  // file-local variable with no global counterpart.
-  .seller-home__skill-description {
-    font-size: 0.8125rem; // 13px
-    line-height: 1.125rem; // 18px
-  }
-
-  // ── Author / last-edited footer ────────────────────────────────
-  // "From Caroline Alix • Edited 3 days ago". Wraps as a whole
-  // label/value pair rather than mid-pair: each `__skill-meta-item`
-  // is its own flex box, so a narrow card breaks BETWEEN the two
-  // facts and never between a label and the name it introduces.
-  // `row-gap` is the 4 px that separates those wrapped lines.
-  .seller-home__skill-meta {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--slds-g-spacing-1, 0.25rem) var(--slds-g-spacing-2, 0.5rem); // 4px / 8px
-    min-width: 0;
-  }
-
-  .seller-home__skill-meta-item {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--slds-g-spacing-1, 0.25rem); // 4px label ↔ value
-    min-width: 0;
-  }
-
-  // Label and value are the same size and weight and differ only in
-  // tone — the pair has to read as one phrase ("From Caroline Alix"),
-  // so the label is dimmed rather than styled into a field name. No
-  // colon, no bold, per Figma.
-  .seller-home__skill-meta-label,
-  .seller-home__skill-meta-value {
-    font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-    font-size: 0.8125rem; // 13px — same literal as the description
-    font-weight: var(--slds-g-font-weight-4, 400);
-    line-height: 1.125rem; // 18px
-    white-space: nowrap;
-  }
-
-  .seller-home__skill-meta-label {
-    color: var(--slds-g-color-on-surface-2, #2e2e2e);
-  }
-
-  // Near-black, a shade darker than the label — Figma's Text/Default
-  // (#181818), which no SLDS global token carries.
-  //
-  // `overflow: hidden` + ellipsis so a long name truncates instead of
-  // pushing the bullet and the edit time out of the card. Capped at
-  // 14 rem, matching the 140-px max Figma puts on the name slot.
-  .seller-home__skill-meta-value {
-    color: #181818;
-    max-inline-size: 14rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
-  }
-
-  // Bullet between the two facts. 14 px semibold placeholder grey per
-  // Figma — bigger than the copy it divides, which is what makes a
-  // bullet register as a divider rather than as punctuation.
-  // `aria-hidden` in the template, so this is purely visual.
-  .seller-home__skill-meta-separator {
-    flex: 0 0 auto;
-    font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
     font-weight: var(--slds-g-font-weight-6, 590);
-    line-height: 1.1875rem; // 19px
-    color: #747474; // Figma Text/Placeholder — no SLDS global equivalent
+    line-height: 0.875rem; // 14px
+    text-align: center;
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  }
+
+  // Description keeps the shared 12 px and takes Figma's 17-px leading
+  // (the shared rule's unitless 1.3 works out to ~15.6 px).
+  .seller-home__skill-description {
+    line-height: 1.0625rem; // 17px
+  }
+
+  // ── Connected-skills disclosure, relocated ───────────────────────
+  // The trigger is a fact ON the attribute line here instead of a
+  // right-anchored chip, so two things the shared rules do for the chip
+  // have to be undone. It stays a hover / focus disclosure: the
+  // underline and the focus ring keep coming from the shared rules,
+  // untouched — only the type changed (above) to match its neighbours.
+  //
+  // `order` / `flex` / `justify-content` reset the narrow-viewport rule
+  // further up this sheet, which hands the chip its own full-width row
+  // at ≤ 40 rem. Inside a flex attribute line that would drop "Referred
+  // N other skills" onto a line of its own and orphan the bullet.
+  // Higher specificity (0,2,0 over 0,1,0) wins regardless of source
+  // order, so the reset does not need repeating inside the media query.
+  //
+  // `margin-right` is the 36-px gutter the chip reserves so it never
+  // shares pixels with the hover-revealed kebab. The kebab is on the
+  // far side of the card from here, so that gutter would just punch a
+  // 36-px hole into the middle of the line.
+  .seller-home__skill-uses-wrap {
+    order: 0;
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    margin-right: 0;
+  }
+
+  // Popover flips to hang down-and-RIGHT: left-aligned to the trigger,
+  // with the matching `top-left` nubbin set in the template. Keeping
+  // Version A's right-alignment would run the popover (192 px minimum)
+  // off the left edge of the card, since the trigger now sits only
+  // ~60 px in from it.
+  .seller-home__skill-uses-popover {
+    right: auto;
+    left: 0;
+  }
+
+  // ── Action cluster (Figma 11194:24333) ───────────────────────────
+  // "Use Skill" + bare kebab, 8 px apart, vertically centered at
+  // the card's right edge. Absolute against the <li> (which
+  // `.seller-home__skill-item` already makes a positioning parent)
+  // because it sits ON TOP of the row anchor — see the template note
+  // for why it cannot be a descendant of it.
+  //
+  // `inset-inline-end` matches the card's own 16-px inline padding, so
+  // the kebab's right edge lines up with the text column's left edge
+  // inset. Same `z-index: 2` the bare kebab uses: above the anchor,
+  // below the dropdown it opens (z-index 5) and below SLDS overlays.
+  .seller-home__skill-actions {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: var(--slds-g-spacing-4, 1rem); // 16px
+    transform: translateY(-50%);
+    z-index: 2;
+
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-2, 0.5rem); // 8px, per Figma
+  }
+
+  // STACKING: the wrapper above is a stacking context — `transform`
+  // alone makes it one, and the `z-index` seals it — so the overflow
+  // dropdown that opens inside it (`z-index: 5`) cannot escape it. Every
+  // row's wrapper then sits at the same `2`, ties, and resolves on DOM
+  // order, which paints each card's cluster over the open menu of every
+  // card ABOVE it: the dropdown disappears behind the next few rows'
+  // buttons.
+  //
+  // Lifting the wrapper while its own menu is open is the fix — it
+  // carries the trapped dropdown up with it. `.is-menu-open` is toggled
+  // on the <li> by `skillOverflowController` for exactly this kind of
+  // "menu is open" styling, and it drops back to `2` on close so a
+  // resting cluster never outranks its neighbours.
+  //
+  // Version A has the same latent trap (its kebab container is also
+  // transformed and z-indexed) but no visible symptom: the clusters that
+  // would cover the menu there are bare kebabs at `opacity: 0`. Left
+  // alone deliberately — this pass is Version B only.
+  .seller-home__skill-item.is-menu-open .seller-home__skill-actions {
+    z-index: 6;
+  }
+
+  // Reserve the cluster's width on the text column. The cluster is out
+  // of flow, so without this the description — which ellipsizes at its
+  // own content edge — would run underneath the buttons.
+  //
+  // 9 rem = Figma's 132-px cluster (a 92-px "Use Skill" + the 8-px gap
+  // + the kebab's 32-px hover box) plus the 12-px gutter it puts between
+  // the text column and the actions (`pr` on node 11194:24309). A
+  // literal is the trade-off of taking the cluster out of flow: a much
+  // longer localized button label would need this bumped, since the text
+  // column can no longer discover the cluster's width itself.
+  .seller-home__skill-body {
+    padding-inline-end: 9rem; // 144px
+  }
+
+  // The menu container joins the cluster's flex flow instead of
+  // absolute-positioning itself against the <li>. `position: relative`
+  // (not `static`) is load-bearing: the dropdown inside is absolute and
+  // anchors to this box, so going static would send it to the <li>
+  // instead and it would open 36 px off target.
+  //
+  // `z-index: auto` clears the `2` the shared rule needs to lift its
+  // absolute kebab above the row anchor. In flow inside the cluster
+  // that lift is the wrapper's job, and a z-index here would only add a
+  // second stacking context between the dropdown and the page.
+  .seller-home__skill-menu--inline {
+    position: relative;
+    top: auto;
+    right: auto;
+    transform: none;
+    z-index: auto;
+    display: flex;
+    align-items: center;
+  }
+
+  // Always visible, where Version A's kebab fades in on hover: the
+  // design draws this as part of the card's layout, next to "Use
+  // Skill", rather than an affordance that appears on approach. The
+  // shared reveal rules further up set the same `opacity: 1` on hover,
+  // so nothing fights — this only changes the RESTING state.
+  //
+  // SIZED 32 PX even though the resting glyph is 14 px, because the
+  // hover state (node 11314:170930) is a 32-px circle centred on that
+  // glyph: carrying the box at rest and only painting it on hover means
+  // nothing moves when the pointer arrives, and the target clears the
+  // 24-px minimum a 16-px button would miss. `slds-button_icon-bare` is
+  // deliberately absent from the SLDS rule that squares off the
+  // bordered variants, so the size has to be set here.
+  .seller-home__skill-menu-trigger {
+    opacity: 1;
+    pointer-events: auto;
+
+    inline-size: var(--slds-g-sizing-9, 2rem); // 32px
+    block-size: var(--slds-g-sizing-9, 2rem);
+    border-radius: var(--slds-g-radius-border-circle, 9999px);
+
+    // Back to the SLDS 2 default 14 px, up from the 12 px the shared
+    // rule uses to match the trailing chevron's weight. Version B has
+    // no chevron to match, and the design draws 14 px inside both the
+    // resting and the hover box.
+    .slds-button__icon {
+      inline-size: 0.875rem; // 14px
+      block-size: 0.875rem;
+    }
+  }
+
+  // Hover paints the circle and turns the glyph accent-blue. Held while
+  // the menu is open too — a trigger with a popover hanging off it
+  // reading as untouched looks broken, and the row underneath stays
+  // hovered anyway.
+  //
+  // Spelled out instead of nested with `&`: stylelint resolves
+  // `&`-selectors before testing them against the project's class
+  // pattern, which rejects the digit in `--skills-v2`.
+  .seller-home__skill-menu-trigger:hover,
+  .seller-home__skill-menu-trigger:focus-visible,
+  .seller-home__skill-menu-trigger[aria-expanded="true"] {
+    background: var(--slds-g-color-surface-2, #f3f3f3);
+
+    .slds-button__icon {
+      fill: var(--slds-g-color-accent-2, #0250d9);
+    }
+  }
+
+  // ── Overflow menu surface (Figma 11305:26088) ─────────────────────
+  // LEFT-anchored 2 px below the kebab's ICON, where Version A
+  // right-anchors it 4 px below the whole trigger.
+  //
+  // Both offsets resolve against the `--inline` container, which is the
+  // trigger's 32-px hover box, and they treat that box differently on
+  // purpose:
+  //
+  //   • `top` clears the box by 2 px, so the surface drops below the
+  //     hover circle rather than tucking under its lower half — 10 px
+  //     below the icon itself.
+  //   • `left` steps in by the 8 px of padding the box holds around the
+  //     icon, so the surface still lines up with the glyph the seller
+  //     clicked instead of hanging 8 px to its left.
+  //
+  // Opening rightward drops the surface into the page gutter beside
+  // the card instead of reaching back across the description. That is
+  // the design; the gutter is empty at every viewport this prototype
+  // targets.
+  .seller-home__skill-menu-list {
+    top: calc(100% + 2px); // 10px below the icon, 2px below its box
+    right: auto;
+    left: var(--slds-g-spacing-2, 0.5rem); // 8px
+
+    // Hug the longest label instead of the shared 160-px floor: the
+    // design sizes the surface to its content (106 px = 12 px padding
+    // + 16 px icon + 8 px gap + a 58-px "Duplicate" + 12 px padding),
+    // and an absolutely positioned box shrink-wraps once the floor is
+    // gone.
+    min-width: 0;
+
+    // 12 px, up one step from the shared 8 px. Clipped because the items
+    // run the full width of the surface with square hover fills, and at
+    // this radius the top and bottom ones visibly cut the corner —
+    // there is nothing inside a menu that needs to escape its own box.
+    border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
+    overflow: hidden;
+
+    // Elevation/2 - down, the shadow the design attaches to this
+    // surface. The shared rule's hand-rolled pair predates the token.
+    box-shadow: var(--slds-g-shadow-2);
+  }
+
+  // 36-px rows — the design's 18-px line box with 9 px above and below.
+  // The label steps up to SLDS's base body size (13 px) from the 12 px
+  // the shared rule borrows from Scheduled's menu, and the leading icon
+  // to 16 px, so the row matches node 11305:26094's geometry: 12 px in
+  // from the edge, an 8-px gap, then the label.
+  .seller-home__skill-menu-item {
+    padding-block: 0.5625rem; // 9px
+    font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+    line-height: 1.125rem; // 18px
+  }
+
+  .seller-home__skill-menu-item-icon {
+    width: 1rem; // 16px
+    height: 1rem;
+  }
+
+  // Narrow-viewport guard. The left-anchored surface overhangs the card
+  // by ~75 px, and around 1250 px the gutter it lands in stops being
+  // wide enough: the surface crosses the scroll container's content
+  // edge, the container gains horizontal scrollable overflow (its
+  // `overflow-y: auto` computes `overflow-x` to `auto` too), and the
+  // menu clips. Falling back to Version A's right-anchoring keeps it
+  // inside the card at any width.
+  //
+  // 79 rem = 1264 px, one step above that crossing, so 1280 px — where
+  // the surface still clears the edge by 15 px — keeps the design.
+  @media (max-width: 79rem) {
+    .seller-home__skill-menu-list {
+      right: var(--slds-g-spacing-2, 0.5rem); // 8px — the icon's edge,
+      left: auto;                             //       not the box's
+    }
   }
 }
 

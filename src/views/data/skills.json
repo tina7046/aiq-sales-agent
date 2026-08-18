@@ -246,9 +246,8 @@
 // that page reads this file explicitly with `readData("skills")` — see
 // `_skills_body_v1.html`. Consequence worth knowing before you rename
 // a key: neither URL holds its own copy of any skill, label, or count.
-// `prototypeVersions` (the switcher) and `rowMeta` (Version B's stamp
-// and footer labels) exist only for that comparison and are meant to
-// be deleted together once a direction is chosen.
+// `prototypeVersions` (the switcher) exists only for that comparison and
+// is meant to be deleted once a direction is chosen.
 {
   "pageTitle": "Skills",
 
@@ -302,32 +301,40 @@
     ]
   },
 
-  // ── Row metadata copy (Version B rows only) ──────────────────
-  // ------------------------------------------------------------
-  // Labels for the object stamp and the footer that Version B's card
-  // adds (Figma 11194:24307). Version A ignores this block entirely.
-  // Only LABELS live here — the values come from each skill's own
-  // `createdBy` / `updatedAt`, the same fields /skill_detail.html's
-  // metadata caption reads, so a row can never claim a different
-  // author or edit date than the page it opens.
+  // Version B's card body carries NO data of its own. The 2026-08-18
+  // pass on Figma 11194:24307 settled it as a restack of facts Version A
+  // already renders — the skill name, its agent, and its
+  // connected-skills count — so the `rowMeta` block that fed the earlier
+  // object tile, object stamp, and "From … • Edited …" footer is gone
+  // rather than left dormant. Author and last-edit stay on
+  // /skill_detail.html, which reads each skill's own `createdBy` /
+  // `updatedAt` directly.
   //
-  //   object.label — The stamp under the skill name. "Skill" names
-  //                  the object type, matching how record pages stamp
-  //                  their object above the record name.
-  //   object.icon  — SLDS utility sprite id. Figma's node IS this
-  //                  SLDS icon, so the sprite is the same glyph by
-  //                  provenance — no second exported asset.
-  //   ownerLabel / editedLabel
-  //                — The muted halves of "From {name}" and
-  //                  "Edited {when}". Authored so the phrasing can
-  //                  change without touching the row markup.
-  "rowMeta": {
-    "object": {
-      "label": "Skill",
-      "icon":  "salesforce1"
-    },
-    "ownerLabel":  "From",
-    "editedLabel": "Edited"
+  // ── "Use Skill" button (Version B rows only) ──────────────────
+  // ------------------------------------------------------------
+  // The primary half of the card's action cluster (Figma 11194:24333);
+  // the bordered kebab beside it is the same overflow menu Version A
+  // ships, so it needs no copy of its own. Version A ignores this block
+  // entirely, and dropping it degrades Version B's cluster to just the
+  // kebab rather than breaking the row.
+  //
+  //   id            — Action id emitted as `data-sh-skill-action`, which
+  //                   routes the click through the SAME
+  //                   `sh:skill-action` path the overflow items use.
+  //                   `use_in_chat` deliberately matches the verb the
+  //                   Skill detail page's own "Use in Chat" button
+  //                   fires, so both surfaces mean one thing.
+  //   label         — Visible button text. "Use Skill" per Figma, where
+  //                   the detail page says "Use in Chat" — the card has
+  //                   less room and more surrounding context.
+  //   assistiveText — Accessible name + tooltip. `{name}` is replaced
+  //                   with the skill's name at render time, so the
+  //                   button reads uniquely per row instead of nine
+  //                   identical "Use Skill" targets.
+  "useAction": {
+    "id":            "use_in_chat",
+    "label":         "Use Skill",
+    "assistiveText": "Use {name} in a new conversation"
   },
 
   "header": {

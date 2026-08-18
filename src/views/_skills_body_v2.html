@@ -10,10 +10,11 @@
 
   STATUS: the page frame still matches Version A (same header band,
   banner, toolbar, and body scroll); the SKILL CARD is where B has
-  diverged — Figma 11194:24307 adds an object tile, an object stamp
-  under the name, and a "From … • Edited …" footer. That card lives in
-  the shared `_skill_list.html` behind the `skillListVariant` flag set
-  below, not in a second copy of the row markup.
+  diverged — Figma 11194:24307 restacks the row into name / agent •
+  referred-skills / description, with no author or last-edit line. That
+  card lives in the shared `_skill_list.html` behind the
+  `skillListVariant` flag set below, not in a second copy of the row
+  markup.
 
   WHERE TO DIVERGE further
     1. Rearrange the markup in this file — that is what it is for.
@@ -48,18 +49,22 @@
 {% set filterAction = skillsData.filterAction %}
 {% set emptyState   = skillsData.emptyState %}
 
-{# Version B's card shape (Figma 11194:24307): object tile, object
-   stamp, and the "From … • Edited …" footer. `_skill_list.html` reads
-   this flag to pick the body layout — the row's anchor, menus,
-   popovers, and hooks are single-sourced there, so this is the whole
-   opt-in. `rowMeta` carries the labels that layout needs.
+{# Version B's card shape (Figma 11194:24307): the skill name over a
+   muted "agent • referred-skills" attribute line over the description,
+   with a "Use Skill" + kebab action cluster at the right.
+   `_skill_list.html` reads this flag to pick the body layout and the
+   trailing treatment — the row's anchor, menu markup, popovers, and
+   hooks are single-sourced there, so this is the whole opt-in.
+
+   `useAction` is the only copy Version B adds; everything else on the
+   card restacks facts Version A already renders.
 
    Version A leaves both unset and renders the original two-line row.
-   That is why the flag lives here and not in the page file: it
-   describes the BODY's card design, and a future Version C gets its
-   own body partial with its own value. #}
+   That is why they live here and not in the page file: they describe
+   the BODY's card design, and a future Version C gets its own body
+   partial with its own values. #}
 {% set skillListVariant = "v2" %}
-{% set rowMeta          = skillsData.rowMeta %}
+{% set useAction        = skillsData.useAction %}
 
 {# `.seller-home--knowledge` + `.seller-home--skills` are inherited
    from Version A so the viewport lock, column widths, and body scroll

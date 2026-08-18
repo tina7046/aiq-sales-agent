@@ -511,7 +511,13 @@
       // Capture the trigger BEFORE we close the menu — closing
       // clears `openTrigger`, and we still need it as the focus
       // fallback target if the action doesn't open a modal.
-      var restoreTarget = openTrigger
+      //
+      // Falls back to the clicked control itself for action buttons
+      // that are NOT menu items — Version B's "Use Skill" button
+      // carries this same hook while no menu is open, so `openTrigger`
+      // is null there and a modal opened from it would have nowhere to
+      // return focus on dismiss.
+      var restoreTarget = openTrigger || actionBtn
 
       // Close FIRST, then dispatch. Restoring focus to the
       // trigger is the sensible default per the SkillCard spec
@@ -736,6 +742,14 @@
       share: {
         title: 'Share skill',
         body:  'The share sheet will open here. This prototype doesn\u2019t ship sharing yet.'
+      },
+      // Version B's "Use Skill" button (Figma 11194:24333). Same copy
+      // shape as the others, and the same reason: no chat surface
+      // consumes a skill hand-off yet. See the `use_in_chat` case for
+      // what ships alongside this dialog.
+      use_in_chat: {
+        title: 'Use skill',
+        body:  'This skill will open in a new conversation with the skill attached. This prototype doesn\u2019t ship that hand-off yet.'
       }
     }
 
@@ -754,6 +768,28 @@
         case 'schedule':
         case 'share':
           openPlaceholderDialog(placeholderCopy[action], trigger)
+          break
+        // Version B's "Use Skill" button. Unlike the cases above this
+        // one is NOT an overflow item — it is a button in the card's
+        // action cluster carrying the same `data-sh-skill-action` hook,
+        // so it arrives here through the same delegated path.
+        //
+        // Fires the semantic event FIRST so a future consumer can open
+        // a real conversation with the skill attached without touching
+        // this file, then falls back to the labeled placeholder. That
+        // is the same two-step /skill_detail.html's own "Use in Chat"
+        // button performs (see `wireUseInChat` in skill_detail.js) —
+        // deliberately, so both surfaces behave identically and both
+        // flip to the real navigation in one place each. A silent
+        // navigation to a surface that ignores the skill would leave
+        // the seller with no sign the hand-off worked.
+        case 'use_in_chat':
+          try {
+            document.dispatchEvent(new CustomEvent('sh:skill-use-in-chat', {
+              detail: { skillId: skillId }
+            }))
+          } catch (_e) { /* CustomEvent unsupported? Skip. */ }
+          openPlaceholderDialog(placeholderCopy.use_in_chat, trigger)
           break
         case 'duplicate':
           duplicateSkillItem(item)

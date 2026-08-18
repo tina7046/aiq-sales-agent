@@ -17,12 +17,13 @@
     • skillListVariant
                     — which landing VERSION is asking for the row:
                        unset / "v1" → Version A's two-line row,
-                       "v2" → Version B's card (object tile, object
-                       stamp, "From … • Edited …" footer). Added
-                       2026-08-17; see the `renderSkillRow` docblock
-                       for both shapes.
-    • rowMeta       — label + icon copy Version B's stamp and footer
-                       render. Ignored by Version A.
+                       "v2" → Version B's three-line card (name over an
+                       agent • referred-skills attribute line, over the
+                       description) with a right-side action cluster.
+                       Added 2026-08-17; see the `renderSkillRow`
+                       docblock for both shapes.
+    • useAction     — copy + action id for Version B's "Use Skill"
+                       button. Ignored by Version A.
 
   ── What changed from the card partial ────────────────────────────
   • The row is horizontally laid out: [title/description block]
@@ -122,6 +123,171 @@
 
 
 {#
+  "Referred N other skills" disclosure — trigger + popover.
+  ---------------------------------------------------------------------
+  Its own macro because the two landing versions put this affordance in
+  different PLACES and it must stay one implementation: Version A keeps
+  it in the row's right-anchored cluster, Version B moves it into the
+  attribute line under the skill name (Figma 11194:24307). The trigger,
+  its `data-sh-skill-uses` hook, the `aria-describedby` → popover
+  pairing, and the popover's contents are identical in both.
+
+  `nubbin` selects which SLDS nubbin variant the popover carries, since
+  that has to match where the trigger sits: `top-right` for the
+  right-anchored placement (popover hangs down-and-left), `top-left`
+  for the attribute line (popover hangs down-and-right, because a
+  left-biased trigger has no room to its left). See the
+  `.seller-home__skill-uses-popover` rules in skills.scss — the
+  matching `left` / `right` offset is scoped per version there.
+
+  Wrapper is `position: relative` so the popover can absolute-position
+  off the trigger without needing an offset library.
+
+  Trigger is a `<span>` — the whole row is already inside an `<a>`, and
+  HTML forbids interactive descendants of an anchor. We deliberately
+  make it keyboard-focusable (`tabindex="0"`) so the popover can also
+  open on Tab, per spec ("Open on hover and keyboard focus"). The
+  nested tabindex is a minor spec caveat (validators flag it, browsers
+  render it), but the alternative — restructuring the row so the
+  trigger sits as a sibling of the anchor — would be a
+  disproportionate refactor for a prototype affordance. The WAI-ARIA
+  "tooltip" pattern (trigger + `aria-describedby` → element with
+  `role="tooltip"`) still resolves correctly.
+
+  `hidden` on the popover is authoritative — the JS controller toggles
+  it via `element.hidden = …`, and resolves WHICH popover through the
+  trigger's `aria-describedby`, so this pair can move anywhere in the
+  row without touching skills.js. Nothing inside is focusable, so no
+  focus trap is needed; hover / focus of the trigger drives open and
+  close entirely.
+#}
+{% macro renderSkillUses(skill, count, popoverId, nubbin) %}
+  <span class="seller-home__skill-uses-wrap">
+    <span
+      class="seller-home__skill-uses-link"
+      data-sh-skill-uses
+      tabindex="0"
+      aria-describedby="{{ popoverId }}"
+    >Referred {{ count }} other skill{% if count != 1 %}s{% endif %}</span>
+
+    {# SLDS 2 popover shell (`.slds-popover` + `.slds-popover__body`)
+       so we inherit the component's border, radius, elevation, and
+       inner padding directly from SLDS design tokens. `role="tooltip"`
+       matches the information-only nature of the disclosure. #}
+    <div
+      class="slds-popover slds-nubbin_{{ nubbin or 'top-right' }} seller-home__skill-uses-popover"
+      role="tooltip"
+      id="{{ popoverId }}"
+      data-sh-skill-uses-popover
+      hidden
+    >
+      <div class="slds-popover__body seller-home__skill-uses-popover-body">
+        <p class="seller-home__skill-uses-popover-title">This skill uses</p>
+        <ul class="seller-home__skill-uses-popover-list">
+          {% for sub in skill.connectedSkills %}
+            <li class="seller-home__skill-uses-popover-item">{{ sub.name }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </span>
+{% endmacro %}
+
+
+{#
+  Overflow menu — trigger + dropdown.
+  ---------------------------------------------------------------------
+  One implementation, two shapes. Both versions draw the SAME bare
+  kebab; they disagree only on where the container sits and when the
+  trigger is visible:
+
+    Version A — absolute-positioned against the <li>, revealed on
+                hover / focus-within / menu-open.
+    Version B — always visible, sitting in the card's action cluster
+                next to "Use Skill" (Figma 11194:24307 → 11194:24333,
+                kebab node 11305:26076 "⚡ Button Icon - Bare").
+
+  Everything else is identical and MUST stay that way: `data-sh-skill-
+  menu` (the container `skillOverflowController` resolves from the
+  trigger), `data-sh-skill-stop` (marks this subtree "inside" for the
+  outside-click dismisser), `data-sh-skill-menu-trigger`,
+  `data-sh-skill-menu-list`, the `aria-controls` → `id` pairing, and
+  `data-sh-skill-action` on each item (which the same delegated handler
+  turns into an `sh:skill-action` event).
+
+  The container is always a SIBLING of the row anchor, never a
+  descendant: it holds real <button>s, and HTML forbids interactive
+  descendants of an <a>. Version A absolute-positions it on top of the
+  anchor; Version B nests it in a cluster that does the positioning, so
+  its own offsets are reset in skills.scss.
+
+  Callers gate on `actions | length` — an empty menu is never rendered.
+#}
+{% macro renderSkillMenu(skill, menuId, actions, variant) %}
+  {% set isV2 = (variant == "v2") %}
+  <div
+    class="seller-home__skill-menu{% if isV2 %} seller-home__skill-menu--inline{% endif %}"
+    data-sh-skill-menu
+    data-sh-skill-stop
+  >
+    <button
+      type="button"
+      class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger"
+      data-sh-skill-menu-trigger
+      aria-haspopup="menu"
+      aria-expanded="false"
+      aria-controls="{{ menuId }}"
+      aria-label="More actions for {{ skill.name }}"
+      title="More actions"
+    >
+      <svg class="slds-button__icon" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
+      </svg>
+      <span class="slds-assistive-text">More actions</span>
+    </button>
+
+    <div
+      class="seller-home__skill-menu-list"
+      id="{{ menuId }}"
+      role="menu"
+      aria-label="{{ skill.name }} actions"
+      data-sh-skill-menu-list
+      hidden
+    >
+      <ul class="seller-home__skill-menu-items" role="none">
+        {% for action in actions %}
+          {# Destructive actions get a modifier class so the label /
+             icon can pick up a red foreground. Delete is currently the
+             only destructive action; the pattern generalizes if others
+             land later. #}
+          {% set isDestructive = action.id == "delete" %}
+          <li
+            role="none"
+            class="seller-home__skill-menu-row{% if isDestructive %} seller-home__skill-menu-row--destructive{% endif %}"
+          >
+            <button
+              type="button"
+              class="seller-home__skill-menu-item{% if isDestructive %} seller-home__skill-menu-item--destructive{% endif %}"
+              role="menuitem"
+              tabindex="-1"
+              data-sh-skill-action="{{ action.id }}"
+            >
+              {% if action.icon %}
+                <svg class="seller-home__skill-menu-item-icon" aria-hidden="true">
+                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
+                </svg>
+              {% endif %}
+              <span class="seller-home__skill-menu-item-label">{{ action.label }}</span>
+            </button>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+{% endmacro %}
+
+
+{#
   Skill list row.
   ---------------------------------------------------------------------
   <li> is the row cell AND the positioning parent for the sibling
@@ -154,24 +320,30 @@
   Version B (`variant == "v2"`, Figma 11194:24307):
 
     ┌──────────────────────────────────────────────────────────────┐
-    │ ┌──┐ Name  (Sales)                                           │
-    │ │▓▓│ ☁ Skill                                                 │
-    │ └──┘                                                         │
+    │ Name                                                          │
+    │ Sales • Referred 3 other skills          [Use Skill]  (⋮)     │
     │ Description that clamps to one line with an ellipsis.        │
-    │ From Caroline Alix • Edited 3 days ago                       │
     └──────────────────────────────────────────────────────────────┘
-                                          (same right-anchored
-                                          cluster, vertically
-                                          centered, as Version A)
 
-  Only the BODY STACK reads `variant` — the anchor, the overflow menu,
-  the connected-skills popover, the chevron, and every `data-sh-*` hook
+  Version B carries the SAME facts as Version A, restacked: the agent
+  drops out of the badge beside the name and the connected-skills
+  disclosure drops out of the right-anchored cluster, and both land on
+  one muted attribute line under the name. Author and last-edit are not
+  shown at all (they remain on /skill_detail.html).
+
+  Version B's right side is an ACTION CLUSTER instead of hover
+  affordances: "Use Skill" plus a bordered kebab, both always visible,
+  vertically centered against the card. The hover-revealed chevron and
+  the bare hover kebab are Version A's shape only.
+
+  `variant` selects the body stack AND which trailing treatment ships;
+  the anchor, the overflow menu MARKUP, the connected-skills popover
+  markup (one macro each, two placements), and every `data-sh-*` hook
   are single-sourced below, so the two landing versions cannot drift on
-  behavior. `rowMeta` carries the labels Version B's stamp and footer
-  need; both arguments are optional, and omitting them is exactly what
-  Version A does.
+  behavior. `variant` and `useAction` are both optional; omitting them
+  is exactly what Version A does.
 #}
-{% macro renderSkillRow(skill, rowActions, agentLibrary, variant, rowMeta) %}
+{% macro renderSkillRow(skill, rowActions, agentLibrary, variant, useAction) %}
   {% set isLinked = not (skill.linked == false) %}
 
   {# `variant` names the LANDING VERSION asking for the row (set by
@@ -199,31 +371,25 @@
      is enough to open /skill_detail.html on row activation. #}
   {% set skillHref = skill.href or ("/skill_detail.html?id=" ~ skill.id) or "#" %}
 
-  {# Version B's footer values. Read from the SAME fields
-     /skill_detail.html's metadata caption uses, so a row can never
-     claim a different author or edit date than the page it opens.
-     `hasMeta` folds the variant gate in, so the footer markup below
-     needs no second `isV2` test, and a Version B row whose skill is
-     missing both fields simply renders no footer instead of an empty
-     one. #}
-  {% set ownerName  = skill.createdBy %}
-  {% set editedWhen = skill.updatedAt %}
-  {% set hasMeta    = isV2 and (ownerName or editedWhen) %}
+  {# Connected-skills count, derived up front because the two versions
+     render the disclosure in different places (right-anchored cluster
+     in Version A, attribute line in Version B) and both branches below
+     need the gate. The count comes from `.length` — never hard-coded —
+     and the singular / plural label flips automatically at N == 1. #}
+  {% set connectedSkillCount = (skill.connectedSkills or []) | length %}
+  {% set hasConnectedMeta    = connectedSkillCount > 0 %}
+  {% set usesPopoverId       = "skill-" ~ skill.id ~ "-uses-popover" %}
 
   {# Accessible name for the linked row, assembled up front because
      an anchor's aria-label REPLACES its inner text for assistive
      tech: anything the row shows visually has to be restated here or
-     it goes unannounced. Version B shows two extra facts, so it
-     announces two extra clauses. #}
+     it goes unannounced. The connected-skills trigger is the one
+     exception — it is separately focusable and describes itself
+     through `aria-describedby`, so restating it here would announce
+     it twice. #}
   {% set rowLabel = "Open skill, " ~ skill.name %}
   {% if agent %}
     {% set rowLabel = rowLabel ~ ", " ~ agent.label %}
-  {% endif %}
-  {% if hasMeta and ownerName %}
-    {% set rowLabel = rowLabel ~ ", from " ~ ownerName %}
-  {% endif %}
-  {% if hasMeta and editedWhen %}
-    {% set rowLabel = rowLabel ~ ", edited " ~ editedWhen %}
   {% endif %}
 
   {# Menu id (used both by the trigger's aria-controls and the menu
@@ -307,49 +473,45 @@
            Still no RUNTIME-state badge here; state is not a Skill
            concept. #}
         {% if isV2 %}
-          {# ── Version B lead: object tile + title stack ──────────
-             Figma 11194:24307. The tile is a 32-px indigo rounded
-             square carrying a white glyph, and the title stack beside
-             it holds the name/badge row over the object stamp.
+          {# ── Version B heading: name over an attribute line ─────
+             Figma 11194:24307. The name owns its line, and the facts
+             that Version A spreads across a badge beside the name and
+             a chip on the far right collapse into one 10-px muted line
+             directly beneath it: agent • referred-skills.
 
-             The tile is `aria-hidden`: it is a type marker for a list
-             where every row is the same type, so announcing it would
-             add one identical word per row. The glyph is the asset
-             Figma exports (committed under /assets/images/, since it
-             is not an SLDS sprite icon) and is sized explicitly in
-             CSS — the file ships `preserveAspectRatio="none"`, so a
-             box with the wrong aspect would visibly stretch it.
+             The heading wrapper exists to hold the name and the
+             attribute line as one unit with NO gap between them
+             (their leading does the separating, per Figma), so the
+             4-px gap the body stack carries applies only between this
+             block and the description below it.
 
-             The stamp's cloud comes from the SLDS utility sprite this
-             prototype already loads (`rowMeta.object.icon`) rather
-             than from a second exported asset: Figma's node IS that
-             SLDS icon, so the sprite is the same glyph by
-             provenance. #}
-          <span class="seller-home__skill-lead">
-            <span class="seller-home__skill-object-tile" aria-hidden="true">
-              <img
-                class="seller-home__skill-object-tile-glyph"
-                src="/assets/images/skill-object-glyph.svg"
-                alt=""
-                width="18"
-                height="17"
-              />
-            </span>
+             The agent is plain text here rather than the tinted pill
+             Version A uses — same fact, different treatment per Figma,
+             and it means the line reads as one phrase instead of a
+             badge plus a chip. It is already announced through the
+             row's aria-label, so nothing here is announced twice.
 
-            <span class="seller-home__skill-lead-text">
-              {{ renderSkillTitleRow(skill, agent) }}
+             The bullet is `aria-hidden` and each half is independently
+             gated, so the separator can never end up leading or
+             trailing. #}
+          <span class="seller-home__skill-heading">
+            <span class="seller-home__skill-title">{{ skill.name }}</span>
 
-              {% if rowMeta and rowMeta.object and rowMeta.object.label %}
-                <span class="seller-home__skill-source">
-                  {% if rowMeta.object.icon %}
-                    <svg class="seller-home__skill-source-icon" aria-hidden="true" focusable="false">
-                      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ rowMeta.object.icon }}"></use>
-                    </svg>
-                  {% endif %}
-                  <span class="seller-home__skill-source-label">{{ rowMeta.object.label }}</span>
-                </span>
-              {% endif %}
-            </span>
+            {% if agent or hasConnectedMeta %}
+              <span class="seller-home__skill-source">
+                {% if agent %}
+                  <span class="seller-home__skill-source-label">{{ agent.label }}</span>
+                {% endif %}
+
+                {% if agent and hasConnectedMeta %}
+                  <span class="seller-home__skill-source-separator" aria-hidden="true">•</span>
+                {% endif %}
+
+                {% if hasConnectedMeta %}
+                  {{ renderSkillUses(skill, connectedSkillCount, usesPopoverId, "top-left") }}
+                {% endif %}
+              </span>
+            {% endif %}
           </span>
         {% else %}
           {# Version A: the title row is the first line of the stack,
@@ -369,113 +531,28 @@
           title="{{ skill.description }}"
         >{{ skill.description }}</p>
 
-        {% if hasMeta %}
-          {# ── Version B footer: author + last edit ───────────────
-             Two label/value pairs split by a bullet. Labels are
-             muted, values are near-black, per Figma — the pair reads
-             as one phrase, so the label deliberately does NOT get its
-             own colon or bold treatment.
-
-             The bullet is `aria-hidden` and the whole footer is
-             already restated in the anchor's aria-label, so nothing
-             here is announced twice or announced as punctuation. Each
-             half is independently gated, so the separator can never
-             end up leading or trailing. #}
-          <span class="seller-home__skill-meta">
-            {% if ownerName %}
-              <span class="seller-home__skill-meta-item">
-                <span class="seller-home__skill-meta-label">{{ rowMeta.ownerLabel or "From" }}</span>
-                <span class="seller-home__skill-meta-value">{{ ownerName }}</span>
-              </span>
-            {% endif %}
-
-            {% if ownerName and editedWhen %}
-              <span class="seller-home__skill-meta-separator" aria-hidden="true">•</span>
-            {% endif %}
-
-            {% if editedWhen %}
-              <span class="seller-home__skill-meta-item">
-                <span class="seller-home__skill-meta-label">{{ rowMeta.editedLabel or "Edited" }}</span>
-                <span class="seller-home__skill-meta-value">{{ editedWhen }}</span>
-              </span>
-            {% endif %}
-          </span>
-        {% endif %}
       </div>
 
-      {# ── Right-anchored meta cluster ─────────────────────────
-         Optional "Uses N other skills" chip. Gated by a non-empty
-         `skill.connectedSkills` array; the count is derived from
-         `.length` (never hard-coded) and the singular / plural
-         label flips automatically at N == 1. #}
-      {% set connectedSkillCount = (skill.connectedSkills or []) | length %}
-      {% set hasConnectedMeta    = connectedSkillCount > 0 %}
-      {% if hasConnectedMeta %}
-        {% set usesPopoverId = "skill-" ~ skill.id ~ "-uses-popover" %}
-        {# Trigger + popover wrapper.
-           ------------------------------------------------
-           The wrapper is `position: relative` so the popover can
-           absolute-position off the trigger without needing an
-           offset library.
-
-           Trigger is a `<span>` — the whole row is already inside
-           an `<a>`, and HTML forbids interactive descendants of
-           an anchor. We deliberately make it keyboard-focusable
-           (`tabindex="0"`) so the popover can also open on Tab,
-           per spec ("Open on hover and keyboard focus"). The
-           nested tabindex is a minor spec caveat (validators
-           flag it, browsers render it), but the alternative —
-           restructuring the row so the trigger sits as a sibling
-           of the anchor — would be a disproportionate refactor
-           for a prototype affordance. The WAI-ARIA "tooltip"
-           pattern (trigger + `aria-describedby` → element with
-           `role="tooltip"`) still resolves correctly. #}
-        <span class="seller-home__skill-uses-wrap">
-          <span
-            class="seller-home__skill-uses-link"
-            data-sh-skill-uses
-            tabindex="0"
-            aria-describedby="{{ usesPopoverId }}"
-          >Referred {{ connectedSkillCount }} other skill{% if connectedSkillCount != 1 %}s{% endif %}</span>
-
-          {# SLDS 2 popover shell (`.slds-popover` +
-             `.slds-popover__body`) so we inherit the component's
-             border, radius, elevation, and inner padding directly
-             from SLDS design tokens. `role="tooltip"` matches the
-             information-only nature of the disclosure. `slds-
-             nubbin_top-right` positions the arrow at the top-
-             right so it visually points UP-AND-LEFT toward the
-             trigger when the popover hangs below-and-right of
-             the link.
-
-             `hidden` is authoritative — the JS controller toggles
-             it via `element.hidden = …`. Nothing inside is
-             focusable, so no focus trap needed; hover / focus of
-             the trigger drives open/close entirely. #}
-          <div
-            class="slds-popover slds-nubbin_top-right seller-home__skill-uses-popover"
-            role="tooltip"
-            id="{{ usesPopoverId }}"
-            data-sh-skill-uses-popover
-            hidden
-          >
-            <div class="slds-popover__body seller-home__skill-uses-popover-body">
-              <p class="seller-home__skill-uses-popover-title">This skill uses</p>
-              <ul class="seller-home__skill-uses-popover-list">
-                {% for sub in skill.connectedSkills %}
-                  <li class="seller-home__skill-uses-popover-item">{{ sub.name }}</li>
-                {% endfor %}
-              </ul>
-            </div>
-          </div>
-        </span>
+      {# ── Right-anchored meta cluster (Version A only) ────────
+         The "Referred N other skills" disclosure. Version B renders
+         the same macro inside its attribute line under the skill
+         name instead, so this slot is empty there and the chevron
+         becomes the row's only trailing element. #}
+      {% if hasConnectedMeta and not isV2 %}
+        {{ renderSkillUses(skill, connectedSkillCount, usesPopoverId, "top-right") }}
       {% endif %}
 
       {# Trailing chevron — HIDDEN by default; revealed via CSS on
          hover / focus-within / is-menu-open of the <li> wrapper.
          Rendered on linked rows only; unlinked / inert rows ship
-         no drill-in glyph so the affordance can't mis-signal. #}
-      {% if isLinked %}
+         no drill-in glyph so the affordance can't mis-signal.
+
+         Version A only: Version B fills that right slot with the
+         action cluster below, and a chevron behind those buttons would
+         be a second drill-in signal competing with them. The row
+         itself is still the click target there — only the glyph is
+         gone. #}
+      {% if isLinked and not isV2 %}
         <span class="seller-home__skill-chevron" aria-hidden="true">
           <svg class="seller-home__skill-chevron-glyph" focusable="false">
             <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
@@ -484,78 +561,51 @@
       {% endif %}
     {% if isLinked %}</a>{% else %}</div>{% endif %}
 
-    {# ── Overflow menu ────────────────────────────────────────────
-       SIBLING of the anchor. Absolute-positioned via home.scss
-       (right side, z-index above the anchor) so the trigger sits
-       on top of the row visually while the anchor still receives
-       clicks everywhere else. `data-sh-skill-stop` marks the whole
-       menu container as an "inside" zone so the outside-click
-       dismisser doesn't fire on trigger / list clicks.
+    {% if isV2 %}
+      {# ── Version B action cluster ──────────────────────────────
+         Figma 11194:24333: a neutral "Use Skill" button and a bare
+         kebab, 8 px apart, vertically centered at the card's right
+         edge. Both are real <button>s, so the cluster is a
+         SIBLING of the anchor and absolute-positions on top of it —
+         the same escape hatch Version A's kebab has always used,
+         because HTML forbids interactive descendants of an <a>.
 
-       The menu button + list are always rendered but hidden by
-       default; CSS reveals the trigger on hover / focus-within /
-       menu-open. Skipped entirely when the skill has zero
-       applicable actions so we never render an empty popover. #}
-    {% if allowedActions | length %}
-      <div
-        class="seller-home__skill-menu"
-        data-sh-skill-menu
-        data-sh-skill-stop
-      >
-        <button
-          type="button"
-          class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger"
-          data-sh-skill-menu-trigger
-          aria-haspopup="menu"
-          aria-expanded="false"
-          aria-controls="{{ menuId }}"
-          aria-label="More actions for {{ skill.name }}"
-          title="More actions"
-        >
-          <svg class="slds-button__icon" aria-hidden="true">
-            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-          </svg>
-          <span class="slds-assistive-text">More actions</span>
-        </button>
+         Clicks here never reach the anchor (it is not an ancestor), so
+         no `stopPropagation` is needed to protect row activation.
 
-        <div
-          class="seller-home__skill-menu-list"
-          id="{{ menuId }}"
-          role="menu"
-          aria-label="{{ skill.name }} actions"
-          data-sh-skill-menu-list
-          hidden
-        >
-          <ul class="seller-home__skill-menu-items" role="none">
-            {% for action in allowedActions %}
-              {# Destructive actions get a modifier class so the
-                 label / icon can pick up a red foreground. Delete
-                 is currently the only destructive action; the
-                 pattern generalizes if others land later. #}
-              {% set isDestructive = action.id == "delete" %}
-              <li
-                role="none"
-                class="seller-home__skill-menu-row{% if isDestructive %} seller-home__skill-menu-row--destructive{% endif %}"
-              >
-                <button
-                  type="button"
-                  class="seller-home__skill-menu-item{% if isDestructive %} seller-home__skill-menu-item--destructive{% endif %}"
-                  role="menuitem"
-                  tabindex="-1"
-                  data-sh-skill-action="{{ action.id }}"
-                >
-                  {% if action.icon %}
-                    <svg class="seller-home__skill-menu-item-icon" aria-hidden="true">
-                      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
-                    </svg>
-                  {% endif %}
-                  <span class="seller-home__skill-menu-item-label">{{ action.label }}</span>
-                </button>
-              </li>
-            {% endfor %}
-          </ul>
+         "Use Skill" routes through the SAME `data-sh-skill-action`
+         hook the menu items use, so `skillOverflowController` picks it
+         up with no new binding and `skillActionRouter` handles it in
+         one switch case. `useAction.id` comes from skills.json rather
+         than being hard-coded here, so the button and the router agree
+         through data. #}
+      {% if useAction %}
+        <div class="seller-home__skill-actions">
+          <button
+            type="button"
+            class="slds-button slds-button_neutral seller-home__skill-action-use"
+            data-sh-skill-action="{{ useAction.id }}"
+            aria-label="{{ useAction.assistiveText | replace("{name}", skill.name) }}"
+            title="{{ useAction.assistiveText | replace("{name}", skill.name) }}"
+          >{{ useAction.label }}</button>
+
+          {% if allowedActions | length %}
+            {{ renderSkillMenu(skill, menuId, allowedActions, "v2") }}
+          {% endif %}
         </div>
-      </div>
+      {% elif allowedActions | length %}
+        {# No `useAction` copy authored — the kebab still ships, and the
+           cluster degrades to a single button. #}
+        <div class="seller-home__skill-actions">
+          {{ renderSkillMenu(skill, menuId, allowedActions, "v2") }}
+        </div>
+      {% endif %}
+    {% elif allowedActions | length %}
+      {# Version A's bare kebab: absolute-positioned against the <li>,
+         revealed on hover / focus-within / menu-open. Skipped entirely
+         when the skill has zero applicable actions so we never render
+         an empty popover. #}
+      {{ renderSkillMenu(skill, menuId, allowedActions, "v1") }}
     {% endif %}
   </li>
 {% endmacro %}
@@ -575,10 +625,11 @@
   for the card grid and the attribute name was kept when the list
   refactor landed to avoid churning every controller reference.
 
-  `skillListVariant` + `rowMeta` come from the including body partial
-  (`_skills_body_v1.html` / `_skills_body_v2.html`) and pick the row's
-  body layout. Both are undefined on any other surface that includes
-  this file, which lands on Version A's row — the historical default.
+  `skillListVariant` comes from the including body partial
+  (`_skills_body_v1.html` / `_skills_body_v2.html`) and picks the row's
+  body layout; `useAction` carries the copy for Version B's "Use Skill"
+  button. Both are undefined on any other surface that includes this
+  file, which lands on Version A's row — the historical default.
 #}
 <ul
   class="seller-home__skill-list"
@@ -586,7 +637,7 @@
 >
   {% for skill in skills %}
     {% if not (skill.hidden == true) %}
-      {{ renderSkillRow(skill, rowActions, agentLibrary, skillListVariant, rowMeta) }}
+      {{ renderSkillRow(skill, rowActions, agentLibrary, skillListVariant, useAction) }}
     {% endif %}
   {% endfor %}
 </ul>
