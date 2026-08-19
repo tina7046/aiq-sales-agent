@@ -1605,8 +1605,14 @@ main.app-wrapper {
 
   padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
   border-radius: 0 0 1rem 1rem;
-  overflow: hidden;
   background: var(--slds-g-color-surface-container-1, #ffffff);
+
+  // No `overflow: hidden` here. It used to be, to keep the white
+  // background inside the rounded bottom corners — but `border-radius`
+  // already clips an element's own background and border; overflow only
+  // governs descendants, and every child sits inside the padding. All
+  // it actually did was clip the agent menu, which opens downward out
+  // of this row.
 }
 
 .seller-home__composer-slot {
@@ -1689,6 +1695,287 @@ main.app-wrapper {
   -webkit-mask: var(--sh-composer-icon-image) center / contain no-repeat;
   mask: var(--sh-composer-icon-image) center / contain no-repeat;
   pointer-events: none;
+}
+
+// ── Composer menu trigger badge ────────────────────────────────────
+// A `<button>` wearing `.slds-badge`, so it needs the resets SLDS'
+// `<span>` badge never does.
+.seller-home__composer-badge {
+  appearance: none;
+  margin: 0;
+  cursor: pointer;
+  font-family: inherit;
+
+  // Badges are a size below the toolbar's buttons, so match their box
+  // rather than sit short next to them.
+  min-block-size: 1.5rem;
+
+  transition: background-color 120ms ease;
+
+  // `slds-badge_lightest` sets the resting background through a custom
+  // property, so hover goes through the same one — setting
+  // `background-color` directly here would win over the badge and
+  // leave the rest state and the hover state configured two ways.
+  &:hover {
+    --slds-c-badge-color-background: var(--slds-g-color-surface-container-2, #f3f3f3);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
+    outline-offset: 2px;
+  }
+}
+
+// Matches the chevron opposite it and the same artwork in the menu
+// rows, so the badge's two ends read as a pair.
+.seller-home__composer-badge-icon {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seller-home__composer-badge {
+    transition: none;
+  }
+}
+
+// ── Composer action menu ───────────────────────────────────────────
+// The dropdown behind a toolbar button that picks one of a set — the
+// agent chooser today. Positioning comes from SLDS
+// (`slds-dropdown-trigger`, `slds-dropdown`); the surface and the rows
+// are the BB - AOP slash menu's (`.slash-suggestion` in its aop.scss),
+// so the list and the detail panel beside it read as one component.
+//
+// Values from the source: `radius-border-3`, a 1px border, white, and
+// the same two-layer shadow the detail panel carries. Width is SLDS'
+// `slds-dropdown_small` on the element rather than a number here, so it
+// tracks the platform's sizing scale.
+.seller-home__composer-menu-list {
+  padding: var(--slds-g-spacing-1, 0.25rem);
+
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  // SLDS shows and hides its dropdowns with `.slds-is-open` on the
+  // trigger. This one uses the `hidden` attribute as the single source
+  // of truth, the way the feed's menus do, so the JS has one thing to
+  // set and there's no class and attribute to keep agreeing.
+  //
+  // Which means overriding all three properties SLDS hides a dropdown
+  // with — `display` from `.slds-dropdown-trigger_click .slds-dropdown`,
+  // and `visibility` / `opacity` from `.slds-dropdown-trigger
+  // .slds-dropdown`. Both are only undone by `.slds-is-open`, except
+  // that the second is also undone on `:hover`, which is enough to make
+  // a menu missing this rule look fine right up until the pointer
+  // leaves and every row inside it stops being focusable.
+  //
+  // The descendant selector is here to clear their specificity rather
+  // than to scope anything, so `[hidden]` is folded into the same rule
+  // with `:not()`: a separate `&[hidden]` rule would tie and leave
+  // which one wins up to stylesheet order.
+  .slds-dropdown-trigger_click &:not([hidden]) {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+  }
+}
+
+.seller-home__composer-menu-item {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  margin: 0;
+  width: 100%;
+  cursor: pointer;
+  text-align: start;
+
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  padding: var(--slds-g-spacing-2, 0.5rem);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+
+  transition: background-color 120ms ease;
+
+  // Brand tint rather than the neutral SLDS menus use, as in the source.
+  &:hover,
+  &:focus-visible {
+    background: var(--slds-g-color-brand-base-95, #eef4ff);
+    outline: none;
+  }
+
+  &:focus-visible {
+    box-shadow: inset 3px 0 0 var(--slds-g-color-accent-2, #0250d9);
+  }
+}
+
+// Full-colour artwork standing on its own — no disc behind it, unlike
+// the source, which sets a monochrome glyph in a coloured circle.
+.seller-home__composer-menu-icon {
+  flex-shrink: 0;
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+// `min-width: 0` so a long agent name truncates instead of pushing the
+// check off the end of the row.
+.seller-home__composer-menu-label {
+  flex: 1;
+  min-width: 0;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.1875rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// Reserved with `visibility`, not `display`, so the row's height and
+// the body's width don't change when the selection moves between items.
+.seller-home__composer-menu-check {
+  flex-shrink: 0;
+  inline-size: 1rem;
+  block-size: 1rem;
+  fill: var(--slds-g-color-accent-2, #0250d9);
+  visibility: hidden;
+}
+
+[aria-checked="true"] > .seller-home__composer-menu-check {
+  visibility: visible;
+}
+
+// ── Composer menu detail panel ─────────────────────────────────────
+// Ported from the BB - AOP slash menu (`.slash-suggestion-detail` in
+// its aop.scss): hovering a row opens a panel to the right of the list,
+// aligned to that row's top edge. Widths, the two-layer shadow and the
+// grey header are the source's values.
+//
+// `position: fixed` is the source's choice and worth keeping — it takes
+// the panel out of every ancestor's overflow, which is what clipped the
+// dropdown itself earlier. The trade is that it doesn't follow a
+// scrolling page, so home.js closes the menu on scroll.
+//
+// JS writes `top` and `left`; everything else is here.
+.seller-home__composer-menu-detail {
+  position: fixed;
+  z-index: 7001; // one above `.slds-dropdown`, so it sits over the list
+  width: 24rem;
+
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  cursor: default;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.seller-home__composer-menu-detail-header {
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  background: var(--slds-g-color-neutral-base-95, #f3f3f3);
+  border-radius: var(--slds-g-radius-border-3, 0.75rem)
+    var(--slds-g-radius-border-3, 0.75rem) 0 0;
+}
+
+.seller-home__composer-menu-detail-body {
+  padding: var(--slds-g-spacing-3, 0.75rem);
+}
+
+.seller-home__composer-menu-detail-title {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.3;
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+.seller-home__composer-menu-detail-text {
+  margin: var(--slds-g-spacing-1, 0.25rem) 0 0;
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.4;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// The dashed rule is the source's: it reads as "a thing you could type"
+// rather than a thing that already exists.
+.seller-home__composer-menu-example {
+  margin: var(--slds-g-spacing-2, 0.5rem) 0 0;
+  padding: var(--slds-g-spacing-2, 0.5rem);
+
+  border: 1px dashed var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-1, 0.25rem);
+
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.4;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+// Tab bar for records that carry `tabs` instead of a flat `examples`
+// list. Neither agent uses it today; it's here so a tabbed record works
+// without a template change, which is how the source behaves.
+.seller-home__composer-menu-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+  margin-top: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.seller-home__composer-menu-tab {
+  appearance: none;
+  border: 0;
+  margin: 0;
+  cursor: pointer;
+
+  padding: 0.125rem var(--slds-g-spacing-2, 0.5rem);
+  border-radius: var(--slds-g-radius-border-pill, 15rem);
+  background: transparent;
+
+  font-family: inherit;
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  line-height: 1.125rem;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+
+  transition: background-color 120ms ease, color 120ms ease;
+
+  &:hover {
+    background: var(--slds-g-color-surface-container-2, #f3f3f3);
+  }
+
+  &[aria-selected="true"] {
+    background: var(--slds-g-color-surface-container-3, #e5e5e5);
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+    font-weight: var(--slds-g-font-weight-6, 590);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seller-home__composer-menu-item,
+  .seller-home__composer-menu-tab {
+    transition: none;
+  }
 }
 
 // Send-specific tweak. When the send button becomes enabled (user
@@ -2119,6 +2406,13 @@ main.app-wrapper {
   --sh-status-size: 1.25rem;
   --sh-status-glyph: 1rem;
 
+  // The completed dot, sized on its own. `#circle` is a solid disc
+  // filling 92% of its viewBox, where the rest of the set are line icons
+  // with margin built in, so at a shared box it lands far heavier than
+  // they do. 0.75rem puts the disc at ~11px against their 16px slot,
+  // which is the weight the checkmark used to carry.
+  --sh-status-dot: 0.75rem;
+
   position: relative; // lifts it above the row's stretched-link overlay
   z-index: 2;
 
@@ -2199,6 +2493,19 @@ main.app-wrapper {
   animation: sh-spin 0.85s linear infinite;
 }
 
+// Off the shared glyph box and onto its own. Ties with the base rule on
+// specificity, so it has to stay below it.
+//
+// Resizing rather than scaling: `transform` is the icon-swap's, and a
+// scale here would be overwritten the moment the glyph is raised or
+// cleared. Staying out of that also keeps the dot centred for free —
+// the button centres these through its flex alignment, so a different
+// box re-centres itself.
+.seller-home__feed-item-status-glyph--circle {
+  inline-size: var(--sh-status-dot);
+  block-size: var(--sh-status-dot);
+}
+
 // The two ends of the swap. Every rule that raises or clears a glyph
 // sets all three properties, so a glyph hidden on hover picks the blur
 // and scale back up rather than only fading.
@@ -2222,7 +2529,7 @@ $sh-feed-states: completed, running, scheduled, paused, failed;
 // state offers pause except the two where it isn't the obvious intent —
 // a paused row offers play, and a failed one offers retry.
 $sh-feed-status-rest: (
-  completed: "check",
+  completed: "circle",
   running:   "spinner",
   scheduled: "clock",
   paused:    "pause",
@@ -2243,9 +2550,18 @@ $sh-feed-status-action: (
   }
 }
 
-// The one glyph that carries colour. Scoped to the resting glyph so the
-// hover swap to the retry arrow returns to the normal grey — the error
-// badge below the title is already saying it in words by then.
+// The two glyphs that carry colour, both scoped to the resting glyph so
+// the hover swap to pause or retry returns to the normal grey — by then
+// the button is describing an action, not a state.
+//
+// The dot is a palette green rather than the success token its meaning
+// would suggest: `success-base-*` resolves teal in the agentic theme,
+// which next to the running spinner's blue reads as another shade of the
+// same thing rather than "done".
+[data-sh-feed-state="completed"] .seller-home__feed-item-status-glyph--circle {
+  fill: var(--slds-g-color-palette-green-60, #3ba755);
+}
+
 [data-sh-feed-state="failed"] .seller-home__feed-item-status-glyph--warning {
   fill: var(--slds-g-color-error-base-40, #ea001e);
 }

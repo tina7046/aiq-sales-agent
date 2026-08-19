@@ -1,0 +1,212 @@
+{% extends "_template.html" %}
+
+{#
+  Agent chooser — secondary popover lab
+  =====================================================================
+  Served at /composer_detail.html. A scratchpad for redesigning the
+  detail panel that opens to the right of the agent menu.
+
+  UNLIKE agent_at_work.html, this page is a FORK, on purpose. That page
+  renders the real feed so it can't drift; this one carries its own copy
+  of the panel so the design can be pulled apart without touching what
+  Seller Home ships. The cost is the usual one: the moment the real panel
+  changes, this stops being an accurate starting point. It's meant to be
+  short-lived — redesign here, port, delete.
+
+  PORTING BACK is a rename. Every class is the shipping one with the
+  block swapped, so the port is find-and-replace plus moving the rules:
+
+    lab-detail          → seller-home__composer-menu-detail
+    lab-detail-header   → seller-home__composer-menu-detail-header
+    lab-detail-body     → seller-home__composer-menu-detail-body
+    lab-detail-title    → seller-home__composer-menu-detail-title
+    lab-detail-text     → seller-home__composer-menu-detail-text
+    lab-example         → seller-home__composer-menu-example
+    lab-tabs            → seller-home__composer-menu-tabs
+    lab-tab             → seller-home__composer-menu-tab
+
+  Markup lands in `_home_composer.html` (the `composerActionMenu` macro,
+  in the per-item `{% raw %}{% for %}{% endraw %}` after the list), styles in `home.scss`
+  under "Composer menu detail panel". Copy in `data/index.json`, on each
+  agent's `useCase` / `examples`.
+
+  Anything prefixed `lab-page` or `lab-menu` is furniture for this page
+  and does NOT get ported — the menu beside the panel is a still of the
+  real one, here only so the panel is judged at the right proportions
+  rather than floating on its own.
+
+  Two things the real panel does that this one deliberately doesn't:
+
+    • `position: fixed`, with `left` / `top` written by home.js from the
+      hovered row. Here it sits in flow so it can be seen at rest.
+    • Tab switching, which is a delegated click handler in home.js. The
+      tabs below are static; the second variant shows a non-first tab
+      selected so that state is visible too.
+#}
+
+{% block styles %}
+<link rel="stylesheet" href="/styles/composer_detail.css" />
+{% endblock %}
+
+{% block content %}
+
+{# A still of the agent menu, for scale. Not the real component — see the
+   note above. Class names are `lab-menu*` precisely so nothing here can
+   be mistaken for something to port. #}
+{% macro labMenu(active) %}
+  <div class="lab-menu">
+    <button type="button" class="lab-menu-item {{ 'is-active' if active == 'hunter' }}">
+      <img class="lab-menu-icon" src="/assets/images/agent-icons/hunter.svg" alt="" />
+      <span class="lab-menu-label">Hunter Sales Agent</span>
+      <svg class="lab-menu-check" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+      </svg>
+    </button>
+    <button type="button" class="lab-menu-item {{ 'is-active' if active == 'coworker' }}">
+      <img class="lab-menu-icon" src="/assets/images/agent-icons/coworker.svg" alt="" />
+      <span class="lab-menu-label">Coworker Agent</span>
+    </button>
+  </div>
+{% endmacro %}
+
+{# ── The panel ──────────────────────────────────────────────────────
+   This is the thing being designed. Structure matches the shipping
+   markup one-for-one; only the block name differs. #}
+{% macro labDetail(useCase, examples, tabs, activeTab) %}
+  <div class="lab-detail">
+    <div class="lab-detail-header">
+      <p class="lab-detail-title">Use case</p>
+      <p class="lab-detail-text">{{ useCase }}</p>
+    </div>
+
+    {% if tabs %}
+      <div class="lab-detail-body">
+        <p class="lab-detail-title">Try an example</p>
+
+        <div class="lab-tabs" role="tablist">
+          {% for tab in tabs %}
+            <button
+              type="button"
+              role="tab"
+              class="lab-tab"
+              aria-selected="{{ 'true' if loop.index0 == activeTab else 'false' }}"
+            >{{ tab.label }}</button>
+          {% endfor %}
+        </div>
+
+        {% for tab in tabs %}
+          <p class="lab-example"{% if loop.index0 != activeTab %} hidden{% endif %}>{{ tab.example }}</p>
+        {% endfor %}
+      </div>
+    {% elif examples %}
+      <div class="lab-detail-body">
+        <p class="lab-detail-title">Try an example</p>
+        {% for example in examples %}
+          <p class="lab-example">{{ example }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{% set coworkerUseCase = "A general assistant for everything around the selling — summarising, drafting, scheduling and answering questions about internal docs." %}
+{% set coworkerExamples = [
+  "Summarise my meetings from yesterday",
+  "Draft a note to the team about the Q3 launch",
+  "What does our security review process require?"
+] %}
+{% set hunterUseCase = "Built for pipeline work — prospecting, account research, outreach and deal follow-up. Knows your territory, quota and open opportunities." %}
+{% set hunterExamples = [
+  "Find 20 prospects at accounts like Northwind",
+  "Draft follow-ups for every deal that went quiet this week",
+  "What are the top 3 things I must know to make my number?"
+] %}
+
+<div class="lab-page">
+  <header class="lab-page__head">
+    <h1 class="lab-page__title">Agent chooser — secondary popover</h1>
+    <p class="lab-page__note">
+      Scratchpad. Edit <code>src/views/composer_detail.html</code> and
+      <code>src/styles/composer_detail.scss</code>, then port to
+      <code>_home_composer.html</code> and <code>home.scss</code> by
+      renaming <code>lab-detail*</code> to
+      <code>seller-home__composer-menu-detail*</code>. The page's own
+      chrome is <code>lab-page*</code> and <code>lab-menu*</code>; none
+      of that gets ported.
+    </p>
+  </header>
+
+  {# ── In context ─────────────────────────────────────────────────
+     The pairing that matters: a 240px menu with a 24rem panel 8px off
+     its right edge, top-aligned to the hovered row. Judge the design
+     here first — on its own the panel always looks fine. #}
+  <section class="lab-page__section">
+    <h2 class="lab-page__section-title">In context</h2>
+    <p class="lab-page__section-note">
+      Menu and panel at their real sizes and offset, panel aligned to the
+      second row the way hovering Coworker leaves it.
+    </p>
+
+    <div class="lab-page__stage">
+      {{ labMenu('coworker') }}
+      <div class="lab-page__stage-detail">
+        {{ labDetail(coworkerUseCase, coworkerExamples) }}
+      </div>
+    </div>
+  </section>
+
+  {# ── Variants ───────────────────────────────────────────────────
+     Both shapes the data can take, side by side and at rest. #}
+  <section class="lab-page__section">
+    <h2 class="lab-page__section-title">Shapes</h2>
+    <p class="lab-page__section-note">
+      Left is what ships — a flat <code>examples</code> list. Right is the
+      <code>tabs</code> alternative, which no agent uses yet but the
+      template already supports.
+    </p>
+
+    <div class="lab-page__row">
+      {{ labDetail(hunterUseCase, hunterExamples) }}
+
+      {{ labDetail(
+        hunterUseCase,
+        null,
+        [
+          { "label": "Prospect", "example": "Find 20 prospects at accounts like Northwind" },
+          { "label": "Follow up", "example": "Draft follow-ups for every deal that went quiet this week" },
+          { "label": "Plan", "example": "What are the top 3 things I must know to make my number?" }
+        ],
+        1
+      ) }}
+    </div>
+  </section>
+
+  {# ── Edges ──────────────────────────────────────────────────────
+     The two cases that break a panel design: nothing to show, and far
+     more than expected. Worth keeping an eye on while iterating. #}
+  <section class="lab-page__section">
+    <h2 class="lab-page__section-title">Edges</h2>
+    <p class="lab-page__section-note">
+      Use case with no examples, and a long one with six — the shortest
+      and tallest the panel gets.
+    </p>
+
+    <div class="lab-page__row">
+      {{ labDetail("Handles the everyday admin around selling.", null) }}
+
+      {{ labDetail(
+        "Built for pipeline work — prospecting, account research, outreach and deal follow-up. Knows your territory, your quota, every open opportunity and the full history of who has touched each one, so it can pick up a thread rather than start from nothing.",
+        [
+          "Find 20 prospects at accounts like Northwind",
+          "Draft follow-ups for every deal that went quiet this week",
+          "What are the top 3 things I must know to make my number?",
+          "Which opportunities slipped out of this quarter and why",
+          "Summarise everything that happened on Acme since Tuesday",
+          "Who else at Initech should I be talking to"
+        ]
+      ) }}
+    </div>
+  </section>
+</div>
+
+{% endblock %}

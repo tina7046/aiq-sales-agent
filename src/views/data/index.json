@@ -305,7 +305,70 @@
       "start": [
         { "id": "add",       "label": "Add",       "icon": "add" },
         { "id": "skills",    "label": "Skills",    "iconImage": "/assets/images/nav-icons/skills.png" },
-        { "id": "all_tools", "label": "All tools", "icon": "all" }
+        { "id": "all_tools", "label": "All tools", "icon": "all" },
+        // An action with a `menu` renders as a dropdown trigger instead
+        // of a plain button — see `composerAction` in _home_composer.html.
+        // Every other action here has no `menu` and is unaffected.
+        //
+        // Single-select: exactly one item carries `selected`, and the
+        // chosen one is marked with a check on the right. `icon` is a
+        // STANDARD sprite id (the coloured tiles), unlike the toolbar
+        // buttons above, which are utility sprites.
+        {
+          "id": "agent",
+          "label": "Agent",
+          "icon": "agent_astro",
+          // Hovering an item opens a detail panel to its right, ported
+          // from the BB - AOP slash menu. `useCase` is its header; the
+          // body lists what to try.
+          //
+          // Two shapes for that body, matching the source: `examples`
+          // is a flat list, `tabs` is a set of { label, example } the
+          // panel puts behind a tab bar. An item with neither renders
+          // the use case alone.
+          //
+          // `iconImage` rather than a sprite id: these are full-colour
+          // illustrations with their own palettes, so they can't be
+          // recoloured or masked the way the toolbar's glyphs are. They
+          // stay separate files and go in as <img> — both share generic
+          // `.cls-1`-style class names internally, which would collide
+          // if the two were inlined into the page together.
+          //
+          // `badgeLabel` is the short form the toolbar badge wears;
+          // `label` is the full name, which stays in the menu and in
+          // the badge's accessible name so the trigger still says which
+          // agent it means.
+          "menu": {
+            "label": "Choose an agent",
+            "items": [
+              {
+                "id": "hunter",
+                "label": "Hunter Sales Agent",
+                "badgeLabel": "Hunter",
+                "iconImage": "/assets/images/agent-icons/hunter.svg",
+                "selected": true,
+                "useCase": "Built for pipeline work — prospecting, account research, outreach and deal follow-up. Knows your territory, quota and open opportunities.",
+                "examples": [
+                  "Find 20 prospects at accounts like Northwind",
+                  "Draft follow-ups for every deal that went quiet this week",
+                  "What are the top 3 things I must know to make my number?"
+                ]
+              },
+              {
+                "id": "coworker",
+                "label": "Coworker Agent",
+                "badgeLabel": "Coworker",
+                "iconImage": "/assets/images/agent-icons/coworker.svg",
+                "useCase": "A general assistant for everything around the selling — summarising, drafting, scheduling and answering questions about internal docs.",
+                "examples": [
+                  "Summarise my meetings from yesterday",
+                  "Draft a note to the team about the Q3 launch",
+                  "What does our security review process require?"
+                ]
+              }
+            ]
+          }
+        }
       ],
       "end": []
     }

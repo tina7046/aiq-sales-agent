@@ -88,7 +88,7 @@
           markup twice, because the two slots differed only in which array
           they walked and the icon branch would otherwise be written four
           times over. -#}
-      {% macro composerAction(action) %}
+      {% macro composerActionButton(action) %}
         <button
           type="button"
           class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn"
@@ -116,6 +116,202 @@
           {% endif %}
           <span class="slds-assistive-text">{{ action.label }}</span>
         </button>
+      {% endmacro %}
+
+      {#- An action with a `menu` becomes a dropdown trigger; everything
+          else is the bare button above.
+
+          `menuitemradio` rather than the listbox in the SLDS docs: this
+          is a menu hung off a toolbar button that picks one of a set,
+          not a form control, and radio semantics are what tell AT that
+          choosing one deselects the other. `aria-checked` is the single
+          source of truth — the check on the right is revealed off it in
+          CSS, so selecting is one attribute write per item.
+
+          The check sits after the body rather than before the label
+          (which is where the SLDS example puts it) so the row reads
+          icon, name, then state. -#}
+      {#- The trigger for a menu is a badge naming the current choice
+          rather than a bare icon, so the toolbar states which agent is
+          about to run instead of making the seller open the menu to
+          find out. home.js rewrites the label when the choice changes.
+
+          A `<button>` carrying `.slds-badge` rather than SLDS' usual
+          `<span>`: it opens a menu, so it has to be operable, and a
+          span with a click handler is not. The chevron on the right is
+          what marks it as one, since a badge otherwise reads as an
+          inert status chip; the agent's artwork sits on the left. -#}
+      {% macro composerActionBadge(action, menuId) %}
+        {%- set current = (action.menu.items | selectattr("selected") | first) or action.menu.items[0] -%}
+        <button
+          type="button"
+          class="slds-badge slds-badge_lightest seller-home__composer-badge"
+          data-sh-composer-action="{{ action.id }}"
+          title="{{ action.label }}"
+          aria-label="{{ action.label }}: {{ current.label }}"
+          aria-haspopup="menu"
+          aria-expanded="false"
+          aria-controls="{{ menuId }}"
+          data-sh-composer-menu-trigger
+        >
+          <span class="slds-badge__icon slds-badge__icon_left">
+            <img
+              class="seller-home__composer-badge-icon"
+              src="{{ current.iconImage }}"
+              alt=""
+              data-sh-composer-badge-icon
+            />
+          </span>
+          <span data-sh-composer-badge-label>{{ current.badgeLabel or current.label }}</span>
+          <span class="slds-badge__icon slds-badge__icon_right">
+            <span class="slds-icon_container slds-icon-utility-chevrondown slds-current-color">
+              <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevrondown"></use>
+              </svg>
+            </span>
+          </span>
+        </button>
+      {% endmacro %}
+
+      {% macro composerActionMenu(action) %}
+        {% set menuId = "seller-home-composer-" ~ action.id ~ "-menu" %}
+        {#- `data-slds-dropdown-manual` opts this trigger out of the
+            blanket dropdown binder in app.js, which otherwise flips
+            `.slds-is-open` on every click of a `.slds-button` inside a
+            `slds-dropdown-trigger_click`. home.js drives this menu from
+            the `hidden` attribute instead, and two owners for one piece
+            of state desync the moment anything closes the menu without
+            going through the trigger — picking an agent, say. The class
+            would still be set, so the next click on the button would
+            clear it and the menu would open with `display: none`. -#}
+        <div
+          class="slds-dropdown-trigger slds-dropdown-trigger_click seller-home__composer-menu"
+          data-slds-dropdown-manual
+          data-sh-composer-menu
+        >
+          {{ composerActionBadge(action, menuId) }}
+
+          <div
+            class="slds-dropdown slds-dropdown_left slds-dropdown_small seller-home__composer-menu-list"
+            id="{{ menuId }}"
+            role="menu"
+            aria-label="{{ action.menu.label }}"
+            data-sh-composer-menu-list
+            hidden
+          >
+            <ul class="slds-dropdown__list" role="none">
+              {% for item in action.menu.items %}
+                <li class="slds-dropdown__item" role="none">
+                  <button
+                    type="button"
+                    class="seller-home__composer-menu-item"
+                    role="menuitemradio"
+                    aria-checked="{{ 'true' if item.selected else 'false' }}"
+                    data-sh-composer-menu-item="{{ item.id }}"
+                    data-sh-composer-badge-text="{{ item.badgeLabel or item.label }}"
+                  >
+                    {#- Decorative: the label right next to it is the
+                        accessible name, so an alt here would only make
+                        a screen reader say it twice. -#}
+                    <img
+                      class="seller-home__composer-menu-icon"
+                      src="{{ item.iconImage }}"
+                      alt=""
+                    />
+
+                    <span class="seller-home__composer-menu-label">{{ item.label }}</span>
+
+                    {#- Always rendered, revealed by `aria-checked`. Keeps
+                        the row's width stable between states and leaves
+                        selecting as one attribute flip. -#}
+                    <svg class="seller-home__composer-menu-check" aria-hidden="true">
+                      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+                    </svg>
+                  </button>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+
+          {#- Detail panels — the list-plus-detail pattern ported from
+              the BB - AOP slash menu. Hovering (or arrowing to) an item
+              opens its panel to the right of the list.
+
+              One panel per item, rendered here rather than templated
+              into a single shared panel by JS the way the source does.
+              The source had to build strings because its copy lived in
+              a JS module; ours lives in the data, so leaving it in the
+              template keeps Nunjucks' escaping and gives the JS nothing
+              to do but show and place the right one.
+
+              Siblings of the dropdown, not children of it: `.slds-
+              dropdown` sets an identity `transform`, and any transform
+              makes an element the containing block for `position:
+              fixed` descendants, so a panel nested inside it would be
+              placed from the dropdown's top-left instead of the
+              viewport's. Still inside the trigger wrapper, which is
+              what keeps the outside-click check treating the panel as
+              part of the menu.
+
+              They don't inherit the list's `hidden` out here, so
+              home.js hides them whenever the menu closes. -#}
+          {% for item in action.menu.items %}
+            <div
+              class="seller-home__composer-menu-detail"
+              id="{{ menuId }}-{{ item.id }}-detail"
+              data-sh-composer-menu-detail="{{ item.id }}"
+              hidden
+            >
+              <div class="seller-home__composer-menu-detail-header">
+                <p class="seller-home__composer-menu-detail-title">Use case</p>
+                <p class="seller-home__composer-menu-detail-text">{{ item.useCase }}</p>
+              </div>
+
+              {#- Two shapes, as in the source: `tabs` puts each example
+                  behind a label, `examples` is a flat list. -#}
+              {% if item.tabs and item.tabs | length %}
+                <div class="seller-home__composer-menu-detail-body">
+                  <p class="seller-home__composer-menu-detail-title">Try an example</p>
+
+                  <div class="seller-home__composer-menu-tabs" role="tablist">
+                    {% for tab in item.tabs %}
+                      <button
+                        type="button"
+                        role="tab"
+                        class="seller-home__composer-menu-tab"
+                        aria-selected="{{ 'true' if loop.first else 'false' }}"
+                        data-sh-composer-menu-tab="{{ loop.index0 }}"
+                      >{{ tab.label }}</button>
+                    {% endfor %}
+                  </div>
+
+                  {% for tab in item.tabs %}
+                    <p
+                      class="seller-home__composer-menu-example"
+                      data-sh-composer-menu-tabpanel="{{ loop.index0 }}"
+                      {%- if not loop.first %} hidden{% endif %}
+                    >{{ tab.example }}</p>
+                  {% endfor %}
+                </div>
+              {% elif item.examples and item.examples | length %}
+                <div class="seller-home__composer-menu-detail-body">
+                  <p class="seller-home__composer-menu-detail-title">Try an example</p>
+                  {% for example in item.examples %}
+                    <p class="seller-home__composer-menu-example">{{ example }}</p>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% endmacro %}
+
+      {% macro composerAction(action) %}
+        {% if action.menu %}
+          {{ composerActionMenu(action) }}
+        {% else %}
+          {{ composerActionButton(action) }}
+        {% endif %}
       {% endmacro %}
 
       <div class="seller-home__composer-toolbar" role="toolbar" aria-label="Composer actions">
