@@ -1412,10 +1412,17 @@
         var badgeText = item.getAttribute('data-sh-composer-badge-text') || chosenName
         if (badgeLabel && badgeText) badgeLabel.textContent = badgeText
 
+        // The crop travels with the artwork: only the agents whose icon
+        // is a portrait are circled, so reading it off the row keeps the
+        // badge honest instead of the two deciding separately.
         var badgeIcon = itemTrigger.querySelector('[data-sh-composer-badge-icon]')
         var chosenIcon = item.querySelector('.seller-home__composer-menu-icon')
         if (badgeIcon && chosenIcon) {
           badgeIcon.setAttribute('src', chosenIcon.getAttribute('src'))
+          badgeIcon.classList.toggle(
+            'seller-home__composer-badge-icon--round',
+            chosenIcon.classList.contains('seller-home__composer-menu-icon--round')
+          )
         }
 
         // Which is why the accessible name keeps the full one: the
@@ -1500,30 +1507,6 @@
 
       var menu = closest(from, '[data-sh-composer-menu]')
       if (menu) scheduleHide(menu)
-    })
-
-    // Example tabs, for a record that carries `tabs` instead of a flat
-    // `examples` list. Neither agent does today.
-    composerRoot.addEventListener('click', function (event) {
-      var tab = closest(event.target, '[data-sh-composer-menu-tab]')
-      if (!tab) return
-
-      event.preventDefault()
-      event.stopPropagation()
-
-      var panel = closest(tab, '[data-sh-composer-menu-detail]')
-      var index = tab.getAttribute('data-sh-composer-menu-tab')
-      if (!panel) return
-
-      toArray(panel.querySelectorAll('[data-sh-composer-menu-tab]'))
-        .forEach(function (other) {
-          other.setAttribute('aria-selected', String(other === tab))
-        })
-
-      toArray(panel.querySelectorAll('[data-sh-composer-menu-tabpanel]'))
-        .forEach(function (example) {
-          example.hidden = example.getAttribute('data-sh-composer-menu-tabpanel') !== index
-        })
     })
 
     document.addEventListener('click', function (event) {

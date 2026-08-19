@@ -156,7 +156,7 @@
         >
           <span class="slds-badge__icon slds-badge__icon_left">
             <img
-              class="seller-home__composer-badge-icon"
+              class="seller-home__composer-badge-icon{{ ' seller-home__composer-badge-icon--round' if current.iconRound }}"
               src="{{ current.iconImage }}"
               alt=""
               data-sh-composer-badge-icon
@@ -185,7 +185,7 @@
             would still be set, so the next click on the button would
             clear it and the menu would open with `display: none`. -#}
         <div
-          class="slds-dropdown-trigger slds-dropdown-trigger_click seller-home__composer-menu"
+          class="slds-dropdown-trigger slds-dropdown-trigger_click slds-m-left_small seller-home__composer-menu"
           data-slds-dropdown-manual
           data-sh-composer-menu
         >
@@ -214,7 +214,7 @@
                         accessible name, so an alt here would only make
                         a screen reader say it twice. -#}
                     <img
-                      class="seller-home__composer-menu-icon"
+                      class="seller-home__composer-menu-icon{{ ' seller-home__composer-menu-icon--round' if item.iconRound }}"
                       src="{{ item.iconImage }}"
                       alt=""
                     />
@@ -235,7 +235,8 @@
 
           {#- Detail panels — the list-plus-detail pattern ported from
               the BB - AOP slash menu. Hovering (or arrowing to) an item
-              opens its panel to the right of the list.
+              opens its panel to the right of the list: the agent's
+              portrait beside what it's best at and what to ask it.
 
               One panel per item, rendered here rather than templated
               into a single shared panel by JS the way the source does.
@@ -263,44 +264,31 @@
               hidden
             >
               <div class="seller-home__composer-menu-detail-header">
-                <p class="seller-home__composer-menu-detail-title">Use case</p>
-                <p class="seller-home__composer-menu-detail-text">{{ item.useCase }}</p>
-              </div>
-
-              {#- Two shapes, as in the source: `tabs` puts each example
-                  behind a label, `examples` is a flat list. -#}
-              {% if item.tabs and item.tabs | length %}
-                <div class="seller-home__composer-menu-detail-body">
-                  <p class="seller-home__composer-menu-detail-title">Try an example</p>
-
-                  <div class="seller-home__composer-menu-tabs" role="tablist">
-                    {% for tab in item.tabs %}
-                      <button
-                        type="button"
-                        role="tab"
-                        class="seller-home__composer-menu-tab"
-                        aria-selected="{{ 'true' if loop.first else 'false' }}"
-                        data-sh-composer-menu-tab="{{ loop.index0 }}"
-                      >{{ tab.label }}</button>
-                    {% endfor %}
+                <div class="slds-media">
+                  <div class="slds-media__figure">
+                    {#- `.slds-avatar` is what rounds this: 100% radius
+                        and `overflow: hidden` on the span. The artwork
+                        itself is square, so the crop has to come from
+                        here — an `iconRound` agent is already circular
+                        at 16px in the rows, but that's a different
+                        element. -#}
+                    <span class="slds-avatar slds-avatar_large">
+                      {#- Decorative: the row this panel belongs to
+                          names the agent and points at the panel with
+                          `aria-describedby`, so alt text would only
+                          repeat what's announced. -#}
+                      <img src="{{ item.iconImage }}" alt="" />
+                    </span>
                   </div>
 
-                  {% for tab in item.tabs %}
-                    <p
-                      class="seller-home__composer-menu-example"
-                      data-sh-composer-menu-tabpanel="{{ loop.index0 }}"
-                      {%- if not loop.first %} hidden{% endif %}
-                    >{{ tab.example }}</p>
-                  {% endfor %}
+                  <div class="slds-media__body">
+                    <p class="seller-home__composer-menu-detail-title">{{ item.useCase }}</p>
+                    {% for example in item.examples %}
+                      <p class="seller-home__composer-menu-example">{{ example }}</p>
+                    {% endfor %}
+                  </div>
                 </div>
-              {% elif item.examples and item.examples | length %}
-                <div class="seller-home__composer-menu-detail-body">
-                  <p class="seller-home__composer-menu-detail-title">Try an example</p>
-                  {% for example in item.examples %}
-                    <p class="seller-home__composer-menu-example">{{ example }}</p>
-                  {% endfor %}
-                </div>
-              {% endif %}
+              </div>
             </div>
           {% endfor %}
         </div>

@@ -1615,10 +1615,24 @@ main.app-wrapper {
   // of this row.
 }
 
+// No gap: since the buttons became 2rem boxes their own padding is the
+// spacing, and a gap on top of it separates the glyphs by more than the
+// hover pills suggest. The pills now sit flush, 16px between glyphs.
 .seller-home__composer-slot {
   display: flex;
   align-items: center;
-  gap: var(--slds-g-spacing-2, 0.5rem);
+  gap: 0;
+}
+
+// SLDS puts `margin-inline-start: spacing-1` on any button following
+// another, which stacks on the gap above and survives removing it.
+//
+// Scoped through the slot to clear `.slds-button + .slds-button`'s
+// specificity outright. Matching it and letting source order decide
+// would work — home.css loads last — but that's the arrangement that
+// already caught this component out once, in the dropdown.
+.seller-home__composer-slot .seller-home__composer-btn + .seller-home__composer-btn {
+  margin-inline-start: 0;
 }
 
 // Composer icon button — additive tweaks over
@@ -1636,6 +1650,40 @@ main.app-wrapper {
   // Ensure the button doesn't inherit the composer's `cursor: text`
   // from `.seller-home__composer-content`.
   cursor: pointer;
+
+  // The row kebab's hover treatment, so the two icon-button families on
+  // this page answer the pointer the same way: a circular grey pill on
+  // hover or keyboard focus, one step darker while pressed. Tokens and
+  // timing are lifted from `.seller-home__feed-item-menu-trigger` — if
+  // that changes, this should follow.
+  //
+  // A background needs a box to fill, and SLDS' bare variant doesn't
+  // give it one: these buttons were the 16px glyph and nothing else, so
+  // there was no pill to paint and no target to speak of either. 2rem is
+  // the kebab's own size, which puts them back over the 24px minimum.
+  //
+  // Note the icon stays 16px — this is padding around it, not a bigger
+  // glyph.
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--slds-g-sizing-9, 2rem);
+  block-size: var(--slds-g-sizing-9, 2rem);
+  border-radius: var(--slds-g-radius-border-circle, 100%);
+
+  transition: background-color 120ms ease;
+
+  // Send ships disabled and is the one button here that can be, so the
+  // pill has to opt out of it — a hover response on a button that won't
+  // do anything is a lie.
+  &:hover:not([disabled]),
+  &:focus-visible:not([disabled]) {
+    background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+  }
+
+  &:active:not([disabled]) {
+    background-color: var(--slds-g-color-surface-container-3, #e5e5e5);
+  }
 
   // One colour for the whole toolbar, declared once and inherited by
   // both icon kinds: `currentColor` is what the sprite fills with and
@@ -1733,7 +1781,17 @@ main.app-wrapper {
   block-size: 1rem;
 }
 
+// Agents whose icon is a portrait rather than a flat mark, cropped so it
+// reads as an avatar instead of a photo tile. Opt-in per agent via
+// `iconRound` in the data — the vector marks fill their box to the
+// corners and a circle would cut into them.
+.seller-home__composer-menu-icon--round,
+.seller-home__composer-badge-icon--round {
+  border-radius: var(--slds-g-radius-border-circle, 50%);
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .seller-home__composer-btn,
   .seller-home__composer-badge {
     transition: none;
   }
@@ -1882,98 +1940,37 @@ main.app-wrapper {
   }
 }
 
+// One padded block, no second section: the panel is a media object, so
+// the avatar and the text beside it are the whole layout. The earlier
+// grey header split it in two, which the redesign dropped.
 .seller-home__composer-menu-detail-header {
-  padding: var(--slds-g-spacing-3, 0.75rem);
-  background: var(--slds-g-color-neutral-base-95, #f3f3f3);
-  border-radius: var(--slds-g-radius-border-3, 0.75rem)
-    var(--slds-g-radius-border-3, 0.75rem) 0 0;
+  padding: var(--slds-g-spacing-4, 1rem);
 }
 
-.seller-home__composer-menu-detail-body {
-  padding: var(--slds-g-spacing-3, 0.75rem);
-}
-
+// "Best for sales tasks" — a heading, not a label, so it runs at body
+// size rather than the small caps-ish scale the panel used before.
 .seller-home__composer-menu-detail-title {
   margin: 0;
-  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-size: var(--slds-g-font-scale-2, 1rem);
   font-weight: var(--slds-g-font-weight-6, 590);
   line-height: 1.3;
   color: var(--slds-g-color-on-surface-3, #001e5b);
 }
 
-.seller-home__composer-menu-detail-text {
-  margin: var(--slds-g-spacing-1, 0.25rem) 0 0;
-  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
-  font-weight: var(--slds-g-font-weight-4, 400);
-  line-height: 1.4;
-  color: var(--slds-g-color-on-surface-2, #2e2e2e);
-}
-
-// The dashed rule is the source's: it reads as "a thing you could type"
-// rather than a thing that already exists.
+// The example prompts, as plain lines under the title. The source
+// boxed each one in a dashed rule; at five per agent that read as a
+// form, so they're set as a list instead.
 .seller-home__composer-menu-example {
   margin: var(--slds-g-spacing-2, 0.5rem) 0 0;
-  padding: var(--slds-g-spacing-2, 0.5rem);
-
-  border: 1px dashed var(--slds-g-color-border-1, #c9c9c9);
-  border-radius: var(--slds-g-radius-border-1, 0.25rem);
 
   font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
   font-weight: var(--slds-g-font-weight-4, 400);
   line-height: 1.4;
   color: var(--slds-g-color-on-surface-2, #2e2e2e);
-
-  &[hidden] {
-    display: none;
-  }
-}
-
-// Tab bar for records that carry `tabs` instead of a flat `examples`
-// list. Neither agent uses it today; it's here so a tabbed record works
-// without a template change, which is how the source behaves.
-.seller-home__composer-menu-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--slds-g-spacing-1, 0.25rem);
-  margin-top: var(--slds-g-spacing-2, 0.5rem);
-}
-
-.seller-home__composer-menu-tab {
-  appearance: none;
-  border: 0;
-  margin: 0;
-  cursor: pointer;
-
-  padding: 0.125rem var(--slds-g-spacing-2, 0.5rem);
-  border-radius: var(--slds-g-radius-border-pill, 15rem);
-  background: transparent;
-
-  font-family: inherit;
-  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
-  line-height: 1.125rem;
-  color: var(--slds-g-color-on-surface-1, #5c5c5c);
-
-  transition: background-color 120ms ease, color 120ms ease;
-
-  &:hover {
-    background: var(--slds-g-color-surface-container-2, #f3f3f3);
-  }
-
-  &[aria-selected="true"] {
-    background: var(--slds-g-color-surface-container-3, #e5e5e5);
-    color: var(--slds-g-color-on-surface-3, #001e5b);
-    font-weight: var(--slds-g-font-weight-6, 590);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
-    outline-offset: 2px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .seller-home__composer-menu-item,
-  .seller-home__composer-menu-tab {
+  .seller-home__composer-menu-item {
     transition: none;
   }
 }
@@ -2559,7 +2556,7 @@ $sh-feed-status-action: (
 // which next to the running spinner's blue reads as another shade of the
 // same thing rather than "done".
 [data-sh-feed-state="completed"] .seller-home__feed-item-status-glyph--circle {
-  fill: var(--slds-g-color-palette-green-60, #3ba755);
+  fill: var(--slds-g-color-palette-green-70, #45c65a);
 }
 
 [data-sh-feed-state="failed"] .seller-home__feed-item-status-glyph--warning {

@@ -318,14 +318,14 @@
           "id": "agent",
           "label": "Agent",
           "icon": "agent_astro",
-          // Hovering an item opens a detail panel to its right, ported
-          // from the BB - AOP slash menu. `useCase` is its header; the
-          // body lists what to try.
+          // Hovering an item opens a detail panel to its right: the
+          // agent's portrait, a one-line `useCase` saying what it's
+          // best at, and `examples` — the things it can be asked for.
           //
-          // Two shapes for that body, matching the source: `examples`
-          // is a flat list, `tabs` is a set of { label, example } the
-          // panel puts behind a tab bar. An item with neither renders
-          // the use case alone.
+          // Both are short by design. The panel is read in the second
+          // or two before the pointer moves on, so `useCase` is a
+          // phrase rather than a sentence and each example is one line
+          // that won't wrap at 24rem.
           //
           // `iconImage` rather than a sprite id: these are full-colour
           // illustrations with their own palettes, so they can't be
@@ -345,13 +345,20 @@
                 "id": "hunter",
                 "label": "Hunter Sales Agent",
                 "badgeLabel": "Hunter",
-                "iconImage": "/assets/images/agent-icons/hunter.svg",
+                "iconImage": "/assets/images/agent-icons/hunter.png",
+                // Portrait rather than a flat mark, so it's cropped to a
+                // circle and reads as an avatar. Per-agent because the
+                // artwork differs in kind: circling Coworker's vector
+                // mark would just clip its corners.
+                "iconRound": true,
                 "selected": true,
-                "useCase": "Built for pipeline work — prospecting, account research, outreach and deal follow-up. Knows your territory, quota and open opportunities.",
+                "useCase": "Best for sales tasks",
                 "examples": [
-                  "Find 20 prospects at accounts like Northwind",
-                  "Draft follow-ups for every deal that went quiet this week",
-                  "What are the top 3 things I must know to make my number?"
+                  "Prospect into new accounts",
+                  "Draft cadences, emails and call scripts",
+                  "Update your data after every meeting",
+                  "Answer RFP, quotes and proposals",
+                  "Tell you how to reach quota"
                 ]
               },
               {
@@ -359,11 +366,13 @@
                 "label": "Coworker Agent",
                 "badgeLabel": "Coworker",
                 "iconImage": "/assets/images/agent-icons/coworker.svg",
-                "useCase": "A general assistant for everything around the selling — summarising, drafting, scheduling and answering questions about internal docs.",
+                "useCase": "Best for general tasks",
                 "examples": [
-                  "Summarise my meetings from yesterday",
-                  "Draft a note to the team about the Q3 launch",
-                  "What does our security review process require?"
+                  "Plan my work for today",
+                  "Show me trending support cases this month",
+                  "Which cases should I follow-up on?",
+                  "Which campaigns are running?",
+                  "Draft new marketing emails"
                 ]
               }
             ]
