@@ -1879,6 +1879,35 @@ main.app-wrapper {
   block-size: 1rem;
 }
 
+// The sprite variant at the two 1rem sizes. `slds-icon_container_circle`
+// ships 0.5rem of padding, which is the whole box here and would leave
+// the glyph nothing — so the padding comes off and the glyph fills the
+// disc instead. Inset by a hair so the artwork doesn't touch the edge.
+.seller-home__composer-menu-icon,
+.seller-home__composer-badge-icon {
+  &.slds-icon_container {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.0625rem;
+  }
+
+  > .slds-icon {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+}
+
+// Each badge icon is wrapped so the whole thing — portrait or disc —
+// can be hidden as one, whichever shape it turned out to be.
+.seller-home__composer-badge-icon-slot {
+  display: inline-flex;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
 // `min-width: 0` so a long agent name truncates instead of pushing the
 // check off the end of the row.
 .seller-home__composer-menu-label {
@@ -1940,11 +1969,39 @@ main.app-wrapper {
   }
 }
 
+// A submenu rather than a description: same panel chrome and the same
+// positioning, but sized like the list it belongs to instead of the
+// 24rem card. Matches `.seller-home__composer-menu-list` so the two
+// read as one menu at two levels.
+.seller-home__composer-menu-detail--menu {
+  width: auto;
+  min-width: var(--slds-g-sizing-14, 15rem);
+  padding: var(--slds-g-spacing-1, 0.25rem);
+}
+
+// The affordance on a row that opens a submenu, where a selectable row
+// carries its check. Same box as the check so both kinds of row lay out
+// identically and the labels line up.
+.seller-home__composer-menu-chevron {
+  flex-shrink: 0;
+  inline-size: 1rem;
+  block-size: 1rem;
+  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
 // One padded block, no second section: the panel is a media object, so
 // the avatar and the text beside it are the whole layout. The earlier
 // grey header split it in two, which the redesign dropped.
 .seller-home__composer-menu-detail-header {
   padding: var(--slds-g-spacing-4, 1rem);
+}
+
+// The sprite variant of the panel's avatar. No size here on purpose:
+// `.slds-icon` is 2rem by default and the circle container adds 0.5rem
+// of padding either side, which is the 3rem `.slds-avatar_large` gives
+// the portraits. Setting it again would be two sources for one number.
+.seller-home__composer-menu-detail-icon {
+  flex-shrink: 0;
 }
 
 // "Best for sales tasks" — a heading, not a label, so it runs at body

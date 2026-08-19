@@ -131,6 +131,35 @@
           The check sits after the body rather than before the label
           (which is where the SLDS example puts it) so the row reads
           icon, name, then state. -#}
+      {#- An agent's artwork, in whichever of the two kinds it comes in:
+          a portrait (`iconImage`) or a standard sprite glyph on SLDS'
+          coloured disc (`icon`). Both end up round at the same box, so
+          callers only pass the size class they want.
+
+          One macro because this renders in three places — the menu row,
+          the badge and the detail panel — and a row whose icon didn't
+          match its own badge would look like a bug.
+
+          `slds-icon_container_circle` brings 0.5rem of padding with it,
+          which is what makes the sprite variant 3rem at `_large`. The
+          16px callers zero it out in home.scss; there's no room for
+          padding in a 1rem box. -#}
+      {% macro agentIcon(item, klass, glyphSize) %}
+        {%- if item.iconImage -%}
+          <img
+            class="{{ klass }}{{ ' ' ~ klass ~ '--round' if item.iconRound }}"
+            src="{{ item.iconImage }}"
+            alt=""
+          />
+        {%- else -%}
+          <span class="slds-icon_container slds-icon_container_circle slds-icon-standard-{{ item.icon | replace('_', '-') }} {{ klass }}">
+            <svg class="slds-icon{{ ' slds-icon_' ~ glyphSize if glyphSize }}" aria-hidden="true">
+              <use xlink:href="/assets/icons/standard-sprite/svg/symbols.svg#{{ item.icon }}"></use>
+            </svg>
+          </span>
+        {%- endif -%}
+      {% endmacro %}
+
       {#- The trigger for a menu is a badge naming the current choice
           rather than a bare icon, so the toolbar states which agent is
           about to run instead of making the seller open the menu to
@@ -141,8 +170,23 @@
           span with a click handler is not. The chevron on the right is
           what marks it as one, since a badge otherwise reads as an
           inert status chip; the agent's artwork sits on the left. -#}
+      {#- Every agent that can actually be chosen, flattened out of the
+          rows: the two top-level ones plus whatever sits behind a
+          submenu. The badge needs the flat list because what it shows is
+          a selection, and a selection can come from either level. -#}
       {% macro composerActionBadge(action, menuId) %}
-        {%- set current = (action.menu.items | selectattr("selected") | first) or action.menu.items[0] -%}
+        {#- `set` rather than an expression: `push` returns the new
+            length, and printing that would put "1234567" in the
+            toolbar. Assigning it throws the number away. -#}
+        {%- set agents = [] -%}
+        {%- for item in action.menu.items -%}
+          {%- if item.submenu -%}
+            {%- for sub in item.submenu -%}{% set _ = agents.push(sub) %}{%- endfor -%}
+          {%- else -%}
+            {% set _ = agents.push(item) %}
+          {%- endif -%}
+        {%- endfor -%}
+        {%- set current = (agents | selectattr("selected") | first) or agents[0] -%}
         <button
           type="button"
           class="slds-badge slds-badge_lightest seller-home__composer-badge"
@@ -154,13 +198,18 @@
           aria-controls="{{ menuId }}"
           data-sh-composer-menu-trigger
         >
+          {#- One icon per agent, all but the current one hidden — the
+              same trick the detail panels use. The alternative, having
+              JS rewrite this element, means teaching it to build both
+              icon shapes; this way it only flips `hidden`. -#}
           <span class="slds-badge__icon slds-badge__icon_left">
-            <img
-              class="seller-home__composer-badge-icon{{ ' seller-home__composer-badge-icon--round' if current.iconRound }}"
-              src="{{ current.iconImage }}"
-              alt=""
-              data-sh-composer-badge-icon
-            />
+            {% for agent in agents %}
+              <span
+                class="seller-home__composer-badge-icon-slot"
+                data-sh-composer-badge-icon="{{ agent.id }}"
+                {%- if agent != current %} hidden{% endif %}
+              >{{ agentIcon(agent, "seller-home__composer-badge-icon") }}</span>
+            {% endfor %}
           </span>
           <span data-sh-composer-badge-label>{{ current.badgeLabel or current.label }}</span>
           <span class="slds-badge__icon slds-badge__icon_right">
@@ -199,35 +248,63 @@
             data-sh-composer-menu-list
             hidden
           >
+            {#- Two kinds of row, and the difference is semantic, not
+                just visual. A row that names an agent is a
+                `menuitemradio` — one of a set, `aria-checked` saying
+                which. A row that opens a submenu is a plain `menuitem`
+                with `aria-haspopup`: it can't be chosen, so calling it
+                a radio would promise a state it never has. The chevron
+                replaces the check for the same reason.
+
+                `data-sh-composer-menu-row` is on both — it's what the
+                panel, the arrow keys and the hover intent key off.
+                `data-sh-composer-menu-item` marks only the things that
+                can actually be selected, which is why the submenu's own
+                entries carry it and the row that opens them doesn't. -#}
             <ul class="slds-dropdown__list" role="none">
               {% for item in action.menu.items %}
                 <li class="slds-dropdown__item" role="none">
-                  <button
-                    type="button"
-                    class="seller-home__composer-menu-item"
-                    role="menuitemradio"
-                    aria-checked="{{ 'true' if item.selected else 'false' }}"
-                    data-sh-composer-menu-item="{{ item.id }}"
-                    data-sh-composer-badge-text="{{ item.badgeLabel or item.label }}"
-                  >
-                    {#- Decorative: the label right next to it is the
-                        accessible name, so an alt here would only make
-                        a screen reader say it twice. -#}
-                    <img
-                      class="seller-home__composer-menu-icon{{ ' seller-home__composer-menu-icon--round' if item.iconRound }}"
-                      src="{{ item.iconImage }}"
-                      alt=""
-                    />
+                  {% if item.submenu %}
+                    <button
+                      type="button"
+                      class="seller-home__composer-menu-item"
+                      role="menuitem"
+                      aria-haspopup="menu"
+                      aria-expanded="false"
+                      aria-controls="{{ menuId }}-{{ item.id }}-detail"
+                      data-sh-composer-menu-row="{{ item.id }}"
+                    >
+                      {{ agentIcon(item, "seller-home__composer-menu-icon") }}
+                      <span class="seller-home__composer-menu-label">{{ item.label }}</span>
+                      <svg class="seller-home__composer-menu-chevron" aria-hidden="true">
+                        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
+                      </svg>
+                    </button>
+                  {% else %}
+                    <button
+                      type="button"
+                      class="seller-home__composer-menu-item"
+                      role="menuitemradio"
+                      aria-checked="{{ 'true' if item.selected else 'false' }}"
+                      data-sh-composer-menu-row="{{ item.id }}"
+                      data-sh-composer-menu-item="{{ item.id }}"
+                      data-sh-composer-badge-text="{{ item.badgeLabel or item.label }}"
+                    >
+                      {#- Decorative: the label right next to it is the
+                          accessible name, so an alt here would only make
+                          a screen reader say it twice. -#}
+                      {{ agentIcon(item, "seller-home__composer-menu-icon") }}
 
-                    <span class="seller-home__composer-menu-label">{{ item.label }}</span>
+                      <span class="seller-home__composer-menu-label">{{ item.label }}</span>
 
-                    {#- Always rendered, revealed by `aria-checked`. Keeps
-                        the row's width stable between states and leaves
-                        selecting as one attribute flip. -#}
-                    <svg class="seller-home__composer-menu-check" aria-hidden="true">
-                      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
-                    </svg>
-                  </button>
+                      {#- Always rendered, revealed by `aria-checked`. Keeps
+                          the row's width stable between states and leaves
+                          selecting as one attribute flip. -#}
+                      <svg class="seller-home__composer-menu-check" aria-hidden="true">
+                        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+                      </svg>
+                    </button>
+                  {% endif %}
                 </li>
               {% endfor %}
             </ul>
@@ -257,6 +334,41 @@
               They don't inherit the list's `hidden` out here, so
               home.js hides them whenever the menu closes. -#}
           {% for item in action.menu.items %}
+            {#- A submenu row's panel is a second menu, so it drops the
+                24rem description card for the list's own width and
+                padding. Same positioning machinery either way — it's
+                still the thing that opens to the right of the row. -#}
+            {% if item.submenu %}
+              <div
+                class="seller-home__composer-menu-detail seller-home__composer-menu-detail--menu"
+                id="{{ menuId }}-{{ item.id }}-detail"
+                data-sh-composer-menu-detail="{{ item.id }}"
+                role="menu"
+                aria-label="{{ item.label }}"
+                hidden
+              >
+                <ul class="slds-dropdown__list" role="none">
+                  {% for sub in item.submenu %}
+                    <li class="slds-dropdown__item" role="none">
+                      <button
+                        type="button"
+                        class="seller-home__composer-menu-item"
+                        role="menuitemradio"
+                        aria-checked="{{ 'true' if sub.selected else 'false' }}"
+                        data-sh-composer-menu-item="{{ sub.id }}"
+                        data-sh-composer-badge-text="{{ sub.badgeLabel or sub.label }}"
+                      >
+                        {{ agentIcon(sub, "seller-home__composer-menu-icon") }}
+                        <span class="seller-home__composer-menu-label">{{ sub.label }}</span>
+                        <svg class="seller-home__composer-menu-check" aria-hidden="true">
+                          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+                        </svg>
+                      </button>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% else %}
             <div
               class="seller-home__composer-menu-detail"
               id="{{ menuId }}-{{ item.id }}-detail"
@@ -265,20 +377,27 @@
             >
               <div class="seller-home__composer-menu-detail-header">
                 <div class="slds-media">
+                  {#- Decorative throughout: the row this panel belongs
+                      to names the agent and points at the panel with
+                      `aria-describedby`, so alt text would only repeat
+                      what's already announced.
+
+                      The two icon kinds reach 3rem by different routes.
+                      A portrait needs `.slds-avatar` to crop it — 100%
+                      radius and `overflow: hidden` on the span, since
+                      the artwork itself is square. A sprite glyph is
+                      already on a disc, and `.slds-icon`'s own 2rem
+                      plus the circle container's 0.5rem either side
+                      lands on the same 3rem, which is why no size class
+                      is passed here. -#}
                   <div class="slds-media__figure">
-                    {#- `.slds-avatar` is what rounds this: 100% radius
-                        and `overflow: hidden` on the span. The artwork
-                        itself is square, so the crop has to come from
-                        here — an `iconRound` agent is already circular
-                        at 16px in the rows, but that's a different
-                        element. -#}
-                    <span class="slds-avatar slds-avatar_large">
-                      {#- Decorative: the row this panel belongs to
-                          names the agent and points at the panel with
-                          `aria-describedby`, so alt text would only
-                          repeat what's announced. -#}
-                      <img src="{{ item.iconImage }}" alt="" />
-                    </span>
+                    {% if item.iconImage %}
+                      <span class="slds-avatar slds-avatar_large">
+                        <img src="{{ item.iconImage }}" alt="" />
+                      </span>
+                    {% else %}
+                      {{ agentIcon(item, "seller-home__composer-menu-detail-icon") }}
+                    {% endif %}
                   </div>
 
                   <div class="slds-media__body">
@@ -290,6 +409,7 @@
                 </div>
               </div>
             </div>
+            {% endif %}
           {% endfor %}
         </div>
       {% endmacro %}

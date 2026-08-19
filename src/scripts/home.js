@@ -1282,15 +1282,33 @@
     var pointerMoved = true
     var hideTimer = null
 
-    function menuItems (list) {
-      return toArray(list.querySelectorAll('[role="menuitemradio"]'))
+    // Rows are what the list shows and the arrow keys walk. Agents are
+    // what can be selected. They're mostly the same elements, but not
+    // always: a row that opens a submenu isn't selectable, and the
+    // agents inside that submenu aren't rows.
+    function menuRows (scope) {
+      return toArray(scope.querySelectorAll('[data-sh-composer-menu-row]'))
     }
 
-    function detailFor (item) {
-      var menu = closest(item, '[data-sh-composer-menu]')
-      var id = item.getAttribute('data-sh-composer-menu-item')
+    function menuAgents (scope) {
+      return toArray(scope.querySelectorAll('[data-sh-composer-menu-item]'))
+    }
+
+    function detailFor (row) {
+      var menu = closest(row, '[data-sh-composer-menu]')
+      var id = row.getAttribute('data-sh-composer-menu-row')
       return menu
         ? menu.querySelector('[data-sh-composer-menu-detail="' + id + '"]')
+        : null
+    }
+
+    // The row a panel belongs to — the inverse of `detailFor`, for
+    // walking back out of a submenu.
+    function rowFor (panel) {
+      var menu = closest(panel, '[data-sh-composer-menu]')
+      var id = panel.getAttribute('data-sh-composer-menu-detail')
+      return menu
+        ? menu.querySelector('[data-sh-composer-menu-row="' + id + '"]')
         : null
     }
 
@@ -1305,33 +1323,43 @@
       cancelHide()
       toArray(menu.querySelectorAll('[data-sh-composer-menu-detail]'))
         .forEach(function (panel) { panel.hidden = true })
-      menuItems(menu).forEach(function (item) {
-        item.removeAttribute('aria-describedby')
+      menuRows(menu).forEach(function (row) {
+        row.removeAttribute('aria-describedby')
+        // Submenu rows advertise their panel's state; description rows
+        // have no `aria-expanded` to reset.
+        if (row.hasAttribute('aria-haspopup')) {
+          row.setAttribute('aria-expanded', 'false')
+        }
       })
     }
 
     // Right of the list, top-aligned to the row — the source's geometry.
     // Measured at show time rather than cached, because the row's
     // position depends on where the composer is on screen.
-    function showDetail (item) {
-      var menu = closest(item, '[data-sh-composer-menu]')
+    function showDetail (row) {
+      var menu = closest(row, '[data-sh-composer-menu]')
       var list = menu && menu.querySelector('[data-sh-composer-menu-list]')
-      var panel = detailFor(item)
+      var panel = detailFor(row)
       if (!menu || !list || !panel) return
 
       cancelHide()
       hideDetails(menu)
 
       var listRect = list.getBoundingClientRect()
-      var itemRect = item.getBoundingClientRect()
+      var rowRect = row.getBoundingClientRect()
 
       panel.style.left = (listRect.right + COMPOSER_DETAIL_GAP) + 'px'
-      panel.style.top = itemRect.top + 'px'
+      panel.style.top = rowRect.top + 'px'
       panel.hidden = false
 
-      // The panel is the row's description while it's up, so the copy
-      // isn't sighted-only.
-      if (panel.id) item.setAttribute('aria-describedby', panel.id)
+      if (row.hasAttribute('aria-haspopup')) {
+        // A submenu is announced as open, not as a description of the
+        // row — `aria-describedby` would have a screen reader read the
+        // agent names as if they described the row that opens them.
+        row.setAttribute('aria-expanded', 'true')
+      } else if (panel.id) {
+        row.setAttribute('aria-describedby', panel.id)
+      }
     }
 
     function scheduleHide (menu) {
@@ -1372,12 +1400,20 @@
           closeAll(menu)
           list.hidden = false
           trigger.setAttribute('aria-expanded', 'true')
+
           // Open on the current choice rather than the first row, so
-          // Arrow keys move relative to where the selection actually is.
-          var checked = menuItems(list).filter(function (i) {
-            return i.getAttribute('aria-checked') === 'true'
-          })[0]
-          var first = checked || menuItems(list)[0]
+          // Arrow keys move relative to where the selection actually
+          // is. When that choice lives in a submenu it isn't a row, so
+          // fall back to the row that leads to it — focus has to land
+          // in the list either way.
+          var checked = menu.querySelector('[aria-checked="true"]')
+          var landing = checked && checked.hasAttribute('data-sh-composer-menu-row')
+            ? checked
+            : checked && closest(checked, '[data-sh-composer-menu-detail]')
+              ? rowFor(closest(checked, '[data-sh-composer-menu-detail]'))
+              : null
+
+          var first = landing || menuRows(list)[0]
           if (first) first.focus()
         } else {
           closeMenu(menu, true)
@@ -1392,10 +1428,12 @@
       event.stopPropagation()
 
       var itemMenu = closest(item, '[data-sh-composer-menu]')
-      var itemList = closest(item, '[data-sh-composer-menu-list]')
       var itemTrigger = itemMenu.querySelector('[data-sh-composer-menu-trigger]')
 
-      menuItems(itemList).forEach(function (other) {
+      // Scoped to the whole menu, not the list: the agents are split
+      // across the list and its submenu panels, but they're still one
+      // set — picking a custom agent has to clear the check on Hunter.
+      menuAgents(itemMenu).forEach(function (other) {
         other.setAttribute('aria-checked', String(other === item))
       })
 
@@ -1412,18 +1450,16 @@
         var badgeText = item.getAttribute('data-sh-composer-badge-text') || chosenName
         if (badgeLabel && badgeText) badgeLabel.textContent = badgeText
 
-        // The crop travels with the artwork: only the agents whose icon
-        // is a portrait are circled, so reading it off the row keeps the
-        // badge honest instead of the two deciding separately.
-        var badgeIcon = itemTrigger.querySelector('[data-sh-composer-badge-icon]')
-        var chosenIcon = item.querySelector('.seller-home__composer-menu-icon')
-        if (badgeIcon && chosenIcon) {
-          badgeIcon.setAttribute('src', chosenIcon.getAttribute('src'))
-          badgeIcon.classList.toggle(
-            'seller-home__composer-badge-icon--round',
-            chosenIcon.classList.contains('seller-home__composer-menu-icon--round')
-          )
-        }
+        // The badge carries every agent's icon and shows one. Agents
+        // come with two kinds of artwork — a portrait or a sprite glyph
+        // on a disc — and picking between pre-rendered markup keeps
+        // that difference in the template rather than teaching this to
+        // build both.
+        var chosen = item.getAttribute('data-sh-composer-menu-item')
+        toArray(itemTrigger.querySelectorAll('[data-sh-composer-badge-icon]'))
+          .forEach(function (slot) {
+            slot.hidden = slot.getAttribute('data-sh-composer-badge-icon') !== chosen
+          })
 
         // Which is why the accessible name keeps the full one: the
         // badge alone doesn't say which agent "Hunter" is.
@@ -1443,34 +1479,78 @@
       closeMenu(itemMenu, true)
     })
 
+    var COMPOSER_MENU_KEYS = [
+      'Escape', 'ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft'
+    ]
+
     composerRoot.addEventListener('keydown', function (event) {
-      if (event.key !== 'Escape' && event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+      if (COMPOSER_MENU_KEYS.indexOf(event.key) === -1) return
 
       var menu = closest(event.target, '[data-sh-composer-menu]')
       if (!menu) return
       var list = menu.querySelector('[data-sh-composer-menu-list]')
       if (!list || list.hidden) return
 
+      // Focus is either on a row in the list or on an agent inside an
+      // open submenu, and every key below means something different
+      // depending on which.
+      var panel = closest(event.target, '[data-sh-composer-menu-detail]')
+
       event.preventDefault()
 
+      // Keyboard drives the panel, and takes hover out of the running
+      // until the pointer moves — otherwise the row the mouse happens
+      // to rest on would pull the panel straight back.
+      pointerMoved = false
+
       if (event.key === 'Escape') {
-        closeMenu(menu, true)
+        // Out of the submenu first, then out of the menu: one Escape
+        // shouldn't close everything from two levels down.
+        if (panel) {
+          var owner = rowFor(panel)
+          hideDetails(menu)
+          if (owner) owner.focus()
+        } else {
+          closeMenu(menu, true)
+        }
         return
       }
 
-      var all = menuItems(list)
+      // Into a submenu, and back out of one.
+      if (event.key === 'ArrowRight' && !panel) {
+        var row = closest(event.target, '[data-sh-composer-menu-row]')
+        if (row && row.hasAttribute('aria-haspopup')) {
+          showDetail(row)
+          var opened = detailFor(row)
+          var firstAgent = opened && menuAgents(opened)[0]
+          if (firstAgent) firstAgent.focus()
+        }
+        return
+      }
+
+      if (event.key === 'ArrowLeft') {
+        if (panel) {
+          var back = rowFor(panel)
+          hideDetails(menu)
+          if (back) back.focus()
+        }
+        return
+      }
+
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+
+      var all = panel ? menuAgents(panel) : menuRows(list)
       if (!all.length) return
       var at = all.indexOf(document.activeElement)
       var next = event.key === 'ArrowDown'
         ? all[(at + 1) % all.length]
         : all[(at - 1 + all.length) % all.length]
 
-      // Keyboard drives the panel too, and takes hover out of the
-      // running until the pointer moves — otherwise the row the mouse
-      // happens to rest on would pull the panel straight back.
-      pointerMoved = false
       next.focus()
-      showDetail(next)
+      // Only the list drives the panel. Arrowing within a submenu is
+      // moving inside the panel that's already open, and re-showing it
+      // would tear down the element focus just landed on.
+      if (!panel) showDetail(next)
     })
 
     // ── Hover ───────────────────────────────────────────────────────
@@ -1483,26 +1563,29 @@
     composerRoot.addEventListener('mouseover', function (event) {
       if (!pointerMoved) return
 
-      var item = closest(event.target, '[data-sh-composer-menu-item]')
-      if (item) {
-        showDetail(item)
+      // Rows, not agents: hovering an agent inside a submenu must not
+      // re-show that submenu, and the row that opens one isn't an agent
+      // at all.
+      var row = closest(event.target, '[data-sh-composer-menu-row]')
+      if (row) {
+        showDetail(row)
         return
       }
 
-      // Inside the panel itself: the pointer travelled there to read
-      // it, so hold it open.
+      // Inside the panel itself: the pointer travelled there to read it
+      // or to pick from it, so hold it open.
       if (closest(event.target, '[data-sh-composer-menu-detail]')) cancelHide()
     })
 
     composerRoot.addEventListener('mouseout', function (event) {
-      var from = closest(event.target, '[data-sh-composer-menu-item]') ||
+      var from = closest(event.target, '[data-sh-composer-menu-row]') ||
         closest(event.target, '[data-sh-composer-menu-detail]')
       if (!from) return
 
       // Moving between the row and its panel, or within either, isn't
       // leaving — only a landing spot outside both starts the timer.
       var to = event.relatedTarget
-      if (to && (closest(to, '[data-sh-composer-menu-item]') ||
+      if (to && (closest(to, '[data-sh-composer-menu-row]') ||
                  closest(to, '[data-sh-composer-menu-detail]'))) return
 
       var menu = closest(from, '[data-sh-composer-menu]')
