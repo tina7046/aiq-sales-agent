@@ -1978,6 +1978,74 @@ main.app-wrapper {
   }
 }
 
+// ── Group headers ─────────────────────────────────────────────────────
+// "Active" / "Paused" labels above their runs of rows. Only rendered
+// where the data defines `feed.groups`.
+//
+// Each one shows only while its group has something in it, decided with
+// `:has()` on the list rather than in JS — so a row paused at runtime
+// brings the Paused header with it, and resuming the last paused row
+// takes it away again, with nothing to keep in sync.
+.seller-home__feed-group {
+  margin-bottom: var(--slds-g-spacing-2, 0.5rem);
+  transition: opacity var(--duration-quick) var(--ease-in-out);
+}
+
+// A label the current reshuffle is about to move. It holds its space —
+// the rows' landing positions have to account for it, or everything
+// jolts once they arrive — but stays invisible while they travel, and
+// fades in when home.js clears the flag on the Flip's completion.
+//
+// Flagged per label rather than on the list, so a move that shifts one
+// group's label leaves the other alone instead of blinking it.
+//
+// `transition: none` so it snaps to hidden on the way in; the fade only
+// belongs to the way out.
+.seller-home__feed-group[data-sh-feed-settling] {
+  opacity: 0;
+  transition: none;
+}
+
+// A header that follows a run of rows needs more air above it than the
+// gap between two rows, or the label reads as belonging to the row it's
+// sitting under. The first header is the list's first child and needs
+// none.
+.seller-home__feed-list-item + .seller-home__feed-group {
+  margin-top: var(--slds-g-spacing-4, 1rem);
+}
+
+.seller-home__feed-group-label {
+  margin: 0;
+  padding-inline: var(--slds-g-spacing-1, 0.25rem);
+
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.3;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+.seller-home__feed-list:not(:has([data-sh-feed-state="paused"]))
+  [data-sh-feed-group="paused"] {
+  display: none;
+}
+
+// The mirror case, for when everything has been paused: an "Active"
+// label over nothing reads as a bug.
+//
+// Phrased as "no row exists whose state isn't paused" rather than the
+// more natural-sounding "no list item that isn't paused". The latter
+// needs a `:has()` inside a `:has()`, which the spec disallows — and an
+// invalid selector takes its whole rule down with it, silently, which
+// is exactly how this sat here not working. The `:not()` here is a
+// plain attribute negation, so nothing is nested.
+//
+// Group labels carry `data-sh-feed-group-state`, not
+// `data-sh-feed-state`, so they can't match this and count themselves.
+.seller-home__feed-list:not(:has([data-sh-feed-state]:not([data-sh-feed-state="paused"])))
+  [data-sh-feed-group="active"] {
+  display: none;
+}
+
 // ── Empty state ───────────────────────────────────────────────────────
 // Stands in for the list once the last row is dismissed. `:has()` on the
 // section is what drives it, so there's no JS to keep in sync and the
@@ -2075,15 +2143,43 @@ main.app-wrapper {
 }
 
 // All glyphs stack on the same centre; the rules below reveal two.
+//
+// The swap is transitions.dev's icon swap (09-icon-swap.md) — opacity
+// plus blur plus scale — reading the `--icon-swap-*` tokens installed
+// in index.scss. Not its `.t-icon-swap` markup though: that's a
+// two-icon component switched by `data-state`, and this slot holds six
+// glyphs whose visible pair is picked by the maps below, off the row's
+// state crossed with hover. Borrowing the recipe keeps the motion
+// consistent with the rest of the app without pretending this is a
+// binary switch.
+//
+// Blur and scale are dialled back from the shared defaults: those are
+// tuned for a full-size icon, and at this glyph's 16px a 2px blur
+// smears it and a 0.25 start scale reads as a pop rather than a swap.
 .seller-home__feed-item-status-glyph {
+  --icon-swap-blur: 1px;
+  --icon-swap-start-scale: 0.7;
+
   position: absolute;
   inline-size: var(--sh-status-glyph);
   block-size: var(--sh-status-glyph);
+
   opacity: 0;
+  filter: blur(var(--icon-swap-blur));
+  transform: scale(var(--icon-swap-start-scale));
   fill: var(--slds-g-color-on-surface-1, #5c5c5c);
-  transition: opacity 120ms ease, fill 120ms ease;
+
+  transition:
+    opacity   var(--icon-swap-dur) var(--icon-swap-ease),
+    filter    var(--icon-swap-dur) var(--icon-swap-ease),
+    transform var(--icon-swap-dur) var(--icon-swap-ease),
+    fill      var(--duration-quick) var(--ease-in-out);
 }
 
+// Deliberately not gated by the preview latch below: this only darkens
+// whatever glyph is up, so while the button is latched out of previewing
+// it still visibly answers the pointer — it just answers with the row's
+// state instead of the next action.
 .seller-home__feed-item-status:hover .seller-home__feed-item-status-glyph,
 .seller-home__feed-item-status:focus-visible .seller-home__feed-item-status-glyph {
   fill: var(--slds-g-color-on-surface-2, #2e2e2e);
@@ -2101,6 +2197,21 @@ main.app-wrapper {
 
 [data-sh-feed-state="running"] .seller-home__feed-item-status-glyph--spinner {
   animation: sh-spin 0.85s linear infinite;
+}
+
+// The two ends of the swap. Every rule that raises or clears a glyph
+// sets all three properties, so a glyph hidden on hover picks the blur
+// and scale back up rather than only fading.
+@mixin sh-feed-glyph-shown {
+  opacity: 1;
+  filter: blur(0);
+  transform: scale(1);
+}
+
+@mixin sh-feed-glyph-hidden {
+  opacity: 0;
+  filter: blur(var(--icon-swap-blur));
+  transform: scale(var(--icon-swap-start-scale));
 }
 
 // Every state a row can be in. Drives the kebab's per-state action
@@ -2128,7 +2239,7 @@ $sh-feed-status-action: (
 
 @each $state, $glyph in $sh-feed-status-rest {
   [data-sh-feed-state="#{$state}"] .seller-home__feed-item-status-glyph--#{$glyph} {
-    opacity: 1;
+    @include sh-feed-glyph-shown;
   }
 }
 
@@ -2139,18 +2250,29 @@ $sh-feed-status-action: (
   fill: var(--slds-g-color-error-base-40, #ea001e);
 }
 
+// The status button, but only while it should be previewing the action.
+//
+// A click leaves the pointer sitting on the button, so without this gate
+// the hover rules would immediately show the NEXT action and the state
+// just created would never appear — press pause on a completed row and
+// you land straight on a play glyph, having never seen it paused.
+// home.js latches the button out of preview on click and releases it
+// when the pointer or focus leaves, which is the point at which asking
+// for a preview again is a deliberate act.
+$sh-feed-status-preview: ".seller-home__feed-item-status:not([data-sh-feed-hover-latched])";
+
 @each $state, $glyph in $sh-feed-status-action {
   // Clear the resting glyph, then raise the action one. Both selectors
   // carry the same specificity, so source order decides — which is why
   // these two blocks must stay in this order.
-  [data-sh-feed-state="#{$state}"] .seller-home__feed-item-status:hover .seller-home__feed-item-status-glyph,
-  [data-sh-feed-state="#{$state}"] .seller-home__feed-item-status:focus-visible .seller-home__feed-item-status-glyph {
-    opacity: 0;
+  [data-sh-feed-state="#{$state}"] #{$sh-feed-status-preview}:hover .seller-home__feed-item-status-glyph,
+  [data-sh-feed-state="#{$state}"] #{$sh-feed-status-preview}:focus-visible .seller-home__feed-item-status-glyph {
+    @include sh-feed-glyph-hidden;
   }
 
-  [data-sh-feed-state="#{$state}"] .seller-home__feed-item-status:hover .seller-home__feed-item-status-glyph--#{$glyph},
-  [data-sh-feed-state="#{$state}"] .seller-home__feed-item-status:focus-visible .seller-home__feed-item-status-glyph--#{$glyph} {
-    opacity: 1;
+  [data-sh-feed-state="#{$state}"] #{$sh-feed-status-preview}:hover .seller-home__feed-item-status-glyph--#{$glyph},
+  [data-sh-feed-state="#{$state}"] #{$sh-feed-status-preview}:focus-visible .seller-home__feed-item-status-glyph--#{$glyph} {
+    @include sh-feed-glyph-shown;
   }
 }
 
@@ -2592,6 +2714,7 @@ $sh-feed-status-action: (
 @media (prefers-reduced-motion: reduce) {
   .seller-home__feed-item,
   .seller-home__feed-item-status-glyph,
+  .seller-home__feed-group,
   .seller-home__feed-item-workflow,
   .seller-home__feed-item-menu-trigger,
   .seller-home__feed-item-menu-item,

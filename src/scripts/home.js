@@ -1553,7 +1553,16 @@
   // place among its neighbours rather than to the top of its group.
   function feedSortKey (order, li) {
     var row = li.querySelector('[data-sh-feed-item]')
-    var state = row ? row.getAttribute('data-sh-feed-state') : ''
+
+    // Group headers ("Active", "Paused") are list items too, and they
+    // name the group they sit above rather than containing a row. They
+    // carry `data-sh-feed-order="-1"` so they land first within it —
+    // which is what keeps a row paused at runtime from being inserted
+    // above its own header.
+    var state = row
+      ? row.getAttribute('data-sh-feed-state')
+      : li.getAttribute('data-sh-feed-group-state')
+
     var group = order.indexOf(state)
 
     return {
@@ -1594,9 +1603,40 @@
       return
     }
 
+    // Group labels sit between the rows, and one moves whenever the
+    // number of rows above it changes — or when its group opens or
+    // empties. Flip only animates the rows, so a label left visible
+    // would jump straight to its new place while everything around it
+    // glided there. Hide any label that's about to move, let the rows
+    // travel, then fade it back in: it arrives once, in the right spot.
+    //
+    // Measured rather than inferred from the state change, because
+    // "does this label move" depends on what's above it, not on what
+    // the row became. Run now shuffles a row between two groups that
+    // are both above the Paused label, and correctly leaves it alone.
+    var headers = toArray(list.querySelectorAll('.seller-home__feed-group'))
+    var wasAt = headers.map(function (h) { return h.getBoundingClientRect().top })
+
     var state = Flip.getState(list.querySelectorAll('[data-sh-feed-list-item]'))
     move()
-    Flip.from(state, { duration: FEED_MOTION.shuffle, ease: FEED_MOTION.ease })
+
+    // Read after the move, when layout is final but before Flip starts
+    // animating. A label that was hidden reads as 0 on one side and a
+    // real offset on the other, so opening and emptying a group both
+    // count as moving.
+    var settling = headers.filter(function (h, i) {
+      return h.getBoundingClientRect().top !== wasAt[i]
+    })
+
+    settling.forEach(function (h) { h.setAttribute('data-sh-feed-settling', '') })
+
+    Flip.from(state, {
+      duration: FEED_MOTION.shuffle,
+      ease: FEED_MOTION.ease,
+      onComplete: function () {
+        settling.forEach(function (h) { h.removeAttribute('data-sh-feed-settling') })
+      }
+    })
   }
 
   // Any state change can move the row — pausing sorts it to the bottom,
@@ -1612,6 +1652,9 @@
       return
     }
 
+    // Group labels are handled inside `feedReshuffle` — it can measure
+    // which of them the move actually shifts, which is not something
+    // this function could work out from the state change alone.
     feedReshuffle(li, function () {
       applyFeedState(row, state)
       placeFeedRow(feedRoot, li)
@@ -1808,6 +1851,35 @@
     })
   }
 
+  // The glyph slot shows the row's state at rest and the NEXT action on
+  // hover, and a click leaves the pointer sitting right where it was —
+  // so the hover rules would take over immediately and the state just
+  // created would never be seen. Press pause on a completed row and you
+  // land straight on a play glyph, having never watched it become
+  // paused, which is worst when the row doesn't move because it was
+  // already last in the list.
+  //
+  // Latching the button out of preview until the pointer or focus
+  // leaves gives that state a beat to be read, and puts the next preview
+  // behind a deliberate act. A timer was the alternative and is worse:
+  // the glyph would change on its own while the pointer sat still.
+  //
+  // Bound per interaction rather than delegated, because `pointerleave`
+  // doesn't bubble. Both listeners remove themselves, so nothing
+  // accumulates across clicks.
+  function latchStatusHover (toggle) {
+    toggle.setAttribute('data-sh-feed-hover-latched', '')
+
+    function release () {
+      toggle.removeAttribute('data-sh-feed-hover-latched')
+      toggle.removeEventListener('pointerleave', release)
+      toggle.removeEventListener('blur', release)
+    }
+
+    toggle.addEventListener('pointerleave', release)
+    toggle.addEventListener('blur', release)
+  }
+
   // ── Status button ─────────────────────────────────────────────────
   // What it does depends on the row's state: a paused row resumes, a
   // failed one retries, anything else pauses.
@@ -1826,6 +1898,7 @@
       var now = nextFeedState(row)
 
       changeFeedState(feedRoot, row, now)
+      latchStatusHover(toggle)
 
       document.dispatchEvent(new CustomEvent('sh:feed-run-toggle', {
         detail: {

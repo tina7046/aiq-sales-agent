@@ -240,6 +240,35 @@
 
 
 {#
+  Group header — a label sitting above a run of rows ("Active",
+  "Paused"). Rendered only where the data defines `feed.groups`.
+
+  It's an `<li>` because a `<ul>` can only hold list items, and
+  `role="presentation"` because it isn't one of the things being
+  listed — that keeps the list's announced count equal to the number of
+  rows. The `<h4>` inside is the real heading, one level below the
+  section's `<h2>` and beside the rows' `<h3>`s.
+
+  `sortState` is which state group this header belongs above, and the
+  `data-sh-feed-order="-1"` puts it first within that group. Between
+  them they let `feedSortKey` in home.js place the header with exactly
+  the machinery that places the rows, so a row paused at runtime lands
+  underneath the Paused header rather than above it.
+#}
+{% macro groupHeader(name, label, sortState) %}
+<li
+  class="seller-home__feed-group"
+  role="presentation"
+  data-sh-feed-group="{{ name }}"
+  data-sh-feed-group-state="{{ sortState }}"
+  data-sh-feed-order="-1"
+>
+  <h4 class="seller-home__feed-group-label">{{ label }}</h4>
+</li>
+{% endmacro %}
+
+
+{#
   Row.
 
   The interactive element sits INSIDE the `<h3>` and stretches to fill
@@ -451,9 +480,14 @@
      list of this size, and it doesn't depend on a Nunjucks filter
      being available.
 
-     `feed.itemsParked` is NOT rendered — see index.json. #}
+     `feed.itemsParked` is NOT rendered — see index.json.
+
+     Group headers are opt-in: they render only where the data defines
+     `feed.groups`, which today is the lab page and not Seller Home. #}
   <ul class="seller-home__feed-list" role="list">
+    {% if feed.groups %}{{ groupHeader("active", feed.groups.active, feed.stateOrder[0]) }}{% endif %}
     {% for state in feed.stateOrder %}
+      {% if feed.groups and state == "paused" %}{{ groupHeader("paused", feed.groups.paused, "paused") }}{% endif %}
       {% for item in feed.items %}
         {% if item.state == state %}
           <li class="seller-home__feed-list-item" data-sh-feed-list-item>

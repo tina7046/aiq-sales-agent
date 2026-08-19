@@ -14,6 +14,120 @@ $static-font-path: '/assets/fonts/webfonts';
 //
 @import 'footer';
 
+// ══════════════════════════════════════════════════════════════════════
+// transitions.dev — motion tokens + shared transitions
+// ----------------------------------------------------------------------
+// Installed here, in the stylesheet every page loads via _template.html,
+// so any surface can reference the scale rather than inventing its own
+// durations. See .agents/skills/transitions-dev/ for the full catalogue
+// and the reference file behind each snippet.
+//
+// The block below is `_root.css` from that skill, pasted once as
+// documented. Two layers:
+//
+//   1. the shared motion scale — `--duration-*`, `--ease-*`,
+//      `--distance-*`, `--scale-*`, `--blur-*`. Reference these
+//      directly anywhere: `transition: opacity var(--duration-fast)
+//      var(--ease-in-out)`.
+//   2. per-transition tunables (`--icon-swap-*`, `--modal-*`, …) that
+//      each snippet reads. Only the ones whose snippet is installed do
+//      anything; the rest are inert until one is.
+//
+// Match on USAGE, not on the raw number, when reaching for a token —
+// the usage each one is tuned for is in the comment beside it.
+// ══════════════════════════════════════════════════════════════════════
+:root {
+  /* ── Motion tokens — shared scale ────────────────────────────── */
+  /* Durations */
+  --duration-stagger: 40ms;  /* per-item stagger offset */
+  --duration-micro: 80ms;  /* tooltip/path delay, shake segment, large stagger */
+  --duration-quick: 150ms;  /* modal/dropdown close, text swap, tooltip appear */
+  --duration-fast: 250ms;  /* icon swap, dropdown/modal open, tabs sliding, page slide */
+  --duration-medium: 350ms;  /* panel close, toast close */
+  --duration-slow: 400ms;  /* panel open, skeleton content reveal, input clear */
+  --duration-very-slow: 500ms;  /* emphasis moments, badge appear, text reveal, success check */
+  /* Easings */
+  --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);  /* modal/dropdown/panel open + close, page slide, resize, position change */
+  --ease-in-out: ease-in-out;  /* icon swap, text swap, text reveal, skeleton reveal */
+  --ease-out: ease-out;  /* tooltip open / close */
+  --ease-linear: linear;  /* shimmer, skeleton pulse, spinner */
+  --ease-bounce: cubic-bezier(0.34, 1.36, 0.64, 1);  /* badge pop open */
+  --ease-bounce-strong: cubic-bezier(0.34, 3.85, 0.64, 1);  /* bouncy hover-out (avatar return) */
+  /* Distances */
+  --distance-micro: 4px;  /* text swap */
+  --distance-small: 6px;  /* error shake (small segment) */
+  --distance-base: 8px;  /* badge diagonal reveal, page slide, error shake (large segment) */
+  --distance-medium: 12px;  /* text reveal */
+  --distance-large: 30px;  /* check badge appear */
+  /* Scales */
+  --scale-large: 0.96;  /* modal open / close */
+  --scale-medium: 0.97;  /* dropdown open */
+  --scale-small: 0.98;  /* tooltip open */
+  --scale-tiny: 0.99;  /* dropdown close */
+  /* Blur */
+  --blur-small: 2px;  /* panel reveal, icon swap, text swap, skeleton reveal, number pop-in */
+  --blur-medium: 3px;  /* page slide, text reveal */
+  --blur-large: 8px;  /* success check open */
+
+  /* ── Per-transition tunables ─────────────────────────────────── */
+  /* Icon swap */
+  --icon-swap-dur: 250ms;
+  --icon-swap-blur: 2px;
+  --icon-swap-start-scale: 0.25;
+  --icon-swap-ease: ease-in-out;
+  /* Modal open / close — already in use on the conversation page */
+  --modal-open-dur: 250ms;
+  --modal-close-dur: 150ms;
+  --modal-scale: 0.96;
+  --modal-scale-close: 0.96;
+  --modal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+// ── Icon swap ─────────────────────────────────────────────────────────
+// Cross-fades two icons sharing one slot: hamburger ↔ close, play ↔
+// pause, expand ↔ collapse. Both stay in the DOM, stacked in the same
+// grid cell, and `data-state` picks which is up.
+//
+//   <div class="t-icon-swap" data-state="a">
+//     <span class="t-icon" data-icon="a">…</span>
+//     <span class="t-icon" data-icon="b">…</span>
+//   </div>
+//
+// Pure CSS — flip `data-state` from whatever already drives the state.
+//
+// Verbatim from 09-icon-swap.md, `will-change` and reduced-motion guard
+// included. Note this is the two-icon component; a slot that picks from
+// more than two glyphs (the feed's status button) references the
+// `--icon-swap-*` tokens directly instead of using these classes.
+.t-icon-swap {
+  position: relative;
+  display: inline-grid;
+}
+.t-icon-swap .t-icon {
+  grid-area: 1 / 1;
+  transition:
+    opacity   var(--icon-swap-dur) var(--icon-swap-ease),
+    filter    var(--icon-swap-dur) var(--icon-swap-ease),
+    transform var(--icon-swap-dur) var(--icon-swap-ease);
+  will-change: opacity, filter, transform;
+}
+.t-icon-swap[data-state="a"] .t-icon[data-icon="a"],
+.t-icon-swap[data-state="b"] .t-icon[data-icon="b"] {
+  opacity: 1;
+  filter: blur(0);
+  transform: scale(1);
+}
+.t-icon-swap[data-state="a"] .t-icon[data-icon="b"],
+.t-icon-swap[data-state="b"] .t-icon[data-icon="a"] {
+  opacity: 0;
+  filter: blur(var(--icon-swap-blur));
+  transform: scale(var(--icon-swap-start-scale));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-icon-swap .t-icon { transition: none !important; }
+}
+
 //
 // We can also add styles directly in this file, like so:
 //
@@ -262,8 +376,16 @@ $static-font-path: '/assets/fonts/webfonts';
   border-radius: 50%;
   animation: sh-spin 0.85s linear infinite;
 }
+// `from` is stated rather than left implicit. Without it the start of the
+// animation is whatever `transform` the element already carries, and if
+// that isn't a rotation the browser can't interpolate the two function
+// lists — it falls back to matrices instead. The feed's status glyphs sit
+// at `scale(1)` for the icon-swap transition, and `scale(1)` and
+// `rotate(360deg)` are both the identity matrix, so the spinner
+// interpolated identity to identity and sat perfectly still.
 @keyframes sh-spin {
-  to { transform: rotate(360deg); }
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 @media (prefers-reduced-motion: reduce) {
   .sh-spinner { animation: none; }

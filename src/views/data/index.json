@@ -2750,6 +2750,24 @@
     // The labels live here rather than in the template so the wording is
     // editable without touching markup, and so the JS that rewrites the
     // subline on pause has no copy of its own.
+    // ── Group headers ─────────────────────────────────────────────────
+    // Labels above the runs of rows. Defining `groups` at all is what
+    // turns them on — remove this key and the list renders unbroken, so
+    // the treatment can be taken back out without touching markup.
+    //
+    // "Active" covers everything that isn't paused: finished, failed,
+    // running and scheduled are all work the agent is still on the hook
+    // for, so the split the seller cares about is running-or-not.
+    //
+    // Each label hides while its group is empty, decided in CSS off
+    // `:has()`. Pausing the first row brings the Paused label with it,
+    // and pausing every row hides Active rather than leaving it over
+    // nothing.
+    "groups": {
+      "active": "Active",
+      "paused": "Paused"
+    },
+
     "statusLabels": {
       "completed": "Completed",
       "running":   "Running now",
@@ -2942,6 +2960,46 @@
           { "icon": "doc", "label": "Quarterly Deal Pulse" }
         ],
         "workflow": { "id": "", "label": "" }
+      },
+      // Two runs in flight. Where they sit in this array doesn't matter:
+      // `stateOrder` puts them in the running group, between the
+      // completed rows and the scheduled one.
+      {
+        "id": "run-01",
+        // The count lives in the pill, not the title: a title that names
+        // a number goes stale the moment the run moves on, and it has to
+        // read correctly in every tense (the neutral form would be
+        // "Research 42 target accounts" for a run that hasn't counted
+        // anything yet). The pill can carry progress instead.
+        "title": "Researching target accounts",
+        "titles": {
+          "running": "Researching target accounts",
+          "neutral": "Research target accounts"
+        },
+        "cadence": "Weekly",
+        "startedAt": "Started 12 min ago",
+        "lastRun": "Last run Monday",
+        "state": "running",
+        "outputs": [
+          { "icon": "table", "label": "42 of 50 accounts" }
+        ],
+        "workflow": { "id": "", "label": "" }
+      },
+      {
+        "id": "run-02",
+        "title": "Drafting outreach for warm leads",
+        "titles": {
+          "running": "Drafting outreach for warm leads",
+          "neutral": "Draft outreach for warm leads"
+        },
+        "cadence": "Daily",
+        "startedAt": "Started 4 min ago",
+        "lastRun": "Last run yesterday",
+        "state": "running",
+        "outputs": [
+          { "icon": "message", "label": "12 of 30 drafted" }
+        ],
+        "workflow": { "id": "", "label": "" }
       }
     ],
 
@@ -2969,22 +3027,9 @@
         "retryOutput": { "icon": "doc", "label": "Syncing 214 territories" },
         "workflow": { "id": "", "label": "" }
       },
-      {
-        "id": "run-01",
-        "title": "Researching 42 target accounts",
-        "titles": {
-          "running": "Researching 42 target accounts",
-          "neutral": "Research 42 target accounts"
-        },
-        "cadence": "Weekly",
-        "startedAt": "Started 12 min ago",
-        "lastRun": "Last run Monday",
-        "state": "running",
-        "outputs": [
-          { "icon": "table", "label": "42 accounts" }
-        ],
-        "workflow": { "id": "", "label": "" }
-      },
+      // No parked `running` example: there are two live in `items`
+      // above, and a third under the same id would only be a duplicate
+      // to trip over.
       {
         "id": "sch-01",
         "title": "Refresh account health scores",
