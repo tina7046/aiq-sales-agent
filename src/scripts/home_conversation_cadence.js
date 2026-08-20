@@ -50,6 +50,11 @@
   // ── Config ──────────────────────────────────────────────────────
   var SELECTORS = {
     root:        '[data-sh-cadence-root]',
+    // The standalone email-drafts block (the "Draft intro emails"
+    // answer). Same `stepCard` markup as a cadence touch, minus the
+    // rail / accordion / pager — so it shares the tab and citation
+    // machinery below without the sequence controller around it.
+    emailDrafts: '[data-sh-email-drafts]',
     steps:       '[data-sh-cadence-steps]',
     seqTemplate: '[data-sh-cadence-seq]',
     // Header + identity write targets:
@@ -222,6 +227,49 @@
     for (var i = 0; i < found.length; i++) roots.push(found[i])
 
     for (var r = 0; r < roots.length; r++) bindCadence(roots[r])
+
+    // Standalone email-drafts blocks. Same scope resolution as the
+    // cadence roots above: the block can BE the injected node or live
+    // inside it.
+    var drafts = []
+    if (host.matches && host.matches(SELECTORS.emailDrafts)) drafts.push(host)
+    var foundDrafts = host.querySelectorAll(SELECTORS.emailDrafts)
+    for (var d = 0; d < foundDrafts.length; d++) drafts.push(foundDrafts[d])
+    for (var e = 0; e < drafts.length; e++) bindEmailDrafts(drafts[e])
+  }
+
+  // ── Standalone email drafts ─────────────────────────────────────
+  // The "Draft intro emails" answer renders one `stepCard` per
+  // prospect with none of the sequence chrome — no rail, no collapse,
+  // no pager. So there's no sequence to render, no roster to page, and
+  // no approval state; the only interactive parts of a card are its
+  // Details / Feedback tabs and its inline citations. Both already
+  // exist as scope-agnostic helpers (`mintStepIds`, `activateTab`, and
+  // the citations observer), so wiring is: mint the ARIA ids the cloned
+  // markup needs, delegate tab clicks off the block, and point the
+  // citation hover card at it.
+  //
+  // Regenerate stays disabled: it needs authored alternates to cycle
+  // through (`regenerations` on the step), and these one-off intros
+  // carry none. The feedback textarea is left inert for the same
+  // reason — there's nothing to regenerate from. Idempotent per block.
+  function bindEmailDrafts (root) {
+    if (!root || root.dataset.emailDraftsWired === 'true') return
+    root.dataset.emailDraftsWired = 'true'
+
+    mintStepIds(root)
+
+    root.addEventListener('click', function (event) {
+      var target = event.target
+      if (!target || !target.closest) return
+      var tab = target.closest(SELECTORS.tabLink)
+      if (!tab) return
+      event.preventDefault()
+      activateTab(tab.closest(SELECTORS.tabsRoot), tab.getAttribute('data-sh-tab-link'))
+    })
+
+    var pop = root.querySelector(SELECTORS.cite)
+    createCitations(root, pop).observe(root)
   }
 
   // ── The header's two lookups ────────────────────────────────────

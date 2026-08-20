@@ -1839,6 +1839,11 @@
   function feedSublineKey (state, home) {
     if (state === 'paused') return 'paused'
     if (state === 'running' && home !== 'running') return 'running'
+    // Complete / Schedule from the kebab move the row into a finished or
+    // waiting state; each slot carries the authored copy for those, so
+    // the subline and title tense follow the way pause and run already do.
+    if (state === 'completed') return 'completed'
+    if (state === 'scheduled') return 'scheduled'
     return 'default'
   }
 
@@ -2156,12 +2161,15 @@
           detail: { action: actionId, rowId: rowId, source: 'feed' }
         }))
 
-        // The two run actions are transitions the status button already
-        // makes, reached from the menu instead — so they go through the
-        // same path rather than inventing a second one.
+        // Every state-changing action is a transition the row can already
+        // reach — Run now / Pause echo the status button, Complete and
+        // Schedule move it into a finished or waiting state — so they all
+        // go through `changeFeedState` rather than inventing a second path.
         if (actionId === 'dismiss') dismissListItem(closest(item, '[data-sh-feed-list-item]'))
         else if (actionId === 'run_now' && row) changeFeedState(feedRoot, row, 'running')
         else if (actionId === 'pause' && row) changeFeedState(feedRoot, row, 'paused')
+        else if (actionId === 'complete' && row) changeFeedState(feedRoot, row, 'completed')
+        else if (actionId === 'schedule' && row) changeFeedState(feedRoot, row, 'scheduled')
         return
       }
     })

@@ -84,6 +84,8 @@
     {{ workflowActivity(msg) }}
   {% elif msg.type == 'suggestions' %}
     {{ suggestions(msg) }}
+  {% elif msg.type == 'email_drafts' %}
+    {{ emailDrafts(msg) }}
   {% endif %}
 </li>
 {% endmacro %}
@@ -679,6 +681,86 @@
   </ul>
   {% endif %}
 </div>
+{% endmacro %}
+
+
+{# ── Email drafts ─────────────────────────────────────────────────
+   The "Draft intro emails" answer: one drafted email per prospect,
+   each headed by whose email it is. Reuses the cadence's `stepCard`
+   macro verbatim — the same message card, Details / Feedback tabs,
+   inline citations, and Sources pills — but WITHOUT the sequence
+   chrome around it: no channel rail / timeline line, no collapse
+   accordion, no `<ol>`, no pager or footer. A cadence is one prospect
+   across many touches; this is one touch across many prospects, so
+   the card is the only piece that carries over.
+
+   Wired by ShCadence.mount, which also scans `[data-sh-email-drafts]`
+   (see home_conversation_cadence.js): tabs and the citation hover card
+   share the cadence's own handlers, so this adds no behavior of its
+   own. Each `stepCard` is a self-contained unit — no dependency on the
+   rail or the `<li>` it normally sits in — which is what makes the
+   standalone reuse a call rather than a fork.
+
+   Data contract — an `email_drafts` message on a scripted turn's reply:
+     {
+       id: String, type: 'email_drafts',
+       text?: String,               // agent line above the cards
+       emails: [ {
+         prospect: String,          // "Zack Turner"  — the identity header
+         role:     String,          // "VP, IT"
+         company:  String,          // "Cirrus"
+         step: { … a `stepCard` step: type:'email', subject, body,
+                 details:[{title,value}], sources:[{label,icon}] }
+       } ]
+     }
+   `step.body` is trusted authored markup on the same terms as every
+   other body in this file — `<br>` breaks and `email-highlight`
+   citation spans, never user input. Tokens ({firstName} etc.) are
+   filled per email from the prospect fields, so a step CAN be written
+   with tokens; these are authored per person, so they mostly aren't. #}
+{% macro emailDrafts(msg) %}
+<article
+  class="seller-home__conv-msg seller-home__conv-msg--agent"
+  data-sh-conv-msg="{{ msg.id }}"
+  data-sh-conv-msg-type="agent"
+  aria-label="Agent response"
+>
+  {% if msg.text %}
+  <p class="seller-home__conv-msg-agent-text">{{ msg.text | emphasis | safe }}</p>
+  {% endif %}
+
+  {% if msg.emails and msg.emails | length > 0 %}
+  <div class="seller-home__conv-email-drafts" data-sh-email-drafts>
+    {% for email in msg.emails %}
+    {#- The prospect meta `stepCard` needs for token fill, built the
+        same way the cadence builds `_meta` so the tokens behave
+        identically on both surfaces. -#}
+    {%- set _p = {
+      prospect:  email.prospect,
+      firstName: email.prospect.split(' ') | first,
+      role:      email.role,
+      company:   email.company
+    } -%}
+    <section class="seller-home__conv-email-draft">
+      {#- Whose email this is. The name leads; role and company trail
+          as a muted qualifier, bullet-separated. -#}
+      <h4 class="seller-home__conv-email-draft-identity">
+        <span class="seller-home__conv-email-draft-name">{{ email.prospect }}</span>
+        {%- if email.role or email.company %}
+        <span class="seller-home__conv-email-draft-meta">{{ email.role }}{% if email.role and email.company %} &middot; {% endif %}{{ email.company }}</span>
+        {%- endif %}
+      </h4>
+      {{ cadence.stepCard(email.step, _p) }}
+    </section>
+    {% endfor %}
+
+    {#- One citation hover card for the whole block, anchored to
+        whichever highlight is hovered — same one-per-scope model the
+        cadence uses. -#}
+    {{ cadence.citationPopover() }}
+  </div>
+  {% endif %}
+</article>
 {% endmacro %}
 
 

@@ -2815,6 +2815,188 @@
           ]
         }
       ]
+    },
+    // ── Meeting Next Steps → multi-threading (ri-04 drills in here) ────
+    // Reuses the conv-001 building blocks: an agent text intro, the
+    // `prospectTable` (a narrow 3-column cut of it), and a `suggestions`
+    // nudge. From a booked meeting with Marcus Chen (the pinned row of
+    // conv-001), the agent maps the rest of the Cirrus buying group and
+    // offers to draft intro emails to all three.
+    //
+    // Title/recentLabel here move together with the `ri-04` card title
+    // above (the "three copies" rule; ri-04 is not the default, so
+    // home_conversation.json's fallbackTitle is not a fourth copy).
+    //
+    // Message ids are `c3-`-prefixed so they can't collide with conv-001
+    // / conv-002 once every conversation is cloned onto the one page.
+    //
+    // MILESTONE 1: prospects only. The three drafted email cards arrive
+    // in `scriptedTurns` (built next) when "Draft intro emails" is sent.
+    "conv-003": {
+      "id": "conv-003",
+      "title": "Meeting Next Steps",
+      "subtitle": "Buyer Engage",
+      "workflow": { "id": "buyer_engage", "label": "Buyer Engage" },
+      "status": "in_progress",
+      "recentLabel": "Meeting Next Steps",
+      "messages": [
+        {
+          "id":   "c3-context",
+          "type": "agent",
+          "text": "Off your meeting with **Marcus Chen** (VP, Sales) at **Cirrus**, I mapped the rest of the buying group. Right now **Robert** (Director, IT) is your only technical contact — a single-threaded deal that stalls the moment his priorities shift. **Multi-threading** means engaging several decision-makers in the account in parallel, so momentum doesn’t hinge on one champion. Here are three more people at Cirrus worth pulling in now."
+        },
+        {
+          "id":   "c3-prospects",
+          "type": "agent",
+          "table": {
+            "id": "conv-003-prospects",
+            "ariaLabel": "Cirrus buying-group contacts to multi-thread",
+            // A three-column cut of conv-001's prospect table: only these
+            // ids are declared, so only these render (see `prospectTable`).
+            "columns": [
+              { "id": "prospect",    "label": "Prospect" },
+              { "id": "company",     "label": "Company" },
+              { "id": "whyProspect", "label": "Why multi-thread?" }
+            ],
+            "rows": [
+              {
+                "id": "cirrus-mt-01", "prospect": "Zack Turner", "role": "VP, IT", "company": "Cirrus",
+                "icon": "contact", "recordType": "Contact",
+                "email": "zack.turner@cirrus.com", "phone": "+1 (415) 555-0142",
+                "companyLogoUrl": "/assets/images/company-logos/accounts/cirrus.png",
+                "employees": "~3,500", "industry": "Software / HR & IT Management", "location": "San Francisco, CA",
+                "whyProspect": "Robert’s manager and the budget owner for infrastructure decisions. Looping him in early gives the deal executive air cover if Robert’s priorities shift."
+              },
+              {
+                "id": "cirrus-mt-02", "prospect": "Monica Reyes", "role": "Sr. Director, Data Architecture", "company": "Cirrus",
+                "icon": "contact", "recordType": "Contact",
+                "email": "monica.reyes@cirrus.com", "phone": "+1 (415) 555-0173",
+                "companyLogoUrl": "/assets/images/company-logos/accounts/cirrus.png",
+                "employees": "~3,500", "industry": "Software / HR & IT Management", "location": "San Francisco, CA",
+                "whyProspect": "Owns the data model the integration plugs into. Her sign-off de-risks the technical evaluation, and she isn’t engaged yet."
+              },
+              {
+                "id": "cirrus-mt-03", "prospect": "Patrick O’Brien", "role": "Manager, DevOps", "company": "Cirrus",
+                "icon": "contact", "recordType": "Contact",
+                "email": "patrick.obrien@cirrus.com", "phone": "+1 (415) 555-0198",
+                "companyLogoUrl": "/assets/images/company-logos/accounts/cirrus.png",
+                "employees": "~3,500", "industry": "Software / HR & IT Management", "location": "San Francisco, CA",
+                "whyProspect": "Reports to Robert and would own day-to-day rollout. A friendly voice at the working level keeps momentum between the exec conversations."
+              }
+            ]
+          }
+        },
+        {
+          "id":   "c3-next-steps",
+          "type": "suggestions",
+          "text": "What do you want me to do next?",
+          "items": [
+            {
+              "id":     "draft-intro-emails",
+              "text":   "Draft intro emails to all three contacts, personalized to each one’s role in the deal.",
+              "cta":    "Draft intro emails",
+              "prompt": "Draft intro emails to all three contacts"
+            }
+          ]
+        }
+      ],
+      "opening": {
+        "stages": [
+          {
+            "id": "c3-open-01",
+            "thinkingMs": 2000,
+            "thinkingLabel": "Reviewing your meeting with Marcus Chen…",
+            "messageIds": ["c3-context"]
+          },
+          {
+            "id": "c3-open-02",
+            "thinkingMs": 2600,
+            "thinkingLabel": "Mapping the Cirrus buying group…",
+            "messageIds": ["c3-prospects", "c3-next-steps"]
+          }
+        ]
+      },
+      // Sending "Draft intro emails" (the suggestion, or any follow-up)
+      // returns one `email_drafts` message: three standalone email cards,
+      // one per prospect, each headed by whose email it is. The cards
+      // reuse the cadence `stepCard` — Details / Feedback tabs, inline
+      // citations, Sources pills — without the sequence rail or accordion
+      // (see the `email_drafts` macro in _home_conversation_messages.html).
+      //
+      // Each `step` is a `stepCard` step: type + subject + body (trusted
+      // markup, `email-highlight` spans carry their hover card) + details
+      // (Email Type, Reasoning) + sources. No `regenerations`, so each
+      // card's Regenerate stays disabled — these are one-off intros.
+      "scriptedTurns": [
+        {
+          "id": "turn-01",
+          "thinkingMs": 2600,
+          "thinkingLabel": "Drafting three intro emails…",
+          "reply": [
+            {
+              "id":   "turn-01-emails",
+              "type": "email_drafts",
+              "text": "Here are three intro emails, one per contact — each written to their role in the deal. Review the reasoning on any card, or tell me what to change.",
+              "emails": [
+                {
+                  "prospect": "Zack Turner",
+                  "role": "VP, IT",
+                  "company": "Cirrus",
+                  "step": {
+                    "type": "email",
+                    "subject": "Backing Robert’s Bluebirds evaluation",
+                    "body": "Hi Zack,<br><br>Your team is already looking at Bluebirds with Robert — <span class='email-highlight' data-link='context' data-popover-title='Deal Context' data-popover-question='Is this the right thing to open on?' data-popover-body='Technical evaluation underway on the IT side; Robert (Director, IT) is the active contact.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>the technical evaluation is already underway on the IT side</span>. I wanted to reach you directly, since <span class='email-highlight' data-link='pain' data-popover-title='Buying Role' data-popover-question='Is this a fair read of his role?' data-popover-body='VP of IT — Robert’s manager and the budget owner for infrastructure decisions at Cirrus.' data-source-label='ZoomInfo' data-source-icon='/assets/images/source_icons/source_zoominfo.svg'>infrastructure decisions at this scale land on your desk</span>.<br><br>The short version: we consolidate enrichment across 15 data vendors into one workflow, inside the CRM your reps already use — nothing new for IT to stand up or secure.<br><br>Fifteen minutes to give you the executive view before Robert brings you the detail?",
+                    "details": [
+                      { "title": "Email Type", "value": "Warm intro — executive" },
+                      { "title": "Reasoning",  "value": "Reaches the budget owner above the technical contact so the deal keeps executive air cover if Robert’s priorities shift. The ask is a fifteen-minute exec briefing, not a demo — the version a VP takes from a stranger." }
+                    ],
+                    "sources": [
+                      { "label": "Salesforce", "icon": "/assets/images/source_icons/source_salesforce.svg" },
+                      { "label": "ZoomInfo",   "icon": "/assets/images/source_icons/source_zoominfo.svg" }
+                    ]
+                  }
+                },
+                {
+                  "prospect": "Monica Reyes",
+                  "role": "Sr. Director, Data Architecture",
+                  "company": "Cirrus",
+                  "step": {
+                    "type": "email",
+                    "subject": "How Bluebirds fits your data model",
+                    "body": "Hi Monica,<br><br>We’re partway into an evaluation with Robert’s team, and a deployment at your scale eventually runs through <span class='email-highlight' data-link='context' data-popover-title='Ownership' data-popover-question='Is this the right hook for her?' data-popover-body='Sr. Director, Data Architecture — owns the data model the integration plugs into. Her sign-off de-risks the technical evaluation.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>the account’s data architecture</span> — which is your call, not IT’s.<br><br>Bluebirds writes enriched records into your existing objects: <span class='email-highlight' data-link='solution' data-popover-title='Value Prop' data-popover-question='Is this the reassurance an architect wants first?' data-popover-body='No net-new schema and no shadow data store — enrichment lands on the objects already in the model.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>no net-new schema, no shadow data store</span>. Most architects want to see exactly that before they sign off.<br><br>Worth a short session to walk your team through it, so the review doesn’t stall later?",
+                    "details": [
+                      { "title": "Email Type", "value": "Technical intro" },
+                      { "title": "Reasoning",  "value": "Engages the sign-off owner who isn’t in the deal yet, and leads with the first question a data architect asks — what it does to the schema. Pre-empts the review that most often stalls a technical evaluation." }
+                    ],
+                    "sources": [
+                      { "label": "Salesforce", "icon": "/assets/images/source_icons/source_salesforce.svg" },
+                      { "label": "G2",         "icon": "/assets/images/source_icons/source_g2.svg" }
+                    ]
+                  }
+                },
+                {
+                  "prospect": "Patrick O’Brien",
+                  "role": "Manager, DevOps",
+                  "company": "Cirrus",
+                  "step": {
+                    "type": "email",
+                    "subject": "Rollout, from the team who’d run it",
+                    "body": "Hi Patrick,<br><br>You’d likely own the day-to-day rollout if Cirrus moves forward with Bluebirds — <span class='email-highlight' data-link='context' data-popover-title='Working-Level Owner' data-popover-question='Is this why he belongs on the thread?' data-popover-body='Manager, DevOps — reports to Robert and would own day-to-day rollout. A friendly voice at the working level keeps momentum between the exec conversations.' data-source-label='ZoomInfo' data-source-icon='/assets/images/source_icons/source_zoominfo.svg'>so I’d rather you hear it from us early than inherit it later</span>.<br><br><span class='email-highlight' data-link='solution' data-popover-title='Setup' data-popover-question='Is this the operational detail he cares about?' data-popover-body='Median package install and field mapping time across 2025 Salesforce onboardings.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>Setup is a 30-minute package install and field mapping</span>, and there’s no new interface for your team to maintain — it lives in the CRM you already run.<br><br>Happy to walk through the deployment steps whenever it’s useful.",
+                    "details": [
+                      { "title": "Email Type", "value": "Working-level intro" },
+                      { "title": "Reasoning",  "value": "Opens a friendly line at the level that owns execution, so momentum holds between the executive conversations. Leads with the operational facts a DevOps manager weighs — setup time and maintenance surface — rather than the pitch." }
+                    ],
+                    "sources": [
+                      { "label": "ZoomInfo",   "icon": "/assets/images/source_icons/source_zoominfo.svg" },
+                      { "label": "Salesforce", "icon": "/assets/images/source_icons/source_salesforce.svg" }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   },
   "feed": {
@@ -2915,9 +3097,11 @@
     // neither is a second way of doing something that already had one.
     // Dismiss stays last: it's the destructive one.
     "rowActions": [
-      { "id": "run_now", "label": "Run now", "icon": "play",  "hideForState": "running" },
-      { "id": "pause",   "label": "Pause",   "icon": "pause", "onlyForState": "running" },
-      { "id": "dismiss", "label": "Dismiss", "icon": "close" }
+      { "id": "run_now",  "label": "Run now",  "icon": "play",  "hideForState": "running" },
+      { "id": "pause",    "label": "Pause",    "icon": "pause", "onlyForState": "running" },
+      { "id": "complete", "label": "Complete", "icon": "check", "hideForState": "completed" },
+      { "id": "schedule", "label": "Schedule", "icon": "clock", "hideForState": "scheduled" },
+      { "id": "dismiss",  "label": "Dismiss",  "icon": "close" }
     ],
     // Semantic-category → SLDS utility-sprite map (Figma node
     // 8797:228978). Row outputs pick an `icon` from this map's
@@ -3049,6 +3233,23 @@
         // exists now.
         "outputs": [
           { "icon": "doc", "label": "Quarterly Deal Pulse" }
+        ],
+        "workflow": { "id": "", "label": "" }
+      },
+      {
+        "id": "ri-04",
+        "conversationId": "conv-003",
+        "title": "Meeting Next Steps",
+        "titles": {
+          "running": "Preparing meeting next steps",
+          "neutral": "Meeting next steps"
+        },
+        "cadence": "Daily",
+        "nextRun": "Next run Friday at 9:00 AM",
+        "lastRun": "Last run yesterday",
+        "state": "scheduled",
+        "outputs": [
+          { "icon": "doc", "label": "Action items" }
         ],
         "workflow": { "id": "", "label": "" }
       },

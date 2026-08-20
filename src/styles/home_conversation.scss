@@ -1477,6 +1477,25 @@ $sh-conv-table-rows: 5.5;
   }
 }
 
+// ── conv-003 (Meeting Next Steps) — a three-column cut of the prospect
+// table. Two overrides scoped to this table by id so Found New Prospects
+// (conv-001, seventeen columns) keeps its wider, scrolling layout:
+//   • The company column only ever holds "Cirrus" here, so its 20rem
+//     floor is dead weight — the three columns (prospect ~321px +
+//     company + whyProspect 240px) only overflow the ~800px thread
+//     because of it. Dropping it to 9rem sums the table back under the
+//     thread width and removes the horizontal scrollbar.
+//   • The name / company first lines read as links; give them the
+//     pointer affordance to match (there's still nothing to navigate to).
+.seller-home__conv-prospect-table[data-sh-conv-table="conv-003-prospects"] {
+  .seller-home__conv-prospect-table-el th[data-sh-conv-col="company"] {
+    width: 16rem;                                              // 144px — only "Cirrus" lives here
+    min-width: 9rem;
+  }
+
+  .cell_text_link { cursor: pointer; }
+}
+
 .seller-home__conv-prospect-table-el {
   // `max-content` lets the per-column minimums below add up past the
   // wrapper, which is what produces the horizontal scroll;
@@ -2691,6 +2710,64 @@ $sh-conv-table-rows: 5.5;
   &.is-open {
     display: block;
   }
+}
+
+
+// ──────────────────────────────────────────────────────────────────────
+// Email drafts — the "Draft intro emails" answer
+// ============================================================
+// One `stepCard` per prospect (see the `email_drafts` macro in
+// _home_conversation_messages.html), reusing the cadence card with none
+// of the sequence chrome — no rail, no accordion, no pager. The card
+// itself is styled by the cadence section just below; this block owns
+// only the vertical stack of cards and the identity header over each,
+// so a card here and a touch in a cadence render identically.
+//
+// Wider than a cadence touch, on purpose: dropping the 30px rail and
+// its 12px gap hands the whole ~788px agent column to the card, so the
+// 7/5 split reads more comfortably than it does inside a sequence.
+.seller-home__conv-email-drafts {
+  // Same escape the cadence / table / snapshot need: without it a long
+  // draft line sets the intrinsic width and pushes the agent article
+  // past the 800px thread column instead of wrapping inside it.
+  min-width: 0;
+  max-width: 100%;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-4, 1rem);   // 16px between drafts
+}
+
+.seller-home__conv-email-draft {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-2, 0.5rem);   // 8px between header and card
+}
+
+// Whose email this is. The name leads in the body weight; role and
+// company trail as a muted, bullet-separated qualifier. Kept at the
+// thread's 13/14px meta scale so the header sits quietly above the card
+// rather than competing with the Subject line inside it.
+.seller-home__conv-email-draft-identity {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--slds-g-spacing-2, 0.5rem);
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+}
+
+.seller-home__conv-email-draft-name {
+  font-size: var(--slds-g-font-scale-1, 0.875rem);      // 14px
+  font-weight: var(--slds-g-font-weight-7, 700);
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+.seller-home__conv-email-draft-meta {
+  font-size: var(--slds-g-font-size-base, 0.8125rem);   // 13px
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
 }
 
 

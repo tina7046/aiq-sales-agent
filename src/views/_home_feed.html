@@ -133,20 +133,30 @@
 {#
   One subline slot, carrying every string it may ever need to show:
 
-    default   the row's own state, as rendered
-    paused    what it says once paused
-    running   what it says once a run is started off-schedule
+    default    the row's own state, as rendered
+    paused     what it says once paused
+    running    what it says once a run is started off-schedule
+    completed  what it says once marked complete from the kebab
+    scheduled  what it says once rescheduled from the kebab
+
+  The `completed` / `scheduled` slots are the authored copy for those two
+  states, held stable at their render-time values so the Complete and
+  Schedule menu actions can move a row into a finished or waiting state
+  and have its subline read right — the same swap-by-key mechanism the
+  status button already uses for pause and run.
 
   `bindFeed` switches slots by key and never composes wording, which is
   what keeps all the copy in index.json.
 #}
-{% macro sublineSlot(name, klass, rest, paused, running) %}
+{% macro sublineSlot(name, klass, rest, paused, running, completed, scheduled) %}
 <span
   class="{{ klass }}"
   data-sh-feed-slot="{{ name }}"
   data-sh-feed-slot-default="{{ rest | trim }}"
   data-sh-feed-slot-paused="{{ paused | trim }}"
   data-sh-feed-slot-running="{{ running | trim }}"
+  data-sh-feed-slot-completed="{{ completed | trim }}"
+  data-sh-feed-slot-scheduled="{{ scheduled | trim }}"
 >{{ rest | trim }}</span>
 {% endmacro %}
 
@@ -328,6 +338,8 @@
           data-sh-feed-slot-default="{{ item.title }}"
           data-sh-feed-slot-paused="{{ neutralTitle }}"
           data-sh-feed-slot-running="{{ runningTitle }}"
+          data-sh-feed-slot-completed="{{ item.title }}"
+          data-sh-feed-slot-scheduled="{{ neutralTitle }}"
           {%- if hasWorkflow %}
           aria-label="{{ linkName }}"
           data-sh-feed-item-name-suffix="{{ ', workflow: ' ~ item.workflow.label }}"
@@ -343,6 +355,8 @@
           data-sh-feed-slot-default="{{ item.title }}"
           data-sh-feed-slot-paused="{{ neutralTitle }}"
           data-sh-feed-slot-running="{{ runningTitle }}"
+          data-sh-feed-slot-completed="{{ item.title }}"
+          data-sh-feed-slot-scheduled="{{ neutralTitle }}"
           {%- if hasWorkflow %}
           aria-label="{{ linkName }}"
           data-sh-feed-item-name-suffix="{{ ', workflow: ' ~ item.workflow.label }}"
@@ -354,9 +368,9 @@
 
       {# Subline — "<status> · <time>". #}
       <p class="seller-home__feed-item-desc" id="{{ descId }}">
-        {{ sublineSlot("status", "seller-home__feed-item-desc-status", sublineStatus(item, statusLabels), statusLabels.paused, statusLabels.running) }}
+        {{ sublineSlot("status", "seller-home__feed-item-desc-status", sublineStatus(item, statusLabels), statusLabels.paused, statusLabels.running, statusLabels.completed, item.cadence) }}
         <span class="seller-home__feed-item-desc-sep" aria-hidden="true">·</span>
-        {{ sublineSlot("time", "seller-home__feed-item-desc-time", sublineTime(item), item.lastRun, retryTime) }}
+        {{ sublineSlot("time", "seller-home__feed-item-desc-time", sublineTime(item), item.lastRun, retryTime, item.nextRun or item.lastRun or item.startedAt, item.nextRun or item.lastRun or item.startedAt) }}
       </p>
 
       {# Readable, not aria-hidden. These counts are the row's payload

@@ -1651,11 +1651,10 @@ main.app-wrapper {
   // from `.seller-home__composer-content`.
   cursor: pointer;
 
-  // The row kebab's hover treatment, so the two icon-button families on
-  // this page answer the pointer the same way: a circular grey pill on
-  // hover or keyboard focus, one step darker while pressed. Tokens and
-  // timing are lifted from `.seller-home__feed-item-menu-trigger` — if
-  // that changes, this should follow.
+  // A circular pill on hover or keyboard focus, one step darker while
+  // pressed. Shape, size and timing come from the row kebab
+  // (`.seller-home__feed-item-menu-trigger`), which carries the same
+  // blue — between them they're every icon button on this page.
   //
   // A background needs a box to fill, and SLDS' bare variant doesn't
   // give it one: these buttons were the 16px glyph and nothing else, so
@@ -1678,11 +1677,11 @@ main.app-wrapper {
   // do anything is a lie.
   &:hover:not([disabled]),
   &:focus-visible:not([disabled]) {
-    background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+    background-color: var(--slds-g-color-palette-electric-blue-95, #edf4ff);
   }
 
   &:active:not([disabled]) {
-    background-color: var(--slds-g-color-surface-container-3, #e5e5e5);
+    background-color: var(--slds-g-color-palette-electric-blue-90, #d6e6ff);
   }
 
   // One colour for the whole toolbar, declared once and inherited by
@@ -1760,12 +1759,16 @@ main.app-wrapper {
 
   transition: background-color 120ms ease;
 
+  // Same blue as the icon buttons beside it — the badge is one of the
+  // toolbar's controls, and a grey response next to four blue ones
+  // reads as something that hasn't been styled yet.
+  //
   // `slds-badge_lightest` sets the resting background through a custom
   // property, so hover goes through the same one — setting
   // `background-color` directly here would win over the badge and
   // leave the rest state and the hover state configured two ways.
   &:hover {
-    --slds-c-badge-color-background: var(--slds-g-color-surface-container-2, #f3f3f3);
+    --slds-c-badge-color-background: var(--slds-g-color-palette-electric-blue-95, #edf4ff);
   }
 
   &:focus-visible {
@@ -2957,15 +2960,20 @@ $sh-feed-status-preview: ".seller-home__feed-item-status:not([data-sh-feed-hover
     fill: var(--slds-g-color-on-surface-1, #5c5c5c);
   }
 
+  // Blue rather than the neutral SLDS menus use, matching the
+  // composer's controls. Both overflow actions take it — the section's
+  // and the row's — so the two levels of "more actions" answer alike.
+  // The open state holds the hover colour, so a menu that's up still
+  // reads as attached to the button that opened it.
   &:hover,
   &:focus-visible,
   &[aria-expanded="true"] {
-    background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+    background-color: var(--slds-g-color-palette-electric-blue-95, #edf4ff);
     border-radius: var(--slds-g-radius-border-circle, 100%);
   }
 
   &:active {
-    background-color: var(--slds-g-color-surface-container-3, #e5e5e5);
+    background-color: var(--slds-g-color-palette-electric-blue-90, #d6e6ff);
   }
 }
 
