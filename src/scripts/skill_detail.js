@@ -3,21 +3,19 @@
 // (/skill_detail.html)
 //
 // Thin caller that:
-//   1. Reads `?id=<id>` off the URL.
+//   1. Reads `?id=<id>` or `?new=1` off the URL.
 //   2. Reads the inlined page config (catalog + toolLibrary +
 //      agentLibrary + statusLibrary + copy) from the
 //      `#sh-skill-detail-config`
 //      <script type="application/json"> block emitted by the template.
 //   3. Resolves the matching skill row (by exact `id`) inside the
-//      catalog.
+//      catalog, or a locally created SkillStore record.
 //   4. Either
-//        a. hydrates the breadcrumb, title, owning-agent + lifecycle
-//           badges, metadata caption, and action clusters, wires the header
-//           dialogs, and hands the
-//           resulting state to the shared
-//           `KnowledgeDocumentView.create({ alwaysEdit, livePreview })`
-//           factory PLUS the Save / Cancel / beforeunload / draft /
-//           saved-value wiring documented below, OR
+//        a. hydrates the three-block canvas (name / description /
+//           instructions), breadcrumb, badges, action clusters, and
+//           Save / Cancel / beforeunload / draft wiring, OR
+//        b. shows the empty create canvas (`?new=1`), OR
+//        c. shows the "not found" state and stops.
 //        b. shows the "not found" state and stops.
 //
 // Persistence model (prototype-scoped, no backend):
@@ -43,14 +41,10 @@
 //   • Use in Chat  — dispatch `sh:skill-use-in-chat` + navigate to
 //                    /home.html#skill=<id>. Composer-prefill is a
 //                    future follow-up.
-//   • Schedule     — split button. Primary opens the "Schedule skill"
-//                    placeholder from _skills_dialogs.html. Chevron
-//                    opens a small dropdown seeded with "Schedule…" /
-//                    "Manage schedule" (stub events).
-//   • Kebab        — Duplicate / Share / Delete, gated by permission
-//                    flags. Duplicate + Share are placeholders; Delete
-//                    confirms via the destructive modal, then navigates
-//                    back to /skills.html.
+//   • Schedule     — opens the scheduling conversation (or a
+//                    placeholder if that script is missing).
+//   • More         — Share / Duplicate / Details (placeholders) and
+//                    Delete (confirms, then returns to /skills.html).
 //
 // Scope: runs ONLY on /skill_detail.html (the template loads it via
 // `{% block scripts_extra %}`). Every other page ignores it because
@@ -104,6 +98,7 @@
   // "in-flight draft" vs "committed save".
   var DRAFT_KEY_PREFIX     = 'sh:skills:draft:v1:';
   var AUTOSAVE_DEBOUNCE_MS = 400;
+  var CREATE_DRAFT_ID      = '__new__';
 
   // Placeholder identity for the "current user" in the prototype.
   // Real deployments overwrite this by reading the seller's name
@@ -160,18 +155,11 @@
       d.titleMismatch = (d.titleMismatch && typeof d.titleMismatch === 'object') ? d.titleMismatch : {};
       d.validation    = (d.validation    && typeof d.validation    === 'object') ? d.validation    : {};
       d.switcher      = (d.switcher      && typeof d.switcher      === 'object') ? d.switcher      : {};
-      // Metadata caption. Defined as PARTS on the JSON side (each
-      // part is a template referencing skill fields) and assembled
-      // by `assembleMetadata()` below. Falls back to a sensible
-      // default part set so callers with missing detail blocks
-      // still render something meaningful.
-      d.metadata = (d.metadata && typeof d.metadata === 'object') ? d.metadata : {};
-      d.metadata.separator = typeof d.metadata.separator === 'string' ? d.metadata.separator : ' \u00b7 ';
-      d.metadata.parts     = Array.isArray(d.metadata.parts) ? d.metadata.parts : [
-        { id: 'createdBy', template: 'Created by {createdBy}' },
-        { id: 'updated',   template: 'Last updated {updatedAt} by {updatedBy}' },
-        { id: 'version',   template: '{version}' }
-      ];
+      d.canvas        = (d.canvas        && typeof d.canvas        === 'object') ? d.canvas        : {};
+      d.edited = (d.edited && typeof d.edited === 'object') ? d.edited : {};
+      d.edited.template = typeof d.edited.template === 'string' && d.edited.template
+        ? d.edited.template
+        : 'Edited {updatedAt}';
       parsed.detail = d;
       return parsed;
     } catch (_e) {
@@ -194,6 +182,105 @@
     }
   }
 
+  function readNewFromUrl() {
+    try {
+      var params = new URLSearchParams(window.location.search || '');
+      var raw = params.get('new');
+      return raw === '1' || raw === 'true';
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function makeCreateStub() {
+    return {
+      id:          null,
+      name:        '',
+      description: '',
+      markdown:    '',
+      created:     true,
+      canEdit:     true,
+      canShare:    true,
+      canDelete:   true,
+      createdBy:   DEFAULT_CURRENT_USER,
+      actions:     ['edit', 'schedule', 'duplicate', 'share', 'delete']
+    };
+  }
+
+  function mintSkillId() {
+    return 'sk-new-' + Date.now();
+  }
+
+  function fieldText(el) {
+    if (!el) return '';
+    return String(el.textContent || '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function setFieldText(el, text) {
+    if (!el) return;
+    var next = String(text == null ? '' : text);
+    el.textContent = next;
+    syncEmptyClass(el);
+  }
+
+  function syncEmptyClass(el) {
+    if (!el) return;
+    var empty = !String(el.textContent || '').replace(/\u00a0/g, ' ').trim();
+    if (empty) el.classList.add('is-empty');
+    else el.classList.remove('is-empty');
+  }
+
+  function normalizePlain(s) {
+    return String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+  }
+
+  // Split a stored markdown blob into the three canvas fields.
+  // Leading `# Name` becomes the name field (unless `skill.name`
+  // already supplies it). The first paragraph is treated as the
+  // description when it duplicates `skill.description` (or when
+  // description is missing). Remainder is instructions.
+  function splitSkillDocument(skill) {
+    var md = String(skill && skill.markdown || '');
+    var name = String(skill && skill.name || '').trim();
+    var description = String(skill && skill.description || '').trim();
+    var lines = md.replace(/\r\n?/g, '\n').split('\n');
+    var i = 0;
+    while (i < lines.length && lines[i].trim() === '') i++;
+    var h1 = /^\s*#\s+(.+?)\s*#*\s*$/.exec(lines[i] || '');
+    if (h1) {
+      if (!name) name = String(h1[1] || '').trim();
+      i++;
+      while (i < lines.length && lines[i].trim() === '') i++;
+    }
+    var paraStart = i;
+    var paraLines = [];
+    while (i < lines.length && lines[i].trim() !== '' && !/^\s*#{1,6}\s/.test(lines[i])) {
+      paraLines.push(lines[i]);
+      i++;
+    }
+    var firstPara = paraLines.join(' ').replace(/\s+/g, ' ').trim();
+    if (!description) description = firstPara;
+    var skipPara = !!(firstPara && description && normalizeTitle(firstPara) === normalizeTitle(description));
+    if (!skipPara) {
+      i = paraStart;
+    } else {
+      while (i < lines.length && lines[i].trim() === '') i++;
+    }
+    var instructions = lines.slice(i).join('\n').replace(/^\n+/, '').replace(/\n+$/, '');
+    return { name: name, description: description, instructions: instructions };
+  }
+
+  function joinSkillDocument(name, description, instructions) {
+    var n = String(name || '').trim();
+    var d = String(description || '').trim();
+    var body = String(instructions || '').replace(/^\n+/, '').replace(/\n+$/, '');
+    var parts = [];
+    if (n) parts.push('# ' + n);
+    if (d) parts.push(d);
+    if (body) parts.push(body);
+    return parts.length ? parts.join('\n\n') + '\n' : '';
+  }
+
   function findSkill(catalog, id) {
     if (!id || !Array.isArray(catalog)) return null;
     for (var i = 0; i < catalog.length; i++) {
@@ -202,58 +289,50 @@
     return null;
   }
 
-  // ── Metadata assembly ────────────────────────────────────────────────
-  // Header metadata caption is assembled at render time from
-  // individual fields on the skill record — no pre-composed sentence
-  // lives in JSON. Each PART carries a template with `{placeholder}`
-  // slots. `resolvePart()` fills the placeholders against the skill;
-  // if ANY placeholder resolves to an empty value, the part returns
-  // `null` and the caller drops it from the output. Non-empty parts
-  // are joined by the configured separator.
-  //
-  // The `keys` returned by `metadataKeysOf()` are the fields
-  // referenced by each part's template — precomputed once so the
-  // hot path is a straight string.replace loop.
-  function metadataKeysOf(template) {
-    var keys = [];
-    var re = /\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g;
-    var m;
-    while ((m = re.exec(String(template || ''))) !== null) {
-      if (keys.indexOf(m[1]) < 0) keys.push(m[1]);
-    }
-    return keys;
+  // ── Edited stamp ─────────────────────────────────────────────────────
+  // Header-right “Edited Mar 13” (Figma 11606:25114). Compact the
+  // skill's `updatedAt` into a short date: today/yesterday become
+  // month+day, and a trailing “ at 4:00 PM” is dropped so the stamp
+  // stays one line beside the 32 px action group.
+  var EDITED_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  function formatMonthDay(when) {
+    var w = (when instanceof Date) ? when : new Date();
+    return EDITED_MONTHS[w.getMonth()] + ' ' + w.getDate();
   }
 
-  function resolvePart(part, skill) {
-    if (!part || typeof part.template !== 'string' || !skill) return null;
-    var keys = metadataKeysOf(part.template);
-    if (keys.length === 0) return part.template.trim() || null;
-    var out = part.template;
-    for (var i = 0; i < keys.length; i++) {
-      var key = keys[i];
-      var value = skill[key];
-      // Treat undefined / null / "" / whitespace as missing. If any
-      // required key is missing, the part is dropped entirely (we
-      // don't want to render "Created by " with a dangling
-      // trailing space).
-      if (value == null || String(value).trim() === '') return null;
-      out = out.split('{' + key + '}').join(String(value));
+  function compactEditedDate(updatedAt) {
+    var s = String(updatedAt || '').trim();
+    if (!s) return '';
+    var now = new Date();
+    if (/^today\b/i.test(s)) return formatMonthDay(now);
+    if (/^yesterday\b/i.test(s)) {
+      return formatMonthDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
     }
-    return out.trim() || null;
+    var atIdx = s.indexOf(' at ');
+    if (atIdx > 0) return s.slice(0, atIdx);
+    return s;
   }
 
-  function assembleMetadata(metadataCfg, skill) {
+  function formatEditedLabel(template, skill) {
     if (!skill) return '';
-    var parts     = Array.isArray(metadataCfg && metadataCfg.parts) ? metadataCfg.parts : [];
-    var separator = typeof (metadataCfg && metadataCfg.separator) === 'string'
-      ? metadataCfg.separator
-      : ' \u00b7 ';
-    var resolved = [];
-    for (var i = 0; i < parts.length; i++) {
-      var p = resolvePart(parts[i], skill);
-      if (p) resolved.push(p);
+    var stamp = compactEditedDate(skill.updatedAt);
+    if (!stamp) return '';
+    var tpl = String(template || 'Edited {updatedAt}');
+    if (tpl.indexOf('{updatedAt}') === -1) return (tpl + ' ' + stamp).trim();
+    return tpl.split('{updatedAt}').join(stamp);
+  }
+
+  function paintEdited(el, skill, template) {
+    if (!el) return;
+    var label = formatEditedLabel(template, skill);
+    if (label) {
+      el.textContent = label;
+      el.hidden = false;
+    } else {
+      el.textContent = '';
+      el.hidden = true;
     }
-    return resolved.join(separator);
   }
 
   // ── Title badges ─────────────────────────────────────────────────────
@@ -368,7 +447,7 @@
       if (!raw) return null;
       var parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== 'object') return null;
-      if (parsed.v !== 2) { clearDraft(id); return null; }
+      if (parsed.v !== 2 && parsed.v !== 3) { clearDraft(id); return null; }
       if (typeof parsed.markdown !== 'string') return null;
       if (typeof parsed.baseline !== 'string') { clearDraft(id); return null; }
       var baseline = String(currentBaseline == null ? '' : currentBaseline);
@@ -376,20 +455,30 @@
         clearDraft(id);
         return null;
       }
-      return parsed.markdown;
+      if (parsed.v === 2) {
+        return { markdown: parsed.markdown, name: null, description: null, legacy: true };
+      }
+      return {
+        markdown:    parsed.markdown,
+        name:        typeof parsed.name === 'string' ? parsed.name : '',
+        description: typeof parsed.description === 'string' ? parsed.description : '',
+        legacy:      false
+      };
     } catch (_e) { return null; }
   }
 
-  function writeDraft(id, markdown, baseline) {
+  function writeDraft(id, payload, baseline) {
     if (!id) return;
     try {
-      var payload = JSON.stringify({
-        v: 2,
-        markdown: String(markdown == null ? '' : markdown),
-        baseline: String(baseline == null ? '' : baseline),
-        savedAt:  Date.now()
+      var envelope = JSON.stringify({
+        v:           3,
+        name:        String(payload && payload.name != null ? payload.name : ''),
+        description: String(payload && payload.description != null ? payload.description : ''),
+        markdown:    String(payload && payload.markdown != null ? payload.markdown : ''),
+        baseline:    String(baseline == null ? '' : baseline),
+        savedAt:     Date.now()
       });
-      window.localStorage.setItem(getDraftKey(id), payload);
+      window.localStorage.setItem(getDraftKey(id), envelope);
     } catch (_e) { /* silent — same tolerance Knowledge uses. */ }
   }
 
@@ -629,6 +718,8 @@
   // slots (an accidental cross-fire is architecturally impossible).
   var pendingLeaveSaveHandler    = null;
   var pendingLeaveDiscardHandler = null;
+  var pendingDraftAiHandler      = null;
+  var pendingConditionHandler    = null;
 
   // Static index of dialog-kind → { modalId, backdropId }. Callers
   // pass a `kind` and the dispatcher routes close/dismiss/backdrop
@@ -639,7 +730,9 @@
     'delete':         { modalId: 'skills-delete-modal',           backdropId: 'skills-delete-backdrop' },
     'discard':        { modalId: 'skills-discard-modal',          backdropId: 'skills-discard-backdrop' },
     'title-mismatch': { modalId: 'skills-title-mismatch-modal',   backdropId: 'skills-title-mismatch-backdrop' },
-    'leave':          { modalId: 'skills-leave-modal',            backdropId: 'skills-leave-backdrop' }
+    'leave':          { modalId: 'skills-leave-modal',            backdropId: 'skills-leave-backdrop' },
+    'draft-ai':       { modalId: 'skills-draft-ai-modal',         backdropId: 'skills-draft-ai-backdrop' },
+    'condition':      { modalId: 'skills-condition-modal',        backdropId: 'skills-condition-backdrop' }
   };
 
   function openDialog(modalId, backdropId, initialFocusTarget, returnFocusTo) {
@@ -695,7 +788,7 @@
     openDialog('skills-delete-modal', 'skills-delete-backdrop', cancelBtn, returnFocusTo);
   }
 
-  // Discard-unsaved-changes confirmation. Called from the toolbar
+  // Discard-unsaved-changes confirmation. Called from the header
   // Cancel button when the editor is dirty. Focus starts on the
   // SECONDARY "Keep editing" button so a stray Enter press
   // preserves the draft — matching the delete-dialog safety.
@@ -741,6 +834,68 @@
     pendingTitleMismatchHandler = typeof onConfirm === 'function' ? onConfirm : null;
     pendingTitleMismatchDismiss = typeof onDismiss === 'function' ? onDismiss : null;
     openDialog('skills-title-mismatch-modal', 'skills-title-mismatch-backdrop', returnBtn, returnFocusTo);
+  }
+
+  function openDraftAiDialog(copy, returnFocusTo, onGenerate) {
+    var titleEl = document.querySelector('[data-sh-skill-draft-ai-title]');
+    var labelEl = document.querySelector('[data-sh-skill-draft-ai-label]');
+    var promptEl = document.querySelector('[data-sh-skill-draft-ai-prompt]');
+    var generateBtn = document.querySelector('[data-sh-skill-draft-ai-generate]');
+    var cancelBtn = document.querySelector('[data-sh-skill-draft-ai-cancel]');
+    var cfg = copy || {};
+    if (titleEl) titleEl.textContent = cfg.dialogTitle || cfg.title || 'Draft with AI';
+    if (labelEl) labelEl.textContent = cfg.promptLabel || 'Describe the skill you want';
+    if (promptEl) {
+      promptEl.placeholder = cfg.promptPlaceholder || '';
+      promptEl.value = '';
+    }
+    if (generateBtn && cfg.generateLabel) generateBtn.textContent = cfg.generateLabel;
+    if (cancelBtn && cfg.cancelLabel) cancelBtn.textContent = cfg.cancelLabel;
+    pendingDraftAiHandler = typeof onGenerate === 'function' ? onGenerate : null;
+    openDialog(
+      'skills-draft-ai-modal',
+      'skills-draft-ai-backdrop',
+      promptEl || generateBtn,
+      returnFocusTo
+    );
+  }
+
+  // Condition entry dialog. Opened from the block menu's If / Else If
+  // items; collects a single free-text condition and hands it back so
+  // the caller can insert a styled conditional block. `cfg` carries the
+  // per-branch title/label/placeholder copy.
+  function openConditionDialog(cfg, returnFocusTo, onSubmit) {
+    var titleEl = document.querySelector('[data-sh-skill-condition-title]');
+    var labelEl = document.querySelector('[data-sh-skill-condition-label]');
+    var inputEl = document.querySelector('[data-sh-skill-condition-input]');
+    var addBtn  = document.querySelector('[data-sh-skill-condition-add]');
+    var c = cfg || {};
+    if (titleEl) titleEl.textContent = c.title || 'Add a condition';
+    if (labelEl) labelEl.textContent = c.label || 'When should this apply?';
+    if (inputEl) {
+      inputEl.placeholder = c.placeholder || '';
+      inputEl.value = '';
+    }
+    if (addBtn && c.addLabel) addBtn.textContent = c.addLabel;
+    pendingConditionHandler = typeof onSubmit === 'function' ? onSubmit : null;
+    openDialog(
+      'skills-condition-modal',
+      'skills-condition-backdrop',
+      inputEl || addBtn,
+      returnFocusTo
+    );
+  }
+
+  // Read the condition field, close the dialog, and fire the pending
+  // handler. Shared by the Add button and the input's Enter key.
+  function submitConditionDialog() {
+    var inputEl = document.querySelector('[data-sh-skill-condition-input]');
+    var value = inputEl ? String(inputEl.value || '') : '';
+    var handler = pendingConditionHandler;
+    pendingConditionHandler = null;
+    closeDialog('skills-condition-modal', 'skills-condition-backdrop', null);
+    if (handler) { try { handler(value); } catch (_e) {} }
+    currentDialogTrigger = null;
   }
 
   // Cleanly close + fire the dismiss callback for a title-mismatch
@@ -827,6 +982,28 @@
         return;
       }
 
+      var draftAiBtn = closest(event.target, '[data-sh-skill-draft-ai-generate]');
+      if (draftAiBtn) {
+        event.preventDefault();
+        var promptEl = document.querySelector('[data-sh-skill-draft-ai-prompt]');
+        var promptValue = promptEl ? String(promptEl.value || '') : '';
+        var draftAiHandler = pendingDraftAiHandler;
+        pendingDraftAiHandler = null;
+        closeDialog('skills-draft-ai-modal', 'skills-draft-ai-backdrop', null);
+        if (draftAiHandler) {
+          try { draftAiHandler(promptValue); } catch (_e) {}
+        }
+        currentDialogTrigger = null;
+        return;
+      }
+
+      var conditionBtn = closest(event.target, '[data-sh-skill-condition-add]');
+      if (conditionBtn) {
+        event.preventDefault();
+        submitConditionDialog();
+        return;
+      }
+
       // Generic close (X, secondary button).
       var closeBtn = closest(event.target, '[data-sh-skills-dialog-close]');
       if (closeBtn) {
@@ -846,6 +1023,12 @@
     });
 
     document.addEventListener('keydown', function (event) {
+      // Enter in the condition field submits, matching the Add button.
+      if (event.key === 'Enter' && closest(event.target, '[data-sh-skill-condition-input]')) {
+        event.preventDefault();
+        submitConditionDialog();
+        return;
+      }
       if (event.key !== 'Escape' && event.key !== 'Esc') return;
       // Dismiss whichever dialog is currently visible. Order
       // doesn't matter — dialogs are mutually exclusive because
@@ -883,12 +1066,17 @@
       closeDialog('skills-placeholder-modal', 'skills-placeholder-backdrop', currentDialogTrigger);
       currentDialogTrigger = null;
     } else if (kind === 'leave') {
-      // Backdrop / Escape / X on the "Leave without saving?"
-      // dialog is equivalent to "Keep editing" — cancel both
-      // pending branches, close, restore focus to the trigger.
       pendingLeaveSaveHandler    = null;
       pendingLeaveDiscardHandler = null;
       closeDialog('skills-leave-modal', 'skills-leave-backdrop', currentDialogTrigger);
+      currentDialogTrigger = null;
+    } else if (kind === 'draft-ai') {
+      pendingDraftAiHandler = null;
+      closeDialog('skills-draft-ai-modal', 'skills-draft-ai-backdrop', currentDialogTrigger);
+      currentDialogTrigger = null;
+    } else if (kind === 'condition') {
+      pendingConditionHandler = null;
+      closeDialog('skills-condition-modal', 'skills-condition-backdrop', currentDialogTrigger);
       currentDialogTrigger = null;
     }
   }
@@ -971,9 +1159,54 @@
     // page header is a navigation heading; the two coexist by
     // design.
     enrichSupportingSkillLinks(articleEl, catalog);
+    enrichToolMentionLinks(articleEl, toolLibrary);
     enrichConnectionsAndAccess(articleEl, toolLibrary);
     decorateSupportingSkillsGroup(articleEl);
     decorateConnectionsGroup(articleEl, toolLibrary);
+  }
+
+  // Inline `@`-mentions of a tool serialize as `[Salesforce](#tool/sf)`.
+  // Post-render we turn those anchors into the same chip treatment the
+  // supporting-skill links get, but with the tool's icon. Idempotent so
+  // live-preview re-renders don't compound state.
+  function enrichToolMentionLinks(articleEl, toolLibrary) {
+    var lib = (toolLibrary && typeof toolLibrary === 'object') ? toolLibrary : {};
+    var anchors = articleEl.querySelectorAll('a[href^="#tool/"]');
+    for (var i = 0; i < anchors.length; i++) {
+      var a = anchors[i];
+      var href = a.getAttribute('href') || '';
+      var key = decodeURIComponent(href.replace(/^#tool\//, ''));
+      var tool = Object.prototype.hasOwnProperty.call(lib, key) ? (lib[key] || {}) : null;
+      if (!a.classList.contains('seller-home__skill-chip')) {
+        a.classList.add('seller-home__skill-chip');
+      }
+      if (tool) {
+        a.classList.add('seller-home__skill-chip_known');
+        a.classList.remove('seller-home__skill-chip_missing');
+        a.removeAttribute('aria-disabled');
+        a.removeAttribute('tabindex');
+        a.setAttribute('title', 'Tool: ' + (tool.name || key));
+        // Icon as a background-image span (NOT an <img>) so the anchor
+        // round-trips to `[label](#tool/key)` — see the CSS note.
+        var iconSrc = tool.iconRef || tool.icon;
+        if (iconSrc && !a.querySelector('[data-sh-skill-tool-chip-icon]')) {
+          var icon = document.createElement('span');
+          icon.className = 'seller-home__skill-tool-chip-icon';
+          icon.setAttribute('data-sh-skill-tool-chip-icon', '');
+          icon.setAttribute('aria-hidden', 'true');
+          icon.style.backgroundImage = 'url("' + iconSrc + '")';
+          a.insertBefore(icon, a.firstChild);
+        }
+      } else {
+        a.classList.remove('seller-home__skill-chip_known');
+        a.classList.add('seller-home__skill-chip_missing');
+        a.setAttribute('aria-disabled', 'true');
+        a.setAttribute('tabindex', '-1');
+        a.setAttribute('title', 'Tool not found: ' + key);
+        var oldIcon = a.querySelector('[data-sh-skill-tool-chip-icon]');
+        if (oldIcon && oldIcon.parentNode) oldIcon.parentNode.removeChild(oldIcon);
+      }
+    }
   }
 
   function enrichSupportingSkillLinks(articleEl, catalog) {
@@ -1043,6 +1276,42 @@
         if (oldIcon && oldIcon.parentNode) oldIcon.parentNode.removeChild(oldIcon);
       }
     }
+  }
+
+  // Build the grouped resource list the editor's @-mention picker
+  // renders: every catalog skill (bar the one being edited) plus every
+  // tool in the library. Skill hrefs point at the detail page; tool
+  // hrefs use the `#tool/<key>` fragment enrichToolMentionLinks reads.
+  function buildMentionResources(config, activeSkill) {
+    var groups = [];
+    var catalog = Array.isArray(config.catalog) ? config.catalog : [];
+    var currentId = (activeSkill && activeSkill.id) || '';
+    var seen = {};
+    var skillItems = [];
+    for (var i = 0; i < catalog.length; i++) {
+      var s = catalog[i];
+      if (!s || !s.id || s.id === currentId || seen[s.id]) continue;
+      seen[s.id] = true;
+      skillItems.push({
+        label: s.name || s.id,
+        href:  '/skill_detail.html?id=' + encodeURIComponent(s.id)
+      });
+    }
+    if (skillItems.length) groups.push({ label: 'Skills', items: skillItems });
+
+    var lib = (config.toolLibrary && typeof config.toolLibrary === 'object') ? config.toolLibrary : {};
+    var toolItems = [];
+    for (var key in lib) {
+      if (!Object.prototype.hasOwnProperty.call(lib, key)) continue;
+      var entry = lib[key] || {};
+      toolItems.push({
+        label:   entry.name || key,
+        href:    '#tool/' + encodeURIComponent(key),
+        iconRef: entry.iconRef || entry.icon || ''
+      });
+    }
+    if (toolItems.length) groups.push({ label: 'Tools', items: toolItems });
+    return groups;
   }
 
   // Find an H2 (from either renderer variant) whose text starts with
@@ -1354,30 +1623,47 @@
         );
       });
     }
+  }
 
-    var scheduleItems = root.querySelectorAll('[data-sh-skill-detail-schedule-item]');
-    for (var i = 0; i < scheduleItems.length; i++) {
+  // Header overflow: Share / Duplicate / Details / Delete.
+  // Share, Duplicate, and Details are labeled placeholders until
+  // those surfaces ship. Delete confirms, then returns to the
+  // Skills list — this page has no catalog row to remove in-place.
+  function wireMoreActions(root, skill, actionsCopy) {
+    var moreCopy = (actionsCopy && actionsCopy.more) || {};
+    var placeholders = moreCopy.placeholders || {};
+    var moreBtn = root.querySelector('[data-sh-skill-detail-more-menu]');
+    var items = root.querySelectorAll('[data-sh-skill-detail-more-item]');
+    for (var i = 0; i < items.length; i++) {
       (function (item) {
         item.addEventListener('click', function (e) {
           e.preventDefault();
-          var itemId = item.getAttribute('data-sh-skill-detail-schedule-item') || '';
+          var itemId = item.getAttribute('data-sh-skill-detail-more-item') || '';
           var wrap = closest(item, '.slds-dropdown-trigger');
           var trigger = wrap && wrap.querySelector('[aria-haspopup="menu"]');
           if (wrap && wrap.classList.contains('slds-is-open')) {
             wrap.classList.remove('slds-is-open');
             if (trigger) trigger.setAttribute('aria-expanded', 'false');
           }
+          var returnFocus = trigger || moreBtn;
+          if (itemId === 'delete') {
+            openDeleteDialog(returnFocus, function () {
+              window.location.href = '/skills.html';
+            });
+            return;
+          }
+          var copy = placeholders[itemId] || {};
           openPlaceholderDialog({
-            title: (item.textContent || '').trim() || 'Schedule',
-            body: 'Click Schedule to open the scheduling conversation. Preset shortcuts aren\u2019t wired yet.'
-          }, trigger || scheduleBtn);
+            title: copy.title || (item.textContent || '').trim() || 'Action',
+            body:  copy.body || 'This action isn\u2019t wired up yet.'
+          }, returnFocus);
           try {
-            document.dispatchEvent(new CustomEvent('sh:skill-schedule-menu', {
-              detail: { itemId: itemId, skillId: skill.id }
+            document.dispatchEvent(new CustomEvent('sh:skill-action', {
+              detail: { action: itemId, skillId: skill.id, trigger: returnFocus }
             }));
           } catch (_e) { /* swallow */ }
         });
-      }(scheduleItems[i]));
+      }(items[i]));
     }
   }
 
@@ -1710,19 +1996,12 @@
       newBtn.addEventListener('click', function (e) {
         e.preventDefault();
         close(false);
-        // Creation isn't wired in the prototype. Fire the same
-        // semantic event /skills.html's "Create Skill" pill fires so
-        // one future handler can serve both entry points, then show
-        // the shared placeholder rather than dead-ending the click.
         try {
           document.dispatchEvent(new CustomEvent('sh:skills-create', {
             detail: { source: 'skill-switcher' }
           }));
         } catch (_e) { /* CustomEvent unsupported? Skip. */ }
-        openPlaceholderDialog({
-          title: copy.newPlaceholderTitle || copy.newLabel || 'Create skill',
-          body:  copy.newPlaceholderBody  || ''
-        }, trigger);
+        window.location.href = '/skill_detail.html?new=1';
       });
     }
 
@@ -1753,78 +2032,69 @@
     render();
   }
 
-  function hydrateFound(root, skill, config) {
+  function hydrateFound(root, skill, config, options) {
     var detail = config.detail || {};
+    var canvasCopy = detail.canvas || {};
+    var untitledLabel = canvasCopy.untitledLabel || 'Untitled';
+    var isCreateMode = !!(options && options.isCreate);
 
     var crumbEl    = root.querySelector('[data-sh-skill-detail-crumb]');
     var titleEl    = root.querySelector('[data-sh-skill-detail-title]');
-    var metadataEl = root.querySelector('[data-sh-skill-detail-metadata]');
+    var editedEl   = root.querySelector('[data-sh-skill-detail-edited]');
     var canvasEl   = root.querySelector('[data-sh-skill-canvas]');
     var articleEl  = root.querySelector('[data-sh-skill-editor-doc]');
-    var toolbarEl  = root.querySelector('[data-sh-skill-editor-toolbar]');
+    var toolbarEl  = null;
     var notFoundEl = root.querySelector('[data-sh-skill-detail-notfound]');
     var commitEl   = root.querySelector('[data-sh-skill-detail-commit]');
     var saveBtn    = root.querySelector('[data-sh-skill-detail-save]');
     var cancelBtn  = root.querySelector('[data-sh-skill-detail-cancel]');
     var statusEl   = root.querySelector('[data-sh-skill-detail-status]');
+    var nameEl     = root.querySelector('[data-sh-skill-canvas-name]');
+    var descEl     = root.querySelector('[data-sh-skill-canvas-description]');
+    var starterEl  = root.querySelector('[data-sh-skill-starter-cards]');
+    var actionGroupEl = root.querySelector('[data-sh-skill-detail-action-group]');
+    var editedTemplate = (detail.edited && detail.edited.template) || 'Edited {updatedAt}';
 
-    // ── Effective baseline resolution ────────────────────────────────
-    // SkillStore is the single source of truth for committed saves.
-    // If it holds a local override, its record wins for
-    // `markdown / updatedAt / updatedBy / version`; otherwise we
-    // fall through to the shipped JSON. We hold the merged record
-    // in `activeSkill` for the rest of the flow so header metadata
-    // reads see the post-save fields immediately after a successful
-    // persist (see `applyPersistedRecord` below).
-    var loaded        = loadEffectiveSkill(skill);
-    var activeSkill   = loaded.record;
-    var effectiveBase = activeSkill.markdown || '';
-
-    // Title cell carries BOTH `data-sh-skill-detail-crumb` and
-    // `-title` (it IS the page's H1 and the breadcrumb "current"
-    // node in one). Set once — the two selectors resolve to the
-    // same element today, but if a future design splits them
-    // apart, either query already owns the write.
-    if (titleEl && activeSkill.name) titleEl.textContent = activeSkill.name;
-    if (crumbEl && crumbEl !== titleEl && activeSkill.name) crumbEl.textContent = activeSkill.name;
-
-    // Owning-agent + lifecycle pills beside the title. Both read the
-    // SHIPPED record, not the merged one: ownership and publish state
-    // are catalog metadata that a local edit cannot change (the editor
-    // only touches markdown), so `skill` and `activeSkill` agree here —
-    // using `skill` keeps it that way even if SkillStore ever starts
-    // persisting more fields. Worth noting for the status pill in
-    // particular: an unsaved draft in the editor does NOT make a
-    // published skill "Draft", since the badge describes the catalog
-    // record and the draft is local, unpublished state.
-    paintAgentBadge(root, skill, config.agentLibrary);
-    paintStatusBadge(root, skill, config.statusLibrary);
-
-    if (metadataEl) {
-      // Assemble from parts — each part is skipped when its
-      // referenced skill fields are missing. If EVERY part is
-      // skipped the caption stays hidden entirely rather than
-      // showing an empty separator string. Reads the merged
-      // record so a refreshed page shows the last locally-saved
-      // version + updatedAt + updatedBy.
-      var caption = assembleMetadata(detail.metadata, activeSkill);
-      if (caption) {
-        metadataEl.textContent = caption;
-        metadataEl.hidden = false;
-      } else {
-        metadataEl.textContent = '';
-        metadataEl.hidden = true;
-      }
+    function refreshEdited() {
+      paintEdited(editedEl, isCreateMode ? null : activeSkill, editedTemplate);
     }
 
-    if (activeSkill.name) document.title = activeSkill.name;
+    // ── Effective baseline resolution ────────────────────────────────
+    var loaded = (skill && skill.id) ? loadEffectiveSkill(skill) : { record: skill, hasLocalOverride: false };
+    var activeSkill = loaded.record || skill || makeCreateStub();
+    var parts = splitSkillDocument(activeSkill);
+    var savedName = parts.name;
+    var savedDesc = parts.description;
+    var savedInstructions = parts.instructions;
+    var effectiveBase = joinSkillDocument(savedName, savedDesc, savedInstructions);
+
+    function paintHeaderTitle(name) {
+      var label = String(name || '').trim() || untitledLabel;
+      if (titleEl) titleEl.textContent = label;
+      if (crumbEl && crumbEl !== titleEl) crumbEl.textContent = label;
+      document.title = label;
+    }
+
+    paintHeaderTitle(savedName);
+
+    if (isCreateMode) {
+      paintAgentBadge(root, null, config.agentLibrary);
+      paintStatusBadge(root, null, config.statusLibrary);
+      refreshEdited();
+      if (actionGroupEl) actionGroupEl.hidden = true;
+    } else {
+      paintAgentBadge(root, skill, config.agentLibrary);
+      paintStatusBadge(root, skill, config.statusLibrary);
+      refreshEdited();
+      if (actionGroupEl) actionGroupEl.hidden = false;
+    }
+
     if (canvasEl)   canvasEl.hidden   = false;
     if (notFoundEl) notFoundEl.hidden = true;
 
-    // Grab handles for the inline error banner + success toast up
-    // front so the save flow can flip them without re-querying on
-    // every call. Missing nodes degrade gracefully (banner-less
-    // save-error path still shows an aria-live announcement).
+    setFieldText(nameEl, savedName);
+    setFieldText(descEl, savedDesc);
+
     var errorEl = root.querySelector('[data-sh-skill-detail-save-error]');
     var errorTitleEl = root.querySelector('[data-sh-skill-detail-save-error-title]');
     var errorMessageEl = root.querySelector('[data-sh-skill-detail-save-error-message]');
@@ -1838,84 +2108,177 @@
       if (errorEl && !errorEl.hidden) errorEl.hidden = true;
     }
 
-    // Read-only surface. Callers that ship `canEdit: false` get the
-    // same rendered document but no editing affordances (no
-    // contenteditable, no toolbar, no Save / Cancel).
     var canEdit = skill.canEdit !== false;
     if (!canEdit) {
       if (commitEl) commitEl.hidden = true;
+      if (nameEl) nameEl.setAttribute('contenteditable', 'false');
+      if (descEl) descEl.setAttribute('contenteditable', 'false');
+    }
+
+    function draftStorageId() {
+      return (activeSkill && activeSkill.id) ? activeSkill.id : CREATE_DRAFT_ID;
+    }
+
+    function combinedIsDirty() {
+      if (normalizePlain(fieldText(nameEl)) !== normalizePlain(savedName)) return true;
+      if (normalizePlain(fieldText(descEl)) !== normalizePlain(savedDesc)) return true;
+      return !!(editor && editor.isDirty());
+    }
+
+    function refreshCommit() {
+      if (!canEdit) return;
+      if (combinedIsDirty()) showCommit();
+      else hideCommit();
+    }
+
+    function syncArticleEmpty() {
+      if (!articleEl) return;
+      var md = editor ? editor.getMarkdown() : savedInstructions;
+      if (!String(md || '').trim()) articleEl.classList.add('is-empty');
+      else articleEl.classList.remove('is-empty');
+    }
+
+    function hideStarterCards() {
+      if (starterEl) starterEl.hidden = true;
+    }
+
+    function showStarterCards() {
+      if (starterEl) starterEl.hidden = false;
     }
 
     var editor = window.SkillMarkdownEditor.create({
       root:            canvasEl,
       article:         articleEl,
       toolbar:         toolbarEl,
-      initialMarkdown: effectiveBase,
+      initialMarkdown: savedInstructions,
       canEdit:         canEdit,
+      blockCopy:       canvasCopy.blocks || {},
+      resources:       buildMentionResources(config, activeSkill),
+
+      onPlaceholder: function (kind, trigger) {
+        var copy = (canvasCopy.blocks || {});
+        if (kind === 'refine') {
+          openPlaceholderDialog({
+            title: copy.refineTitle || 'Refine with AI',
+            body:  copy.refineBody || 'Inline AI refinement is not connected in this prototype.'
+          }, trigger);
+        } else if (kind === 'conditional') {
+          // Which branch fired? The trigger is the menu button; its
+          // data-convert distinguishes if / elseif / else.
+          var branch = (trigger && trigger.getAttribute)
+            ? (trigger.getAttribute('data-convert') || 'if')
+            : 'if';
+          if (branch === 'else') {
+            // "Else" carries no condition — insert directly.
+            editor.insertConditional('else', '');
+            hideStarterCards();
+            syncArticleEmpty();
+            refreshCommit();
+          } else {
+            var isElseIf = branch === 'elseif';
+            openConditionDialog({
+              title:       isElseIf ? (copy.elseIfTitle || 'Add an Else If condition') : (copy.ifTitle || 'Add an If condition'),
+              label:       copy.conditionLabel || 'When should this apply?',
+              placeholder: copy.conditionPlaceholder || 'e.g. the account is in Healthcare',
+              addLabel:    copy.conditionAddLabel || 'Add'
+            }, trigger, function (value) {
+              // insertConditional already drops the caret into the new
+              // block, so no editor.focus() (that would jump to the top).
+              editor.insertConditional(branch, value);
+              hideStarterCards();
+              syncArticleEmpty();
+              refreshCommit();
+            });
+          }
+        } else if (kind === 'draft') {
+          openDraftAiDialog(canvasCopy.draftWithAi || {}, trigger, function () {
+            var sample = (canvasCopy.draftWithAi && canvasCopy.draftWithAi.sample) || '';
+            hideStarterCards();
+            editor.setDraft(sample);
+            syncArticleEmpty();
+            refreshCommit();
+            editor.focus();
+          });
+        }
+      },
 
       onDirtyChange: function (isDirty) {
         if (!canEdit) return;
-        if (isDirty) {
-          showCommit();
-        } else {
-          hideCommit();
-        }
-        // Any dirty-state change clears a stale save-error banner —
-        // the seller has moved on. Storage-error banners auto-clear
-        // on the next successful save (see `attemptSave` below).
+        refreshCommit();
         if (isDirty) hideSaveError();
+        syncArticleEmpty();
+        if (isDirty && editor && String(editor.getMarkdown() || '').trim()) {
+          hideStarterCards();
+        }
       },
       onCancel: function () {
-        clearDraft(activeSkill.id);
+        clearDraft(draftStorageId());
         announce(statusEl,
           (detail.status && detail.status.discardedMessage)
             || 'Unsaved changes discarded.');
       },
       onRender: function (article) {
-        enrichPreview(article, config.catalog, config.toolLibrary, activeSkill.name);
+        enrichPreview(article, config.catalog, config.toolLibrary, fieldText(nameEl) || savedName);
+        syncArticleEmpty();
       }
-      // NB: no `onSave` — the host owns the commit sequence now
-      // (validate → persist → snapshot → update metadata → toast).
-      // The editor's `save()` method is unused; the host calls
-      // `setMarkdown(persisted.markdown)` after `SkillStore.save()`
-      // resolves so the baseline reflects the persisted result.
     });
 
     if (!editor) return;
 
-    // ── Restore draft ────────────────────────────────────────────────
-    // Runs AFTER create() so `setDraft()` sees the initial rendered
-    // baseline and flips the dirty flag from a clean → dirty state
-    // once the draft content is applied. `readDraft()` is guarded by
-    // baseline-envelope matching so a stale draft (against a
-    // different effective baseline) is dropped and never reapplied.
+    syncArticleEmpty();
+    if (isCreateMode && !String(savedInstructions || '').trim()) {
+      showStarterCards();
+    } else {
+      hideStarterCards();
+    }
+
     if (canEdit) {
-      var draft = readDraft(activeSkill.id, effectiveBase);
-      if (draft !== null && draft !== effectiveBase) {
-        editor.setDraft(draft);
-        announce(statusEl,
-          (detail.status && detail.status.restoredMessage)
-            || 'Restored unsaved changes from your previous session.');
+      var draft = readDraft(draftStorageId(), effectiveBase);
+      if (draft) {
+        var restoredInstructions = draft.markdown;
+        var restoredName = draft.name;
+        var restoredDesc = draft.description;
+        if (draft.legacy) {
+          var splitDraft = splitSkillDocument({
+            name: savedName,
+            description: savedDesc,
+            markdown: draft.markdown
+          });
+          restoredName = splitDraft.name;
+          restoredDesc = splitDraft.description;
+          restoredInstructions = splitDraft.instructions;
+        }
+        var sameAsSaved =
+          normalizePlain(restoredName) === normalizePlain(savedName) &&
+          normalizePlain(restoredDesc) === normalizePlain(savedDesc) &&
+          String(restoredInstructions || '') === String(savedInstructions || '');
+        if (!sameAsSaved) {
+          if (restoredName != null) setFieldText(nameEl, restoredName);
+          if (restoredDesc != null) setFieldText(descEl, restoredDesc);
+          editor.setDraft(restoredInstructions);
+          paintHeaderTitle(fieldText(nameEl));
+          if (String(restoredInstructions || '').trim()) hideStarterCards();
+          refreshCommit();
+          announce(statusEl,
+            (detail.status && detail.status.restoredMessage)
+              || 'Restored unsaved changes from your previous session.');
+        }
       }
     }
 
-    // ── Autosave (debounced) ─────────────────────────────────────────
-    // Writes the current draft Markdown to localStorage ~400 ms after
-    // the seller stops typing. We hook off the `input` event on the
-    // contenteditable article — the editor's own listener has
-    // already run by then and `getMarkdown()` returns the current
-    // draft synchronously.
-    //
-    // NB: this is the DRAFT autosave (unsaved edits), not the
-    // committed-save path. SkillStore.save() only runs when the
-    // user explicitly clicks Save / hits Cmd+S.
-    if (canEdit && articleEl) {
+    if (canEdit) {
       var flushAutosave = debounce(function () {
-        if (editor.isDirty()) {
-          writeDraft(activeSkill.id, editor.getMarkdown(), effectiveBase);
+        if (combinedIsDirty()) {
+          writeDraft(draftStorageId(), {
+            name: fieldText(nameEl),
+            description: fieldText(descEl),
+            markdown: editor.getMarkdown()
+          }, effectiveBase);
         }
       }, AUTOSAVE_DEBOUNCE_MS);
-      articleEl.addEventListener('input', flushAutosave);
+      if (articleEl) articleEl.addEventListener('input', flushAutosave);
+      if (nameEl) nameEl.addEventListener('input', flushAutosave);
+      if (descEl) descEl.addEventListener('input', flushAutosave);
     }
 
     // ── Save state ───────────────────────────────────────────────────
@@ -1940,17 +2303,34 @@
     // save-and-leave).
     function attemptSave(source) {
       if (!canEdit) return;
-      if (isSaving) return;                // ← concurrency guard
-      if (!editor.isDirty()) return;       // ← nothing to save
+      if (isSaving) return;
+      if (!combinedIsDirty()) return;
 
-      // 1. Serialize current draft.
-      var md = editor.getMarkdown();
+      var name = fieldText(nameEl);
+      var desc = fieldText(descEl);
+      var instructions = editor.getMarkdown();
+      var copy = detail.validation || {};
 
-      // 2. Validate. Errors reject; warnings surface a confirmation.
+      if (!name) {
+        showSaveError(detail.saveError || {}, {
+          code: 'missing_name',
+          message: copy.missingName || 'Name is required.'
+        });
+        return;
+      }
+      if (!desc) {
+        showSaveError(detail.saveError || {}, {
+          code: 'missing_description',
+          message: copy.missingDescription || 'Add a description to help your agent identify this skill.'
+        });
+        return;
+      }
+
+      var md = joinSkillDocument(name, desc, instructions);
       var validation = validateMarkdown(md, {
-        displayName: activeSkill.name,
+        displayName: name,
         catalog: config.catalog,
-        copy: detail.validation || {}
+        copy: copy
       });
 
       if (!validation.ok) {
@@ -1958,67 +2338,64 @@
         return;
       }
 
-      // Warnings that need user confirmation. Only ONE gate today
-      // (title mismatch); missing-supporting-skill warnings are
-      // informational — we don't block save because a broken link
-      // is still valid Markdown.
-      var titleWarn = firstWarning(validation.warnings, 'h1_mismatch');
-      if (titleWarn) {
-        openTitleMismatchDialog(
-          saveBtn,
-          titleWarn,
-          (detail.titleMismatch && detail.titleMismatch.bodyTemplate)
-            || 'The document\u2019s title (\u201c{h1}\u201d) doesn\u2019t match this skill\u2019s display name (\u201c{name}\u201d). Save anyway?',
-          function onConfirmSaveAnyway() {
-            performPersist(md, source);
-          },
-          function onReturnToEditor() {
-            if (saveBtn && typeof saveBtn.focus === 'function') saveBtn.focus();
-          }
-        );
-        return;
-      }
-
-      performPersist(md, source);
+      performPersist(md, source, name, desc, instructions);
     }
 
     // Actual persistence — validation already passed. Wraps the
     // SkillStore.save() promise and manages the save state, error
     // banner, toast, dirty-flag reconciliation, and metadata
     // refresh.
-    function performPersist(md, source) {
+    function performPersist(md, source, name, desc, instructions) {
       isSaving = true;
       setSaveState('saving');
       hideSaveError();
       announce(statusEl,
         (detail.status && detail.status.savingMessage) || 'Saving your changes\u2026');
 
-      // Preserve the current scroll position of the canvas so a
-      // repaint (via `editor.setMarkdown(persisted.markdown)`) at
-      // the end of the save doesn't jump the seller back to the
-      // top. Recorded on the canvas body — the scroll host in the
-      // Skill detail layout.
       var scrollHost = root.querySelector('[data-sh-skill-canvas-body]');
       var priorScrollTop = scrollHost ? scrollHost.scrollTop : 0;
 
       var currentUserName = readCurrentUserName(config, activeSkill);
+      var skillId = activeSkill.id;
+      var minted = false;
+      if (!skillId) {
+        skillId = mintSkillId();
+        minted = true;
+      }
 
-      window.SkillStore.save(activeSkill.id, {
+      window.SkillStore.save(skillId, {
         markdown:         md,
+        name:             name,
+        description:      desc,
+        created:          isCreateMode || activeSkill.created === true,
         currentUserName:  currentUserName,
         previousVersion:  activeSkill.version || ''
       }).then(function (record) {
-        // 3. Persist succeeded — apply the returned record to the
-        //    in-memory skill so subsequent renders (Cancel, chip
-        //    enrichment) reflect the new metadata.
-        applyPersistedRecord(record);
+        if (minted) {
+          clearDraft(CREATE_DRAFT_ID);
+          activeSkill.id = skillId;
+          isCreateMode = false;
+          if (actionGroupEl) actionGroupEl.hidden = false;
+          try {
+            window.history.replaceState(
+              null,
+              '',
+              '/skill_detail.html?id=' + encodeURIComponent(skillId)
+            );
+          } catch (_e) { /* ignore */ }
+        }
 
-        // 4. Replace `savedMarkdown` with the persisted result and
-        //    synchronize `draftMarkdown` to match. `setMarkdown()`
-        //    fires `onDirtyChange(false)` internally, which hides
-        //    the commit cluster.
-        editor.setMarkdown(record.markdown);
-        clearDraft(activeSkill.id);
+        applyPersistedRecord(record);
+        savedName = name;
+        savedDesc = desc;
+        savedInstructions = instructions;
+        effectiveBase = md;
+        activeSkill.name = name;
+        activeSkill.description = desc;
+        editor.setMarkdown(instructions);
+        paintHeaderTitle(name);
+        hideStarterCards();
+        clearDraft(skillId);
 
         // 5. Restore scroll position if it was captured.
         if (scrollHost && priorScrollTop) {
@@ -2085,22 +2462,19 @@
     // Apply a persisted record back to the in-memory active skill.
     // Only the four fields SkillStore returns are touched — every
     // other field (name, description, connectedSkills, ownership…)
-    // stays as-shipped. Also refreshes the header metadata caption
-    // so the seller sees the version bump + new updatedAt inline.
+    // stays as-shipped. Also refreshes the header edited stamp so
+    // the seller sees the new date inline.
     function applyPersistedRecord(record) {
       if (!record) return;
       activeSkill.markdown  = record.markdown;
       activeSkill.updatedAt = record.updatedAt;
       activeSkill.updatedBy = record.updatedBy;
       activeSkill.version   = record.version;
+      if (typeof record.name === 'string') activeSkill.name = record.name;
+      if (typeof record.description === 'string') activeSkill.description = record.description;
+      if (record.created === true) activeSkill.created = true;
 
-      if (metadataEl) {
-        var caption = assembleMetadata(detail.metadata, activeSkill);
-        if (caption) {
-          metadataEl.textContent = caption;
-          metadataEl.hidden = false;
-        }
-      }
+      refreshEdited();
     }
 
     // Save-button state manager. Rendered as attribute + label
@@ -2141,6 +2515,8 @@
       var isValidation = err && (
         err.code === 'empty' ||
         err.code === 'missing_h1' ||
+        err.code === 'missing_name' ||
+        err.code === 'missing_description' ||
         err.code === 'unsafe_html' ||
         err.code === 'unsafe_link'
       );
@@ -2200,7 +2576,24 @@
       }, 220);
     }
 
-    // ── Save / Cancel click handlers ─────────────────────────────────
+    function isCanvasEmpty() {
+      return !fieldText(nameEl) && !fieldText(descEl) && !String(editor.getMarkdown() || '').trim();
+    }
+
+    function leaveToSkills() {
+      window.location.href = (detail.back && detail.back.href) || '/skills.html';
+    }
+
+    function revertCanvas() {
+      setFieldText(nameEl, savedName);
+      setFieldText(descEl, savedDesc);
+      paintHeaderTitle(savedName);
+      editor.cancel();
+      syncArticleEmpty();
+      refreshCommit();
+      if (isCreateMode && !String(savedInstructions || '').trim()) showStarterCards();
+    }
+
     if (canEdit && saveBtn) {
       saveBtn.addEventListener('click', function (e) {
         e.preventDefault();
@@ -2210,34 +2603,26 @@
     if (canEdit && cancelBtn) {
       cancelBtn.addEventListener('click', function (e) {
         e.preventDefault();
-        if (!editor.isDirty()) return;
+        if (isCreateMode && !combinedIsDirty() && isCanvasEmpty()) {
+          leaveToSkills();
+          return;
+        }
+        if (!combinedIsDirty()) return;
         openDiscardDialog(cancelBtn, function onDiscardConfirmed() {
-          // Restore the last successfully saved Markdown. The
-          // editor's `cancel()` method repaints from
-          // `savedMarkdown` (= the persisted or shipped baseline),
-          // clears the dirty flag, and fires `onCancel` which
-          // clears the localStorage draft.
-          editor.cancel();
+          revertCanvas();
+          if (isCreateMode && isCanvasEmpty()) leaveToSkills();
         });
       });
     }
 
-    // ── Cmd/Ctrl+S ───────────────────────────────────────────────────
-    // Global keydown that only fires on this page (the root check
-    // in `init()` ensures we're on the detail page). Ignores
-    // shift-modified variants (Save As), lets the browser handle
-    // the fallback when there's nothing to save.
     if (canEdit) {
       document.addEventListener('keydown', function (e) {
         if (e.key !== 's' && e.key !== 'S') return;
         if (!(e.metaKey || e.ctrlKey)) return;
         if (e.shiftKey || e.altKey) return;
-        // Ignore key repeats to reduce chatter — a held Cmd+S
-        // shouldn't queue multiple saves (the concurrency guard
-        // covers this too, but early-return is cheaper).
         if (e.repeat) return;
         e.preventDefault();
-        if (editor.isDirty()) attemptSave('keyboard');
+        if (combinedIsDirty()) attemptSave('keyboard');
       });
     }
 
@@ -2250,10 +2635,9 @@
       });
     }
 
-    // ── beforeunload guard ───────────────────────────────────────────
     if (canEdit) {
       window.addEventListener('beforeunload', function (e) {
-        if (editor.isDirty()) {
+        if (combinedIsDirty()) {
           e.preventDefault();
           e.returnValue = (detail.status && detail.status.unloadMessage) || '';
           return e.returnValue;
@@ -2261,24 +2645,88 @@
       });
     }
 
-    // ── Editor bridge for external actions ───────────────────────────
-    // Header affordances that navigate away from the detail page
-    // (Schedule, and future analogous actions) need to consult the
-    // editor's dirty flag and, if unsaved edits exist, route the
-    // navigation through the "Leave without saving?" dialog. Rather
-    // than exposing `attemptSave`/`editor` globally, we hand each
-    // wiring function a small `editorBridge` capability object with
-    // JUST the operations it needs — `isDirty()`, `save()`,
-    // `discardChanges()`. `null` when the surface is read-only
-    // (`canEdit === false`) so callers can bypass the guard cleanly.
+    if (canEdit && nameEl) {
+      nameEl.addEventListener('input', function () {
+        syncEmptyClass(nameEl);
+        paintHeaderTitle(fieldText(nameEl));
+        refreshCommit();
+        if (combinedIsDirty()) hideSaveError();
+      });
+      nameEl.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        if (descEl) descEl.focus();
+      });
+      nameEl.addEventListener('blur', function () {
+        if (!fieldText(nameEl)) {
+          nameEl.textContent = '';
+          syncEmptyClass(nameEl);
+        }
+      });
+      nameEl.addEventListener('paste', function (e) {
+        if (!e.clipboardData) return;
+        e.preventDefault();
+        var text = e.clipboardData.getData('text/plain').replace(/\s+/g, ' ').trim();
+        document.execCommand('insertText', false, text);
+      });
+    }
+
+    if (canEdit && descEl) {
+      descEl.addEventListener('input', function () {
+        syncEmptyClass(descEl);
+        refreshCommit();
+        if (combinedIsDirty()) hideSaveError();
+      });
+      descEl.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        editor.focus();
+      });
+      descEl.addEventListener('blur', function () {
+        if (!fieldText(descEl)) {
+          descEl.textContent = '';
+          syncEmptyClass(descEl);
+        }
+      });
+    }
+
+    var dividerEl = root.querySelector('[data-sh-skill-canvas-divider]');
+    if (canEdit && dividerEl) {
+      dividerEl.addEventListener('click', function () {
+        editor.focus();
+      });
+    }
+
+    if (canEdit && starterEl) {
+      starterEl.addEventListener('click', function (e) {
+        var card = closest(e.target, '[data-sh-skill-starter]');
+        if (!card) return;
+        var kind = card.getAttribute('data-sh-skill-starter');
+        if (kind === 'outline') {
+          var template = (canvasCopy.outline && canvasCopy.outline.template) || '';
+          hideStarterCards();
+          editor.setDraft(template);
+          syncArticleEmpty();
+          refreshCommit();
+          editor.focus();
+        } else if (kind === 'draft-ai') {
+          openDraftAiDialog(canvasCopy.draftWithAi || {}, card, function () {
+            var sample = (canvasCopy.draftWithAi && canvasCopy.draftWithAi.sample) || '';
+            hideStarterCards();
+            editor.setDraft(sample);
+            syncArticleEmpty();
+            refreshCommit();
+            editor.focus();
+          });
+        }
+      });
+    }
+
     var editorBridge = canEdit ? {
-      isDirty: function () { return editor.isDirty(); },
+      isDirty: function () { return combinedIsDirty(); },
       save:    function () { attemptSave('leave-dialog'); },
       discardChanges: function () {
-        // Mirror the toolbar Cancel path: revert to `savedMarkdown`
-        // + clear the localStorage draft. `editor.cancel()` fires
-        // `onCancel`, which already calls `clearDraft(...)`.
-        editor.cancel();
+        revertCanvas();
       }
     } : null;
 
@@ -2286,6 +2734,7 @@
     var actionsCopy = detail.actions || {};
     wireUseInChat(root, activeSkill, actionsCopy);
     wireScheduleAction(root, activeSkill, actionsCopy, editorBridge);
+    wireMoreActions(root, activeSkill, actionsCopy);
     wireSkillSwitcher(root, activeSkill, config);
   }
 
@@ -2323,27 +2772,24 @@
   function hydrateNotFound(root, config) {
     var crumbEl    = root.querySelector('[data-sh-skill-detail-crumb]');
     var titleEl    = root.querySelector('[data-sh-skill-detail-title]');
-    var metadataEl = root.querySelector('[data-sh-skill-detail-metadata]');
+    var editedEl   = root.querySelector('[data-sh-skill-detail-edited]');
     var canvasEl   = root.querySelector('[data-sh-skill-canvas]');
     var notFoundEl = root.querySelector('[data-sh-skill-detail-notfound]');
     var commitEl   = root.querySelector('[data-sh-skill-detail-commit]');
     var useInChatBtn = root.querySelector('[data-sh-skill-detail-use-in-chat]');
     var scheduleBtn  = root.querySelector('[data-sh-skill-detail-schedule]');
-    var scheduleChevron = root.querySelector('[data-sh-skill-detail-schedule-menu]');
+    var moreChevron = root.querySelector('[data-sh-skill-detail-more-menu]');
 
     if (canvasEl) canvasEl.hidden = true;
     if (commitEl) commitEl.hidden = true;
 
-    // Blank the header title + metadata so the fallback "Skill"
-    // string doesn't peek above the not-found panel. `crumbEl` and
-    // `titleEl` may resolve to the same element (they share the
-    // header H1 today) — the second write is a harmless no-op.
+    // Blank the header title + edited stamp so leftover copy doesn't
+    // peek above the not-found panel. `crumbEl` and `titleEl` may
+    // resolve to the same element (they share the header H1 today)
+    // — the second write is a harmless no-op.
     if (titleEl) titleEl.textContent = '';
     if (crumbEl && crumbEl !== titleEl) crumbEl.textContent = '';
-    if (metadataEl) {
-      metadataEl.textContent = '';
-      metadataEl.hidden = true;
-    }
+    paintEdited(editedEl, null, '');
 
     // No resolved skill means no owner to name and no publish state to
     // report — passing null takes each badge's own "no label" branch,
@@ -2362,7 +2808,7 @@
     // seller can't fire actions against a resolved-null id.
     // Use in Chat + Schedule stay visible but `aria-disabled` for
     // AT + click-suppressed for pointer users.
-    var actionButtons = [useInChatBtn, scheduleBtn, scheduleChevron];
+    var actionButtons = [useInChatBtn, scheduleBtn, moreChevron];
     for (var i = 0; i < actionButtons.length; i++) {
       var btn = actionButtons[i];
       if (!btn) continue;
@@ -2398,9 +2844,18 @@
     }
 
     var id = readIdFromUrl();
+    var isNew = readNewFromUrl();
     var skill = findSkill(config.catalog, id);
-    if (skill) {
-      hydrateFound(root, skill, config);
+
+    if (!skill && id && window.SkillStore && typeof window.SkillStore.loadCreated === 'function') {
+      try { skill = window.SkillStore.loadCreated(id); }
+      catch (_e) { skill = null; }
+    }
+
+    if (isNew && !id) {
+      hydrateFound(root, makeCreateStub(), config, { isCreate: true });
+    } else if (skill) {
+      hydrateFound(root, skill, config, { isCreate: false });
     } else {
       hydrateNotFound(root, config);
     }

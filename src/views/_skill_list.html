@@ -563,12 +563,21 @@
 
     {% if isV2 %}
       {# ── Version B action cluster ──────────────────────────────
-         Figma 11194:24333: a neutral "Use Skill" button and a bare
-         kebab, 8 px apart, vertically centered at the card's right
-         edge. Both are real <button>s, so the cluster is a
-         SIBLING of the anchor and absolute-positions on top of it —
-         the same escape hatch Version A's kebab has always used,
-         because HTML forbids interactive descendants of an <a>.
+         Figma 11314:170930: a pair of bare 32-px icon buttons — "Use
+         Skill" carrying the `anywhere_chat` glyph, then the kebab — 8 px
+         apart and vertically centered at the card's right edge. Both are
+         real <button>s, so the cluster is a SIBLING of the anchor and
+         absolute-positions on top of it — the same escape hatch Version
+         A's kebab has always used, because HTML forbids interactive
+         descendants of an <a>. Hidden at rest (opacity only, still in
+         the accessibility tree) and revealed on the <li>'s hover /
+         focus-within / is-menu-open so the card wash and both icons
+         stay in lockstep when the pointer moves onto a button.
+
+         "Use Skill" is icon-only, so its label moves to
+         `slds-assistive-text` and the per-row accessible name comes from
+         `aria-label` / `title` (which name the skill, where the glyph
+         alone could not).
 
          Clicks here never reach the anchor (it is not an ancestor), so
          no `stopPropagation` is needed to protect row activation.
@@ -583,11 +592,16 @@
         <div class="seller-home__skill-actions">
           <button
             type="button"
-            class="slds-button slds-button_neutral seller-home__skill-action-use"
+            class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-action-use"
             data-sh-skill-action="{{ useAction.id }}"
             aria-label="{{ useAction.assistiveText | replace("{name}", skill.name) }}"
             title="{{ useAction.assistiveText | replace("{name}", skill.name) }}"
-          >{{ useAction.label }}</button>
+          >
+            <svg class="slds-button__icon" aria-hidden="true">
+              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ useAction.icon }}"></use>
+            </svg>
+            <span class="slds-assistive-text">{{ useAction.label }}</span>
+          </button>
 
           {% if allowedActions | length %}
             {{ renderSkillMenu(skill, menuId, allowedActions, "v2") }}

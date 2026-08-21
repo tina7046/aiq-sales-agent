@@ -209,6 +209,22 @@
     // filter after a card mutation).
     skillActionRouter(gridRoot)
 
+    // Create Skill — navigate to the empty three-block canvas.
+    // The button used to be a dead `data-sh-skills-create` hook;
+    // the detail page now owns `?new=1` as the empty-state entry.
+    var createBtn = root.querySelector('[data-sh-skills-create]')
+    if (createBtn) {
+      createBtn.addEventListener('click', function (event) {
+        event.preventDefault()
+        try {
+          document.dispatchEvent(new CustomEvent('sh:skills-create', {
+            detail: { source: 'landing' }
+          }))
+        } catch (_e) { /* CustomEvent unsupported? Skip. */ }
+        window.location.href = '/skill_detail.html?new=1'
+      })
+    }
+
     // Recompute the per-tab count pill values from the CURRENT
     // DOM. Called from the `sh:skills-refresh` handler below every
     // time the router adds or removes a card. Screen-reader
