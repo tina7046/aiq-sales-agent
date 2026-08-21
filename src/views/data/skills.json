@@ -324,9 +324,13 @@
   //                   `use_in_chat` deliberately matches the verb the
   //                   Skill detail page's own "Use in Chat" button
   //                   fires, so both surfaces mean one thing.
-  //   label         — Visible button text. "Use Skill" per Figma, where
-  //                   the detail page says "Use in Chat" — the card has
-  //                   less room and more surrounding context.
+  //   label         — Screen-reader label. Not painted since Figma
+  //                   11314:170930 turned this into an icon-only
+  //                   button; the detail page's equivalent still says
+  //                   "Use in Chat" in text, where there is room.
+  //   icon          — SLDS utility sprite id for the glyph, authored
+  //                   here for the same reason the overflow items carry
+  //                   theirs in data rather than in the template.
   //   assistiveText — Accessible name + tooltip. `{name}` is replaced
   //                   with the skill's name at render time, so the
   //                   button reads uniquely per row instead of nine
@@ -334,6 +338,7 @@
   "useAction": {
     "id":            "use_in_chat",
     "label":         "Use Skill",
+    "icon":          "anywhere_chat",
     "assistiveText": "Use {name} in a new conversation"
   },
 
@@ -877,12 +882,10 @@
   //   fallbackTitle         — SSR title text; the glue script
   //                            overwrites with the resolved skill's
   //                            `name` once the row hydrates.
-  //   metadataTemplate      — format string for the "Created by …
-  //                            · Last updated … by … · V8" caption
-  //                            below the title. `{createdBy}`,
-  //                            `{updatedBy}`, `{updatedAt}`,
-  //                            `{version}` are token slots the JS
-  //                            replaces at render time.
+  //   edited                — “Edited {updatedAt}” stamp that sits
+  //                            12 px left of the header action group
+  //                            (Figma 11606:25114). `{updatedAt}` is
+  //                            compact-formatted by the glue script.
   //   actions               — labels for the header-right cluster.
   //                            Each item carries `label` (visible)
   //                            + `assistiveText` (aria-label + title
@@ -924,9 +927,8 @@
     //                   caption above. `usesTemplateOne` handles the
     //                   singular so a 1-skill recipe doesn't read
     //                   "Uses 1 other skills".
-    //   new*          — the "+" button. Creation isn't wired in this
-    //                   prototype, so it opens the shared placeholder
-    //                   dialog rather than dead-ending the seller.
+    //   new*          — the "+" button. Navigates to
+    //                   /skill_detail.html?new=1 (empty canvas).
     "switcher": {
       "triggerLabel":        "Switch skill",
       "panelLabel":          "Switch to another skill",
@@ -944,34 +946,72 @@
       "newPlaceholderBody":  "Creating a skill isn\u2019t wired up yet. When it ships, this button will open the skill builder with a blank definition."
     },
 
+    // Three-block canvas (name / description / instructions). Empty
+    // state (`?new=1`) uses the placeholders + starter cards; the
+    // pre-filled state hydrates from the catalog row.
+    "canvas": {
+      "untitledLabel":            "Untitled",
+      "namePlaceholder":          "Your skill name",
+      "descriptionPlaceholder":   "Add a description to help your agent identify this skill\u2026",
+      "instructionsPlaceholder":  "Type instructions, / for conditionals, or @ for resources\u2026",
+      "blocks": {
+        "tuneHint":            "Click to tune",
+        "filterPlaceholder":   "Filter",
+        "nothingFound":        "Nothing found",
+        "copy":                "Copy block",
+        "convert":             "Convert to",
+        "refine":              "Refine with AI",
+        "moveUp":              "Move up",
+        "delete":              "Delete",
+        "moveDown":            "Move down",
+        "paragraph":           "Paragraph",
+        "bigHeading":          "Big heading",
+        "mediumHeading":       "Medium heading",
+        "smallHeading":        "Small heading",
+        "divider":             "Divider",
+        "bulletedList":        "Bulleted list",
+        "if":                  "If",
+        "elseIf":              "Else If",
+        "else":                "Else",
+        "draftWithAi":         "Draft with AI",
+        "addBlock":            "Add block",
+        "conditional":         "Conditional",
+        "refineTitle":         "Refine with AI",
+        "refineBody":          "Inline AI refinement isn\u2019t connected in this prototype. Select Generate from Draft With AI on an empty skill, or keep editing the block by hand.",
+        "mentionTitle":        "Resources",
+        "mentionBody":         "Resource mentions (@) aren\u2019t connected in this prototype. Supporting skills still render as chips from Markdown links.",
+        "conditionalTitle":    "Conditionals",
+        "conditionalBody":     "Slash conditionals aren\u2019t connected in this prototype. Use Convert to from the block handle to change this block\u2019s type."
+      },
+      "outline": {
+        "title":       "Use Outline",
+        "description": "Start from a guided template",
+        "template":    "## What this skill does\n\nDescribe what this skill produces and who it helps.\n\n## How this skill works\n\nList supporting skills this recipe coordinates:\n\n[Supporting skill](/skill_detail.html?id=)\n\n## Instructions\n\n1. Gather the records this skill should consider.\n2. Analyze them against the goal above.\n3. Return a concise result the seller can act on.\n\n## Connections and access\n\n- Salesforce\n\n## Guardrails\n\n- Never invent customer activity or record values.\n- Ask for clarification when the request is ambiguous.\n"
+      },
+      "draftWithAi": {
+        "title":             "Draft With AI",
+        "description":       "Generate and refine instructions",
+        "dialogTitle":       "Draft with AI",
+        "promptLabel":       "Describe the skill you want",
+        "promptPlaceholder": "e.g. Daily pipeline briefing for my open opportunities",
+        "generateLabel":     "Generate",
+        "cancelLabel":       "Cancel",
+        "sample":            "## What this skill does\n\nDrafts a concise daily briefing of the seller\u2019s open pipeline: what moved, what needs attention, and which next actions will have the greatest impact.\n\n## How this skill works\n\nCoordinates supporting skills to assemble the snapshot from Salesforce opportunity data.\n\n## Instructions\n\n1. Analyze the current user\u2019s open opportunities for the current quarter by default.\n2. Highlight meaningful pipeline movement, emerging risks, and stalled deals.\n3. Recommend a specific next action for each priority opportunity.\n4. Clearly separate confirmed facts from inferred risks.\n\n## Connections and access\n\n- Salesforce\n\n## Guardrails\n\n- Never invent customer activity, deal changes, or pipeline values.\n- Label recommendations and inferred risks clearly.\n- Respect Salesforce permissions and sharing rules.\n"
+      }
+    },
+
     "back": {
       "label": "Back to Skills",
       "href":  "/skills.html"
     },
     "fallbackTitle":    "Skill",
 
-    // Header metadata caption. Split into individual PARTS so the
-    // client assembles the line at render time from the underlying
-    // fields on the skill record — no single pre-composed sentence
-    // lives in JSON. Each part carries a label template with
-    // `{placeholder}` slots that resolve against
-    // `{ createdBy, updatedBy, updatedAt, version }` on the skill.
-    // If ANY placeholder in a part resolves to an empty value, the
-    // whole part is dropped from the rendered caption. Remaining
-    // parts are joined by `separator`. This keeps the surface
-    // resilient to partial data (e.g. a skill with no `version` or
-    // no `updatedAt` yet) without falling back to a broken string.
-    //
-    // Adding a new part is data-only: append an object with a
-    // stable `id`, a `template` referencing skill fields, and the
-    // client will render it in list order.
-    "metadata": {
-      "separator": " \u00b7 ",
-      "parts": [
-        { "id": "createdBy", "template": "Created by {createdBy}" },
-        { "id": "updated",   "template": "Last updated {updatedAt} by {updatedBy}" },
-        { "id": "version",   "template": "{version}" }
-      ]
+    // Header edited stamp. Figma 11606:25114 paints “Edited Mar 13”
+    // beside the action group. `{updatedAt}` is the only slot; the
+    // client compact-formats the skill's timestamp (today/yesterday
+    // become a month+day, longer relative strings stay as written).
+    "edited": {
+      "template": "Edited {updatedAt}"
     },
     "actions": {
       "useInChat": {
@@ -989,25 +1029,30 @@
       },
       "schedule": {
         "label":         "Schedule",
-        "assistiveText": "Schedule this skill",
-        "menuLabel":     "Schedule options",
-        "items": [
-          { "id": "schedule_new",    "label": "Schedule\u2026" },
-          { "id": "schedule_manage", "label": "Manage schedule" }
-        ]
+        "assistiveText": "Schedule this skill"
       },
       "more": {
         "label":         "More actions",
         "assistiveText": "More actions for this skill",
-        // Kebab menu item copy. Rendered by skill_detail.js from
-        // the resolved skill's `actions` array + gated by the
-        // per-skill permission flags (`canEdit`, `canShare`,
-        // `canDelete`). Order below matches the render order.
-        "items": {
-          "edit":      { "label": "Edit metadata" },
-          "duplicate": { "label": "Duplicate" },
-          "share":     { "label": "Share" },
-          "delete":    { "label": "Delete" }
+        "items": [
+          { "id": "share",      "label": "Share",     "icon": "share" },
+          { "id": "duplicate",  "label": "Duplicate", "icon": "copy" },
+          { "id": "details",    "label": "Details",   "icon": "info_alt" },
+          { "id": "delete",     "label": "Delete",    "icon": "delete" }
+        ],
+        "placeholders": {
+          "share": {
+            "title": "Share",
+            "body":  "The share sheet will open here. This prototype doesn\u2019t ship sharing yet."
+          },
+          "duplicate": {
+            "title": "Duplicate",
+            "body":  "Duplicating this skill isn\u2019t wired up yet. When it ships, this action will create a copy you can edit independently."
+          },
+          "details": {
+            "title": "Details",
+            "body":  "Skill details aren\u2019t wired up yet. When they ship, this action will open metadata for the current skill."
+          }
         }
       }
     },
@@ -1072,10 +1117,12 @@
     // when the corresponding check fails. Kept as separate keys so
     // future rules land without a controller edit.
     "validation": {
-      "emptyDocument":    "Add some content before saving. The document can\u2019t be empty.",
-      "missingH1":        "Add a top-level heading (H1) that names this skill before saving.",
-      "unsafeHtml":       "Remove embedded HTML like <script>, <iframe>, or <style> tags. Scripts and framed content aren\u2019t allowed.",
-      "unsafeLink":       "One or more links use an unsafe protocol. Only http, https, mailto, tel, and site-relative URLs are allowed."
+      "emptyDocument":        "Add some content before saving. The document can\u2019t be empty.",
+      "missingH1":            "Add a top-level heading (H1) that names this skill before saving.",
+      "missingName":          "Name is required.",
+      "missingDescription":   "Add a description to help your agent identify this skill.",
+      "unsafeHtml":           "Remove embedded HTML like <script>, <iframe>, or <style> tags. Scripts and framed content aren\u2019t allowed.",
+      "unsafeLink":           "One or more links use an unsafe protocol. Only http, https, mailto, tel, and site-relative URLs are allowed."
     }
   },
 

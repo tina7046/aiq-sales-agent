@@ -444,7 +444,7 @@
 // measures about 6:1.
 //
 // Layered ON TOP of SLDS 2's `.slds-badge` (the element carries both
-// classes) — same approach as `.seller-home__review-row-output-pill`
+// classes) — same approach as `.seller-home__feed-item-output-pill`
 // above. The component supplies `display: inline-flex` + `align-
 // items: center`, 8-px inline padding, and `white-space: nowrap`.
 //
@@ -832,10 +832,13 @@
   align-items: center;
   flex: 0 0 auto;
   min-width: 0;
-  // 36px keeps the "Uses N other skills" label clear of the kebab
-  // trigger's 32-px hit target that reveals on hover (which sits
-  // just to the right, `right: 0.5rem` on `.seller-home__skill-menu`).
-  margin-right: 2.25rem; // 36px
+  // Clears the kebab's 32-px hover box, which reveals to the right of
+  // this label (`right: 2.25rem` on `.seller-home__skill-menu`, so the
+  // box lands 36–68 px inside the row's right edge). 40 px puts the
+  // label's edge at 80 px, leaving the 12 px Version B's cluster keeps
+  // between its text column and its actions — the circle is a painted
+  // surface once hovered, and at 8 px it read as touching the label.
+  margin-right: 2.5rem; // 40px
   // The popover's top-right nubbin needs a small gutter above so
   // it doesn't sit flush against the trigger's underline on hover.
   // Handled by the popover's `top: calc(100% + …)` rule below.
@@ -1204,48 +1207,81 @@
 // both are visible simultaneously. Additional badge-fade rules
 // further down guarantee visual clarity on hover in every state.
 //
-// List-row geometry (post 2026-08-11 refactor):
-//   • Row padding-right: 1.25 rem (20 px).
-//   • Chevron sprite: 0.75 rem (12 px), sits at the row's right
-//     padding edge, so its right edge is 20 px from `<li>` right.
-//   • Kebab (32×32 SLDS icon-bare button) is centred vertically
-//     against the row midline. `right: 2.25rem` (36 px) places its
-//     right edge 36 px inside the row's right side — 4-px clearance
-//     between the kebab's right edge and the chevron's left edge,
-//     enough to visually separate the two affordances without
-//     leaving a distracting gap.
+// List-row geometry, as measured (offsets are px inward from the
+// row's right edge):
+//   • Chevron sprite: 0.75 rem (12 px), spanning 16–28.
+//   • Kebab: a 32×32 icon-bare button centred vertically against the
+//     row midline. `right: 2.25rem` (36 px) puts its hover box at
+//     36–68, so it clears the chevron by 8 px — the same gap Version
+//     B's action cluster keeps between its two controls.
+//   • "Uses N other skills" ends at 80 px, 12 px clear of that box
+//     (see `margin-right` on `.seller-home__skill-uses-wrap`).
 .seller-home__skill-menu {
   position: absolute;
   top: 50%;
   right: 2.25rem; // 36px — leaves the 20px right padding + 12px chevron clear
   transform: translateY(-50%);
   z-index: 2; // above the anchor (which sits at z-index 0 / auto)
+
+  // Flex so the wrapper hugs the trigger instead of inheriting the
+  // inline line box's descender space, which would add ~2 px under the
+  // button and push the dropdown that far past its 10-px offset.
+  display: flex;
+  align-items: center;
 }
 
-// Trigger — 32×32 icon button. Hidden by default per spec
-// ("Overflow actions, shown only on hover or keyboard focus
-// within"). Same reveal rules as the chevron, plus one additional
-// case: when the trigger's own aria-expanded="true" (the menu is
-// open), the trigger must stay visible even if the pointer wanders
-// off the card. Handled via the `.is-menu-open` class on the
-// wrapper AND the direct `[aria-expanded="true"]` selector below
-// for defence in depth.
+// Row icon buttons — the kebab, and Version B's "Use Skill" — are one
+// control type per Figma 11314:170930: a 32×32 bare button holding a
+// 14-px glyph, which paints a surface-2 circle on hover. Version A's row
+// carries only the kebab; Version B's cluster sets the two side by side,
+// where any size or shape difference between them would read as a
+// mistake.
+//
+// SIZED HERE because `slds-button_icon-bare` is deliberately absent
+// from the SLDS rule that squares off the bordered icon variants, so
+// the bare button would otherwise collapse to its glyph. The box is
+// carried at rest and only PAINTED on hover, which means nothing
+// shifts when the pointer arrives and the target clears the 24-px
+// minimum a 14-px button would miss.
+// Only the box is set here. The 14-px glyph is SLDS's own default for
+// `.slds-button__icon`, and it fills from `currentColor`, so the glyph
+// tint is a `color` on the button — one declaration instead of a
+// descendant rule per state.
+.seller-home__skill-menu-trigger,
+.seller-home__skill-action-use {
+  inline-size: var(--slds-g-sizing-9, 2rem); // 32px
+  block-size: var(--slds-g-sizing-9, 2rem);
+  border-radius: var(--slds-g-radius-border-circle, 9999px);
+}
+
+// The kebab rests neutral. Stated rather than inherited: SLDS's own
+// `.slds-button_icon-bare` reads `--slds-s-button-color` first and only
+// falls back to `on-surface-1`, and the SLDS 2 theme sets that token to
+// `accent-2` page-wide — so leaving this off paints a blue kebab.
+.seller-home__skill-menu-trigger {
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+// "Use Skill" rests accent-blue, because it is the row's primary action
+// and the only cue left after the label moved into assistive text — the
+// bordered button it replaced carried a blue label, so blue is what the
+// seller is scanning for.
+.seller-home__skill-action-use {
+  color: var(--slds-g-color-accent-2, #0250d9);
+}
+
+// Kebab-only reveal, per spec ("Overflow actions, shown only on hover
+// or keyboard focus within"). Same rules as the chevron, plus one
+// additional case: when the trigger's own aria-expanded="true" (the
+// menu is open), it must stay visible even if the pointer wanders off
+// the card. Handled via the `.is-menu-open` class on the wrapper AND
+// the direct `[aria-expanded="true"]` selector below for defence in
+// depth. "Use Skill" is exempt — Version B draws it as part of the
+// card's layout rather than an affordance that appears on approach.
 .seller-home__skill-menu-trigger {
   opacity: 0;
   pointer-events: none;
   transition: opacity 120ms ease;
-
-  // Icon size drop from the SLDS 2 default (14 px) to 12 px so the
-  // kebab reads at the same visual weight as the trailing chevron
-  // (also 12 px) — the two affordances live on the same horizontal
-  // line and small size deltas would be noticeable against each
-  // other. `fill: currentColor` on the base SLDS `.slds-button__
-  // icon` picks up the color set here for a single-token tint.
-  .slds-button__icon {
-    width: 0.75rem;  // 12px
-    height: 0.75rem;
-    fill: var(--slds-g-color-on-surface-1, #5c5c5c);
-  }
 }
 
 .seller-home__skill-item:hover .seller-home__skill-menu-trigger,
@@ -1256,26 +1292,84 @@
   pointer-events: auto;
 }
 
-// Dropdown surface. Structural + visual clone of Scheduled's
-// `.seller-home__scheduled-workflow-menu-list` so the two surfaces
-// read as one family. Positioned RIGHT-anchored under the trigger
-// so it doesn't extend past the card's right edge.
+// Hover paints the circle and turns the glyph accent-blue. Held while
+// the menu is open too — a trigger with a popover hanging off it
+// reading as untouched looks broken, and the row underneath stays
+// hovered anyway.
+.seller-home__skill-menu-trigger:hover,
+.seller-home__skill-menu-trigger:focus-visible,
+.seller-home__skill-menu-trigger[aria-expanded="true"],
+.seller-home__skill-action-use:hover,
+.seller-home__skill-action-use:focus-visible {
+  background: var(--slds-g-color-surface-2, #f3f3f3);
+  color: var(--slds-g-color-accent-2, #0250d9);
+}
+
+// Dropdown surface, per Figma 11305:26088. One surface for both design
+// versions — same size, radius, shadow, row metrics and anchoring — so
+// the two read as one component. Version B's block at the end of this
+// file no longer touches it.
 .seller-home__skill-menu-list {
   position: absolute;
-  top: calc(100% + 0.25rem); // 4px gap below the trigger
-  right: 0;
+  // 2 px below the trigger's 32-px hover box, which puts the surface
+  // 10 px below the kebab glyph itself — the design's gap. Clearing the
+  // box rather than tucking under its lower half is the point: the
+  // circle paints on hover, and a surface overlapping it would read as
+  // attached to the wrong thing.
+  top: calc(100% + 2px);
+
+  // LEFT-anchored, so the surface opens rightward from the kebab into
+  // the page gutter beside the card rather than reaching back across
+  // the description. The 8 px steps in by the padding the hover box
+  // holds around its 14-px glyph, so the surface lines up with the
+  // GLYPH the seller clicked rather than hanging 8 px to its left.
+  // `@media (max-width: 79rem)` below covers the widths where the
+  // gutter runs out.
+  left: var(--slds-g-spacing-2, 0.5rem); // 8px
   z-index: 5;
 
-  min-width: 10rem; // 160px — comfortable for the longest label
-                    //         ("Duplicate") plus icon + padding
+  // Shrink-wraps the longest label rather than holding a width floor:
+  // the design sizes the surface to its content (106 px = 12 px
+  // padding + 16 px icon + 8 px gap + a 58-px "Duplicate" + 12 px
+  // padding), and an absolutely positioned box does that on its own.
+  min-width: 0;
   background: var(--slds-g-color-surface-container-1, #ffffff);
   border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
-  border-radius: var(--slds-g-radius-border-2, 0.5rem); // 8px
-  box-shadow:
-    0 4px 12px 0 rgba(0, 0, 0, 0.12),
-    0 1px 3px 0 rgba(0, 0, 0, 0.08);
+
+  // 12 px. Clipped because the items run the full width of the surface
+  // with square hover fills, and at this radius the top and bottom
+  // ones visibly cut the corner — nothing inside a menu needs to
+  // escape its own box.
+  border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
+  overflow: hidden;
+
+  // Elevation/2 - down, the shadow the design attaches to this
+  // surface. Replaces a hand-rolled pair that predated the token.
+  box-shadow: var(--slds-g-shadow-2);
 
   padding-block: var(--slds-g-spacing-1, 0.25rem); // 4px vertical
+}
+
+// Narrow-viewport guard. The left-anchored surface overhangs its card —
+// by 47 px in Version A, whose kebab sits 36 px inside the row's right
+// edge, and 67 px in Version B, whose kebab sits at 16 px — and around
+// 1250 px the gutter it lands in stops being wide enough: the surface
+// crosses the scroll container's content edge, the container gains
+// horizontal scrollable overflow (its `overflow-y: auto` computes
+// `overflow-x` to `auto` too), and the menu clips. Flipping to
+// right-anchoring keeps it inside the card at any width.
+//
+// 79 rem = 1264 px, one step above Version B's crossing — the wider
+// overhang of the two, so one threshold covers both. At 1280 px, where
+// B still clears the edge by 15 px, the design holds.
+//
+// Anchoring from `right` by the same 8 px keeps the surface's edge on
+// the glyph rather than on the hover box, mirroring the `left` above.
+@media (max-width: 79rem) {
+  .seller-home__skill-menu-list {
+    right: var(--slds-g-spacing-2, 0.5rem); // 8px
+    left: auto;
+  }
 }
 
 .seller-home__skill-menu-items {
@@ -1286,12 +1380,12 @@
   flex-direction: column;
 }
 
-// Menu item. Same padding / typography / hover treatment as the
-// Scheduled menu item so users who cross-navigate the two
-// surfaces feel one component family. `focus-visible` uses the
-// SLDS inset-3px accent stripe (matches Knowledge overflow
-// items) so keyboard users see EXACTLY which item Arrow-Up /
-// Arrow-Down is on without ambiguity against the hover style.
+// Menu item — 36-px rows, the design's 18-px line box with 9 px above
+// and below, 12 px in from the edge and an 8-px gap before the label
+// (node 11305:26094). `focus-visible` uses the SLDS inset-3px accent
+// stripe (matches Knowledge overflow items) so keyboard users see
+// EXACTLY which item Arrow-Up / Arrow-Down is on without ambiguity
+// against the hover style.
 .seller-home__skill-menu-item {
   appearance: none;
   background: transparent;
@@ -1305,11 +1399,11 @@
   align-items: center;
   gap: var(--slds-g-spacing-2, 0.5rem); // 8px icon-to-label
 
-  padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
+  padding: 0.5625rem var(--slds-g-spacing-3, 0.75rem); // 9px 12px
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
   font-weight: var(--slds-g-font-weight-4, 400);
-  line-height: 1.0625rem; // 17px
+  line-height: 1.125rem; // 18px
   color: var(--slds-g-color-on-surface-2, #2e2e2e);
 
   transition: background-color 120ms ease, color 120ms ease;
@@ -1327,8 +1421,8 @@
 }
 
 .seller-home__skill-menu-item-icon {
-  width: 0.875rem;  // 14px
-  height: 0.875rem;
+  width: 1rem;  // 16px
+  height: 1rem;
   fill: currentColor;
   flex: 0 0 auto;
 }
@@ -1754,9 +1848,7 @@
     margin-inline:      var(--slds-g-spacing-4, 1rem);
 
     background-color: var(--slds-g-color-surface-container-1, #ffffff);
-    border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
-    border-radius: var(--slds-g-radius-border-3, 12px);
-    overflow: hidden;
+    overflow: visible;
 
     &[hidden] { display: none; }
 
@@ -2060,10 +2152,162 @@
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
-    padding: var(--slds-g-spacing-4, 1rem);
+    overflow-x: visible;
+    padding-block: var(--slds-g-spacing-4, 1rem);
+    padding-inline: 3.5rem;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
     background-color: var(--slds-g-color-surface-container-1, #ffffff);
+  }
+
+  .seller-home__skill-detail-save-error,
+  .seller-home__skill-canvas-stack {
+    width: 100%;
+    max-width: 50rem; // 800 px @ 16-px root
+  }
+
+  // Name / description / instructions stack. Name and description
+  // are plain contenteditable fields (not markdown). Instructions
+  // keep the Knowledge article typography + toolbar commands.
+  .seller-home__skill-canvas-stack {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .seller-home__skill-canvas-name,
+  .seller-home__skill-canvas-description {
+    min-height: 1.5em;
+    outline: none;
+
+    &:focus,
+    &:focus-visible {
+      outline: none;
+    }
+
+    &.is-empty::before {
+      content: attr(data-placeholder);
+      color: var(--slds-g-color-on-surface-3, #747474);
+      pointer-events: none;
+      font-weight: var(--slds-g-font-weight-4, 400);
+    }
+  }
+
+  .seller-home__skill-canvas-name {
+    font-size: var(--slds-g-font-scale-6, 2rem);
+    line-height: 2.5rem;
+    font-weight: var(--slds-g-font-weight-6, 590);
+    margin-block: var(--slds-g-spacing-2, 0.5rem);
+    color: #000000;
+  }
+
+  .seller-home__skill-canvas-description {
+    font-size: var(--slds-g-font-size-4, 1rem);
+    line-height: 1.5;
+    font-weight: var(--slds-g-font-weight-4, 400);
+    color: var(--slds-g-color-on-surface-2, #444);
+    margin-block-end: var(--slds-g-spacing-6, 2rem);
+    width: fit-content;
+    max-width: 100%;
+    align-self: flex-start;
+  }
+
+  .seller-home__skill-canvas-divider {
+    width: 100%;
+    margin: 0 0 var(--slds-g-spacing-4, 1rem);
+    border: 0;
+    border-top: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  }
+
+  .seller-home__skill-canvas-instructions {
+    position: relative;
+    min-height: 8rem;
+  }
+
+  .seller-home__skill-canvas-doc.is-empty::before {
+    content: attr(data-placeholder);
+    color: var(--slds-g-color-on-surface-3, #747474);
+    pointer-events: none;
+    display: block;
+    margin-block-end: var(--slds-g-spacing-4, 1rem);
+  }
+
+  .seller-home__skill-canvas-doc_blocks.is-empty::before {
+    content: none;
+    display: none;
+  }
+
+  .seller-home__skill-starter-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--slds-g-spacing-3, 0.75rem);
+    margin-block-start: var(--slds-g-spacing-4, 1rem);
+
+    &[hidden] { display: none; }
+  }
+
+  .seller-home__skill-starter-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--slds-g-spacing-1, 0.25rem);
+    padding: var(--slds-g-spacing-4, 1rem);
+    text-align: start;
+    cursor: pointer;
+    background-color: var(--slds-g-color-surface-container-1, #ffffff);
+    border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+    border-radius: var(--slds-g-radius-border-3, 12px);
+    color: inherit;
+    font: inherit;
+
+    &:hover {
+      background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+    }
+
+    &:focus,
+    &:focus-visible {
+      outline: 2px solid var(--slds-g-color-accent-2, #0250d3);
+      outline-offset: 2px;
+    }
+  }
+
+  .seller-home__skill-starter-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 2rem;
+    block-size: 2rem;
+    margin-block-end: var(--slds-g-spacing-2, 0.5rem);
+    border-radius: var(--slds-g-radius-border-circle, 9999px);
+    background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+
+    svg {
+      inline-size: 1rem;
+      block-size: 1rem;
+      fill: var(--slds-g-color-on-surface-2, #444);
+    }
+  }
+
+  .seller-home__skill-starter-card-title {
+    font-weight: var(--slds-g-font-weight-6, 600);
+    font-size: 0.875rem;
+    color: var(--slds-g-color-on-surface-1, #181818);
+  }
+
+  .seller-home__skill-starter-card-description {
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--slds-g-color-on-surface-3, #747474);
+  }
+
+  .seller-home__skill-draft-ai-prompt {
+    width: 100%;
+    margin-block-start: var(--slds-g-spacing-1, 0.25rem);
+  }
+
+  .seller-home__skill-detail-action-group[hidden] {
+    display: none;
   }
 
   // ── Editable document surface ────────────────────────────────────
@@ -2256,10 +2500,304 @@
     margin-block: var(--slds-g-spacing-4, 1rem);
   }
 
-  .seller-home__skill-canvas-doc img {
-    max-width: 100%;
-    height: auto;
-    border-radius: var(--slds-g-radius-border-2, 6px);
+  // ── Block editor ────────────────────────────────────────────────
+  // Instructions are a stack of independent blocks. Text sits in a
+  // content column that lines up with the skill name / description.
+  // The grip lives in the left gutter and only appears on hover
+  // (Editor.js / prompt-builder `ce-block` pattern).
+  .seller-home__skill-canvas-doc_blocks {
+    padding-inline: 0;
+  }
+
+  .seller-home__skill-block {
+    position: relative;
+    padding-block: 0;
+    border-radius: 0.375rem;
+    overflow: visible;
+
+    // Invisible gutter so hovering left of the text still counts
+    // as hovering the block (reveals the grip).
+    &::before {
+      content: "";
+      position: absolute;
+      inset-block: 0;
+      inset-inline-start: -3.5rem;
+      inline-size: 3.5rem;
+    }
+
+    &:hover .seller-home__skill-block-grip,
+    &:hover .seller-home__skill-block-plus,
+    &.is-selected .seller-home__skill-block-grip,
+    &.is-selected .seller-home__skill-block-plus {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    // Wash only on click / selection. Hover still reveals plus
+    // and grip, but does not paint the block.
+    &.is-selected .seller-home__skill-block-content {
+      background-color: #eaf5fe;
+      border-radius: 0.375rem;
+    }
+
+    // Vertically center plus / grip on the heading line box.
+    // Content has 4px padding; subsequent H2 blocks also have
+    // 1rem padding-block-start (hairline gap) on the wrapper,
+    // which does not inset `top: 0` absolute controls.
+    &[data-block-kind="h2"] .seller-home__skill-block-grip,
+    &[data-block-kind="h2"] .seller-home__skill-block-plus,
+    &[data-block-kind="h2"] .seller-home__skill-block-ai {
+      top: calc(4px + (2rem - 1.5rem) / 2);
+    }
+
+    + .seller-home__skill-block[data-block-kind="h2"] .seller-home__skill-block-grip,
+    + .seller-home__skill-block[data-block-kind="h2"] .seller-home__skill-block-plus,
+    + .seller-home__skill-block[data-block-kind="h2"] .seller-home__skill-block-ai {
+      top: calc(1rem + 4px + (2rem - 1.5rem) / 2);
+    }
+
+    &[data-block-kind="h3"] .seller-home__skill-block-grip,
+    &[data-block-kind="h3"] .seller-home__skill-block-plus,
+    &[data-block-kind="h3"] .seller-home__skill-block-ai {
+      top: calc(4px + (1.75rem - 1.5rem) / 2);
+    }
+  }
+
+  .seller-home__skill-block-content {
+    min-width: 0;
+    padding: 4px;
+  }
+
+  .seller-home__skill-block.is-empty .seller-home__skill-block-content {
+    padding: 0;
+  }
+
+  .seller-home__skill-block-grip,
+  .seller-home__skill-block-plus,
+  .seller-home__skill-block-ai {
+    position: absolute;
+    top: 0;
+    transform: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--slds-g-color-on-surface-3, #747474);
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 2;
+    overflow: visible;
+
+    &:focus,
+    &:focus-visible {
+      opacity: 1;
+      pointer-events: auto;
+      outline: 2px solid var(--slds-g-color-accent-2, #0250d3);
+      outline-offset: 1px;
+    }
+  }
+
+  .seller-home__skill-block-plus {
+    left: -3.25rem;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    border-radius: 0.25rem;
+    color: var(--slds-g-color-on-surface-3, #747474);
+
+    &:hover {
+      background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+      color: var(--slds-g-color-on-surface-1, #181818);
+    }
+
+    svg {
+      display: block;
+      inline-size: 1.5rem;
+      block-size: 1.5rem;
+      pointer-events: none;
+    }
+  }
+
+  .seller-home__skill-block-grip {
+    left: -1.75rem;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    border-radius: 0.25rem;
+    color: var(--slds-g-color-on-surface-3, #747474);
+    overflow: visible;
+
+    &:hover {
+      background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+      color: var(--slds-g-color-on-surface-1, #181818);
+    }
+
+    &[aria-expanded="true"] .seller-home__skill-block-grip-hint {
+      display: none;
+    }
+  }
+
+  .seller-home__skill-block-grip-icon {
+    display: block;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    flex: 0 0 auto;
+    pointer-events: none;
+  }
+
+  // Prefix with `.seller-home__skill-canvas-doc` so these colors beat
+  // the article `span { color: #000000 }` rule (0,2,1). The hint,
+  // title, keys, and slash chips are all spans inside that article.
+  .seller-home__skill-canvas-doc .seller-home__skill-block-grip-hint {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.2rem;
+    padding: 0.5rem 0.625rem;
+    width: max-content;
+    max-width: none;
+    white-space: nowrap;
+    font-size: 0.75rem;
+    line-height: 1.25;
+    font-weight: var(--slds-g-font-weight-4, 400);
+    color: #e5e5e5;
+    background-color: #181818;
+    border: 0;
+    border-radius: 0.375rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+    pointer-events: none;
+    z-index: 40;
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: 100%;
+      transform: translateX(-50%);
+      border-inline: 5px solid transparent;
+      border-block-end: 5px solid #181818;
+    }
+  }
+
+  .seller-home__skill-canvas-doc .seller-home__skill-block-grip-hint-title {
+    color: #e5e5e5;
+    font-weight: var(--slds-g-font-weight-6, 700);
+    text-align: center;
+    width: 100%;
+  }
+
+  .seller-home__skill-canvas-doc .seller-home__skill-block-grip-hint-keys {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    color: #ffffff;
+  }
+
+  .seller-home__skill-block-grip:hover .seller-home__skill-block-grip-hint,
+  .seller-home__skill-block-grip:focus-visible .seller-home__skill-block-grip-hint {
+    display: flex;
+    color: #e5e5e5;
+  }
+
+  .seller-home__skill-canvas-doc .seller-home__skill-block-slash {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: 1.05rem;
+    block-size: 1.05rem;
+    padding: 0 0.15rem;
+    font-family: var(--slds-g-font-family-monospace, ui-monospace, monospace);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 0.2rem;
+  }
+
+  .seller-home__skill-canvas-doc .seller-home__skill-block-slash-plus {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.6875rem;
+    font-weight: 600;
+  }
+
+  .seller-home__skill-block-ai {
+    display: none;
+  }
+
+  .seller-home__skill-block [data-sh-skill-block-body] {
+    flex: 1 1 auto;
+    min-width: 0;
+    outline: none;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-block: 0;
+
+    &:focus,
+    &:focus-visible {
+      outline: none;
+    }
+  }
+
+  // Empty new line — prompt-builder
+  // `.prompt-paragraph-content.nce-editor[data-empty="true"]`:
+  // one line of body type, no extra chrome, caret only.
+  .seller-home__skill-block.is-empty {
+    padding-block: 0;
+  }
+
+  .seller-home__skill-block.is-empty [data-sh-skill-block-body][data-empty="true"] {
+    min-height: 1.375rem;
+    margin-block: 0;
+    color: #5c5c5c;
+  }
+
+  // Ghost hint on an empty paragraph. Shown on a blank canvas
+  // and on the focused line after Enter (the prompt-builder
+  // empty `nce-editor[data-empty="true"]` treatment).
+  .seller-home__skill-block.is-empty.is-focused [data-sh-skill-block-body][data-empty="true"][data-placeholder]::before,
+  .seller-home__skill-canvas-doc_blocks.is-empty .seller-home__skill-block:first-child.is-empty [data-sh-skill-block-body][data-placeholder]::before {
+    content: attr(data-placeholder);
+    color: #5c5c5c;
+    font-weight: var(--slds-g-font-weight-4, 400);
+    pointer-events: none;
+    float: left;
+    height: 0;
+  }
+
+  .seller-home__skill-canvas.is-readonly .seller-home__skill-block-grip,
+  .seller-home__skill-canvas.is-readonly .seller-home__skill-block-plus,
+  .seller-home__skill-canvas.is-readonly .seller-home__skill-block-ai {
+    display: none;
+  }
+
+  // Knowledge article H2 hairlines assume the heading is a direct
+  // child of the article. Wrapped blocks break `:first-child`, so
+  // reset those borders and re-apply the skill-canvas section rule
+  // on the wrapper.
+  .seller-home__skill-canvas-doc_blocks h2 {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  .seller-home__skill-block[data-block-kind="h2"] + .seller-home__skill-block[data-block-kind="h2"],
+  .seller-home__skill-block + .seller-home__skill-block[data-block-kind="h2"] {
+    border-top: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+    padding-block-start: var(--slds-g-spacing-4, 1rem);
+    margin-block-start: var(--slds-g-spacing-4, 1rem);
+  }
+
+  .seller-home__skill-block[data-block-kind="hr"] [data-sh-skill-block-body] {
+    width: 100%;
+    pointer-events: none;
   }
 
   // ── Supporting-skill chip row (post-render enrichment) ──────────
@@ -2423,15 +2961,8 @@
     // (free space is distributed to auto tracks), which shoved the
     // badge ~80 px to the right of the chevron.
     //
-    // Column 3 is what makes the metadata caption below safe to span
-    // the full row. Grid feeds a spanning item's intrinsic width into
-    // the intrinsic tracks it covers, so while columns 1–2 were the
-    // only tracks, the caption's long nowrap string claimed the
-    // badge's column (391 px for a 112 px pill) and left the crumb
-    // 33 px — the title collapsed to zero and the badge sat on top of
-    // "Skills /". Grid skips that distribution for any item spanning a
-    // FLEXIBLE track, so the `1fr` both exempts the caption from
-    // track sizing and parks the leftover space to the badge's right.
+    // Column 3 parks leftover space to the badge's right so the
+    // title + pills stay tight on the left instead of stretching.
     grid-template-columns: minmax(0, max-content) max-content 1fr;
     // Centers the badge against the 28-px title line. The crumb row
     // is the tallest thing in row 1, so this only moves the badge.
@@ -3089,26 +3620,20 @@
     color: var(--slds-g-color-on-surface-1, #5c5c5c);
   }
 
-  // ── Header metadata caption ─────────────────────────────────────
-  // "Created by Caroline Alix · Last updated yesterday at 4:00PM by
-  // Zubin Keith · V8". 12 px per Figma, single-line with ellipsis
-  // when the name / update chain is unusually long. `[hidden]`
-  // wins over the inline `display: block` below so the template
-  // can ship the element empty + hidden until the glue script
-  // populates it.
-  .seller-home__skill-detail-header-metadata {
+  // ── Edited stamp (Figma 11606:25114) ────────────────────────────
+  // “Edited Mar 13” sits 12 px left of the action group (the parent
+  // `.seller-home__skill-detail-header-actions` already uses a 12 px
+  // gap). Display/1 Regular: 12 px, line-height 1.3, on-surface-1.
+  .seller-home__skill-detail-edited {
     display: block;
     margin: 0;
-    max-width: 100%;
-    // Spans the full header-lead row so the caption can use the whole
-    // width before it ellipsizes. Safe to span only because the grid's
-    // last track is flexible — see the sizing note on that rule.
-    grid-column: 1 / -1;
+    max-width: 12rem;
+    flex: 0 1 auto;
     color: var(--slds-g-color-on-surface-1, #5c5c5c);
     font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-    font-size: 0.75rem;                              // 12 px per Figma
+    font-size: 0.75rem;
     font-weight: var(--slds-g-font-weight-4, 400);
-    line-height: 1.3;                                // Figma line-height ratio
+    line-height: 1.3;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -3167,6 +3692,11 @@
         var(--slds-s-button-radius-border, var(--slds-g-radius-border-circle, 9999px));
       border-end-end-radius:
         var(--slds-s-button-radius-border, var(--slds-g-radius-border-circle, 9999px));
+      // The chevron is not `:last-child` of the trigger (the
+      // dropdown panel is), so SLDS's group rule
+      // `.slds-button:not(:last-child)` zeroes the trailing
+      // border. Restore it so the pill's right edge isn't clipped.
+      border-inline-end-width: var(--slds-g-sizing-border-1, 1px);
     }
 
     // Ensure every button in the group hits the SLDS 2 32-px height
@@ -3176,6 +3706,15 @@
     > .slds-dropdown-trigger > .slds-button {
       min-height: var(--slds-g-sizing-9, 2rem);
     }
+  }
+
+  // More-actions overflow (Share / Duplicate / Details / Delete).
+  // SLDS `slds-dropdown_small` is 240px (`--slds-g-sizing-14`);
+  // this menu is four short labels and should sit at 120px.
+  .seller-home__skill-detail-schedule-trigger .slds-dropdown {
+    width: 120px;
+    min-width: 120px;
+    max-width: 120px;
   }
 
   // ── (removed) Article header + inline metadata ──────────────────
@@ -3228,6 +3767,9 @@
     .seller-home__skill-canvas-body {
       padding: var(--slds-g-spacing-2, 0.5rem);
     }
+    .seller-home__skill-starter-cards {
+      grid-template-columns: 1fr;
+    }
     // Title truncation gets more aggressive at narrow widths so a
     // long skill name doesn't spill past the header edge.
     .seller-home__skill-detail-breadcrumb-current {
@@ -3252,11 +3794,7 @@
   //
   // Breadcrumb also drops the "Skills / " prefix at this width so
   // the current-skill name gets full horizontal budget — the left-
-  // nav "Skills" affordance still gives sellers a way home. The
-  // metadata caption can wrap here (single-line ellipsis on the
-  // header keeps the block tidy at wider widths, but ultra-narrow
-  // phones benefit from letting the caption break so no context
-  // gets truncated silently).
+  // nav "Skills" affordance still gives sellers a way home.
   @media (max-width: 30rem) {
     .seller-home__skill-detail-action .slds-button__icon_left {
       margin-right: 0;
@@ -3276,9 +3814,6 @@
     }
     .seller-home__skill-detail-breadcrumb-current {
       max-width: 100%;
-    }
-    .seller-home__skill-detail-header-metadata {
-      white-space: normal;
     }
   }
 
@@ -3366,6 +3901,20 @@
   border-radius: 0.125rem;
   flex: 0 0 auto;
   object-fit: contain;
+}
+
+// Tool chip icon (inline @-mention of a connection/tool). Rendered as a
+// background-image span rather than an <img> so the surrounding anchor
+// round-trips to `[Salesforce](#tool/sf)` in Markdown — an <img> child
+// would serialize as `![](icon.png)` inside the link and corrupt it.
+.seller-home__skill-tool-chip-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex: 0 0 auto;
+  border-radius: 0.125rem;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
 }
 
 // ============================================================
@@ -3555,6 +4104,12 @@
     display: flex;
     align-items: center;
     gap: var(--slds-g-spacing-2, 0.5rem); // 8px, per Figma
+
+    // Empty cluster space must not steal clicks from the row
+    // underneath while the icons are hidden. Revealed buttons (and
+    // the open menu) opt back in with `auto`, which still hit-tests
+    // even when the parent is `none`.
+    pointer-events: none;
   }
 
   // STACKING: the wrapper above is a stacking context — `transform`
@@ -3570,11 +4125,6 @@
   // on the <li> by `skillOverflowController` for exactly this kind of
   // "menu is open" styling, and it drops back to `2` on close so a
   // resting cluster never outranks its neighbours.
-  //
-  // Version A has the same latent trap (its kebab container is also
-  // transformed and z-indexed) but no visible symptom: the clusters that
-  // would cover the menu there are bare kebabs at `opacity: 0`. Left
-  // alone deliberately — this pass is Version B only.
   .seller-home__skill-item.is-menu-open .seller-home__skill-actions {
     z-index: 6;
   }
@@ -3583,14 +4133,15 @@
   // of flow, so without this the description — which ellipsizes at its
   // own content edge — would run underneath the buttons.
   //
-  // 9 rem = Figma's 132-px cluster (a 92-px "Use Skill" + the 8-px gap
-  // + the kebab's 32-px hover box) plus the 12-px gutter it puts between
-  // the text column and the actions (`pr` on node 11194:24309). A
-  // literal is the trade-off of taking the cluster out of flow: a much
-  // longer localized button label would need this bumped, since the text
-  // column can no longer discover the cluster's width itself.
+  // 5.25 rem = the 72-px cluster (two 32-px icon buttons with the 8-px
+  // gap between them) plus the 12-px gutter Figma puts between the text
+  // column and the actions (`pr` on node 11194:24309). Down from 9 rem,
+  // which budgeted for the 92-px "Use Skill" pill this pass replaced
+  // with an icon button — the description now ellipsizes 72 px later.
+  // A literal is the trade-off of taking the cluster out of flow: the
+  // text column can no longer discover the cluster's width itself.
   .seller-home__skill-body {
-    padding-inline-end: 9rem; // 144px
+    padding-inline-end: 5.25rem; // 84px
   }
 
   // The menu container joins the cluster's flex flow instead of
@@ -3613,129 +4164,393 @@
     align-items: center;
   }
 
-  // Always visible, where Version A's kebab fades in on hover: the
-  // design draws this as part of the card's layout, next to "Use
-  // Skill", rather than an affordance that appears on approach. The
-  // shared reveal rules further up set the same `opacity: 1` on hover,
-  // so nothing fights — this only changes the RESTING state.
-  //
-  // SIZED 32 PX even though the resting glyph is 14 px, because the
-  // hover state (node 11314:170930) is a 32-px circle centred on that
-  // glyph: carrying the box at rest and only painting it on hover means
-  // nothing moves when the pointer arrives, and the target clears the
-  // 24-px minimum a 16-px button would miss. `slds-button_icon-bare` is
-  // deliberately absent from the SLDS rule that squares off the
-  // bordered variants, so the size has to be set here.
+  // ── Hover / focus interaction (Version B only) ─────────────────
+  // The action cluster is a SIBLING of the row, sitting on top of it.
+  // Hovering a button therefore is NOT hovering `.seller-home__skill-
+  // row`, which would drop the card wash the moment the pointer left
+  // the text. Driving both the wash and the icon reveal off the <li>
+  // (`:hover`, `:focus-within`, `.is-menu-open`) keeps them in
+  // lockstep — including while the overflow menu is open, because the
+  // menu is still a descendant of the <li> even when it overflows.
+  .seller-home__skill-item:hover .seller-home__skill-row:not(.seller-home__skill-row--unlinked),
+  .seller-home__skill-item:focus-within .seller-home__skill-row:not(.seller-home__skill-row--unlinked),
+  .seller-home__skill-item.is-menu-open .seller-home__skill-row:not(.seller-home__skill-row--unlinked) {
+    background: var(--slds-g-color-surface-container-2, #f3f3f3);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  }
+
+  // Both icons hide at rest via opacity (not `visibility` / `display`
+  // / `aria-hidden`) so they stay in the accessibility tree and in
+  // tab order. The shared kebab rule already does this for the
+  // overflow trigger; this restates it for "Use Skill" and for the
+  // kebab so Version B's resting override cannot drift. 120 ms matches
+  // the card wash.
+  .seller-home__skill-action-use,
   .seller-home__skill-menu-trigger {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease;
+  }
+
+  .seller-home__skill-item:hover .seller-home__skill-action-use,
+  .seller-home__skill-item:hover .seller-home__skill-menu-trigger,
+  .seller-home__skill-item:focus-within .seller-home__skill-action-use,
+  .seller-home__skill-item:focus-within .seller-home__skill-menu-trigger,
+  .seller-home__skill-item.is-menu-open .seller-home__skill-action-use,
+  .seller-home__skill-item.is-menu-open .seller-home__skill-menu-trigger,
+  .seller-home__skill-menu-trigger[aria-expanded="true"] {
     opacity: 1;
     pointer-events: auto;
-
-    inline-size: var(--slds-g-sizing-9, 2rem); // 32px
-    block-size: var(--slds-g-sizing-9, 2rem);
-    border-radius: var(--slds-g-radius-border-circle, 9999px);
-
-    // Back to the SLDS 2 default 14 px, up from the 12 px the shared
-    // rule uses to match the trailing chevron's weight. Version B has
-    // no chevron to match, and the design draws 14 px inside both the
-    // resting and the hover box.
-    .slds-button__icon {
-      inline-size: 0.875rem; // 14px
-      block-size: 0.875rem;
-    }
   }
 
-  // Hover paints the circle and turns the glyph accent-blue. Held while
-  // the menu is open too — a trigger with a popover hanging off it
-  // reading as untouched looks broken, and the row underneath stays
-  // hovered anyway.
-  //
-  // Spelled out instead of nested with `&`: stylelint resolves
-  // `&`-selectors before testing them against the project's class
-  // pattern, which rejects the digit in `--skills-v2`.
+  // White circle on the hovered / focused icon only, so it reads
+  // against the card's #f3f3f3 wash. The shared rule paints
+  // surface-2 (#f3f3f3) — invisible on that wash — and also latches
+  // it on `[aria-expanded="true"]`; the transparent reset below
+  // drops that latch so only the pointer/keyboard target is selected.
+  .seller-home__skill-action-use:hover,
+  .seller-home__skill-action-use:focus-visible,
   .seller-home__skill-menu-trigger:hover,
-  .seller-home__skill-menu-trigger:focus-visible,
-  .seller-home__skill-menu-trigger[aria-expanded="true"] {
-    background: var(--slds-g-color-surface-2, #f3f3f3);
+  .seller-home__skill-menu-trigger:focus-visible {
+    background: var(--slds-g-color-surface-1, #fff);
+  }
 
-    .slds-button__icon {
-      fill: var(--slds-g-color-accent-2, #0250d9);
+  .seller-home__skill-menu-trigger[aria-expanded="true"]:not(:hover):not(:focus-visible) {
+    background: transparent;
+  }
+
+  // Touch devices never fire `:hover`, so both actions stay painted.
+  // Nested under the version scope so Version A's kebab (which the
+  // shared `(hover: none)` rule already reveals) is the only A change.
+  @media (hover: none) {
+
+    .seller-home__skill-action-use,
+    .seller-home__skill-menu-trigger {
+      opacity: 1;
+      pointer-events: auto;
     }
   }
 
-  // ── Overflow menu surface (Figma 11305:26088) ─────────────────────
-  // LEFT-anchored 2 px below the kebab's ICON, where Version A
-  // right-anchors it 4 px below the whole trigger.
-  //
-  // Both offsets resolve against the `--inline` container, which is the
-  // trigger's 32-px hover box, and they treat that box differently on
-  // purpose:
-  //
-  //   • `top` clears the box by 2 px, so the surface drops below the
-  //     hover circle rather than tucking under its lower half — 10 px
-  //     below the icon itself.
-  //   • `left` steps in by the 8 px of padding the box holds around the
-  //     icon, so the surface still lines up with the glyph the seller
-  //     clicked instead of hanging 8 px to its left.
-  //
-  // Opening rightward drops the surface into the page gutter beside
-  // the card instead of reaching back across the description. That is
-  // the design; the gutter is empty at every viewport this prototype
-  // targets.
-  .seller-home__skill-menu-list {
-    top: calc(100% + 2px); // 10px below the icon, 2px below its box
-    right: auto;
-    left: var(--slds-g-spacing-2, 0.5rem); // 8px
+  @media (prefers-reduced-motion: reduce) {
 
-    // Hug the longest label instead of the shared 160-px floor: the
-    // design sizes the surface to its content (106 px = 12 px padding
-    // + 16 px icon + 8 px gap + a 58-px "Duplicate" + 12 px padding),
-    // and an absolutely positioned box shrink-wraps once the floor is
-    // gone.
-    min-width: 0;
-
-    // 12 px, up one step from the shared 8 px. Clipped because the items
-    // run the full width of the surface with square hover fills, and at
-    // this radius the top and bottom ones visibly cut the corner —
-    // there is nothing inside a menu that needs to escape its own box.
-    border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
-    overflow: hidden;
-
-    // Elevation/2 - down, the shadow the design attaches to this
-    // surface. The shared rule's hand-rolled pair predates the token.
-    box-shadow: var(--slds-g-shadow-2);
-  }
-
-  // 36-px rows — the design's 18-px line box with 9 px above and below.
-  // The label steps up to SLDS's base body size (13 px) from the 12 px
-  // the shared rule borrows from Scheduled's menu, and the leading icon
-  // to 16 px, so the row matches node 11305:26094's geometry: 12 px in
-  // from the edge, an 8-px gap, then the label.
-  .seller-home__skill-menu-item {
-    padding-block: 0.5625rem; // 9px
-    font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
-    line-height: 1.125rem; // 18px
-  }
-
-  .seller-home__skill-menu-item-icon {
-    width: 1rem; // 16px
-    height: 1rem;
-  }
-
-  // Narrow-viewport guard. The left-anchored surface overhangs the card
-  // by ~75 px, and around 1250 px the gutter it lands in stops being
-  // wide enough: the surface crosses the scroll container's content
-  // edge, the container gains horizontal scrollable overflow (its
-  // `overflow-y: auto` computes `overflow-x` to `auto` too), and the
-  // menu clips. Falling back to Version A's right-anchoring keeps it
-  // inside the card at any width.
-  //
-  // 79 rem = 1264 px, one step above that crossing, so 1280 px — where
-  // the surface still clears the edge by 15 px — keeps the design.
-  @media (max-width: 79rem) {
-    .seller-home__skill-menu-list {
-      right: var(--slds-g-spacing-2, 0.5rem); // 8px — the icon's edge,
-      left: auto;                             //       not the box's
+    .seller-home__skill-action-use,
+    .seller-home__skill-menu-trigger {
+      transition: none;
     }
+  }
+
+  // The overflow menu carries no Version B overrides: the surface, its
+  // 2-px vertical offset, its left-anchoring and the narrow-viewport
+  // guard all live in the shared rule further up this file, which both
+  // versions draw identically.
+}
+
+// Block handle / convert menus are portaled to `document.body` so the
+// canvas scrollport cannot clip them. Un-nested on purpose.
+// Visuals follow prompt-builder `.ce-popover__container`.
+.seller-home__skill-block-menu {
+  position: fixed;
+  z-index: 9800;
+  box-sizing: border-box;
+  width: 12.5rem; // 200px — Editor.js default popover
+  min-width: 12.5rem;
+  padding: 0.375rem; // 6px
+  background-color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0.625rem; // 10px
+  box-shadow: 0 8px 24px rgba(43, 45, 50, 0.12);
+
+  &[hidden] { display: none; }
+}
+
+.seller-home__skill-block-menu-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.25rem;
+  padding: 0.4rem 0.625rem;
+  background-color: #f4f5f7;
+  border-radius: 0.375rem;
+}
+
+.seller-home__skill-block-menu-filter-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  color: var(--slds-g-color-on-surface-3, #7b7e89);
+  pointer-events: none;
+
+  svg {
+    display: block;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+}
+
+.seller-home__skill-block-menu-filter input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 1.25rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--slds-g-color-on-surface-1, #181818);
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
+
+  &::placeholder {
+    color: var(--slds-g-color-on-surface-3, #7b7e89);
+    opacity: 1;
+  }
+}
+
+.seller-home__skill-block-menu-empty {
+  padding: 0.5rem 0.25rem;
+  color: var(--slds-g-color-on-surface-3, #7b7e89);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  text-align: center;
+
+  &[hidden] { display: none; }
+}
+
+.seller-home__skill-block-menu-items {
+  display: flex;
+  flex-direction: column;
+}
+
+.seller-home__skill-block-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.125rem;
+  margin: 0;
+  padding: 0.25rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: #1d202b;
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  text-align: start;
+  cursor: pointer;
+
+  &:hover,
+  &:focus,
+  &:focus-visible {
+    background-color: #f0f0f0;
+    outline: none;
+  }
+
+  &[hidden] { display: none; }
+}
+
+.seller-home__skill-block-menu-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seller-home__skill-block-menu-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  inline-size: 1.625rem; // 26px
+  block-size: 1.625rem;
+  border-radius: 0.3125rem;
+  background-color: #f4f5f7;
+  color: inherit;
+
+  svg {
+    display: block;
+    inline-size: 1.25rem; // 20px
+    block-size: 1.25rem;
+  }
+}
+
+// Standard-sprite conditional glyphs (If / Else If / Else) render monochrome
+// to match the stroke glyphs beside them; the sprite paths carry no fill of
+// their own, so force currentColor.
+.seller-home__skill-block-menu-std {
+  fill: currentColor;
+}
+
+.seller-home__skill-block-menu-glyph_chevron {
+  margin-inline-start: auto;
+  background: transparent;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  color: var(--slds-g-color-on-surface-3, #7b7e89);
+
+  svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+}
+
+.seller-home__skill-block-menu-sep {
+  height: auto;
+  margin: 0.25rem 0.25rem;
+  padding: 0;
+  background: transparent;
+  border: 0;
+
+  &[hidden] { display: none; }
+}
+
+.seller-home__skill-block-menu-sep-line {
+  height: 1px;
+  background-color: #e8e8eb;
+}
+
+.seller-home__skill-block-menu-icon {
+  flex: 0 0 auto;
+  inline-size: 0.9rem;
+  block-size: 0.9rem;
+  fill: currentColor;
+}
+
+// ============================================================
+// @-mention resource picker
+// ============================================================
+// Reuses the block-menu shell (`.seller-home__skill-block-menu`) but adds
+// section headers (Skills / Tools), keyboard-active highlighting, and a
+// scroll cap since the catalog can run long. Body-appended and anchored to
+// the caret's "@…" run.
+.seller-home__skill-mention-menu {
+  max-height: 20rem;
+  overflow-y: auto;
+}
+
+.seller-home__skill-mention-group {
+  padding: 0.4rem 0.375rem 0.2rem;
+  color: var(--slds-g-color-on-surface-3, #7b7e89);
+  font-size: 0.6875rem; // 11px
+  font-weight: 600;
+  line-height: 1rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+
+  &[hidden] { display: none; }
+}
+
+.seller-home__skill-mention-item {
+  &[hidden] { display: none; }
+
+  &.is-active {
+    background-color: #f0f0f0;
+  }
+}
+
+.seller-home__skill-mention-icon {
+  display: block;
+  inline-size: 1.25rem; // 20px
+  block-size: 1.25rem;
+  object-fit: contain;
+}
+
+// ============================================================
+// Inline selection toolbar (Bold / Italic / Link)
+// ============================================================
+// Ports the prompt-builder `.ce-inline-toolbar`. Body-appended like the
+// block menu, so it lives at the top level rather than under a page
+// namespace. Sits just above the block menu (9800) at 9850.
+.seller-home__skill-inline-toolbar {
+  position: fixed;
+  z-index: 9850;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 0.25rem;
+  background-color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 24px rgba(43, 45, 50, 0.16);
+
+  &[hidden] { display: none; }
+}
+
+.seller-home__skill-inline-toolbar-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+
+  &[hidden] { display: none; }
+}
+
+.seller-home__skill-inline-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: #1d202b;
+  cursor: pointer;
+
+  svg {
+    display: block;
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+  }
+
+  &:hover,
+  &:focus-visible {
+    background-color: #f0f0f0;
+    outline: none;
+  }
+
+  &[aria-pressed="true"] {
+    color: var(--slds-g-color-accent-container-1, #0b5cab);
+    background-color: rgba(11, 92, 171, 0.1);
+  }
+}
+
+.seller-home__skill-inline-toolbar-link {
+  display: flex;
+  align-items: center;
+  padding: 0 0.25rem;
+
+  &[hidden] { display: none; }
+}
+
+.seller-home__skill-inline-link-input {
+  inline-size: 14rem;
+  max-inline-size: 60vw;
+  height: 1.75rem;
+  margin: 0;
+  padding: 0 0.4rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background: transparent;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--slds-g-color-on-surface-1, #181818);
+
+  &:focus,
+  &:focus-visible { outline: none; }
+
+  &::placeholder {
+    color: var(--slds-g-color-on-surface-3, #7b7e89);
+    opacity: 1;
   }
 }
 
