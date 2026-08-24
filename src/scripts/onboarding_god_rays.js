@@ -12,10 +12,12 @@
      • this file is loaded only by onboarding.html
 
    There is no composer on this page, so the vertical focal point is
-   `focalFallbackPx` measured from the top of the shell — the same
-   branch index.html takes on any page without one. The Shape slider
-   exposes that key (index.html's panel exposes `focalOffsetPx`
-   instead, because that page has a composer).
+   anchored to the visible landing card's centre (the knowledge banner,
+   or the modal card when that's shown) — onboarding's stand-in for the
+   composer index.html anchors to, so the focal point re-centres with the
+   card as the viewport height changes. The Shape slider exposes
+   `focalOffsetPx`, a signed nudge from that centre; `focalFallbackPx` is
+   only the no-card fallback.
 
    Fails soft. If WebGL is unavailable or the CDN is unreachable the
    canvas never mounts, and `.seller-home`'s own background colour is
@@ -36,14 +38,17 @@ const DEFAULTS = {
   colorsCount: 5,
   colorBack: '#ffffff',
   colorBloom: '#ffa8f3',
-  bloom: 0.1, intensity: 0.04, density: 0.1, spotty: 0.98,
+  bloom: 0.1, intensity: 0.1, density: 0.015, spotty: 0.98,
   midSize: 0.51, midIntensity: 0.08,
   scale: 0.59, rotation: 152, offsetX: 0,
-  // Signed distance from the top of the shell down to the convergence
-  // point. Tuned via the Controls panel for this page (deeper than
-  // index.html's fallback so the rays fan further down the shell).
-  focalFallbackPx: 700,
-  speed: 1.09, blur: 18,
+  // Vertical placement is NOT the shader's `offsetY` — see focalOffsetY.
+  // `focalOffsetPx` is a signed nudge from the visible landing card's
+  // vertical centre (0 = dead-centre on the card), so the convergence
+  // point tracks the flex-centred card as the viewport height changes.
+  // `focalFallbackPx` (measured from the shell top) is used only when no
+  // card is in the DOM — the same fallback index.html takes with no anchor.
+  focalOffsetPx: 0, focalFallbackPx: 700,
+  speed: 0.5, blur: 18,
   wedge: 90, feather: 22,
   hole: 0, holeFeather: 0,
   // No cones cleared — the full circle of rays.
@@ -61,7 +66,7 @@ const SLIDERS = [
   ['scale', 'u_scale', 0.1, 4, 0.01],
   ['rotation', 'u_rotation', 0, 360, 1],
   ['offsetX', 'u_offsetX', -1, 1, 0.01],
-  ['focalFallbackPx', null, -300, 700, 5],
+  ['focalOffsetPx', null, -300, 300, 5],
   ['speed', null, 0, 3, 0.01],
   ['blur', null, 0, 60, 1],
   ['wedge', null, 5, 180, 1],
@@ -108,12 +113,39 @@ if (bg) {
       }
     }
 
+    // The visible landing card the rays converge on — the knowledge
+    // banner, or the modal card when that's the one shown (they toggle
+    // via `hidden`). `offsetParent` is null for a `display:none` element,
+    // so it doubles as the visibility test. This is onboarding's stand-in
+    // for index.html's `.seller-home__composer` anchor.
+    const focalTarget = () => {
+      const cards = [
+        document.querySelector('.knowledge-banner'),
+        document.querySelector('.onboarding-modal .morph-modal-container')
+      ]
+      for (const card of cards) {
+        if (card && card.offsetParent !== null) return card
+      }
+      return null
+    }
+
     const focalOffsetY = () => {
       const host = bg.getBoundingClientRect()
       if (!host.width || !host.height) return 0
 
-      const fromHostTop =
-        (shell.getBoundingClientRect().top - host.top) + state.focalFallbackPx
+      // Anchor to the visible card's vertical CENTRE (plus a signed
+      // nudge) the way index.html anchors to its composer, so the focal
+      // point re-centres with the card when the viewport height changes
+      // rather than sitting a fixed distance from the top. Falls back to
+      // `focalFallbackPx` from the shell top when no card is present.
+      const card = focalTarget()
+      let fromHostTop
+      if (card) {
+        const r = card.getBoundingClientRect()
+        fromHostTop = (r.top + r.height / 2 - host.top) + state.focalOffsetPx
+      } else {
+        fromHostTop = (shell.getBoundingClientRect().top - host.top) + state.focalFallbackPx
+      }
 
       return (fromHostTop - host.height / 2) / Math.max(host.width, host.height)
     }

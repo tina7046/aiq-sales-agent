@@ -29,11 +29,25 @@ $onboarding-god-rays-overscan: 90px; // same as $sh-god-rays-overscan in home.sc
   }
 
   // The banner is an in-flow child of the centred column, which uses
-  // `align-items: center` (so children aren't stretched). Give it a width
-  // and a sensible cap so it fills the column without running edge-to-edge.
+  // `align-items: center` (so children aren't stretched). Cap it at the
+  // ported modal's card width (`.onboarding-modal .morph-modal-container`
+  // below) so swapping between the two doesn't resize the landing card.
+  //
+  // Onboarding-only card tweaks (the shared `.knowledge-banner` on
+  // /knowledge.html is untouched — these live under the page scope):
+  //   • Fixed 400px card height. The banner is `display:flex;
+  //     align-items:stretch`, so both columns take this height; the
+  //     banner's own `overflow:hidden` clips any excess copy.
+  //   • White copy column. The shared banner leaves the left column
+  //     transparent to show the gradient wash; here it's solid white.
   .knowledge-banner {
     width: 100%;
-    max-width: 60rem;
+    max-width: 640px;
+    height: 400px;
+
+    .knowledge-banner__content {
+      background-color: #ffffff;
+    }
   }
 }
 
