@@ -35,30 +35,37 @@
 (function () {
   'use strict'
 
-  // Status registry — the client-side half of `statusTypes` in
-  // scheduled.json, carrying only what a row paints: the dot's color
-  // modifier and the label AT reads. The two dot statuses are here
-  // because they're the two a confirmed schedule can land on; `paused`
-  // is left out deliberately, since it renders a play glyph instead of
-  // a dot and nothing in the Schedule flow can pause a schedule yet.
-  var STATUS_TYPES = {
-    needs_approval: { label: 'Needs approval', dot: 'yellow' },
-    scheduled:      { label: 'Scheduled',      dot: 'green'  }
-  }
-
   // A confirmed record's `status` is the scheduling module's own
-  // vocabulary ('active'), which predates this page's three-state one.
-  // Anything unrecognised lands on `scheduled` so a row always renders
-  // rather than being dropped for a status this page can't paint.
-  var STATUS_ALIASES = { active: 'scheduled' }
+  // vocabulary ('active'), which predates this page's. `needs_approval`
+  // is the status this page itself used before it adopted the home
+  // feed's five states, and records outlive a rebuild — they're in
+  // localStorage — so a schedule confirmed under the old vocabulary
+  // still lands somewhere real. Anything unrecognised lands on
+  // `scheduled`, so a row always renders rather than being dropped for
+  // a status this page can't paint.
+  var STATUS_ALIASES = { active: 'scheduled', needs_approval: 'failed' }
   var STATUS_FALLBACK = 'scheduled'
 
   var LIST_SELECTOR = '[data-sh-scheduled-workflow-list]'
 
-  function resolveStatus (status) {
+  // Status registry — read off the list root, where the row template
+  // publishes scheduled.json's `statusTypes` for home.js. Shared rather
+  // than half-copied here, so the labels AT reads and the verbs on the
+  // status button can't drift between an authored row and a spliced one.
+  function readStatusTypes (listEl) {
+    var raw = listEl.getAttribute('data-sh-workflow-status-types')
+    if (!raw) return {}
+    try {
+      return JSON.parse(raw) || {}
+    } catch (err) {
+      return {}
+    }
+  }
+
+  function resolveStatus (types, status) {
     var key = String(status || '')
     if (STATUS_ALIASES[key]) key = STATUS_ALIASES[key]
-    return STATUS_TYPES[key] ? key : STATUS_FALLBACK
+    return types[key] ? key : STATUS_FALLBACK
   }
 
   // The confirmed schedules, newest last (the store appends). Returns
@@ -103,6 +110,27 @@
     return out
   }
 
+  // The status button, lifted off whichever row the page already
+  // rendered — same trick as the ⋮ menu below, and for the same reason:
+  // the glyph stack inside it belongs to the row template, so copying
+  // one is what keeps this splicer from carrying a second version of
+  // it. Only the accessible name is per-row. Returns null on an empty
+  // list, and the row renders without a status button rather than with
+  // an empty one.
+  function cloneStatusButton (listEl, meta, title) {
+    var donor = listEl.querySelector('[data-sh-workflow-run-toggle]')
+    if (!donor) return null
+    var button = donor.cloneNode(true)
+
+    // The donor may have been clicked before it was copied.
+    button.removeAttribute('data-sh-workflow-hover-latched')
+
+    var label = (meta.action || 'Pause') + ' ' + title
+    button.setAttribute('aria-label', label)
+    button.setAttribute('title', label)
+    return button
+  }
+
   // The ⋮ menu, lifted off whichever row the page already rendered.
   // Ids and the trigger's label are per-row, so they're rewritten on
   // the copy; everything else — the actions and their icons — comes
@@ -129,9 +157,10 @@
     return menu
   }
 
-  function buildRow (listEl, record) {
-    var statusKey  = resolveStatus(record.status)
-    var statusMeta = STATUS_TYPES[statusKey]
+  function buildRow (listEl, record, types) {
+    var statusKey  = resolveStatus(types, record.status)
+    var statusMeta = types[statusKey] || {}
+    var statusLabel = statusMeta.label || statusKey
     var title      = record.title || 'Scheduled skill'
     var cadence    = record.cadence || ''
 
@@ -140,6 +169,11 @@
     item.setAttribute('data-sh-workflow-item', '')
     item.setAttribute('data-sh-workflow-id', record.id)
     item.setAttribute('data-sh-workflow-status', statusKey)
+    // The state a resume returns to — see the row template. A schedule
+    // can't be confirmed into `paused`, but the toggle can put it there.
+    if (statusKey !== 'paused') {
+      item.setAttribute('data-sh-workflow-status-default', statusKey)
+    }
 
     // Authored rows are inert because the workflow-detail view doesn't
     // exist yet. A confirmed schedule has somewhere real to go, though
@@ -157,10 +191,13 @@
       body.className = 'seller-home__scheduled-workflow-row'
       body.href = href
       body.setAttribute('data-sh-workflow-open', '')
-      body.setAttribute(
-        'aria-label',
-        'Open the conversation that scheduled ' + title + ', ' + statusMeta.label
-      )
+      // Prefix stamped alongside the label so the status controller in
+      // home.js can re-compose this name when the row changes state,
+      // exactly as it does for an authored row.
+      var labelPrefix = 'Open the conversation that scheduled ' + title + ', '
+      body.setAttribute('aria-label', labelPrefix + statusLabel)
+      body.setAttribute('data-sh-workflow-status-label', '')
+      body.setAttribute('data-sh-workflow-status-prefix', labelPrefix)
     } else {
       body = document.createElement('div')
       body.className = 'seller-home__scheduled-workflow-row ' +
@@ -168,15 +205,11 @@
     }
     body.title = title
 
-    // Status dot. `aria-hidden` because the status reaches AT through
-    // the row's label — on the linked branch that's the `aria-label`
-    // above, on the unlinked one the assistive span below.
-    var dot = document.createElement('span')
-    dot.className = 'seller-home__scheduled-status ' +
-      'seller-home__scheduled-status--dot ' +
-      'seller-home__scheduled-status--' + statusMeta.dot
-    dot.setAttribute('aria-hidden', 'true')
-    body.appendChild(dot)
+    // Status button — a SIBLING of the row body, before it, the way the
+    // row template orders them: it's a `<button>` and the body can be an
+    // `<a>`, and this way the tab order matches the reading order.
+    var status = cloneStatusButton(listEl, statusMeta, title)
+    if (status) item.appendChild(status)
 
     var bodyText = document.createElement('span')
     bodyText.className = 'seller-home__scheduled-workflow-body'
@@ -196,9 +229,12 @@
     }
 
     if (!href) {
+      var textPrefix = 'Status: '
       var srStatus = document.createElement('span')
       srStatus.className = 'slds-assistive-text'
-      srStatus.textContent = 'Status: ' + statusMeta.label
+      srStatus.setAttribute('data-sh-workflow-status-text', '')
+      srStatus.setAttribute('data-sh-workflow-status-prefix', textPrefix)
+      srStatus.textContent = textPrefix + statusLabel
       bodyText.appendChild(srStatus)
     }
 
@@ -257,6 +293,8 @@
     var records = readRecords()
     if (!records.length) return
 
+    var types = readStatusTypes(listEl)
+
     // Ids already on the page — an authored row, or one this script
     // spliced on an earlier pass — so a re-run can't double a schedule.
     var seen = existingIds(listEl)
@@ -277,7 +315,7 @@
       if (titleKey && seenTitles[titleKey]) continue
       if (titleKey) seenTitles[titleKey] = true
       seen[record.id] = true
-      frag.appendChild(buildRow(listEl, record))
+      frag.appendChild(buildRow(listEl, record, types))
     }
 
     if (frag.childNodes.length) {

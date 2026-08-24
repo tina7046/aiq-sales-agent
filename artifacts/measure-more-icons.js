@@ -1,0 +1,15 @@
+const puppeteer = require('puppeteer')
+;(async () => {
+  const browser = await puppeteer.launch({ headless: 'new', executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' })
+  const page = await browser.newPage()
+  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 2 })
+  await page.goto('http://localhost:3002/skill_detail.html?id=sk-daily-pipeline-snapshot', { waitUntil: 'networkidle0' })
+  await page.evaluate(() => { const t = document.querySelector('.seller-home__skill-detail-schedule-trigger'); if (t) t.classList.add('slds-is-open') })
+  await new Promise(r => setTimeout(r, 250))
+  const data = await page.evaluate(() => {
+    const icons = Array.from(document.querySelectorAll('.seller-home__skill-detail-schedule-trigger .slds-dropdown .slds-icon'))
+    return icons.map(el => { const cs = getComputedStyle(el); const r = el.getBoundingClientRect(); return { classes: el.getAttribute('class'), cssW: cs.width, cssH: cs.height, boxW: Math.round(r.width), boxH: Math.round(r.height) } })
+  })
+  console.log(JSON.stringify(data, null, 2))
+  await browser.close()
+})().catch(e => { console.error(e); process.exit(1) })
