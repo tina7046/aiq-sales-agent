@@ -2563,6 +2563,69 @@ main.app-wrapper {
   block-size: var(--sh-status-dot);
 }
 
+// ── Shared status-button chrome (feed + scheduled) ────────────────
+// Extracted so the Seller Home feed and the Scheduled list render the
+// same control — same hit target, glyph size, and swap motion — with
+// only their placement written per surface. (Ported from the shared
+// status refactor so the Scheduled list's button matches the feed.)
+@mixin sh-status-button {
+  // The box matches the 14px title's line box, which is what lets each
+  // surface align the button to the title and land the glyph on it.
+  --sh-status-size: 1.25rem;
+  --sh-status-glyph: 1rem;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--sh-status-size);
+  block-size: var(--sh-status-size);
+
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: var(--slds-g-radius-border-circle, 100%);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
+    outline-offset: 2px;
+  }
+}
+
+// All glyphs stack on the same centre; the state maps reveal two. Blur
+// and scale are dialled back from the shared `--icon-swap-*` defaults:
+// those are tuned for a full-size icon, and at this glyph's 16px a 2px
+// blur smears it and a 0.25 start scale reads as a pop, not a swap.
+@mixin sh-status-glyph {
+  --icon-swap-blur: 1px;
+  --icon-swap-start-scale: 0.7;
+
+  position: absolute;
+  inline-size: var(--sh-status-glyph);
+  block-size: var(--sh-status-glyph);
+
+  opacity: 0;
+  filter: blur(var(--icon-swap-blur));
+  transform: scale(var(--icon-swap-start-scale));
+  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+
+  transition:
+    opacity   var(--icon-swap-dur) var(--icon-swap-ease),
+    filter    var(--icon-swap-dur) var(--icon-swap-ease),
+    transform var(--icon-swap-dur) var(--icon-swap-ease),
+    fill      var(--duration-quick) var(--ease-in-out);
+}
+
+// The spinner is the shared `.sh-spinner` (index.scss), re-boxed to the
+// glyph slot so swapping it in doesn't change the button's metrics.
+// Parked by default — most rows carry one they never show.
+@mixin sh-status-glyph-spinner {
+  box-sizing: border-box;
+  border-width: 2px;
+  animation: none;
+}
+
 // The two ends of the swap. Every rule that raises or clears a glyph
 // sets all three properties, so a glyph hidden on hover picks the blur
 // and scale back up rather than only fading.
@@ -3092,6 +3155,7 @@ $sh-feed-status-preview: ".seller-home__feed-item-status:not([data-sh-feed-hover
 @media (prefers-reduced-motion: reduce) {
   .seller-home__feed-item,
   .seller-home__feed-item-status-glyph,
+  .seller-home__scheduled-status-glyph,
   .seller-home__feed-group,
   .seller-home__feed-item-workflow,
   .seller-home__feed-item-menu-trigger,
@@ -3398,15 +3462,18 @@ $sh-feed-status-preview: ".seller-home__feed-item-status:not([data-sh-feed-hover
 .seller-home__scheduled-workflow-row {
   display: flex;
   align-items: center;
-  // 10px indicator-to-text. Bespoke rather than tokenised: 10 px
-  // falls between `--slds-g-spacing-2` (8) and `-3` (12), and the
-  // 24-px status cell already centers an 8-px dot, so the OPTICAL
-  // gap from dot to title is 10 + 8 = 18 px. Tuning by the optical
-  // figure is why this doesn't land on a token.
-  gap: 0.625rem; // 10px
   min-height: 3.5rem; // 56px — Figma-fixed row height
 
-  padding-inline: var(--slds-g-spacing-3, 0.75rem); // 12px
+  // The status button is a SIBLING of this element rather than a flex
+  // child of it (it's a `<button>` and this row is an `<a>` — see the
+  // template), so the leading cell is reserved with padding instead of
+  // being laid out by a gap: 12 px row padding + 20 px button + 10 px
+  // to the title. The 10 is bespoke rather than tokenised — it falls
+  // between `--slds-g-spacing-2` (8) and `-3` (12), and it's the
+  // optical gap from the 16-px glyph inside that 20-px box that was
+  // tuned, not the box-to-box figure.
+  padding-inline-start: 2.625rem; // 42px = 12 + 20 + 10
+  padding-inline-end: var(--slds-g-spacing-3, 0.75rem); // 12px
   padding-block: 0;
 
   background: var(--slds-g-color-surface-1, #ffffff);
@@ -3475,91 +3542,110 @@ $sh-feed-status-preview: ".seller-home__feed-item-status:not([data-sh-feed-hover
   }
 }
 
-// ── Status indicator (left) ───────────────────────────────────────
-// 24-px wide column so the status column visually rhymes with the
-// 24-px doctype icon on the Knowledge list — future users of
-// `.seller-home__scheduled-workflow-*` should keep the same
-// leading-column width so switching between the two surfaces
-// doesn't cause a horizontal jump.
+// ── Status button (left) ──────────────────────────────────────────
+// The home feed's status control, dropped into this list's leading
+// cell — one workflow reads and behaves the same on both surfaces.
+// Chrome + glyph come from the shared `sh-status-*` mixins; the rest /
+// action glyph maps are scheduled-local (below) because this surface's
+// "completed" rests on a check where the feed rests on a filled circle.
 //
-// Two shapes:
-//   • dot  — an 8-px filled circle. Color comes from the variant
-//            modifier (`--yellow` | `--green`), painted from SLDS
-//            success / warning palette so a future palette shift
-//            flows through automatically.
-//   • icon — an 11-px utility-sprite glyph (used by `paused` →
-//            `play` sprite). Sized so the glyph's visual weight
-//            lines up with the dot's mass — the two scale together,
-//            so a change to one needs a proportional change to the
-//            other or the paused row becomes the loudest indicator
-//            in the list.
-//
-// Both shapes shrank (12 → 8 dot, 16 → 11 glyph) so the indicator
-// reads lighter than the 14-px row title beside it. At 12 px the
-// dot carried more visual mass than the type it annotated, which
-// made the list read as a bulleted list rather than a status list.
+// Absolutely positioned instead of laid out in the row, because it's a
+// `<button>` and the row body is an `<a>` on linked rows — so the
+// template keeps it as a sibling and this drops it into the cell the
+// body's `padding-inline-start` reserves. Same arrangement the ⋮ menu
+// uses at the other end of the row.
 .seller-home__scheduled-status {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;  // 24px column
-  height: 1.5rem; // 24px column
+  @include sh-status-button;
+
+  position: absolute;
+  // The row's own inline padding, so the button lands on the line the
+  // row starts its content on. Moves with that padding or it drifts.
+  inset-inline-start: var(--slds-g-spacing-3, 0.75rem); // 12px
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2; // above the row body's full-row click surface
 }
 
-.seller-home__scheduled-status--dot {
-  // The dot itself is an 8-px filled circle drawn as this element's
-  // own background — `.seller-home__scheduled-status` provides the
-  // 24-px alignment cell; a `::before` would add markup for no
-  // benefit. Painted from SLDS palette tokens so a future palette
-  // shift retunes both variants at once.
-  //
-  // The dot shrinks inside the fixed 24-px cell, so resizing it
-  // never reflows the title column.
-  &::before {
-    content: "";
-    display: block;
-    width: 0.5rem;  // 8px
-    height: 0.5rem; // 8px
-    border-radius: 50%;
-    // The base color is set by the variant modifiers below. Fall
-    // back to a neutral gray so an unknown status still renders a
-    // recognizable indicator instead of an invisible slot.
-    background: var(--slds-g-color-border-1, #c9c9c9);
+// Moving the button out of the row body took its hover out of the row's
+// scope with it. Put it back so hovering the status still lifts the row,
+// matching the feed. Unlinked rows opt out of the hover surface, so
+// they're excluded here too.
+.seller-home__scheduled-workflow-item:has(.seller-home__scheduled-status:hover)
+  .seller-home__scheduled-workflow-row:not(.seller-home__scheduled-workflow-row--unlinked) {
+  background: var(--slds-g-color-surface-container-2, #f3f3f3);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+.seller-home__scheduled-status-glyph {
+  @include sh-status-glyph;
+}
+
+.seller-home__scheduled-status-glyph--spinner {
+  @include sh-status-glyph-spinner;
+}
+
+[data-sh-workflow-status="running"] .seller-home__scheduled-status-glyph--spinner {
+  animation: sh-spin 0.85s linear infinite;
+}
+
+// Darkens whatever glyph is up, so the button still answers the pointer
+// while it's latched out of previewing the next action.
+.seller-home__scheduled-status:hover .seller-home__scheduled-status-glyph,
+.seller-home__scheduled-status:focus-visible .seller-home__scheduled-status-glyph {
+  fill: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// Rest = what the row IS; action = what a click WILL DO. Scheduled-local
+// (not the feed's `$sh-feed-status-*`) so "completed" rests on the check
+// this template renders — the feed rests on a filled circle. Values
+// otherwise mirror the feed so the two surfaces read the same.
+$sh-scheduled-status-rest: (
+  completed: "check",
+  running:   "spinner",
+  scheduled: "clock",
+  paused:    "pause",
+  failed:    "warning",
+);
+
+$sh-scheduled-status-action: (
+  completed: "pause",
+  running:   "pause",
+  scheduled: "pause",
+  paused:    "play",
+  failed:    "refresh",
+);
+
+// At rest: what the row IS.
+@each $state, $glyph in $sh-scheduled-status-rest {
+  [data-sh-workflow-status="#{$state}"] .seller-home__scheduled-status-glyph--#{$glyph} {
+    @include sh-feed-glyph-shown;
   }
 }
 
-// ── Dot color variants ────────────────────────────────────────────
-// Colors are pinned to bespoke hex values from the Scheduled design
-// spec rather than SLDS palette tokens because the status dots need
-// to read as a warm-yellow and a fresh-green regardless of which
-// SLDS theme (light / dark / high-contrast) is active. Palette
-// tokens shift across themes and would drift the semantic mapping
-// (needs-approval-warmth, scheduled-affirmative) as a side-effect.
-//
-//   • --yellow → #FBBE35 (Figma "Status/Needs approval")
-//   • --green  → #41B658 (Figma "Status/Scheduled")
-.seller-home__scheduled-status--yellow::before {
-  background: #fbbe35;
-}
-.seller-home__scheduled-status--green::before {
-  background: #41b658;
+// The one glyph that carries colour — the failed warning. Scoped to the
+// resting glyph so the hover swap to the retry arrow returns to grey.
+[data-sh-workflow-status="failed"] .seller-home__scheduled-status-glyph--warning {
+  fill: var(--slds-g-color-palette-red-50, #ea001e);
 }
 
-// ── Icon variant (paused → play glyph) ────────────────────────────
-// The 11-px sprite sits inside the 24-px alignment cell. Fill
-// resolves via `currentColor`; the wrapper's `color` sets it to
-// the SLDS accent-3 (deep navy) so the glyph reads as chrome —
-// matches the "solid triangle" density in Figma without borrowing
-// the brand-blue reserved for accent affordances.
-.seller-home__scheduled-status--icon {
-  color: var(--slds-g-color-on-surface-3, #001e5b);
-}
+// On hover: what the click WILL DO. Latched off after a click so the
+// state just created is the one you see, rather than the next action the
+// pointer is already sitting on — home.js releases the latch when the
+// pointer or focus leaves. Same gate the feed uses.
+$sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workflow-hover-latched])";
 
-.seller-home__scheduled-status-icon {
-  width: 0.6875rem;   // 11px
-  height: 0.6875rem;  // 11px
-  fill: currentColor;
+@each $state, $glyph in $sh-scheduled-status-action {
+  // Same specificity in both blocks, so source order decides which wins
+  // — these two have to stay in this order.
+  [data-sh-workflow-status="#{$state}"] #{$sh-scheduled-status-preview}:hover .seller-home__scheduled-status-glyph,
+  [data-sh-workflow-status="#{$state}"] #{$sh-scheduled-status-preview}:focus-visible .seller-home__scheduled-status-glyph {
+    @include sh-feed-glyph-hidden;
+  }
+
+  [data-sh-workflow-status="#{$state}"] #{$sh-scheduled-status-preview}:hover .seller-home__scheduled-status-glyph--#{$glyph},
+  [data-sh-workflow-status="#{$state}"] #{$sh-scheduled-status-preview}:focus-visible .seller-home__scheduled-status-glyph--#{$glyph} {
+    @include sh-feed-glyph-shown;
+  }
 }
 
 // ── Text stack (center) ──

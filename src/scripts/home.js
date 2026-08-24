@@ -2226,11 +2226,15 @@
   // Bound per interaction rather than delegated, because `pointerleave`
   // doesn't bubble. Both listeners remove themselves, so nothing
   // accumulates across clicks.
-  function latchStatusHover (toggle) {
-    toggle.setAttribute('data-sh-feed-hover-latched', '')
+  //
+  // `attr` names the latch, since the Scheduled list runs the same
+  // control off its own attribute (`data-sh-workflow-hover-latched`).
+  function latchStatusHover (toggle, attr) {
+    var name = attr || 'data-sh-feed-hover-latched'
+    toggle.setAttribute(name, '')
 
     function release () {
-      toggle.removeAttribute('data-sh-feed-hover-latched')
+      toggle.removeAttribute(name)
       toggle.removeEventListener('pointerleave', release)
       toggle.removeEventListener('blur', release)
     }
@@ -2562,6 +2566,115 @@
   // reorder. Row detail-view opens are a separate future increment;
   // every row today is authored with `linked: false` so activation
   // is a no-op.
+  // ── Scheduled status button ───────────────────────────────────────
+  // Restores the feed-style status control on the Scheduled list (its
+  // CSS + JS were dropped when issa/skills-scheduled-pages merged into
+  // main). Mirrors the feed's control with three deliberate differences:
+  // the row keeps its place (no re-sort), it isn't re-filtered under the
+  // pointer, and state lives on `data-sh-workflow-status` — the same
+  // attribute the tab filter reads.
+
+  // The status registry from scheduled.json, handed to us as JSON on the
+  // list root. Labels and action verbs only — which glyph a state paints
+  // is the stylesheet's business.
+  function readWorkflowStatusTypes (listRoot) {
+    var raw = listRoot.getAttribute('data-sh-workflow-status-types')
+    if (!raw) return {}
+    try {
+      return JSON.parse(raw) || {}
+    } catch (err) {
+      // A malformed registry costs the accessible names, not the toggle
+      // — better a button that still works than a dead list.
+      return {}
+    }
+  }
+
+  // What pressing the status button turns the row into. Same rule the
+  // feed uses, including "resume returns to the last state that wasn't
+  // paused" so retrying an errored row and then pausing it doesn't
+  // resume back into the error.
+  function nextWorkflowStatus (item) {
+    var status = item.getAttribute('data-sh-workflow-status')
+    if (status === 'paused') {
+      return item.getAttribute('data-sh-workflow-status-default') || 'scheduled'
+    }
+    if (status === 'failed') return 'running'
+    return 'paused'
+  }
+
+  function applyWorkflowStatus (item, status, types) {
+    var meta = types[status] || {}
+    var titleNode = item.querySelector('.seller-home__scheduled-workflow-title')
+    var name = titleNode ? (titleNode.textContent || '').trim() : ''
+
+    item.setAttribute('data-sh-workflow-status', status)
+    if (status !== 'paused') {
+      item.setAttribute('data-sh-workflow-status-default', status)
+    }
+
+    // Accessible names are all CSS can't do here. Each element carries
+    // the prefix the template composed it with, so this picks strings
+    // out of the registry and never words anything itself — which is
+    // what keeps the copy in scheduled.json.
+    var toggle = item.querySelector('[data-sh-workflow-run-toggle]')
+    if (toggle && meta.action) {
+      var action = meta.action + ' ' + name
+      toggle.setAttribute('aria-label', action)
+      toggle.setAttribute('title', action)
+    }
+
+    if (!meta.label) return
+
+    // Linked rows carry the status inside the row's own `aria-label`;
+    // unlinked ones have no label to carry it, so it's a visually-hidden
+    // span instead. A row has one or the other.
+    var labelled = item.querySelector('[data-sh-workflow-status-label]')
+    if (labelled) {
+      labelled.setAttribute('aria-label',
+        (labelled.getAttribute('data-sh-workflow-status-prefix') || '') + meta.label)
+    }
+
+    var text = item.querySelector('[data-sh-workflow-status-text]')
+    if (text) {
+      text.textContent =
+        (text.getAttribute('data-sh-workflow-status-prefix') || '') + meta.label
+    }
+  }
+
+  function scheduledStatusController (listRoot, onChange) {
+    var types = readWorkflowStatusTypes(listRoot)
+
+    listRoot.addEventListener('click', function (event) {
+      var toggle = closest(event.target, '[data-sh-workflow-run-toggle]')
+      if (!toggle) return
+
+      var item = closest(toggle, '[data-sh-workflow-item]')
+      if (!item) return
+
+      // The button is painted over the row's full-row click surface, so
+      // pressing it must not also open the row.
+      event.preventDefault()
+      event.stopPropagation()
+
+      var from = item.getAttribute('data-sh-workflow-status') || ''
+      var to = nextWorkflowStatus(item)
+
+      applyWorkflowStatus(item, to, types)
+      latchStatusHover(toggle, 'data-sh-workflow-hover-latched')
+      if (onChange) onChange(item, from, to)
+
+      document.dispatchEvent(new CustomEvent('sh:workflow-run-toggle', {
+        detail: {
+          workflowId: item.getAttribute('data-sh-workflow-id'),
+          from: from,
+          to: to,
+          paused: to === 'paused',
+          source: 'scheduled'
+        }
+      }))
+    })
+  }
+
   function bindScheduled (root) {
     var tabsRoot = root.querySelector('[data-sh-scheduled-tabs]')
     var listRegion = root.querySelector('[data-sh-scheduled-list-region]')
@@ -2570,11 +2683,20 @@
     var statusRegion = root.querySelector('[data-sh-scheduled-status]')
     var filterBtn = root.querySelector('[data-sh-scheduled-filter]')
 
-    // Overflow menu controller is independent of the tab controller
-    // — bind it up front so per-row menus work even if the tab
-    // wiring below early-returns due to malformed markup.
+    // Set once the tab wiring below is known good. The status button is
+    // bound before that point, so it reaches the recount through this
+    // rather than by being bound after it — a page with malformed tab
+    // markup still gets a working toggle, it just has no counts to fix.
+    var afterStatusChange = null
+
+    // Overflow menu + status button are independent of the tab
+    // controller — bind them up front so per-row controls work even if
+    // the tab wiring below early-returns due to malformed markup.
     if (listRoot) {
       scheduledWorkflowOverflowController(listRoot)
+      scheduledStatusController(listRoot, function () {
+        if (afterStatusChange) afterStatusChange()
+      })
     }
 
     // Filter icon-button — just a dispatcher today. A future filter
@@ -2615,6 +2737,34 @@
     // object) but the prototype's list is static so we don't ship a
     // MutationObserver.
     var rows = toArray(listRoot.querySelectorAll('[data-sh-workflow-item]'))
+
+    // Tab counts are painted server-side from scheduled.json and nothing
+    // else updates them, so a row that changes state at runtime has to
+    // bring them with it — pausing the last scheduled workflow would
+    // otherwise leave "Scheduled 3" over a tab that now holds 2. Same
+    // recount `scheduled_drafts.js` runs after splicing a schedule in.
+    function refreshTabCounts () {
+      tabs.forEach(function (tab) {
+        var statuses = tabStatusesById[tab.getAttribute('data-sh-scheduled-tab')] || []
+        var count = 0
+
+        rows.forEach(function (row) {
+          var status = row.getAttribute('data-sh-workflow-status') || ''
+          // Counts are per-tab totals, so they ignore which rows the
+          // ACTIVE tab is currently hiding.
+          if (statuses.length === 0 || statuses.indexOf(status) >= 0) count++
+        })
+
+        var pill = tab.querySelector('[data-sh-scheduled-tab-count]')
+        if (pill) pill.textContent = String(count)
+        // The pill is decorative (`aria-hidden`); this is the copy AT
+        // actually reads, so it has to move with it.
+        var sr = tab.querySelector('.slds-assistive-text')
+        if (sr) sr.textContent = count + ' workflow' + (count === 1 ? '' : 's')
+      })
+    }
+
+    afterStatusChange = refreshTabCounts
 
     // Which tab is active right now. Track independently of the DOM
     // so tab-click handlers can early-return on a no-op reselect.
