@@ -300,7 +300,27 @@ gulp.task('default',
       // Uncomment the next line to prevent this behavior:
       // open: false,
       notify: false,
-      server: 'dist'
+      // Ports 3000/3001 are usually taken by sibling prototypes, so pin the
+      // dev server here to keep the URL stable across restarts.
+      port: 3002,
+      server: {
+        baseDir: 'dist',
+        // The HTML documents carry no cache-bust query of their own, so a
+        // browser that revalidates only from its in-memory cache (the Cursor
+        // Simple Browser does this on soft reloads) keeps serving the old
+        // page — and with it the previous ?v= asset references, so bumped
+        // CSS/JS never gets fetched. Force documents to never be cached.
+        middleware: [
+          function (req, res, next) {
+            if (/\.html(\?|$)/.test(req.url) || req.url === '/' || !/\.[a-z0-9]+(\?|$)/i.test(req.url)) {
+              res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
+              res.setHeader('Pragma', 'no-cache')
+              res.setHeader('Expires', '0')
+            }
+            next()
+          }
+        ]
+      }
     })
     gulp.watch('src/styles/**/*.scss', gulp.series('styles'))
     gulp.watch([

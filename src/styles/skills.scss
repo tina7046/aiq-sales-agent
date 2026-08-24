@@ -2540,36 +2540,59 @@
       border-radius: 0.375rem;
     }
 
-    // Vertically center plus / grip on the heading line box.
-    // Content has 4px padding; subsequent H2 blocks also have
-    // 1rem padding-block-start (hairline gap) on the wrapper,
-    // which does not inset `top: 0` absolute controls.
+    // Vertically center plus / grip on the content box for
+    // headings and chip-row blocks (e.g. "Buyer Engage"), so
+    // the 24px controls sit on the chip / heading, not the
+    // padding edge.
+    &[data-block-kind="h1"] .seller-home__skill-block-grip,
+    &[data-block-kind="h1"] .seller-home__skill-block-plus,
+    &[data-block-kind="h1"] .seller-home__skill-block-ai,
     &[data-block-kind="h2"] .seller-home__skill-block-grip,
     &[data-block-kind="h2"] .seller-home__skill-block-plus,
-    &[data-block-kind="h2"] .seller-home__skill-block-ai {
-      top: calc(4px + (2rem - 1.5rem) / 2);
+    &[data-block-kind="h2"] .seller-home__skill-block-ai,
+    &[data-block-kind="h3"] .seller-home__skill-block-grip,
+    &[data-block-kind="h3"] .seller-home__skill-block-plus,
+    &[data-block-kind="h3"] .seller-home__skill-block-ai,
+    &:has(.seller-home__skill-chip-row) .seller-home__skill-block-grip,
+    &:has(.seller-home__skill-chip-row) .seller-home__skill-block-plus,
+    &:has(.seller-home__skill-chip-row) .seller-home__skill-block-ai {
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    // One-line body text: center the grip / plus on the first text
+    // line. Anchored to the line box (4px top pad + half of the
+    // 1.375rem / 22px line) rather than the block's midpoint, so a
+    // paragraph that wraps keeps the controls on its first line.
+    &[data-block-kind="p"] .seller-home__skill-block-grip,
+    &[data-block-kind="p"] .seller-home__skill-block-plus,
+    &[data-block-kind="p"] .seller-home__skill-block-ai {
+      top: calc(4px + 0.6875rem);
+      transform: translateY(-50%);
     }
 
     + .seller-home__skill-block[data-block-kind="h2"] .seller-home__skill-block-grip,
     + .seller-home__skill-block[data-block-kind="h2"] .seller-home__skill-block-plus,
     + .seller-home__skill-block[data-block-kind="h2"] .seller-home__skill-block-ai {
-      top: calc(1rem + 4px + (2rem - 1.5rem) / 2);
-    }
-
-    &[data-block-kind="h3"] .seller-home__skill-block-grip,
-    &[data-block-kind="h3"] .seller-home__skill-block-plus,
-    &[data-block-kind="h3"] .seller-home__skill-block-ai {
-      top: calc(4px + (1.75rem - 1.5rem) / 2);
+      top: calc(1rem + (100% - 1rem) / 2);
+      transform: translateY(-50%);
     }
   }
 
   .seller-home__skill-block-content {
     min-width: 0;
-    padding: 4px;
+    padding-block: 0;
+    padding-inline: 4px;
   }
 
   .seller-home__skill-block.is-empty .seller-home__skill-block-content {
     padding: 0;
+  }
+
+  // One-line body text gets 4px top/bottom breathing room (empty
+  // paragraphs included, so the caret line matches a filled one).
+  .seller-home__skill-block[data-block-kind="p"] .seller-home__skill-block-content {
+    padding-block: 4px;
   }
 
   .seller-home__skill-block-grip,
@@ -2585,7 +2608,7 @@
     padding: 0;
     border: 0;
     background: transparent;
-    color: var(--slds-g-color-on-surface-3, #747474);
+    color: #b4b4b4;
     cursor: pointer;
     opacity: 0;
     pointer-events: none;
@@ -2606,11 +2629,10 @@
     inline-size: 1.5rem;
     block-size: 1.5rem;
     border-radius: 0.25rem;
-    color: var(--slds-g-color-on-surface-3, #747474);
+    color: #b4b4b4;
 
     &:hover {
       background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
-      color: var(--slds-g-color-on-surface-1, #181818);
     }
 
     svg {
@@ -2626,12 +2648,11 @@
     inline-size: 1.5rem;
     block-size: 1.5rem;
     border-radius: 0.25rem;
-    color: var(--slds-g-color-on-surface-3, #747474);
+    color: #b4b4b4;
     overflow: visible;
 
     &:hover {
       background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
-      color: var(--slds-g-color-on-surface-1, #181818);
     }
 
     &[aria-expanded="true"] .seller-home__skill-block-grip-hint {
@@ -2810,47 +2831,70 @@
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    margin-block-start: var(--slds-g-spacing-2, 0.5rem);
-    margin-block-end:   var(--slds-g-spacing-2, 0.5rem);
+    margin-block: 0;
+    cursor: text;
+    padding-inline-end: 0.75rem;
+    min-block-size: 1.5rem;
   }
 
   // Chip typography + shape inside the canvas doc — matches Figma
   // frame `9744:24896`. Scoped so the list page's chip treatment
   // (which uses the same class name) stays untouched.
+  // Chip = SLDS resource pill (`slds-pill slds-pill_link
+  // nce-pill__resource`): a bordered, rounded-rectangle token with a
+  // leading icon container and a label. Scoped to the canvas doc so the
+  // list page's chip treatment (same class name) stays untouched.
   .seller-home__skill-canvas-doc .seller-home__skill-chip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 2px var(--slds-g-spacing-2, 0.5rem) 2px 6px;
+    gap: var(--slds-g-spacing-1, 0.25rem);
+    // SLDS pill padding: tight block, roomier inline, with a hair less
+    // start padding so the icon container optically balances the label.
+    padding-block: 1px;
+    padding-inline: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-2, 0.5rem);
+    padding-inline-start: var(--slds-g-spacing-1, 0.25rem);
     margin: 0;
-    background-color: transparent;
-    border: 0;
-    border-radius: var(--slds-g-radius-border-circle, 9999px);
-    color: var(--slds-g-color-accent-2, #0250d9);
-    font-size: var(--slds-g-font-scale-2, 1rem);
-    line-height: 17px;
+    min-block-size: 1.5rem; // 24px — matches `.slds-pill` min-height
+    box-sizing: border-box;
+    background-color: #f3f3f3;
+    border: 1px solid #e5e5e5;
+    // Capsule ends, matching the "Owned by Sales" agent badge
+    // (`--slds-c-badge-radius-border: 999px`).
+    border-radius: 999px;
+    color: #2e2e2e;
+    font-size: var(--slds-g-font-scale-1, 0.8125rem); // 13px, SLDS pill label
+    line-height: 1.25;
     font-weight: var(--slds-g-font-weight-4, 400);
-    // Chips read as pill-shaped tokens, not prose links — the
-    // accent colour + rounded shape already communicate
-    // "clickable" per Figma, so the base state has no underline.
-    // Hover reveals an underline as a subtle affordance cue,
-    // matching how other SLDS 2 subtle-link treatments behave.
     text-decoration: none;
-    text-underline-offset: 2px;
+    user-select: all;
+    cursor: pointer;
+    transition: border-color 0.1s ease, background-color 0.1s ease;
 
+    // Link-pill affordance: the border and surface darken on hover /
+    // keyboard focus rather than underlining the label, matching how
+    // SLDS `slds-pill_link` pills respond.
     &:hover,
-    &:focus-visible { text-decoration: underline; }
+    &:focus-visible {
+      text-decoration: none;
+      background-color: #e5e5e5;
+    }
 
     // Missing-target variant. Per spec, an unresolved supporting-
     // skill reference renders as non-interactive text. We keep the
     // `<a>` in the DOM so serialization preserves the Markdown
-    // link, but neutralize the interaction: no pointer, no
-    // underline, muted color, and no keyboard/mouse activation.
+    // link, but neutralize the interaction: muted colour, no hover
+    // response, and no keyboard/mouse activation.
     &.seller-home__skill-chip_missing {
       color: var(--slds-g-color-on-surface-2, #444444);
-      text-decoration: none;
+      border-style: dashed;
       pointer-events: none;
       cursor: default;
+
+      &:hover,
+      &:focus-visible {
+        border-color: #e5e5e5;
+        background-color: #f3f3f3;
+      }
     }
   }
 
@@ -2876,31 +2920,47 @@
     flex-wrap: wrap;
     gap: 6px;
     padding-inline-start: 0;
+    padding-inline-end: 0.75rem;
     list-style: none;
     margin-block: var(--slds-g-spacing-2, 0.5rem);
+    cursor: text;
 
+    // Tool bullets share the skill-chip pill treatment: #F3F3F3
+    // capsule, hairline border, 13px #2E2E2E label, #E5E5E5 hover.
     > li {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 2px var(--slds-g-spacing-2, 0.5rem) 2px 6px;
-      background-color: transparent;
-      color: var(--slds-g-color-on-surface-2, #2e2e2e);
-      font-size: var(--slds-g-font-scale-2, 1rem);
-      line-height: 17px;
-      border-radius: var(--slds-g-radius-border-circle, 9999px);
+      gap: var(--slds-g-spacing-1, 0.25rem);
+      padding-block: 1px;
+      padding-inline: var(--slds-g-spacing-2, 0.5rem);
+      padding-inline-start: var(--slds-g-spacing-1, 0.25rem);
+      min-block-size: 1.5rem; // 24px
+      box-sizing: border-box;
+      background-color: #f3f3f3;
+      border: 1px solid #e5e5e5;
+      border-radius: 999px;
+      color: #2e2e2e;
+      font-size: var(--slds-g-font-scale-1, 0.8125rem); // 13px
+      line-height: 1.25;
+      font-weight: var(--slds-g-font-weight-4, 400);
+      user-select: all;
+      cursor: pointer;
+      transition: background-color 0.1s ease;
+
+      &:hover,
+      &:focus-visible {
+        background-color: #e5e5e5;
+      }
     }
 
     > li + li { margin-block-start: 0; }
 
-    // Connection badges render at 32 × 32. `object-fit: contain`
-    // (from the generic `.seller-home__skill-tool-icon` rule)
-    // fits each badge inside the box while preserving aspect ratio.
+    // Icon sized to the 24px pill, matching the skill chip's 16px glyph.
     .seller-home__skill-tool-icon {
       flex: 0 0 auto;
       border-radius: 0;
-      width:  32px;
-      height: 32px;
+      width:  16px;
+      height: 16px;
     }
   }
 
