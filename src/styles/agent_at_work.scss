@@ -1,0 +1,78 @@
+// ══════════════════════════════════════════════════════════════════════
+//  "Your agent at work" — lab page chrome
+//  ----------------------------------------------------------------------
+//  Compiles to /styles/agent_at_work.css and is loaded ONLY by
+//  agent_at_work.html, on top of home.css.
+//
+//  Page furniture only. The feed itself is the real component and is
+//  styled entirely by `.seller-home__feed*` in home.scss — this file
+//  must not restyle any of it, or the lab stops showing what Seller
+//  Home actually ships, which is the one thing it exists to do.
+//
+//  This used to be ~1100 lines: a full second implementation of the feed
+//  under an `aaw-` namespace, from back when the design was being built
+//  here before being ported. Keeping the two in step by hand failed
+//  repeatedly, so the copy is gone and the page renders the original.
+// ══════════════════════════════════════════════════════════════════════
+
+// How far the shader canvas hangs outside the page box on every side, so
+// its blur halo falls off past the edges instead of tapering to
+// transparent inside the visible area. Same 90px as home.scss.
+$aaw-god-rays-overscan: 90px;
+
+.aaw-lab {
+  position: relative; // positioning root for the shader host
+  min-height: 100%;
+  padding: var(--slds-g-spacing-8, 3rem) var(--slds-g-spacing-6, 2rem);
+
+  // Fallback surface, and the thing that actually fills the cleared cone
+  // at 12 o'clock — the shader canvas is fully transparent there. Also
+  // what shows if WebGL is unavailable or the CDN is unreachable. Same
+  // value as `.seller-home`.
+  background: #f7fbff;
+
+  overflow: clip; // contains the overscan
+}
+
+// ── God-rays shader canvas host ───────────────────────────────────────
+// scripts/aaw_god_rays.js mounts a <canvas> in here. Anchored to the top
+// and sized by height rather than pinned on all four sides: pinning both
+// edges would make the height fully determined by the page and leave
+// `min-height` nothing to clamp.
+//
+// No left inset, unlike Seller Home — there's no nav to sit beside, so
+// the box and the content column already share a centre.
+//
+// Inert: clicks and hovers pass through to the list above it.
+.aaw-lab__god-rays {
+  position: absolute;
+  top: -$aaw-god-rays-overscan;
+  left: -$aaw-god-rays-overscan;
+  right: -$aaw-god-rays-overscan;
+  height: calc(100% + #{$aaw-god-rays-overscan * 2});
+
+  // Floor on the box height, so a short window still gets a ray field
+  // long enough to reach the bottom instead of a squashed one.
+  min-height: 50rem;
+
+  pointer-events: none;
+  z-index: 0;
+}
+
+.aaw-lab__inner {
+  // Promoted above the shader host, which is absolutely positioned and
+  // would otherwise paint over this in-flow sibling.
+  position: relative;
+  z-index: 1;
+
+  max-width: 50rem; // 800px — the Seller Home content column
+  width: 100%;
+  margin-inline: auto;
+}
+
+.aaw-lab__note {
+  margin: 0 0 var(--slds-g-spacing-6, 2rem);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  line-height: 1.4;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}

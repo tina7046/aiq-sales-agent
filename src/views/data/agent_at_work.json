@@ -1,0 +1,378 @@
+{
+  // ══════════════════════════════════════════════════════════════════
+  //  "Your agent at work" — LAB data
+  //  ------------------------------------------------------------------
+  //  Seeded as an exact copy of the `feed` block in index.json, and it
+  //  is the ONLY thing about /agent_at_work.html that forks from Seller
+  //  Home. The markup, styles and behaviour are shared — the page
+  //  includes `_home_feed.html`, loads home.css and boots home.js — so
+  //  there is one implementation and it cannot drift.
+  //
+  //  What forks is the content: rows added here are visible on the lab
+  //  page only, which is what makes it a place to try an idea before
+  //  deciding it belongs on Seller Home. Porting one back is moving the
+  //  object into index.json's `feed.items`.
+  //
+  //  Gulp injects this automatically — `getData` reads
+  //  `data/<page>.json` for `<page>.html` — so defining `feed` here is
+  //  what makes the include pick it up. See the comments in index.json
+  //  for the row contract; it is the same one.
+  // ══════════════════════════════════════════════════════════════════
+  "feed": {
+    "heading": "Your agent at work",
+    // Optional PIN for the date beside the heading. null = show today,
+    // recomputed on every page load. Set a literal string ("Mon July 13")
+    // to freeze it — useful when a screenshot has to match a deck.
+    "date": null,
+    // ── The subline ───────────────────────────────────────────────────
+    // Every row's second line is two slots: "<status> · <time>".
+    //
+    //   completed   Completed   · Next run in 3 days
+    //   running     Running now · Started 4 min ago
+    //   scheduled   Daily       · Next run in 15 hours
+    //   paused      Paused      · Last run Thursday
+    //   failed      Failed      · Last run today at 6:00 AM
+    //
+    // `scheduled` is the one state whose left slot isn't a status word.
+    // A row that's simply waiting has no status worth naming — what you
+    // want to know is how often it runs — and using the cadence there
+    // also stops `scheduled` and `completed` from reading identically,
+    // since both name a next run on the right.
+    //
+    // The labels live here rather than in the template so the wording is
+    // editable without touching markup, and so the JS that rewrites the
+    // subline on pause has no copy of its own.
+    // ── Group headers ─────────────────────────────────────────────────
+    // Labels above the runs of rows. Defining `groups` at all is what
+    // turns them on, so a page can opt out by dropping the key.
+    //
+    // Tried here first and since ported, so index.json has the same
+    // block — this is no longer what makes the lab differ from Seller
+    // Home. See index.json for the full note.
+    "groups": {
+      "active": "Active",
+      "paused": "Paused"
+    },
+
+    "statusLabels": {
+      "completed": "Completed",
+      "running":   "Running now",
+      "paused":    "Paused",
+      "failed":    "Failed"
+    },
+
+    // Shown in place of the list once every row has been dismissed, so
+    // the section holds its shape instead of collapsing to a bare
+    // header. Which one is visible is decided in CSS off whether any
+    // rows are left, so it also covers a page that loads with none.
+    "empty": {
+      "heading": "You're all caught up",
+      "body": "New results appear here as your agent works."
+    },
+
+    // What the right slot says the moment a run is started off-schedule
+    // (a failed row retried, or "Run now" from the kebab). There's no
+    // history to report yet, so it can't reuse `startedAt`.
+    "retryTime": "Started just now",
+
+    // Row order. The template groups `items` by this sequence, so a new
+    // row lands in the right place wherever it's added to the array
+    // below, and home.js re-sorts by the same rule when a row changes
+    // state at runtime.
+    //
+    // `failed` sits directly under the last completed row rather than
+    // above everything: it's still a finished run, just one that didn't
+    // work, so it belongs with the other outcomes instead of
+    // interrupting them.
+    "stateOrder": ["completed", "failed", "running", "scheduled", "paused"],
+    "overflowActions": [
+      { "id": "view_all",        "label": "View all" },
+      { "id": "review_settings", "label": "Review settings" }
+    ],
+    // Per-row overflow-menu actions rendered by the `feedItem` macro.
+    // Same { id, label, icon? } shape as `overflowActions` above so a
+    // future consumer can share renderers between the section-level and
+    // row-level menus. `icon` (optional) is an SLDS utility-sprite id.
+    // Kept as one shared list rather than per-row overrides so every
+    // card exposes the same action set — matches the Salesforce list-
+    // interaction pattern where every row has an identical kebab menu.
+    // Additional actions (Snooze, Assign, etc.) drop in as new entries
+    // here without any template or JS changes.
+    //
+    // `onlyForState` / `hideForState` scope an action to the states it
+    // makes sense in, and they're enforced in CSS off the row's
+    // `data-sh-feed-state` rather than at render time — a row can change
+    // state while its menu already exists. Here that means the top item
+    // reads "Run now" on every row except a running one, which offers
+    // "Pause" in the same slot instead.
+    //
+    // Both reuse transitions the row's status button already makes, so
+    // neither is a second way of doing something that already had one.
+    // Dismiss stays last: it's the destructive one.
+    "rowActions": [
+      { "id": "run_now", "label": "Run now", "icon": "play",  "hideForState": "running" },
+      { "id": "pause",   "label": "Pause",   "icon": "pause", "onlyForState": "running" },
+      { "id": "dismiss", "label": "Dismiss", "icon": "close" }
+    ],
+    // Semantic-category → SLDS utility-sprite map (Figma node
+    // 8797:228978). Row outputs pick an `icon` from this map's
+    // keys — the mapping to a concrete SLDS sprite lives here so
+    // a design change that reskins "message" from `comments` to
+    // `email` (or any other utility icon) is a single-line edit
+    // that re-skins every message pill on the page. Categories:
+    //   • table    — structured records / lists (prospects, buyers,
+    //                accounts as list output)
+    //   • message  — drafted outreach or replies
+    //   • document — generated artifacts (briefs, next steps)
+    //   • pdf      — polished, distributable reports
+    //
+    // Icon sourcing rules — same shape the nav item macro uses:
+    //   • `sprite`        — SVG symbol id inside a `spriteFamily`
+    //                        sprite. `spriteFamily` picks which
+    //                        `assets/icons/<family>-sprite/svg/symbols.svg`
+    //                        file to load from. Defaults to `utility`
+    //                        for back-compat.
+    //   • `iconImage`     — raster asset path used when no suitable
+    //                        sprite exists (per-icon fallback). Wins
+    //                        over `sprite` if both are set.
+    //
+    // Doctype sprites (`gsheet`, `txt`, `pdf`) are pre-colored — the
+    // pill glyph CSS deliberately does NOT force a `currentColor`
+    // fill on the SVG so these sprites paint themselves.
+    "outputTypes": {
+      "table":    { "sprite": "gsheet", "spriteFamily": "doctype" },
+      "doc":      { "sprite": "gdoc",   "spriteFamily": "doctype" },
+      "message":  { "sprite": "txt",    "spriteFamily": "doctype" },
+      "document": { "iconImage": "/assets/images/output-icons/doc.png" },
+      "pdf":      { "sprite": "pdf",    "spriteFamily": "doctype" }
+    },
+    // ── One list, one row per recurring workflow ──────────────────────
+    // The Completed / Running / Scheduled tabs are gone, so a workflow
+    // is no longer three potential rows (its last result, its current
+    // run, its next run) — it's one row that carries its own state.
+    //
+    // Row: { id, title, titles?, state, cadence, lastRun, nextRun?,
+    //        startedAt?, conversationId?, outputs?, error?,
+    //        retryOutput?, workflow? }
+    //   • state   — one of `stateOrder`.
+    //   • title   — what the row reads in the state it renders in. A
+    //     completed run can say what it did ("Found new prospects"); a
+    //     scheduled one hasn't done anything yet, so it names the
+    //     artifact instead of claiming a past action.
+    //   • titles  — the other tenses that same row needs, because state
+    //     changes at runtime and a title stuck in one tense goes wrong
+    //     the moment someone presses the status button. "Run now" on a
+    //     completed row would otherwise leave it claiming to have found
+    //     the prospects it is still looking for.
+    //       running   present progressive ("Finding new prospects")
+    //       neutral   no claim either way ("Find new prospects"), used
+    //                 while paused — nothing is happening, so the row
+    //                 shouldn't assert that anything did
+    //     Both are optional; a row without them keeps `title` in every
+    //     state. The template hands all three to the same slot
+    //     mechanism the subline uses, so home.js swaps them with no
+    //     extra logic.
+    //   • cadence — how often the workflow runs ("Weekly", "Daily").
+    //     Shown as the left slot on `scheduled` rows only, but carried
+    //     by every row so one can be rescheduled into that state.
+    //   • The time fields each serve one state's right slot:
+    //       nextRun    completed, scheduled
+    //       startedAt  running
+    //       lastRun    paused, failed
+    //     Every row needs `lastRun` regardless of state, because any row
+    //     can be paused from its status button and a paused row reports
+    //     when it last ran.
+    //   • Each is the full display string ("Next run in 3 days"), so the
+    //     template stays a plain render with no date formatting.
+    //   • outputs — what the row has to show. `outputs[].label` is the
+    //     full display string too, so no count / pluralization logic.
+    //   • error   — replaces `outputs` on a failed row: there's no
+    //     artifact to link to, so the space the pills would occupy
+    //     carries what went wrong, as an SLDS error badge.
+    //   • retryOutput — the ordinary pill that takes the error badge's
+    //     place once the row is retried. Its point is that the row keeps
+    //     a third line, so retrying doesn't change its height.
+    "items": [
+      {
+        "id": "ri-01",
+        "conversationId": "conv-001",
+        "title": "Found new prospects",
+        "titles": {
+          "running": "Finding new prospects",
+          "neutral": "Find new prospects"
+        },
+        "cadence": "Weekly",
+        "nextRun": "Next run in 3 days",
+        "lastRun": "Last run Thursday",
+        "state": "completed",
+        "outputs": [
+          { "icon": "table",   "label": "7 accounts imported" },
+          { "icon": "message", "label": "25 prospects" }
+        ],
+        "workflow": { "id": "", "label": "" }
+      },
+      {
+        "id": "ri-02",
+        "title": "Drafted proposals to send",
+        "titles": {
+          "running": "Drafting proposals to send",
+          "neutral": "Draft proposals to send"
+        },
+        "cadence": "Daily",
+        "nextRun": "Next run tomorrow at 6:00 AM",
+        "lastRun": "Last run today",
+        "state": "completed",
+        "outputs": [
+          { "icon": "pdf", "label": "10 proposals" }
+        ],
+        "workflow": { "id": "", "label": "" }
+      },
+      {
+        "id": "ri-03",
+        "title": "Weekly exec brief",
+        "titles": {
+          "running": "Preparing your weekly exec brief",
+          "neutral": "Weekly exec brief"
+        },
+        "cadence": "Weekly",
+        "nextRun": "Next run Friday at 5:00 AM",
+        "lastRun": "Last run Friday",
+        "state": "scheduled",
+        // No `todayPrefix` here, unlike a completed row: it stamps today's
+        // date onto the label, and this run hasn't happened yet — the brief
+        // named below is what Friday will produce, not something that
+        // exists now.
+        "outputs": [
+          { "icon": "doc", "label": "Quarterly Deal Pulse" }
+        ],
+        "workflow": { "id": "", "label": "" }
+      },
+      // ── Lab-only rows ─────────────────────────────────────────────
+      // Two runs in flight, added here to try the in-progress treatment
+      // against a list that also has finished and scheduled work in it.
+      // They exist on this page only; Seller Home still shows three.
+      {
+        "id": "run-01",
+        // The count lives in the pill, not the title: a title that names
+        // a number goes stale the moment the run moves on, and it has to
+        // read correctly in every tense (the neutral form would be
+        // "Research 42 target accounts" for a run that hasn't counted
+        // anything yet). The pill can carry progress instead.
+        "title": "Researching target accounts",
+        "titles": {
+          "running": "Researching target accounts",
+          "neutral": "Research target accounts"
+        },
+        "cadence": "Weekly",
+        "startedAt": "Started 12 min ago",
+        "lastRun": "Last run Monday",
+        "state": "running",
+        "outputs": [
+          { "icon": "table", "label": "42 of 50 accounts" }
+        ],
+        "workflow": { "id": "", "label": "" }
+      },
+      {
+        "id": "run-02",
+        "title": "Drafting outreach for warm leads",
+        "titles": {
+          "running": "Drafting outreach for warm leads",
+          "neutral": "Draft outreach for warm leads"
+        },
+        "cadence": "Daily",
+        "startedAt": "Started 4 min ago",
+        "lastRun": "Last run yesterday",
+        "state": "running",
+        "outputs": [
+          { "icon": "message", "label": "12 of 30 drafted" }
+        ],
+        "workflow": { "id": "", "label": "" }
+      }
+    ],
+
+    // ── Parked rows ───────────────────────────────────────────────────
+    // Not rendered. The template only reads `items`, so these sit here
+    // as ready-made examples of the states the page doesn't currently
+    // show — move one into `items` above and it works, no template, CSS
+    // or JS change needed.
+    //
+    // Every state is fully supported today: `stateOrder` sorts it, the
+    // status button has its glyph pair, and the subline slots carry the
+    // strings for it. This array is only about what's on screen.
+    "itemsParked": [
+      {
+        "id": "fail-01",
+        "title": "Sync territory quota changes",
+        "titles": {
+          "running": "Syncing territory quota changes",
+          "neutral": "Sync territory quota changes"
+        },
+        "cadence": "Daily",
+        "lastRun": "Last run today at 6:00 AM",
+        "state": "failed",
+        "error": "Quota API returned 502 — 0 of 214 territories synced",
+        "retryOutput": { "icon": "doc", "label": "Syncing 214 territories" },
+        "workflow": { "id": "", "label": "" }
+      },
+      // No parked `running` example here, unlike index.json: this page
+      // has two live in `items` above, so a third copy under the same id
+      // would only be a duplicate to trip over.
+      {
+        "id": "sch-01",
+        "title": "Refresh account health scores",
+        "titles": {
+          "running": "Refreshing account health scores",
+          "neutral": "Refresh account health scores"
+        },
+        "cadence": "Monthly",
+        "nextRun": "Next run Monday at 6:00 AM",
+        "lastRun": "Last run Jul 20",
+        "state": "scheduled",
+        // "~" estimates read as "expected" for a run that hasn't
+        // happened yet.
+        "outputs": [
+          { "icon": "table", "label": "~1,240 accounts" }
+        ],
+        "workflow": { "id": "", "label": "" }
+      },
+      {
+        "id": "pau-01",
+        "title": "Re-engage stalled opportunities",
+        "titles": {
+          "running": "Re-engaging stalled opportunities",
+          "neutral": "Re-engage stalled opportunities"
+        },
+        "cadence": "Weekly",
+        // A paused row DISPLAYS "Paused" (the template substitutes it),
+        // while the schedule underneath is what resuming restores — so
+        // `nextRun` stays a real time even here.
+        "nextRun": "Next run Tuesday at 8:00 AM",
+        "lastRun": "Last run Tuesday",
+        "state": "paused",
+        "workflow": { "id": "", "label": "" }
+      }
+    ],
+    "tasks": [
+      {
+        "id": "tk-01",
+        "title": "Confirm demo agenda with Northwind",
+        "description": "Demo is Thursday at 10am; agenda still lists last quarter\u2019s topics.",
+        "icon":     { "sprite": "task" },
+        "workflow": { "id":     "prepare_for_meetings", "label": "Prepare for Meetings" }
+      },
+      {
+        "id": "tk-02",
+        "title": "Send updated pricing sheet to Globex",
+        "description": "Legal cleared the enterprise tier yesterday; Globex asked for revised numbers on the 12th.",
+        "icon":     { "sprite": "opportunity" },
+        "workflow": { "id":     "manage_opportunities", "label": "Manage Opportunities" }
+      },
+      {
+        "id": "tk-03",
+        "title": "Log call notes for Initech intro",
+        "description": "45-minute discovery call closed Tuesday; notes still in your scratchpad.",
+        "icon":     { "sprite": "contact" }
+      }
+    ]
+  },
+}

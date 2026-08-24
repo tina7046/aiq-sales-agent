@@ -1,0 +1,281 @@
+
+{% extends "_template.html" %}
+
+
+{% block content %}
+
+{% import "_sparkle.html" as sparkle %}
+
+<link rel="stylesheet"
+	href="https://cdnjs.cloudflare.com/ajax/libs/design-system/2.28.0/styles/salesforce-lightning-design-system.min.css"
+	integrity="sha512-yGlcH7165+gHMWfLapErhAgPK+gSZSQBtGgcO2zsJj8ASkfPh/z8k+4SZ2h+VBZLUIjzur8kktBrGbW3gcWUDQ=="
+	crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="/styles/slds2_agentic.css" />
+
+{# ─────────────────────────────────────────────────────────────────────
+   Stars / typing animation demo
+   Renders the shared, reusable "typing" component — markup from
+   _sparkle.html, styles from styles/index.scss (.sh-typing / .sh-sparkle).
+   The same component drives the conversation feed's thinking indicator;
+   only the demo layout + an enlarged variant are page-local here.
+   ──────────────────────────────────────────────────────────────────── #}
+<style>
+  .ai-typing-demo {
+    padding: 2.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2.5rem;
+    border-bottom: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+    background: var(--slds-g-color-surface-container-1, #fff);
+  }
+  .ai-typing-demo__row { display: flex; align-items: center; gap: 1rem; }
+  .ai-typing-demo__caption {
+    color: var(--slds-g-color-on-surface-2, #444);
+    font-size: 0.75rem;
+  }
+
+  /* The sparkle/typing component is global + size-agnostic
+     (.sh-typing / .sh-sparkle in styles/index.scss). The demo only sets
+     the label's type scale and an enlarged variant to show the motion. */
+  .ai-typing-demo .sh-typing { font-weight: 600; font-size: 0.875rem; }
+  .ai-typing-demo__row--lg .sh-typing { font-size: 2rem; gap: var(--slds-g-spacing-3, 0.75rem); }
+  .ai-typing-demo__row--lg .sh-sparkle { width: 1.75rem; height: 1.75rem; }
+
+  /* ── Spinner ── the component is now global (`.sh-spinner` in
+     styles/index.scss), ported from BB – AOP's account research page.
+     The demo only lays it out + shows an enlarged size. */
+  .bb-spinner-demo {
+    padding: 2.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2rem;
+    border-bottom: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+    background: var(--slds-g-color-surface-container-1, #fff);
+  }
+  .bb-spinner-demo__row { display: flex; align-items: center; gap: 1rem; }
+  .bb-spinner-demo__caption { color: var(--slds-g-color-on-surface-2, #444); font-size: 0.75rem; }
+  .bb-spinner-demo__label { color: var(--slds-g-color-on-surface-2, #444); font-size: 0.875rem; }
+  /* Demo-only larger size — thicker ring keeps the proportion. */
+  .bb-spinner-demo__row--lg .sh-spinner { width: 2.5rem; height: 2.5rem; border-width: 4px; }
+
+  /* ── Agent reasoning stream (Agentforce tool-call trace) ──
+     Interleaved markdown "thoughts" + tool-call status rows (icon +
+     truncating label + optional result count). The rows are muted
+     (slds-text-color_weak) so they read as background reasoning; retry
+     rows use the warning icon in a subdued amber. All SLDS utility
+     classes + sprite icons — only layout lives here. */
+  .agent-reasoning-demo {
+    padding: 2.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.5rem;
+    border-bottom: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+    background: var(--slds-g-color-surface-container-1, #fff);
+  }
+  .agent-reasoning { display: flex; flex-direction: column; gap: 0.75rem; width: 100%; max-width: 42rem; }
+  .agent-reasoning__text { margin: 0; }
+  .agent-reasoning__text p { margin: 0; font-size: 0.875rem; line-height: 1.5; }
+  .agent-reasoning__tool { margin: 0; }
+  /* All tool icons use the SLDS default icon foreground
+     (.slds-icon-text-default) — no per-row tinting. */
+
+  /* ── Record card list (Agentforce "result card mini") ──
+     Compact record cards: standard object icon + title + subtitle, the
+     whole card a link to the record. The icon's brand color comes from
+     `slds-icon-standard-<object>`; the rest is layout. */
+  .record-card-list-demo {
+    padding: 2.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    background: var(--slds-g-color-surface-container-1, #fff);
+  }
+  .record-card-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 32rem;
+  }
+  .card {
+    border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+    border-radius: var(--slds-g-radius-border-2, 0.5rem);
+    background: var(--slds-g-color-surface-container-1, #fff);
+    transition: box-shadow 120ms ease, border-color 120ms ease;
+  }
+  .card:hover {
+    border-color: var(--slds-g-color-border-2, #aeaeae);
+    box-shadow: var(--slds-g-shadow-2, 0 2px 4px 0 rgba(0, 0, 0, 0.1));
+  }
+  .card__link {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-2, 0.5rem);
+    padding: var(--slds-g-spacing-1, 0.25rem) var(--slds-g-spacing-3, 0.75rem);
+    border-radius: inherit;
+    text-decoration: none;
+    color: inherit;
+  }
+  .card__link:hover { text-decoration: none; }
+  .card__link:focus-visible {
+    outline: 2px solid var(--slds-g-color-accent-2, #0176d3);
+    outline-offset: -2px;
+  }
+  .card__icon { flex: 0 0 auto; }
+  .card__body { min-width: 0; display: flex; flex-direction: column; gap: 0.125rem; }
+  .card__title {
+    font-size: var(--slds-g-font-scale-base, 0.8125rem);
+    line-height: var(--slds-g-font-lineheight-2, 1.25);
+    color: var(--slds-g-color-neutral-base-20, #2e2e2e);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .card__subtitle {
+    font-size: var(--slds-g-font-scale-neg-2, 0.625rem);
+    color: var(--slds-g-color-neutral-base-20, #2e2e2e);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+</style>
+
+<section class="ai-typing-demo" aria-label="Stars animation demo">
+  <h1 class="slds-text-heading_medium">Typing / stars animation</h1>
+
+  {# Real size — as it sits inline in a message row. #}
+  <div class="ai-typing-demo__row">
+    <span class="sh-typing">
+      <span class="sh-typing__label" aria-hidden="true">Thinking…</span>
+      <span class="slds-assistive-text" role="status" aria-live="polite" aria-atomic="true">Thinking…</span>
+      {{ sparkle.sparkles() }}
+    </span>
+    <span class="ai-typing-demo__caption">real size</span>
+  </div>
+
+  {# Enlarged so the size + color pulse and the staggered wave are easy to read. #}
+  <div class="ai-typing-demo__row ai-typing-demo__row--lg">
+    <span class="sh-typing">
+      <span class="sh-typing__label" aria-hidden="true">Working on it…</span>
+      {{ sparkle.sparkles() }}
+    </span>
+  </div>
+</section>
+
+{# ─────────────────────────────────────────────────────────────────────
+   Spinner demo — ported from BB – AOP's account research page
+   (aop-editor preview: `createSpinner()` renders <div class="spinner">).
+   Markup is a single empty element; all of it is the CSS above.
+   ──────────────────────────────────────────────────────────────────── #}
+<section class="bb-spinner-demo" aria-label="Spinner demo">
+  <h1 class="slds-text-heading_medium">Spinner (BB – AOP · account research)</h1>
+
+  <div class="bb-spinner-demo__row">
+    <span class="sh-spinner" role="status" aria-label="Loading"></span>
+    <span class="bb-spinner-demo__caption">real size (20px)</span>
+  </div>
+
+  <div class="bb-spinner-demo__row bb-spinner-demo__row--lg">
+    <span class="sh-spinner" role="status" aria-label="Loading"></span>
+    <span class="bb-spinner-demo__caption">large</span>
+  </div>
+
+  {# Inline with a label, mirroring the research step's "step in progress" row. #}
+  <div class="bb-spinner-demo__row">
+    <span class="sh-spinner" aria-hidden="true"></span>
+    <span class="bb-spinner-demo__label">Researching accounts…</span>
+  </div>
+</section>
+
+{# ─────────────────────────────────────────────────────────────────────
+   Agent reasoning stream — recreation of the Agentforce copilot trace
+   (runtime_copilot_base view stream). Two row types interleave:
+     • text  — a markdown "thought" (slds-rich-text-editor__output)
+     • tool  — a tool-call status row: utility icon + truncating label
+               + optional "N results"; `error` swaps in the warning icon.
+   The LWC wrappers (runtime_copilot_base-*, sentos_results-*,
+   lightning-icon) are stripped to plain SLDS markup + sprite icons. #}
+{% set reasoning = [
+  { "type": "text", "text": "Let me search for active campaigns in your CRM right now!" },
+  { "type": "tool", "icon": "warning",   "error": true, "label": "Finding Salesforce records (Campaign) - Refining search" },
+  { "type": "text", "text": "Let me check the correct field names for Campaign first." },
+  { "type": "tool", "icon": "org_chart", "assistive": "Org Context Fetch", "label": "Exploring Salesforce metadata (Campaign)", "count": "122 results" },
+  { "type": "text", "text": "Got the fields. Now let me query the active campaigns properly." },
+  { "type": "tool", "icon": "warning",   "error": true, "label": "Finding Salesforce records (Campaign) - Tweaking the search" },
+  { "type": "text", "text": "The table is huge — let me narrow it to campaigns that started or are running in the current fiscal quarter." },
+  { "type": "tool", "icon": "ai_search", "assistive": "Search", "label": "Finding Salesforce records (Campaign)", "count": "50 results" },
+  { "type": "tool", "icon": "warning",   "error": true, "label": "Finding Salesforce records (Campaign) - Refining search" }
+] %}
+<section class="agent-reasoning-demo" aria-label="Agent reasoning stream demo">
+  <h1 class="slds-text-heading_medium">Agent reasoning stream</h1>
+
+  <div class="agent-reasoning">
+    {% for item in reasoning %}
+      {% if item.type == "text" %}
+        <div class="markdown-wrapper slds-rich-text-editor__output agent-reasoning__text">
+          <p>{{ item.text }}</p>
+        </div>
+      {% else %}
+        {% set iconClass = item.icon | replace("_", "-") %}
+        {% set assistive = item.assistive or "Tool encountered an error" %}
+        <div class="slds-grid slds-grid_vertical-align-center slds-text-color_weak slds-p-left_x-small agent-reasoning__tool" role="status">
+          <span class="slds-icon_container slds-icon-utility-{{ iconClass }} agent-reasoning__tool-icon" title="{{ assistive }}">
+            <svg class="slds-icon slds-icon-text-default slds-icon_x-small" aria-hidden="true">
+              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ item.icon }}"></use>
+            </svg>
+            <span class="slds-assistive-text">{{ assistive }}</span>
+          </span>
+          <p class="slds-col slds-text-body_small slds-p-horizontal_x-small slds-truncate" title="{{ item.label }}">{{ item.label }}</p>
+          {% if item.count %}<p class="slds-col_bump-left slds-text-body_small">{{ item.count }}</p>{% endif %}
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</section>
+
+{# ─────────────────────────────────────────────────────────────────────
+   Record card list — recreation of the Agentforce "result card mini"
+   list (sentos_results-result-card-mini in a .record-card-list <ul>).
+   Each card is an <article> whose <a> links to the record; the standard
+   object icon uses the SLDS sprite + brand color (slds-icon-standard-*),
+   replacing the auth-gated Salesforce PNG. Data-driven for easy edits. #}
+{% set campaigns = [
+  { "title": "AMER-US-PGM-Events: 10/29 EP MMA CATS – New York",        "subtitle": "Campaign • Cross Cloud event in New York, Oct 29 • Status: Confirmed", "href": "/lightning/r/Campaign/701ed00001TDljCAAT/view" },
+  { "title": "EMEA-BE-PGM-Events: How Salesforce Uses Salesforce – Brussels", "subtitle": "Campaign • Oct 29 • Status: Confirmed", "href": "/lightning/r/Campaign/701ed00001GXkSGAA1/view" },
+  { "title": "EMEA-GB-PGM-Events: Tottenham vs Crystal Palace – London", "subtitle": "Campaign • Oct 31 • Status: Confirmed", "href": "/lightning/r/Campaign/701ed00001SFLYCAA5/view" },
+  { "title": "AP-AU-PGM-Events: MuleSoft NRI Partner Webinar",           "subtitle": "Campaign • Oct 28, APAC • Status: Confirmed", "href": "/lightning/r/Campaign/701ed00001VzXKsAAN/view" },
+  { "title": "JP-JP-PGM-Events: 9th CX Forum – Tokyo",                   "subtitle": "Campaign • Oct 30 • Status: Confirmed", "href": "/lightning/r/Campaign/701ed00001WJvCYAA1/view" },
+  { "title": "EMEA-DE-PGM-Events: Cross Cloud – Munich",                 "subtitle": "Campaign • Oct 28 • Status: Confirmed", "href": "/lightning/r/Campaign/701ed00001VSlHoAAL/view" }
+] %}
+<section class="record-card-list-demo" aria-label="Record card list demo">
+  <h1 class="slds-text-heading_medium">Record card list</h1>
+
+  <ul class="record-card-list" role="list">
+    {% for c in campaigns %}
+    <li>
+      <article class="card">
+        <a class="card__link" href="{{ c.href }}">
+          <span class="slds-icon_container slds-icon-standard-campaign card__icon">
+            <svg class="slds-icon slds-icon_small" aria-hidden="true">
+              <use xlink:href="/assets/icons/standard-sprite/svg/symbols.svg#campaign"></use>
+            </svg>
+          </span>
+          <div class="card__body">
+            <span class="card__title" title="{{ c.title }}">{{ c.title }}</span>
+            <span class="card__subtitle" title="{{ c.subtitle }}">{{ c.subtitle }}</span>
+          </div>
+        </a>
+      </article>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+{% endblock %}

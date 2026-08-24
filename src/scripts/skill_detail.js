@@ -335,6 +335,42 @@
     }
   }
 
+  // ── Activity popover ─────────────────────────────────────────────────
+  // Fills the hover panel behind the "Edited …" stamp: an "Edited by"
+  // row (updatedBy + compacted updatedAt) and a "Created by" row
+  // (createdBy + createdAt). Dates fall back to hidden when the skill
+  // carries none. `wrap` is the hover container; hidden when there is no
+  // skill to describe (create mode / not-found).
+  function paintActivity(wrap, skill) {
+    if (!wrap) return;
+    if (!skill) {
+      wrap.hidden = true;
+      return;
+    }
+
+    var editedBy = (skill.updatedBy && String(skill.updatedBy).trim()) ||
+      (skill.createdBy && String(skill.createdBy).trim()) || DEFAULT_CURRENT_USER;
+    var createdBy = (skill.createdBy && String(skill.createdBy).trim()) || DEFAULT_CURRENT_USER;
+    var editedAt = compactEditedDate(skill.updatedAt);
+    var createdAt = (skill.createdAt && String(skill.createdAt).trim()) || '';
+
+    var editedByEl  = wrap.querySelector('[data-sh-activity-edited-by]');
+    var editedAtEl  = wrap.querySelector('[data-sh-activity-edited-at]');
+    var createdByEl = wrap.querySelector('[data-sh-activity-created-by]');
+    var createdAtEl = wrap.querySelector('[data-sh-activity-created-at]');
+
+    if (editedByEl)  editedByEl.textContent  = editedBy;
+    if (createdByEl) createdByEl.textContent = createdBy;
+    if (editedAtEl) {
+      editedAtEl.textContent = editedAt;
+      editedAtEl.hidden = !editedAt;
+    }
+    if (createdAtEl) {
+      createdAtEl.textContent = createdAt;
+      createdAtEl.hidden = !createdAt;
+    }
+  }
+
   // ── Title badges ─────────────────────────────────────────────────────
   // Pills annotating a skill's name: which agent owns it, and where it
   // sits in its publishing lifecycle. The agent pill is drawn in two
@@ -1180,6 +1216,8 @@
       if (!a.classList.contains('seller-home__skill-chip')) {
         a.classList.add('seller-home__skill-chip');
       }
+      a.setAttribute('contenteditable', 'false');
+      a.setAttribute('draggable', 'false');
       if (tool) {
         a.classList.add('seller-home__skill-chip_known');
         a.classList.remove('seller-home__skill-chip_missing');
@@ -1227,6 +1265,8 @@
         if (!a.classList.contains('seller-home__skill-chip')) {
           a.classList.add('seller-home__skill-chip');
         }
+        a.setAttribute('contenteditable', 'false');
+        a.setAttribute('draggable', 'false');
         a.classList.add('seller-home__skill-chip_known');
         a.classList.remove('seller-home__skill-chip_missing');
         a.removeAttribute('aria-disabled');
@@ -1405,6 +1445,25 @@
     }
     if (chipNodes.length === 0) return;
 
+    function markChipAtomic(chip) {
+      if (!chip || chip.nodeType !== 1) return;
+      chip.setAttribute('contenteditable', 'false');
+      chip.setAttribute('draggable', 'false');
+    }
+
+    for (var c = 0; c < chipNodes.length; c++) markChipAtomic(chipNodes[c]);
+
+    // Chips-only paragraph: keep the chips in the original <p> so
+    // the block body stays contenteditable. Native Backspace /
+    // Delete / undo then treat each chip as an atomic unit.
+    if (lastKeepIdx < 0) {
+      p.classList.add('seller-home__skill-chip-row');
+      p.setAttribute('role', 'group');
+      p.setAttribute('aria-label', 'Supporting skills');
+      p.setAttribute('data-sh-skill-chip-lifted', '1');
+      return;
+    }
+
     // Split point: everything AFTER `lastKeepIdx` moves to the row.
     // KEEP whitespace text nodes between chips: the CSS flex `gap`
     // handles visual spacing, but the DOM → Markdown serializer
@@ -1416,6 +1475,8 @@
     row.className = 'seller-home__skill-chip-row';
     row.setAttribute('role', 'group');
     row.setAttribute('aria-label', 'Supporting skills');
+    row.setAttribute('contenteditable', 'true');
+    row.setAttribute('data-sh-skill-block-body', '');
     for (var j = 0; j < toMove.length; j++) {
       row.appendChild(toMove[j]);
     }
@@ -1423,14 +1484,8 @@
     while (p.lastChild && p.lastChild.nodeType === 3 && /^\s*$/.test(p.lastChild.nodeValue || '')) {
       p.removeChild(p.lastChild);
     }
-    // If the paragraph is now empty (chips-only paragraph), replace
-    // it entirely with the row.
-    if (!p.childNodes.length) {
-      p.parentNode.replaceChild(row, p);
-    } else {
-      p.parentNode.insertBefore(row, p.nextSibling);
-      p.setAttribute('data-sh-skill-chip-lifted', '1');
-    }
+    p.parentNode.insertBefore(row, p.nextSibling);
+    p.setAttribute('data-sh-skill-chip-lifted', '1');
   }
 
   // ── Connections & access chip row ─────────────────────────────────
@@ -1471,6 +1526,8 @@
     var tool = toolLibrary[matchedKey] || {};
     li.setAttribute('data-sh-skill-tool', matchedKey);
     li.classList.add('seller-home__skill-tool-bullet');
+    li.setAttribute('contenteditable', 'false');
+    li.setAttribute('draggable', 'false');
     // Accept either `iconRef` (canonical JSON field name) or
     // `icon` (legacy fallback) so a future tool registry that
     // renames the field stays compatible.
@@ -2041,6 +2098,7 @@
     var crumbEl    = root.querySelector('[data-sh-skill-detail-crumb]');
     var titleEl    = root.querySelector('[data-sh-skill-detail-title]');
     var editedEl   = root.querySelector('[data-sh-skill-detail-edited]');
+    var editedWrapEl = root.querySelector('[data-sh-skill-detail-edited-wrap]');
     var canvasEl   = root.querySelector('[data-sh-skill-canvas]');
     var articleEl  = root.querySelector('[data-sh-skill-editor-doc]');
     var toolbarEl  = null;
@@ -2056,7 +2114,11 @@
     var editedTemplate = (detail.edited && detail.edited.template) || 'Edited {updatedAt}';
 
     function refreshEdited() {
-      paintEdited(editedEl, isCreateMode ? null : activeSkill, editedTemplate);
+      var sk = isCreateMode ? null : activeSkill;
+      paintEdited(editedEl, sk, editedTemplate);
+      // Show the hover wrapper only when the stamp itself has a label.
+      paintActivity(editedWrapEl, (editedEl && !editedEl.hidden) ? sk : null);
+      if (editedWrapEl) editedWrapEl.hidden = !!(editedEl && editedEl.hidden);
     }
 
     // ── Effective baseline resolution ────────────────────────────────
@@ -2790,6 +2852,8 @@
     if (titleEl) titleEl.textContent = '';
     if (crumbEl && crumbEl !== titleEl) crumbEl.textContent = '';
     paintEdited(editedEl, null, '');
+    var editedWrapEl = root.querySelector('[data-sh-skill-detail-edited-wrap]');
+    if (editedWrapEl) editedWrapEl.hidden = true;
 
     // No resolved skill means no owner to name and no publish state to
     // report — passing null takes each badge's own "no label" branch,

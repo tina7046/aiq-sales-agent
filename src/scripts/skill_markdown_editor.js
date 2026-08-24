@@ -137,6 +137,7 @@
   // Whatever is not one of the above is escaped and rendered as-is.
 
   var HEADING_RE = /^(#{1,3})\s+(.+?)\s*$/;
+  var TASK_RE    = /^\s*[-*]\s+\[([ xX])\]\s+(.+?)\s*$/;
   var UL_RE      = /^\s*[-*]\s+(.+?)\s*$/;
   var OL_RE      = /^\s*(\d+)\.\s+(.+?)\s*$/;
   var BQ_RE      = /^\s*>\s?(.*)$/;
@@ -192,9 +193,18 @@
     }
     function flushList() {
       if (!list) return;
-      out.push('<' + list + '>' + items.map(function (it) {
-        return '<li>' + renderInline(it) + '</li>';
-      }).join('') + '</' + list + '>');
+      if (list === 'checklist') {
+        out.push('<ul class="seller-home__skill-check-list" data-sh-check-list="">' + items.map(function (it) {
+          return '<li class="seller-home__skill-check-item" data-checked="' + (it.checked ? 'true' : 'false') + '">' +
+            '<span class="seller-home__skill-check-box" contenteditable="false" aria-hidden="true"></span>' +
+            '<span class="seller-home__skill-check-label">' + renderInline(it.text) + '</span>' +
+          '</li>';
+        }).join('') + '</ul>');
+      } else {
+        out.push('<' + list + '>' + items.map(function (it) {
+          return '<li>' + renderInline(it) + '</li>';
+        }).join('') + '</' + list + '>');
+      }
       list = null; items = [];
     }
     function flushQuote() {
@@ -256,6 +266,15 @@
         continue;
       } else if (quote) {
         flushQuote();
+      }
+
+      var mTask = raw.match(TASK_RE);
+      if (mTask) {
+        if (list && list !== 'checklist') flushList();
+        flushParagraph();
+        list = 'checklist';
+        items.push({ checked: /x/i.test(mTask[1]), text: mTask[2] });
+        continue;
       }
 
       var mUL = raw.match(UL_RE);
@@ -380,7 +399,17 @@
         return text;
       case 'ul': {
         var lis = toArray(node.children).filter(function (c) { return c.tagName === 'LI'; });
+        var isCheck = (node.getAttribute && node.getAttribute('data-sh-check-list') != null) ||
+          (node.className && /seller-home__skill-check-list/.test(node.className));
         return lis.map(function (li) {
+          var liIsCheck = isCheck ||
+            (li.className && /seller-home__skill-check-item/.test(li.className));
+          if (liIsCheck) {
+            var checked = li.getAttribute && li.getAttribute('data-checked') === 'true';
+            var labelEl = li.querySelector ? li.querySelector('.seller-home__skill-check-label') : null;
+            var label = labelEl ? serializeInlineChildren(labelEl) : serializeInlineChildren(li);
+            return '- [' + (checked ? 'x' : ' ') + '] ' + label;
+          }
           return '- ' + serializeInlineChildren(li);
         }).join('\n');
       }
@@ -746,8 +775,15 @@
     return null;
   }
 
-  function blockBodyEl(block) {
-    return block ? block.querySelector('[data-sh-skill-block-body]') : null;
+  function blockBodyEl(block, from) {
+    if (!block) return null;
+    var start = from;
+    if (start && start.nodeType === 3) start = start.parentNode;
+    if (start && start.closest) {
+      var inner = start.closest('[data-sh-skill-block-body]');
+      if (inner && block.contains(inner)) return inner;
+    }
+    return block.querySelector('[data-sh-skill-block-body]');
   }
 
   function placeCaretAtStart(el) {
@@ -760,6 +796,94 @@
     if (!sel) return;
     sel.removeAllRanges();
     sel.addRange(range);
+  }
+
+  function placeCaretAfter(node) {
+    if (!node || !node.parentNode) return;
+    var host = node.parentNode;
+    if (host.focus) {
+      try { host.focus(); } catch (_) { /* ignore */ }
+    }
+    var range = document.createRange();
+    range.setStartAfter(node);
+    range.collapse(true);
+    var sel = getSelection() || global.getSelection();
+    if (!sel) return;
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  function isAtomicChip(node) {
+    if (!node || node.nodeType !== 1) return false;
+    if (node.getAttribute('contenteditable') === 'false') return true;
+    return false;
+  }
+
+  function skipEmptyText(node, dir) {
+    var n = node;
+    while (n && n.nodeType === 3 && !String(n.nodeValue || '').replace(/\u00a0/g, ' ').trim()) {
+      n = dir === 'prev' ? n.previousSibling : n.nextSibling;
+    }
+    return n;
+  }
+
+  function atomicBeforeCaret() {
+    var sel = getSelection();
+    if (!sel || !sel.rangeCount || !sel.isCollapsed) return null;
+    var range = sel.getRangeAt(0);
+    var container = range.startContainer;
+    var offset = range.startOffset;
+    if (container.nodeType === 3) {
+      var before = String(container.nodeValue || '').slice(0, offset).replace(/\u00a0/g, ' ');
+      if (before.trim()) return null;
+      return isAtomicChip(skipEmptyText(container.previousSibling, 'prev'))
+        ? skipEmptyText(container.previousSibling, 'prev')
+        : (container.parentNode && isAtomicChip(container.parentNode.previousSibling)
+          ? skipEmptyText(container.parentNode.previousSibling, 'prev')
+          : null);
+    }
+    if (container.nodeType === 1) {
+      if (offset > 0) {
+        var prev = skipEmptyText(container.childNodes[offset - 1], 'prev');
+        return isAtomicChip(prev) ? prev : null;
+      }
+      var sib = skipEmptyText(container.previousSibling, 'prev');
+      return isAtomicChip(sib) ? sib : null;
+    }
+    return null;
+  }
+
+  function atomicAfterCaret() {
+    var sel = getSelection();
+    if (!sel || !sel.rangeCount || !sel.isCollapsed) return null;
+    var range = sel.getRangeAt(0);
+    var container = range.startContainer;
+    var offset = range.startOffset;
+    if (container.nodeType === 3) {
+      var after = String(container.nodeValue || '').slice(offset).replace(/\u00a0/g, ' ');
+      if (after.trim()) return null;
+      var next = skipEmptyText(container.nextSibling, 'next');
+      return isAtomicChip(next) ? next : null;
+    }
+    if (container.nodeType === 1) {
+      var child = skipEmptyText(container.childNodes[offset], 'next');
+      return isAtomicChip(child) ? child : null;
+    }
+    return null;
+  }
+
+  function deleteAtomicNode(node) {
+    if (!node || !node.parentNode) return false;
+    var sel = getSelection() || global.getSelection();
+    if (!sel) return false;
+    var range = document.createRange();
+    range.selectNode(node);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    var ok = false;
+    try { ok = document.execCommand('delete', false, null); } catch (_) { ok = false; }
+    if (!ok && node.parentNode) node.parentNode.removeChild(node);
+    return true;
   }
 
   function isCaretAtStart(el) {
@@ -887,7 +1011,7 @@
           '<div class="seller-home__skill-block-menu-sep"><div class="seller-home__skill-block-menu-sep-line"></div></div>' +
           '<button type="button" class="seller-home__skill-block-menu-item" role="menuitem" data-block-action="refine">' +
             menuGlyph(TUNE_SVG.sparkle) +
-            '<span class="seller-home__skill-block-menu-title">' + escapeHtml(t('refine', 'Refine with AI')) + '</span>' +
+            '<span class="seller-home__skill-block-menu-title">' + escapeHtml(t('draftWithAi', 'Draft with AI')) + '</span>' +
           '</button>' +
           '<button type="button" class="seller-home__skill-block-menu-item" role="menuitem" data-block-action="up">' +
             menuGlyph(TUNE_SVG.up) +
@@ -924,6 +1048,7 @@
           '<button type="button" class="seller-home__skill-block-menu-item" role="menuitem" data-convert="if" hidden>' + menuGlyph(stdIcon('decision')) + '<span class="seller-home__skill-block-menu-title">' + escapeHtml(t('if', 'If')) + '</span></button>' +
           '<button type="button" class="seller-home__skill-block-menu-item" role="menuitem" data-convert="elseif" hidden>' + menuGlyph(stdIcon('maintenance_work_rule')) + '<span class="seller-home__skill-block-menu-title">' + escapeHtml(t('elseIf', 'Else If')) + '</span></button>' +
           '<button type="button" class="seller-home__skill-block-menu-item" role="menuitem" data-convert="else" hidden>' + menuGlyph(stdIcon('decision')) + '<span class="seller-home__skill-block-menu-title">' + escapeHtml(t('else', 'Else')) + '</span></button>' +
+          '<button type="button" class="seller-home__skill-block-menu-item" role="menuitem" data-convert="draft-ai" hidden>' + menuGlyph(TUNE_SVG.sparkle) + '<span class="seller-home__skill-block-menu-title">' + escapeHtml(t('draftWithAi', 'Draft with AI')) + '</span></button>' +
         '</div>';
 
       document.body.appendChild(menuHost);
@@ -1331,7 +1456,7 @@
       var visible = 0;
       toArray(host.querySelectorAll('[data-block-action], [data-convert]')).forEach(function (btn) {
         var convert = btn.getAttribute('data-convert');
-        var extra = convert === 'if' || convert === 'elseif' || convert === 'else';
+        var extra = convert === 'if' || convert === 'elseif' || convert === 'else' || convert === 'draft-ai';
         if (extra && !showExtras) {
           btn.hidden = true;
           return;
@@ -1462,6 +1587,10 @@
           }
         }
         firePlaceholder('conditional', btn);
+        return;
+      }
+      if (kind === 'draft-ai') {
+        firePlaceholder('draft', btn);
         return;
       }
       if (block) convertBlock(block, kind, fromSlash);
@@ -1918,6 +2047,30 @@
     // ── Block interaction ──────────────────────────────────────────
     articleEl.addEventListener('click', function (e) {
       if (!canEdit) return;
+      var checkBox = e.target && e.target.closest ? e.target.closest('.seller-home__skill-check-box') : null;
+      if (checkBox && articleEl.contains(checkBox)) {
+        var checkItem = checkBox.closest('.seller-home__skill-check-item');
+        if (checkItem) {
+          e.preventDefault();
+          var on = checkItem.getAttribute('data-checked') === 'true';
+          checkItem.setAttribute('data-checked', on ? 'false' : 'true');
+          refreshDraft();
+        }
+        return;
+      }
+      var chip = e.target && e.target.closest ? e.target.closest('a.seller-home__skill-chip, li.seller-home__skill-tool-bullet') : null;
+      if (chip && articleEl.contains(chip) && chip.getAttribute('contenteditable') === 'false') {
+        if (e.metaKey || e.ctrlKey) return;
+        e.preventDefault();
+        placeCaretAfter(chip);
+        return;
+      }
+      var chipRow = e.target && e.target.closest ? e.target.closest('.seller-home__skill-chip-row, ul.seller-home__skill-tool-row') : null;
+      if (chipRow && articleEl.contains(chipRow) && e.target === chipRow) {
+        e.preventDefault();
+        placeCaretAtEnd(chipRow);
+        return;
+      }
       var plusBtn = e.target && e.target.closest ? e.target.closest('[data-sh-skill-block-plus]') : null;
       if (plusBtn && articleEl.contains(plusBtn)) {
         e.preventDefault();
@@ -1948,6 +2101,14 @@
       }
     });
 
+    // In-copy fragment links (e.g. "GTM Profile -> …") are display-only: they
+    // carry the text-link styling but must never route or change the URL hash.
+    // Capture-phase + always-on so it holds in read-only render too.
+    articleEl.addEventListener('click', function (e) {
+      var link = e.target && e.target.closest ? e.target.closest('a[href^="#"]') : null;
+      if (link && articleEl.contains(link)) e.preventDefault();
+    }, true);
+
     articleEl.addEventListener('focusin', function (e) {
       if (!canEdit) return;
       var block = closestSkillBlock(e.target, articleEl);
@@ -1965,7 +2126,27 @@
       if (!canEdit) return;
       var block = closestSkillBlock(e.target, articleEl);
       if (!block) return;
-      var body = blockBodyEl(block);
+      var body = blockBodyEl(block, e.target);
+
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && (e.key === 'z' || e.key === 'Z' || e.key === 'y' || e.key === 'Y')) {
+        setTimeout(function () {
+          refreshDraft();
+          updateToolbar();
+          syncAllEmpty();
+        }, 0);
+      }
+
+      if ((e.key === 'Backspace' || e.key === 'Delete') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        var atomic = e.key === 'Backspace' ? atomicBeforeCaret() : atomicAfterCaret();
+        if (atomic && articleEl.contains(atomic)) {
+          e.preventDefault();
+          deleteAtomicNode(atomic);
+          refreshDraft();
+          updateToolbar();
+          if (block) syncBlockEmpty(block);
+          return;
+        }
+      }
 
       if (e.key === 'Escape' || e.key === 'Esc') {
         if (mentionOpen()) { closeMentionMenu(); return; }

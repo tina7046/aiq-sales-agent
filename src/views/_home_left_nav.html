@@ -5,11 +5,10 @@
 
     ┌───────────────────────────────┐  ◂  Sticky top region:
     │                        ◂ (…)  │      • Row 0: collapse button
-    │  + New chat                   │      • Rows 1-5: primary items
-    │  🗓 Schedules                 │        (New chat, Schedules,
-    │  ▦ Skills                     │        Skills, Knowledge, Tools)
+    │  + New chat                   │      • Rows 1-4: primary items
+    │  🗓 Scheduled                 │        (New chat, Scheduled,
+    │  ▦ Skills                     │        Skills, Knowledge)
     │  📚 Knowledge                 │
-    │  🔧 Tools                     │
     │                               │  ◂  Scrollable middle region:
     │  🕒 Recents  (semibold hdr)   │      • Padded top → visible
     │    Acme Inc Prospecting       │        separation between the
@@ -17,15 +16,17 @@
     │    Q3 Pipeline Health Report  │        Recents header per the
     │    …                          │        current design.
     ├───────────────────────────────┤  ◂  Sticky footer region:
-    │  💬 Feedback                  │      • Feedback, Settings
+    │  💬 Feedback                  │      • Feedback, Connections,
+    │  🔧 Connections               │        Settings
     │  ⚙ Settings                   │
     └───────────────────────────────┘
 
   Consumes context vars provided by src/views/data/home.json:
     • navPrimary — Array<{ id, label, icon | iconImage, href? }>.
-                   Top primary items (currently New chat, Schedules,
-                   Skills, Knowledge, Tools).
-    • navFooter  — Array<{ id, label, icon }>. Bottom pinned items.
+                   Top primary items (currently New chat, Scheduled,
+                   Skills, Knowledge).
+    • navFooter  — Array<{ id, label, icon }>. Bottom pinned items
+                   (Feedback, Connections, Settings).
     • navActive  — String. `id` of the current active item. Defaults to
                    "new_chat". Ignored when unmatched (renders no active
                    state — intended for L1/orphaned surfaces).
@@ -109,11 +110,9 @@
     {% endif %}
   </span>
   <span class="seller-home__nav-label">{{ item.label }}</span>
-  {# Count badge — passed only for the item that wants one (Tools). The
-     element is always emitted when a count is passed, and hidden at
-     zero, so tools_modal.js can update the number and toggle it live as
-     tiles connect/disconnect. `slds-col_bump-left` pushes it to the
-     row's trailing edge. #}
+  {# Count badge — passed only for the item that wants one (Connections).
+     A fixed total of available connections; not updated at runtime.
+     `slds-col_bump-left` pushes it to the row's trailing edge. #}
   {% if badgeCount is defined %}
   <span
     class="slds-badge slds-theme_info slds-col_bump-left seller-home__nav-badge"
@@ -121,7 +120,7 @@
     {% if not badgeCount %}hidden{% endif %}
   >
     <span class="slds-assistive-text">: </span><span data-sh-tools-nav-badge-count>{{ badgeCount }}</span>
-    <span class="slds-assistive-text"> not connected</span>
+    <span class="slds-assistive-text"> connections available</span>
   </span>
   {% endif %}
 </a>
@@ -270,15 +269,12 @@
    different active state (e.g. a future Workflows sub-page). #}
 {% set _shNavActive = navActive or "new_chat" %}
 
-{# Seed count for the Tools nav badge: how many tools ship not-added.
-   Loop-set accumulation is supported in this Nunjucks build. This is the
-   authored default; on pages that load the Tools modal, tools_modal.js
-   recomputes it from the persisted connected set and keeps it live as
-   tiles connect and disconnect. #}
-{% set _toolsNotAdded = 0 %}
-{% for _t in (shared.toolsModal.tools or []) %}
-  {% if _t.state != "added" %}{% set _toolsNotAdded = _toolsNotAdded + 1 %}{% endif %}
-{% endfor %}
+{# Count for the Connections nav badge: the total number of connections
+   available in the catalog. Deliberately a fixed total, not a live
+   "not-connected" count — the badge should always show how many
+   connections exist, and never shift as the seller connects or
+   disconnects them or moves between pages. #}
+{% set _connectionsCount = (shared.toolsModal.tools or []) | length %}
 
 {# ── Pre-paint nav state ──────────────────────────────────────────────
    The collapsed preference is client state, so the static markup always
@@ -348,7 +344,7 @@
     <div class="seller-home__nav-list seller-home__nav-list--primary" role="list">
       {% for item in navPrimary %}
         {% if item.id == "tools" %}
-          {{ renderNavItem(item, _shNavActive, _toolsNotAdded) }}
+          {{ renderNavItem(item, _shNavActive, _connectionsCount) }}
         {% else %}
           {{ renderNavItem(item, _shNavActive) }}
         {% endif %}
@@ -454,7 +450,14 @@
   <div class="seller-home__nav-footer">
     <div class="seller-home__nav-list seller-home__nav-list--footer" role="list">
       {% for item in navFooter %}
-        {{ renderNavItem(item, _shNavActive) }}
+        {# Connections lives in the footer (above Settings) and keeps its
+           count badge — same convention as the primary loop, so the badge
+           follows the item wherever it's placed. #}
+        {% if item.id == "tools" %}
+          {{ renderNavItem(item, _shNavActive, _connectionsCount) }}
+        {% else %}
+          {{ renderNavItem(item, _shNavActive) }}
+        {% endif %}
       {% endfor %}
     </div>
   </div>

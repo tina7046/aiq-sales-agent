@@ -315,6 +315,19 @@
     "title": "No knowledge found",
     "description": "Try a different search term."
   },
+
+  // Tabs that filter the document list (see knowledge.html + home.js →
+  // bindKnowledgeTabs). Each document's `tab` field decides which tab it
+  // appears under; a document with no `tab` falls under "learnings".
+  // `defaultTabId` is the tab shown on first paint.
+  "tabs": {
+    "defaultTabId": "learnings",
+    "items": [
+      { "id": "learnings", "label": "Learnings" },
+      { "id": "sources",   "label": "Sources" }
+    ]
+  },
+
   "documentActions": [
     { "id": "download", "label": "Download", "icon": "download" },
     { "id": "delete",   "label": "Delete",   "icon": "delete"   }
@@ -467,10 +480,7 @@
     // ─────────────────────────────────────────────────────────────
     {
       "id": "auto-learning-icp",
-      "name": "Ideal Customer Profile",
-      // Short label for the tabbed Learnings prototype (learnings.html).
-      // Optional; the Knowledge list page ignores it.
-      "tabLabel": "ICP",
+      "name": "Your ICP: Who Buys From You",
       // Badged rows are down to one ("New Learnings" on Customer
       // Business Problem). Kept commented rather than deleted — see the
       // `badge` field notes at the top of this file.
@@ -493,16 +503,15 @@
     },
     {
       "id": "auto-learning-business-problem",
-      "name": "Customer Business Problem",
-      "tabLabel": "Customer Business Problem",
-      // The one badged row: newest `updatedAt` in the set, so the pill
-      // and the date tell the same story.
-      "badge": "New Learnings",
+      "name": "Your Customer's Business Problem",
+      // The one badged row: freshest in the set, so the pill and the
+      // "updated" timestamp tell the same story.
+      "badge": "Updated",
       "type": "Document",
       "size": "6.1 KB",
       "fileType": "txt",
       "iconSrc": "/assets/images/doctype-icons/ai.png",
-      "updatedAt": "July 28",
+      "updatedAt": "24 mins ago",
       "sources": [
         { "name": "Gong", "icon": "/assets/images/source_icons/source_gong.svg" },
         { "name": "Gmail", "icon": "/assets/images/source_icons/source_gmail.png" },
@@ -516,8 +525,7 @@
     },
     {
       "id": "auto-learning-why-now",
-      "name": "Why Now: Communication Strategies for Winning Deals",
-      "tabLabel": "Why Now",
+      "name": "Why Now: What's Driving Your Deals",
       // "badge": "Auto-learned",
       "type": "Document",
       "size": "3.8 KB",
@@ -537,8 +545,7 @@
     },
     {
       "id": "auto-learning-use-cases",
-      "name": "Top Use Cases",
-      "tabLabel": "Top Use Cases",
+      "name": "Your Top Use-Cases",
       // "badge": "Auto-learned",
       "type": "Document",
       "size": "5.4 KB",
@@ -557,8 +564,7 @@
     },
     {
       "id": "auto-learning-value-props",
-      "name": "Most Successful Value Propositions",
-      "tabLabel": "Value Props",
+      "name": "Your Most Successful Value Props",
       // "badge": "Auto-learned",
       "type": "Document",
       "size": "3.1 KB",
@@ -584,7 +590,6 @@
     {
       "id": "auto-learning-voice",
       "name": "Your Voice: How You Communicate with Customers",
-      "tabLabel": "Your Voice",
       // "badge": "Auto-learned",
       "type": "Document",
       "size": "2.7 KB",
@@ -603,6 +608,9 @@
     {
       "id": "q2-field-marketing",
       "name": "Top Case Studies",
+      // Filed under the "Sources" tab; every other document defaults to
+      // "Learnings" (see the `tabs` config above).
+      "tab": "sources",
       // `linked: false` marks the row as non-navigating — the template
       // renders it as an inert `<div>` (no href, no
       // `data-sh-knowledge-doc` hook, no chevron affordance) so click /
@@ -619,6 +627,135 @@
       "updatedAt": "July 21",
       "updatedBy": "Priya Ramaswamy",
       "markdown": "# Q2 Field Marketing\n\nOur Q2 field-marketing plan focuses on the accounts that are most likely to move from consideration to evaluation this quarter. Every event, dinner, and executive briefing on this page is aimed at a specific set of accounts and a specific buying moment.\n\n## Priority Segments\n\nQ2 concentrates spend on three segments where the pipeline is strongest and the buying committee is most active:\n\n- **Financial Services** — 40% of budget. Focus on the top 25 named accounts.\n- **Manufacturing** — 35% of budget. Focus on plant-modernization deals.\n- **Healthcare and Life Sciences** — 25% of budget. Focus on the mid-market segment.\n\nAccounts outside these three segments still receive nurture and digital touches, but no field-marketing spend.\n\n## Signature Events\n\n### Executive Roundtable Series\n\nThree cities in Q2 — New York, Chicago, and San Francisco. Each roundtable seats 12 executives, hosted by a customer speaker plus a Salesforce leader. Invitations are curated jointly by the AE and the field-marketing partner.\n\n### Industry Summits\n\nWe are exhibiting at four industry events this quarter. Field-marketing owns booth logistics; AEs own the account list. Every booth staffer runs the shared *Discovery Conversation Guide* to keep messaging consistent.\n\n### Custom Dinners\n\nUp to 15 custom dinners are available for AE-nominated accounts. Each dinner requires an account plan showing at least one active opportunity or a documented executive sponsor.\n\n## Nomination Process\n\nAEs nominate accounts through the shared field-marketing portal. Every nomination captures:\n\n1. Account name and industry\n2. Opportunity stage and expected close date\n3. Named champion and economic buyer\n4. The specific event or asset requested\n5. The business outcome the seller expects from the touch\n\nNominations are reviewed weekly. Approvals are prioritized by pipeline stage, buying-committee depth, and how recently the account was last touched by field.\n\n## Measuring Success\n\nWe measure Q2 field motion on three signals: sourced pipeline, influenced pipeline, and net-new executive contacts added to targeted accounts. Weekly readouts are posted to the *field-marketing-q2* channel every Friday.\n"
+    },
+    // ─────────────────────────────────────────────────────────────
+    // Additional "Sources" tab sample files. Each is `linked: false`
+    // (renders as an inert row — no href, no chevron, no detail page)
+    // and carries a distinct `fileType` doctype-sprite glyph to show
+    // the spread of formats the agent ingests: PPT, PDF, Excel, Word,
+    // Keynote, Google Sheet/Doc, video, CSV, Pages, etc. No `markdown`
+    // since they don't drill in.
+    // ─────────────────────────────────────────────────────────────
+    {
+      "id": "src-sales-pitch-deck",
+      "name": "Sales Pitch Deck — FY26",
+      "tab": "sources",
+      "linked": false,
+      "type": "Presentation",
+      "size": "9.2 MB",
+      "fileType": "ppt",
+      "updatedAt": "Aug 6",
+      "updatedBy": "Issa Mao"
+    },
+    {
+      "id": "src-competitive-battlecards",
+      "name": "Competitive Battlecards",
+      "tab": "sources",
+      "linked": false,
+      "type": "PDF",
+      "size": "1.4 MB",
+      "fileType": "pdf",
+      "updatedAt": "Aug 3",
+      "updatedBy": "Marcus Feld"
+    },
+    {
+      "id": "src-enterprise-pricing",
+      "name": "Enterprise Pricing & Packaging",
+      "tab": "sources",
+      "linked": false,
+      "type": "Spreadsheet",
+      "size": "512 KB",
+      "fileType": "excel",
+      "updatedAt": "Aug 1",
+      "updatedBy": "Priya Ramaswamy"
+    },
+    {
+      "id": "src-discovery-call-guide",
+      "name": "Discovery Call Guide",
+      "tab": "sources",
+      "linked": false,
+      "type": "Document",
+      "size": "288 KB",
+      "fileType": "word",
+      "updatedAt": "July 29",
+      "updatedBy": "Jordan Chen"
+    },
+    {
+      "id": "src-customer-reference-stories",
+      "name": "Customer Reference Stories",
+      "tab": "sources",
+      "linked": false,
+      "type": "Keynote",
+      "size": "24.1 MB",
+      "fileType": "keynote",
+      "updatedAt": "July 27",
+      "updatedBy": "Issa Mao"
+    },
+    {
+      "id": "src-roi-calculator",
+      "name": "ROI & Business Case Calculator",
+      "tab": "sources",
+      "linked": false,
+      "type": "Google Sheet",
+      "size": "196 KB",
+      "fileType": "gsheet",
+      "updatedAt": "July 25",
+      "updatedBy": "Dana Kim"
+    },
+    {
+      "id": "src-product-demo-recording",
+      "name": "Product Demo Recording",
+      "tab": "sources",
+      "linked": false,
+      "type": "Video",
+      "size": "168 MB",
+      "fileType": "mp4",
+      "updatedAt": "July 23",
+      "updatedBy": "Marcus Feld"
+    },
+    {
+      "id": "src-target-account-list",
+      "name": "Target Account List — FY26",
+      "tab": "sources",
+      "linked": false,
+      "type": "CSV",
+      "size": "84 KB",
+      "fileType": "csv",
+      "updatedAt": "July 21",
+      "updatedBy": "Priya Ramaswamy"
+    },
+    {
+      "id": "src-solution-overview",
+      "name": "Solution Overview One-Pager",
+      "tab": "sources",
+      "linked": false,
+      "type": "PDF",
+      "size": "620 KB",
+      "fileType": "pdf",
+      "updatedAt": "July 19",
+      "updatedBy": "Jordan Chen"
+    },
+    {
+      "id": "src-objection-handling",
+      "name": "Objection Handling Playbook",
+      "tab": "sources",
+      "linked": false,
+      "type": "Google Doc",
+      "size": "264 KB",
+      "fileType": "gdoc",
+      "updatedAt": "July 16",
+      "updatedBy": "Dana Kim"
+    },
+    {
+      "id": "src-brand-guidelines",
+      "name": "Messaging & Brand Guidelines",
+      "tab": "sources",
+      "linked": false,
+      "type": "Pages",
+      "size": "4.6 MB",
+      "fileType": "pages",
+      "updatedAt": "July 13",
+      "updatedBy": "Issa Mao"
     },
     {
       "id": "high-intent-accounts",

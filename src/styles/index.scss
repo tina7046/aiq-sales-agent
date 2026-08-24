@@ -14,6 +14,120 @@ $static-font-path: '/assets/fonts/webfonts';
 //
 @import 'footer';
 
+// ══════════════════════════════════════════════════════════════════════
+// transitions.dev — motion tokens + shared transitions
+// ----------------------------------------------------------------------
+// Installed here, in the stylesheet every page loads via _template.html,
+// so any surface can reference the scale rather than inventing its own
+// durations. See .agents/skills/transitions-dev/ for the full catalogue
+// and the reference file behind each snippet.
+//
+// The block below is `_root.css` from that skill, pasted once as
+// documented. Two layers:
+//
+//   1. the shared motion scale — `--duration-*`, `--ease-*`,
+//      `--distance-*`, `--scale-*`, `--blur-*`. Reference these
+//      directly anywhere: `transition: opacity var(--duration-fast)
+//      var(--ease-in-out)`.
+//   2. per-transition tunables (`--icon-swap-*`, `--modal-*`, …) that
+//      each snippet reads. Only the ones whose snippet is installed do
+//      anything; the rest are inert until one is.
+//
+// Match on USAGE, not on the raw number, when reaching for a token —
+// the usage each one is tuned for is in the comment beside it.
+// ══════════════════════════════════════════════════════════════════════
+:root {
+  /* ── Motion tokens — shared scale ────────────────────────────── */
+  /* Durations */
+  --duration-stagger: 40ms;  /* per-item stagger offset */
+  --duration-micro: 80ms;  /* tooltip/path delay, shake segment, large stagger */
+  --duration-quick: 150ms;  /* modal/dropdown close, text swap, tooltip appear */
+  --duration-fast: 250ms;  /* icon swap, dropdown/modal open, tabs sliding, page slide */
+  --duration-medium: 350ms;  /* panel close, toast close */
+  --duration-slow: 400ms;  /* panel open, skeleton content reveal, input clear */
+  --duration-very-slow: 500ms;  /* emphasis moments, badge appear, text reveal, success check */
+  /* Easings */
+  --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);  /* modal/dropdown/panel open + close, page slide, resize, position change */
+  --ease-in-out: ease-in-out;  /* icon swap, text swap, text reveal, skeleton reveal */
+  --ease-out: ease-out;  /* tooltip open / close */
+  --ease-linear: linear;  /* shimmer, skeleton pulse, spinner */
+  --ease-bounce: cubic-bezier(0.34, 1.36, 0.64, 1);  /* badge pop open */
+  --ease-bounce-strong: cubic-bezier(0.34, 3.85, 0.64, 1);  /* bouncy hover-out (avatar return) */
+  /* Distances */
+  --distance-micro: 4px;  /* text swap */
+  --distance-small: 6px;  /* error shake (small segment) */
+  --distance-base: 8px;  /* badge diagonal reveal, page slide, error shake (large segment) */
+  --distance-medium: 12px;  /* text reveal */
+  --distance-large: 30px;  /* check badge appear */
+  /* Scales */
+  --scale-large: 0.96;  /* modal open / close */
+  --scale-medium: 0.97;  /* dropdown open */
+  --scale-small: 0.98;  /* tooltip open */
+  --scale-tiny: 0.99;  /* dropdown close */
+  /* Blur */
+  --blur-small: 2px;  /* panel reveal, icon swap, text swap, skeleton reveal, number pop-in */
+  --blur-medium: 3px;  /* page slide, text reveal */
+  --blur-large: 8px;  /* success check open */
+
+  /* ── Per-transition tunables ─────────────────────────────────── */
+  /* Icon swap */
+  --icon-swap-dur: 250ms;
+  --icon-swap-blur: 2px;
+  --icon-swap-start-scale: 0.25;
+  --icon-swap-ease: ease-in-out;
+  /* Modal open / close — already in use on the conversation page */
+  --modal-open-dur: 250ms;
+  --modal-close-dur: 150ms;
+  --modal-scale: 0.96;
+  --modal-scale-close: 0.96;
+  --modal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+// ── Icon swap ─────────────────────────────────────────────────────────
+// Cross-fades two icons sharing one slot: hamburger ↔ close, play ↔
+// pause, expand ↔ collapse. Both stay in the DOM, stacked in the same
+// grid cell, and `data-state` picks which is up.
+//
+//   <div class="t-icon-swap" data-state="a">
+//     <span class="t-icon" data-icon="a">…</span>
+//     <span class="t-icon" data-icon="b">…</span>
+//   </div>
+//
+// Pure CSS — flip `data-state` from whatever already drives the state.
+//
+// Verbatim from 09-icon-swap.md, `will-change` and reduced-motion guard
+// included. Note this is the two-icon component; a slot that picks from
+// more than two glyphs (the feed's status button) references the
+// `--icon-swap-*` tokens directly instead of using these classes.
+.t-icon-swap {
+  position: relative;
+  display: inline-grid;
+}
+.t-icon-swap .t-icon {
+  grid-area: 1 / 1;
+  transition:
+    opacity   var(--icon-swap-dur) var(--icon-swap-ease),
+    filter    var(--icon-swap-dur) var(--icon-swap-ease),
+    transform var(--icon-swap-dur) var(--icon-swap-ease);
+  will-change: opacity, filter, transform;
+}
+.t-icon-swap[data-state="a"] .t-icon[data-icon="a"],
+.t-icon-swap[data-state="b"] .t-icon[data-icon="b"] {
+  opacity: 1;
+  filter: blur(0);
+  transform: scale(1);
+}
+.t-icon-swap[data-state="a"] .t-icon[data-icon="b"],
+.t-icon-swap[data-state="b"] .t-icon[data-icon="a"] {
+  opacity: 0;
+  filter: blur(var(--icon-swap-blur));
+  transform: scale(var(--icon-swap-start-scale));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-icon-swap .t-icon { transition: none !important; }
+}
+
 //
 // We can also add styles directly in this file, like so:
 //
@@ -146,5 +260,134 @@ $static-font-path: '/assets/fonts/webfonts';
   bottom: 0;
   right: 0;
   left: 0;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Sparkle / typing indicator (reusable, global)
+// ──────────────────────────────────────────────────────────────────────
+// The canonical "Agentforce" typing/thinking animation: an optional
+// shimmer-sweep label plus a cluster of sparkles that pulse in size and
+// color, staggered a quarter-cycle apart so the twinkle reads as one wave
+// travelling across them. Recreated from the platform's `typing-animation`
+// component (live demo on /feed_components.html).
+//
+// Defined here in index.css — loaded on every page via _template.html — so
+// the conversation feed, demos, and any future surface share ONE
+// definition. Markup ships as macros in views/_sparkle.html:
+//   {% import "_sparkle.html" as sparkle %}
+//   {{ sparkle.sparkles() }}                       → just the stars
+//   <span class="sh-typing">
+//     <span class="sh-typing__label">Thinking…</span>{{ sparkle.sparkles() }}
+//   </span>
+//
+// Timing matches the source: a 1s loop, cubic-bezier(0.61, 0.32, 0.41, 0.69)
+// easing, and 0 / -0.25s / -0.5s per-star delays applied BY POSITION, so any
+// three sparkles auto-wave without per-star modifier classes.
+.sh-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem); // 4px — matches slds-p-left_xx-small
+}
+
+// Shimmer-sweep label. A 200%-wide blue→violet→blue band is clipped to the
+// glyphs with a transparent fill, so the color sweeps THROUGH the text.
+// Consumers own the font (size/weight); only the paint is set here.
+.sh-typing__label {
+  background: linear-gradient(
+    90deg,
+    var(--slds-g-color-brand-base-40, #0250d9) 0%,
+    var(--slds-g-color-palette-violet-40, #9602c7) 50%,
+    var(--slds-g-color-brand-base-40, #0250d9) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: sh-typing-sweep 1s cubic-bezier(0.61, 0.32, 0.41, 0.69) infinite;
+}
+
+// Star cluster — sparkles sit adjacent; their own transparent bounding
+// boxes supply the spacing.
+.sh-sparkles {
+  display: inline-flex;
+  align-items: center;
+}
+
+// One sparkle. Fixed 12px box (only `transform` animates, so the row never
+// reflows), painted via `currentColor` so the color keyframe can drive the
+// fill of a `<path fill="currentColor">`.
+.sh-sparkle {
+  flex: 0 0 auto;
+  width: 0.75rem;  // 12px
+  height: 0.75rem;
+  color: var(--slds-g-color-brand-base-40, #0250d9);
+  transform-origin: center;
+  animation:
+    sh-sparkle-size  1s cubic-bezier(0.61, 0.32, 0.41, 0.69) infinite,
+    sh-sparkle-color 1s cubic-bezier(0.61, 0.32, 0.41, 0.69) infinite;
+}
+
+// Stagger by position — a quarter-cycle each — so three sparkles read as one
+// travelling shimmer. :nth-child keeps it modifier-class-free.
+.sh-sparkles .sh-sparkle:nth-child(1) { animation-delay: 0s,     0s;     }
+.sh-sparkles .sh-sparkle:nth-child(2) { animation-delay: -0.25s, -0.25s; }
+.sh-sparkles .sh-sparkle:nth-child(3) { animation-delay: -0.5s,  -0.5s;  }
+
+@keyframes sh-typing-sweep {
+  0%   { background-position: 0% 50%; }
+  25%  { background-position: 50% 50%; }
+  50%  { background-position: 100% 50%; }
+  75%  { background-position: 50% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes sh-sparkle-size {
+  0%, 100% { transform: scale(0.9167); }
+  25%, 75% { transform: scale(0.75);   }
+  50%      { transform: scale(0.5833); }
+}
+@keyframes sh-sparkle-color {
+  0%, 100% { color: var(--slds-g-color-brand-base-40, #0250d9); }
+  50%      { color: var(--slds-g-color-palette-violet-40, #9602c7); }
+}
+
+// Motion is the affordance, not the message — freeze at rest and keep the
+// label legible (solid brand color) when reduced motion is requested.
+@media (prefers-reduced-motion: reduce) {
+  .sh-typing__label,
+  .sh-sparkle { animation: none; }
+  .sh-typing__label { -webkit-text-fill-color: var(--slds-g-color-brand-base-40, #0250d9); }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Spinner (reusable, global)
+// ──────────────────────────────────────────────────────────────────────
+// Plain CSS border-spinner ported from BB – AOP's account-research preview
+// (aop-editor `createSpinner()` → <div class="spinner">): a light-gray ring
+// with one accent segment, rotating once every .85s. Global so any surface
+// can drop in `<span class="sh-spinner">`. Resize by overriding
+// width/height/border-width (e.g. the feed's in-progress output pills shrink
+// it to the 14px doctype-glyph slot — see home.scss).
+.sh-spinner {
+  display: inline-block;
+  width: 1.25rem;  // 20px
+  height: 1.25rem;
+  border: 3px solid var(--slds-g-color-neutral-base-90, #e5e5e5);
+  border-bottom-color: var(--slds-g-color-accent-1, #066afe);
+  border-radius: 50%;
+  animation: sh-spin 0.85s linear infinite;
+}
+// `from` is stated rather than left implicit. Without it the start of the
+// animation is whatever `transform` the element already carries, and if
+// that isn't a rotation the browser can't interpolate the two function
+// lists — it falls back to matrices instead. The feed's status glyphs sit
+// at `scale(1)` for the icon-swap transition, and `scale(1)` and
+// `rotate(360deg)` are both the identity matrix, so the spinner
+// interpolated identity to identity and sat perfectly still.
+@keyframes sh-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sh-spinner { animation: none; }
 }
 

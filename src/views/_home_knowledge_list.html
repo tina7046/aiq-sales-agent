@@ -116,6 +116,7 @@
     data-sh-knowledge-doc-item
     data-sh-knowledge-doc-name="{{ doc.name }}"
     data-sh-knowledge-doc-type="{{ doc.type }}"
+    data-sh-knowledge-doc-tab="{{ doc.tab or 'learnings' }}"
   >
     {% if isLinked %}
     <a
@@ -156,6 +157,20 @@
          the SLDS doctype sprite. `fileType` is deliberately left in
          the data on rows that set `iconSrc`, so deleting the override
          restores the sprite glyph without having to reconstruct it. #}
+      {# Primary column — the icon + name/metadata top line stacked over
+         the optional source-icon second line. The right cluster (badge,
+         overflow ⋮, chevron) is a SIBLING of this column, so it centers
+         vertically against the whole tile instead of just the top line. #}
+      <span class="seller-home__knowledge-doc-primary">
+
+      {# Top line — icon + name/metadata, vertically centered as one
+         cluster so the icon centers against the name/meta pair, not the
+         taller two-line tile. #}
+      <span class="seller-home__knowledge-doc-main">
+      {# Doc-type icon. Rendered only for non-Learnings tiles — the
+         Sources files keep their file-type glyph (PDF / PPT / etc.),
+         while the Learnings tiles omit the icon entirely. #}
+      {% if (doc.tab or 'learnings') != 'learnings' %}
       <span class="seller-home__knowledge-doc-icon" aria-hidden="true">
         {% if doc.iconSrc %}
         <img class="seller-home__knowledge-doc-icon-img" src="{{ doc.iconSrc }}" alt="" />
@@ -165,57 +180,69 @@
         </svg>
         {% endif %}
       </span>
+      {% endif %}
 
-      {# Center cluster — the name / metadata stack, plus an optional
-         right-aligned badge. The stack is its own element so the badge
-         can be a horizontal sibling of it rather than a third line.
-         `min-width: 0` on BOTH (via CSS) is what lets the name's
-         `text-overflow: ellipsis` bite; without it the flex child's
-         intrinsic content width would push the row wider than its
-         parent. Metadata is nowrap so a very narrow column breaks the
-         name first, per the spec ("At narrow widths, let the document
-         name truncate before hiding its metadata"). #}
-      <span class="seller-home__knowledge-doc-body">
-        <span class="seller-home__knowledge-doc-text">
+      {# Name / metadata stack. `min-width: 0` (via CSS) is what lets the
+         name's `text-overflow: ellipsis` bite; without it the flex
+         child's intrinsic width would push the row wider than its parent.
+         Metadata is nowrap so a narrow column breaks the name first. #}
+      <span class="seller-home__knowledge-doc-text">
+        {# Title line — the name plus the optional badge, on one row so the
+           badge sits inline with the title. The name ellipsizes; the badge
+           holds its size. #}
+        <span class="seller-home__knowledge-doc-name-row">
           <span class="seller-home__knowledge-doc-name">{{ doc.name }}</span>
-          {# "Document · Updated July 28". The "Updated" label lives here
-             rather than in the data so `updatedAt` stays a pure date —
-             the detail page reuses that same field inside its own
-             "Last edited by …" caption, which supplies its own label. #}
-          <span class="seller-home__knowledge-doc-meta">
-            {{ doc.type }}
-            {% if doc.size %}
-            <span class="seller-home__knowledge-doc-meta-sep" aria-hidden="true">·</span>
-            {{ doc.size }}
-            {% endif %}
-            <span class="seller-home__knowledge-doc-meta-sep" aria-hidden="true">·</span>
-            Updated {{ doc.updatedAt }}
-          </span>
+          {% if doc.badge %}
+          <span class="seller-home__knowledge-doc-badge">{{ doc.badge }}</span>
+          {% endif %}
         </span>
-
-        {% if doc.sources and doc.sources | length %}
-        <span class="seller-home__knowledge-doc-sources">
-          <span class="seller-home__knowledge-doc-sources-icons">
-            {% for src in doc.sources %}
-            <span class="seller-home__knowledge-doc-sources-icon">
-              <img src="{{ src.icon }}" alt="{{ src.name }}" />
-            </span>
-            {% endfor %}
-          </span>
+        {# Meta line — "<type> · <size> · Updated <date>". The doc-type
+           label ("Document") is dropped on Learnings tiles (redundant
+           there) but kept on Sources tiles, where it names the file
+           format (PDF, Presentation, …). The "Updated" label lives here
+           rather than in the data so `updatedAt` stays a pure date — the
+           detail page reuses that field in its own "Last edited by …"
+           caption. Separators render only between parts that are present. #}
+        {% set showType = (doc.tab or 'learnings') != 'learnings' %}
+        <span class="seller-home__knowledge-doc-meta">
+          {% if showType %}{{ doc.type }}{% endif %}
+          {% if showType and doc.size %}
+          <span class="seller-home__knowledge-doc-meta-sep" aria-hidden="true">·</span>
+          {% endif %}
+          {% if doc.size %}{{ doc.size }}{% endif %}
+          {% if showType or doc.size %}
+          <span class="seller-home__knowledge-doc-meta-sep" aria-hidden="true">·</span>
+          {% endif %}
+          Updated {{ doc.updatedAt }}
         </span>
-        {% endif %}
-
-        {% if doc.badge %}
-        <span class="seller-home__knowledge-doc-badge">{{ doc.badge }}</span>
-        {% endif %}
       </span>
 
-      {# Right cluster — chevron affordance ("this row leads
-         somewhere"). Purely decorative — the anchor is the click
-         target, not this element. `focusable="false"` keeps IE-family
-         browsers from adding the SVG to the tab order (harmless in
-         modern browsers). Suppressed on unlinked rows since a
-         chevron on an inert row would falsely promise a drill-in. #}
+      </span>{# /.seller-home__knowledge-doc-main #}
+
+      {# Second line — source icons. Indented via CSS to sit flush with
+         the name/metadata above (past the icon + gap), not under the
+         icon. Spread apart, no overlap. #}
+      {% if doc.sources and doc.sources | length %}
+      <span class="seller-home__knowledge-doc-sources">
+        <span class="seller-home__knowledge-doc-sources-icons">
+          {% for src in doc.sources %}
+          <span class="seller-home__knowledge-doc-sources-icon">
+            <img src="{{ src.icon }}" alt="{{ src.name }}" />
+          </span>
+          {% endfor %}
+        </span>
+      </span>
+      {% endif %}
+      </span>{# /.seller-home__knowledge-doc-primary #}
+
+      {# Right cluster — chevron only now; the badge moved onto the title
+         line inside `.doc-text`. The overflow ⋮ menu is a sibling of the
+         anchor, absolutely positioned in the same right gutter. #}
+
+      {# Chevron affordance ("this row leads somewhere"). Purely
+         decorative — the anchor is the click target, not this element.
+         Suppressed on unlinked rows since a chevron on an inert row
+         would falsely promise a drill-in. #}
       {% if isLinked %}
       <span class="seller-home__knowledge-doc-chevron" aria-hidden="true">
         <svg class="seller-home__knowledge-doc-chevron-svg" focusable="false">
@@ -306,6 +333,7 @@
 #}
 <ul
   class="seller-home__knowledge-doc-list"
+  id="seller-home-knowledge-list"
   data-sh-knowledge-doc-list
 >
   {#

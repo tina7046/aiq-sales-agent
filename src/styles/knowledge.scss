@@ -287,8 +287,9 @@
 // shorter, and centres vertically in the extra height.
 //
 // Palette:
-//   • #f5f2fb — the banner surface. The SVG is transparent, so this
-//     tint shows through behind the picture.
+//   • --knowledge-banner-bg — the banner surface: a multi-stop radial
+//     wash (white top corners → blue left / purple right, pooling at the
+//     bottom). The SVG is transparent, so it shows through behind the art.
 //   • #ece1f9 / #401075 — the light lavender and deep purple from the
 //     AI doctype icon (see the Auto-Learning rows in the list below),
 //     reused for the badge so the two AI surfaces on this page match.
@@ -305,7 +306,30 @@
   overflow: hidden;
   border-radius: var(--slds-g-radius-border-3, 0.75rem);
   border: 1px solid var(--slds-g-color-palette-purple-90, #ece1f9);
-  background: #f5f2fb;
+
+  // Multi-stop radial wash, color pooled at the BOTTOM: white in the two
+  // top corners fading down into blue tints on the left and purple/pink
+  // tints on the right. Each stop fades to transparent by 50%, so the
+  // layers blend into a soft, bottom-lit gradient (replaces the old flat
+  // #f5f2fb surface).
+  --knowledge-banner-bg:
+    radial-gradient(at 0% 0%, hsla(0, 0%, 100%, 1) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(0, 0%, 100%, 1) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, hsla(209, 100%, 95%, 1) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, hsla(207, 100%, 98%, 1) 0px, transparent 50%),
+    radial-gradient(at 100% 50%, hsla(286, 100%, 97%, 1) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, hsla(283, 100%, 95%, 1) 0px, transparent 50%);
+
+  // Pink-only variant — the same wash with the two BLUE stops (hues 209 /
+  // 207 on the left) removed, leaving the white top corners plus the
+  // pink/magenta stops (hues 286 / 283) on the right.
+  --knowledge-banner-bg-pink:
+    radial-gradient(at 0% 0%, hsla(0, 0%, 100%, 1) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(0, 0%, 100%, 1) 0px, transparent 50%),
+    radial-gradient(at 100% 50%, hsla(286, 100%, 97%, 1) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, hsla(283, 100%, 95%, 1) 0px, transparent 50%);
+
+  background: var(--knowledge-banner-bg-pink);
 
   // ── Dismiss ──
   transform-origin: center;
@@ -762,6 +786,42 @@
   gap: var(--slds-g-spacing-2, 0.5rem); // 8px between rows — Figma
 }
 
+// ── Learnings tab only: 2-column tile grid ──────────────────────────
+// Sources stays a single column (the default flex above). Scoped with
+// `:has()` on `.knowledge-body-inner`, which contains BOTH the tab radios
+// and the list — so it flips live as the active tab's `aria-checked`
+// changes. `minmax(0, 1fr)` lets the nowrap doc name ellipsize instead of
+// forcing the track wider; `grid-auto-rows: 1fr` levels each row.
+.seller-home__knowledge-body-inner:has([data-sh-knowledge-tab="learnings"][aria-checked="true"]) {
+  .seller-home__knowledge-doc-list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1rem;
+    grid-auto-rows: 1fr;
+  }
+
+  // Grid items must shrink below content width (default is `auto`) and
+  // fill the levelled row height so the tiles line up.
+  .seller-home__knowledge-doc-item {
+    min-width: 0;
+    height: 100%;
+  }
+  // A filtered-out tile must leave no empty grid cell.
+  .seller-home__knowledge-doc-item[hidden] {
+    display: none;
+  }
+  .seller-home__knowledge-doc-row {
+    height: 100%;
+  }
+
+  // Collapse to one column on narrow viewports so tiles don't cramp.
+  @media (max-width: 40rem) {
+    .seller-home__knowledge-doc-list {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
 // Row wrapper. `position: relative` scopes the overflow menu's
 // absolute positioning; without it the menu would resolve `right`
 // against the nearest positioned ancestor (the body inner column)
@@ -778,12 +838,18 @@
 // `sh:knowledge-doc-open` CustomEvent for future routing hooks.
 .seller-home__knowledge-doc-row {
   display: flex;
+  // Horizontal: the primary column (icon + name/meta over the sources
+  // line) on the left, then the right cluster (badge + chevron).
+  // `align-items: center` vertically centers the badge / chevron against
+  // the WHOLE tile — matching the absolutely-centered overflow ⋮ — while
+  // the icon is centered against just the name/meta inside `.doc-main`.
   align-items: center;
-  gap: var(--slds-g-spacing-3, 0.75rem); // 12px icon-to-text
+  gap: 0;
   min-height: 3.5rem; // 56px — Figma-fixed row height
 
   padding-inline: var(--slds-g-spacing-4, 1rem); // 16px
-  padding-block: 0;
+  padding-block-start: var(--slds-g-spacing-4, 1rem); // 16px
+  padding-block-end: var(--slds-g-spacing-3, .75rem); // 12px
 
   background: var(--slds-g-color-surface-1, #ffffff);
   border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
@@ -818,21 +884,22 @@
   }
 
   // ── Hover ──
-  // Subtle surface-container-2 tint. Uses the same neutral shade
-  // Ready-to-Review's row hover uses so the app has one hover
-  // vocabulary across surfaces.
+  // Matches the Connections tiles (`.tool-card`): a drop shadow, no
+  // gray background wash. Keeps the resting hairline and layers the
+  // SLDS shadow-3 lift on top; the surface stays white.
   &:hover {
-    background:#fafafa;
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 0, 0, 0.08),
+      var(--slds-g-shadow-3, 0 2px 3px 0 rgba(0, 0, 0, 0.16));
   }
 
   // ── Active (pressed) ──
-  // Slightly deeper tint on mouse-down so the click registers as a
-  // physical action. `:active` overrides `:hover` naturally because
-  // it sits later in the cascade and the browser applies both.
+  // A shallower lift on mouse-down so the click still reads as a
+  // physical action, but still no gray fill.
   &:active {
-    background: #fafafa;
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16);
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 0, 0, 0.12),
+      0 1px 2px 0 rgba(0, 0, 0, 0.16);
   }
 
   // ── Focus (keyboard) ──
@@ -889,6 +956,31 @@
   }
 }
 
+// ── Primary column ──
+// The two stacked lines — `.doc-main` (icon + name/meta) over the
+// optional `.doc-sources` line. It's the flex-grow child of the row, so
+// the trailing badge / chevron get pushed to the right and (via the
+// row's `align-items: center`) centered against this column's full
+// height, i.e. the whole tile.
+.seller-home__knowledge-doc-primary {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+// ── Top line ──
+// Icon + name/metadata on one horizontal, vertically centered line.
+// Split out from `.doc-primary` (a column) so the icon centers against
+// the name/meta pair rather than the full two-line tile once the
+// source-icon line renders below.
+.seller-home__knowledge-doc-main {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: var(--slds-g-spacing-3, 0.75rem); // 12px icon-to-text
+}
+
 // ── Doctype icon (left) ──
 // 24×24 wrapper holding EITHER the SLDS `doctype-sprite/*` glyph (`txt`
 // gives the yellow-badge TXT file) or a bitmap icon when the doc sets
@@ -936,25 +1028,25 @@
 // leaves it ~20px clear of the overflow trigger (~16px below the 40rem
 // breakpoint, where the reservation tightens). See the block header
 // above for the full coordinate map.
-.seller-home__knowledge-doc-body {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--slds-g-spacing-2, 0.5rem); // 8px — text-to-badge minimum
-  margin-inline-end: 2.75rem; // 44px (32 overflow button + 12 gap)
-}
-
 // Text stack. Name (14px Semibold) over the metadata line (12px). No
 // gap between the two per Figma — the leading of each line already
 // gives them enough visual separation. The only shrinkable child of
 // the cluster, so a long name ellipsizes instead of pushing the badge
 // out of its aligned slot.
 .seller-home__knowledge-doc-text {
-  flex: 0 0 22rem;
+  flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
+}
+
+// Title row — name + optional badge on one line. `min-width: 0` lets the
+// name shrink so its ellipsis fires while the badge keeps its full size.
+.seller-home__knowledge-doc-name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem); // 8px name-to-badge
+  min-width: 0;
 }
 
 .seller-home__knowledge-doc-name {
@@ -964,11 +1056,12 @@
   line-height: 1.1875rem; // 19px — Figma Body/font-scale-1/Semibold
   color: var(--slds-g-color-on-surface-2, #2e2e2e);
 
-  // One-line + ellipsis. Combines with the body's `min-width: 0`
-  // above to actually take effect (see the block comment there).
+  // One-line + ellipsis. `min-width: 0` lets it shrink inside the flex
+  // title row so the ellipsis fires instead of pushing the badge out.
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
   max-width: 100%;
 }
 
@@ -979,14 +1072,16 @@
 // its stacked context, which would break this one's vertical centring.
 // Retune both together.
 //
-// `margin-inline-start: auto` right-aligns it against the cluster's end
-// edge, which lands it directly left of the overflow trigger (see the
-// gutter math on `.seller-home__knowledge-doc-body`). `flex-shrink: 0`
-// makes the name absorb a narrow column instead: the pill stays
-// legible and the name ellipsizes.
+// `.doc-primary` (flex-grow) eats the free space to the badge's left, so
+// the badge sits at the right end of the row with just a small gap off
+// the name; `flex: 0 0 auto` keeps the pill legible so a long name
+// ellipsizes inside `.doc-primary` instead of squeezing the badge. The
+// row's `align-items: center` centers it vertically against the whole
+// tile — level with the overflow ⋮ and the chevron.
 .seller-home__knowledge-doc-badge {
   flex: 0 0 auto;
-  margin-inline-start: auto;
+  // Spacing from the name is handled by `.doc-name-row`'s gap now that the
+  // badge lives on the title line.
 
   padding: 0.125rem var(--slds-g-spacing-2, 0.5rem); // 2px / 8px
   border-radius: var(--slds-g-radius-border-pill, 15rem);
@@ -999,27 +1094,37 @@
   white-space: nowrap;
 }
 
-// ── Source icons (stacked + fan-out on row hover) ──
-// First icon sits on top; the rest tuck underneath to the right.
-// On hover, the stack fans out so every icon is visible.
+// ── Source icons ──
+// Own line beneath the metadata; icons sit side by side, spread 2px
+// apart (no overlap, no hover fan-out).
 .seller-home__knowledge-doc-sources {
-  flex: 0 0 auto;
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  margin-top: 0.375rem; // 6px below the metadata line
+  // Indent to line up with the name/metadata above — clears the 24px
+  // icon plus the 12px icon-to-text gap — so the sources are left-
+  // justified with the text, not tucked under the icon.
+  padding-inline-start: calc(1.5rem + var(--slds-g-spacing-3, 0.75rem)); // 36px
+}
+
+// Learnings tiles drop the doc-type icon, so their name/meta start at the
+// tile's left edge — the source line follows suit with no icon-clearance
+// indent. (Sources tiles keep the icon, but carry no source line today.)
+[data-sh-knowledge-doc-tab="learnings"] .seller-home__knowledge-doc-sources {
+  padding-inline-start: 0;
 }
 
 .seller-home__knowledge-doc-sources-icons {
   display: inline-flex;
   align-items: center;
-  isolation: isolate;
+  gap: 4px; // spread apart, no overlap
 }
 
 .seller-home__knowledge-doc-sources-icon {
-  position: relative;
   flex: none;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px; // rounded square, matching the Connections tile icons
   overflow: hidden;
   background: var(--slds-g-color-surface-container-1, #fff);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
@@ -1032,27 +1137,6 @@
     width: 16px;
     height: 16px;
     object-fit: contain;
-  }
-
-  // First icon is on top (highest z-index), rest stack underneath
-  // going to the right with negative overlap.
-  @for $i from 1 through 10 {
-    &:nth-child(#{$i}) { z-index: 11 - $i; }
-  }
-
-  + .seller-home__knowledge-doc-sources-icon {
-    margin-left: -12px;
-    transition: margin-left 200ms ease;
-  }
-}
-
-.seller-home__knowledge-doc-item:hover .seller-home__knowledge-doc-sources-icon + .seller-home__knowledge-doc-sources-icon {
-  margin-left: 1px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .seller-home__knowledge-doc-sources-icon + .seller-home__knowledge-doc-sources-icon {
-    transition: none;
   }
 }
 
@@ -1108,6 +1192,19 @@
   height: 0.75rem; // 12px
   color: #747474;  // Figma "Icon / Default"
 
+  // Chevron removed from the hover affordance — it no longer appears.
+  // Hidden with `visibility: hidden` (NOT `display: none`) so its box
+  // still reserves the overflow-⋮ gutter below; this also overrides the
+  // opacity hover/touch reveals. Delete this line to bring it back.
+  visibility: hidden;
+
+  // Reserve the overflow-⋮ gutter to the chevron's left. The ⋮ is
+  // absolutely positioned at right: 3rem (48px, 32px wide → out to 80px);
+  // this margin holds a ~56px gap so the badge / name end clear of it and
+  // the ⋮ lands cleanly between them and the chevron. (Was carried by
+  // `.doc-body`'s margin-inline-end before the two-line rebuild.)
+  margin-inline-start: 3.5rem; // 56px
+
   opacity: 0;
   transition: opacity 160ms ease;
 }
@@ -1155,7 +1252,7 @@
 .seller-home__knowledge-doc-menu {
   position: absolute;
   top: 50%;
-  right: 3rem; // 48px = 16 padding + 20 chevron + 12 gap
+  right: 1rem; // 16px — far-right, aligned to where the (now-hidden) chevron sat
   transform: translateY(-50%);
   z-index: 2;
 }
@@ -1164,13 +1261,47 @@
 // Hidden by default; revealed on row hover / focus-within or when
 // the menu is open. Icon color stays at on-surface-1 muted gray so
 // it reads as chrome, not primary content.
+//
+// The bare variant ships size-less (`slds-button_icon-bare` sets no
+// width/height and `--slds-c-button-color-background-hover: none`),
+// so we give it the 32×32 box the layout gutter already reserves and
+// center the 14px ⋮ inside it. That box is what the hover-gray fills
+// as an even circle around the icon.
 .seller-home__knowledge-doc-menu-trigger {
   opacity: 0;
   pointer-events: none;
-  transition: opacity 160ms ease;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--slds-g-sizing-9, 2rem);  // 32px
+  block-size: var(--slds-g-sizing-9, 2rem);   // 32px
+  border-radius: var(--slds-g-radius-border-circle, 100%);
+
+  transition:
+    opacity 160ms ease,
+    background-color 120ms ease;
 
   .slds-button__icon {
     fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+  }
+
+  // Hover-gray — the shell's standard hover surface,
+  // `--slds-g-color-surface-container-2` (#f3f3f3), the same neutral
+  // fill nav items and list rows use on hover. Also applied on
+  // keyboard focus and while the menu is open so the ⋮ reads as
+  // "active". `border-radius` is repeated on :focus-visible because
+  // SLDS's bare-icon focus rule otherwise swaps in its own radius.
+  &:hover,
+  &:focus-visible,
+  &[aria-expanded="true"] {
+    background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+    border-radius: var(--slds-g-radius-border-circle, 100%);
+  }
+
+  // Pressed — one step darker (surface-container-3, #e5e5e5).
+  &:active {
+    background-color: var(--slds-g-color-surface-container-3, #e5e5e5);
   }
 }
 
@@ -1219,7 +1350,7 @@
 }
 
 // Menu items — SLDS-adjacent hover / focus behavior. Cloned from
-// `.seller-home__review-row-menu-item` so the two menus feel
+// `.seller-home__feed-item-menu-item` so the two menus feel
 // identical; leading icon (utility sprite) matches the item's slug.
 .seller-home__knowledge-doc-menu-item {
   appearance: none;
@@ -1302,20 +1433,22 @@
 
   .seller-home__knowledge-doc-row {
     padding-inline: var(--slds-g-spacing-3, 0.75rem);
-    gap: var(--slds-g-spacing-2, 0.5rem); // 8px, tightens icon-to-text
   }
 
-  // Body still needs enough reserved right-gutter for the overflow
-  // menu; the trigger stays 32px on every viewport, so we only
-  // shave the "gap to chevron" reservation, not the button itself.
-  .seller-home__knowledge-doc-body {
-    margin-inline-end: 2.5rem; // 40px (32 overflow + 8 gap)
+  // Tighten the icon-to-text gap and re-align the sources indent to match.
+  .seller-home__knowledge-doc-main {
+    gap: var(--slds-g-spacing-2, 0.5rem); // 8px
+  }
+
+  .seller-home__knowledge-doc-sources {
+    padding-inline-start: calc(1.5rem + var(--slds-g-spacing-2, 0.5rem)); // 32px
   }
 
   // Recompute the overflow menu's right offset for the tighter
-  // gutter: 12px padding + 20px chevron + 8px gap = 40px.
+  // gutter: 12px padding + 20px chevron + 8px gap = 40px. The chevron's
+  // Far-right, matching the tighter 12px row padding at this breakpoint.
   .seller-home__knowledge-doc-menu {
-    right: 2.5rem; // 40px
+    right: 0.75rem; // 12px
   }
 }
 

@@ -1,0 +1,82 @@
+{% extends "_template.html" %}
+
+{#
+  "Your agent at work" — lab page
+  =====================================================================
+  Served at /agent_at_work.html. A bare page that renders the REAL
+  Seller Home feed, so the component can be looked at and poked without
+  the nav, briefing and composer around it.
+
+  The COMPONENT is not a copy. This page includes `_home_feed.html`,
+  loads `home.css` and boots `home.js` — one implementation, shared with
+  Seller Home, so markup, styles and behaviour can't drift.
+
+  The DATA does fork, on purpose. `data/agent_at_work.json` starts as a
+  copy of index.json's `feed` block, and rows added there show up here
+  only. That's what makes this a place to try an idea before deciding it
+  belongs on Seller Home; porting one back is moving the object into
+  index.json's `feed.items`.
+
+  Worth knowing which side of that line a change falls on: editing a row
+  is local to this page, editing the markup or the styles is editing
+  Seller Home. The whole page used to be a second copy under an `aaw-`
+  namespace, which had to be hand-synced after every change and was
+  wrong again within the hour — hence the split.
+
+  What's still lab-only, and lives in agent_at_work.scss:
+
+    .aaw-lab            page surface + positioning root
+    .aaw-lab__god-rays  shader host (scripts/aaw_god_rays.js)
+    .aaw-lab__inner     the 800px content column
+    .aaw-lab__note      the header note
+
+  The shader is the same one Seller Home runs, tuned to converge above
+  the page rather than on a composer that isn't here.
+#}
+
+{% block styles %}
+{# The real component's stylesheet, then the lab's page chrome. #}
+<link rel="stylesheet" href="/styles/home.css" />
+<link rel="stylesheet" href="/styles/agent_at_work.css" />
+{% endblock %}
+
+{% block content %}
+
+{# `data-sh-root` is what home.js boots off. Every controller it owns
+   guards on its own elements, so the sections that aren't on this page
+   — nav, briefing, composer, knowledge, scheduled — no-op. #}
+<div class="aaw-lab" data-sh-root>
+  {# God-rays shader canvas host. Empty and aria-hidden: decoration with
+     no content. Geometry and stacking come from `.aaw-lab__god-rays`. #}
+  <div class="aaw-lab__god-rays" data-aaw-god-rays aria-hidden="true"></div>
+
+  <div class="aaw-lab__inner">
+    <p class="aaw-lab__note">
+      Lab — the live Seller Home “Your agent at work” feed, on its own.
+      Markup <code>_home_feed.html</code> · styles <code>home.scss</code> ·
+      behaviour <code>home.js</code> · data <code>data/index.json</code>.
+      Edits here are edits to Seller Home.
+    </p>
+
+    {# `feed` comes from data/agent_at_work.json, which gulp injects for
+       this page. That file is a copy of index.json's `feed` block plus
+       whatever is being tried out here — the one thing that forks. #}
+    {% include "_home_feed.html" %}
+  </div>
+</div>
+
+{# GSAP + the Flip plugin, vendored and pinned to the same 3.12.5 as the
+   core. home.js uses GSAP for the row dismiss and Flip to re-sort the
+   list when a row changes state; `feedCanAnimate` checks for both, so a
+   failed load degrades to instant DOM changes. Loaded before home.js,
+   which reads them off the global. #}
+<script src="/scripts/vendor/gsap.min.js"></script>
+<script src="/scripts/vendor/Flip.min.js"></script>
+<script src="/scripts/home.js"></script>
+
+{# ES module, so it defers on its own and the shader mounts after the
+   list is in the DOM — it measures the content column to place the
+   focal point. #}
+<script type="module" src="/scripts/aaw_god_rays.js"></script>
+
+{% endblock %}
