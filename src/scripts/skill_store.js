@@ -12,7 +12,8 @@
 // ── Prototype scope ─────────────────────────────────────────────────────
 // This is a LOCAL prototype. Persistence is client-only:
 //   • Commit envelope   → localStorage["sh:skills:store:v1:<id>"].
-//   • Envelope contains { markdown, updatedAt, updatedBy, version }.
+//   • Envelope contains { markdown, name, description, created,
+//                         updatedAt, updatedBy, version }.
 //   • Nothing is sent to a server. Nothing is shared across browsers /
 //     devices / tabs (each tab shares one origin's localStorage, so tabs
 //     see each other's saves, but a private-mode window or a different
@@ -70,9 +71,12 @@
       if (!raw) return null;
       var parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== 'object') return null;
-      // Envelope shape: { v, markdown, updatedAt, updatedBy, version }.
-      // A missing / mismatched `v` invalidates the envelope so an
-      // older prototype's data can't corrupt this one's flow.
+      // Envelope shape: { v, markdown, name?, description?, created?,
+      // updatedAt, updatedBy, version }. A missing / mismatched `v`
+      // invalidates the envelope so an older prototype's data can't
+      // corrupt this one's flow. `name` / `description` / `created`
+      // are optional so envelopes written before the three-block
+      // canvas still load.
       if (parsed.v !== 1) return null;
       if (typeof parsed.markdown !== 'string') return null;
       return parsed;
@@ -125,12 +129,45 @@
       if (Object.prototype.hasOwnProperty.call(base, k)) merged[k] = base[k];
     }
     merged.markdown  = env.markdown;
+    if (typeof env.name === 'string' && env.name) merged.name = env.name;
+    if (typeof env.description === 'string') merged.description = env.description;
+    if (env.created === true) {
+      merged.created = true;
+      if (!merged.id) merged.id = skillId;
+      if (merged.canEdit === undefined) merged.canEdit = true;
+    }
     if (typeof env.updatedAt === 'string') merged.updatedAt = env.updatedAt;
     if (typeof env.updatedBy === 'string') merged.updatedBy = env.updatedBy;
     if (typeof env.version   === 'string') merged.version   = env.version;
     return {
       record:          merged,
       hasLocalOverride: true
+    };
+  }
+
+  // loadCreated(skillId)
+  //   Reconstruct a synthetic catalog row for a skill that was
+  //   minted on the empty canvas (`created: true` in the envelope)
+  //   and therefore has no shipped JSON record. Returns null when
+  //   no created envelope exists so the caller can fall through to
+  //   not-found.
+  function loadCreated(skillId) {
+    var env = readEnvelope(skillId);
+    if (!env || env.created !== true) return null;
+    return {
+      id:          skillId,
+      name:        typeof env.name === 'string' ? env.name : '',
+      description: typeof env.description === 'string' ? env.description : '',
+      markdown:    env.markdown,
+      created:     true,
+      canEdit:     true,
+      canShare:    true,
+      canDelete:   true,
+      createdBy:   env.updatedBy || 'You',
+      updatedBy:   env.updatedBy,
+      updatedAt:   env.updatedAt,
+      version:     env.version,
+      actions:     ['edit', 'schedule', 'duplicate', 'share', 'delete']
     };
   }
 
@@ -185,6 +222,19 @@
         updatedBy: String(payload.currentUserName || 'You'),
         version:   next
       };
+      if (typeof payload.name === 'string') {
+        envelope.name = payload.name;
+      } else if (current && typeof current.name === 'string') {
+        envelope.name = current.name;
+      }
+      if (typeof payload.description === 'string') {
+        envelope.description = payload.description;
+      } else if (current && typeof current.description === 'string') {
+        envelope.description = current.description;
+      }
+      if (payload.created === true || (current && current.created === true)) {
+        envelope.created = true;
+      }
 
       // Simulate write latency so the "saving…" state has a visible
       // pulse. Real backends REPLACE this setTimeout with a fetch —
@@ -197,12 +247,16 @@
             'Couldn\u2019t save. Your browser refused to store this change (private mode, blocked storage, or full quota).'));
           return;
         }
-        resolve({
+        var result = {
           markdown:  envelope.markdown,
           updatedAt: envelope.updatedAt,
           updatedBy: envelope.updatedBy,
           version:   envelope.version
-        });
+        };
+        if (typeof envelope.name === 'string') result.name = envelope.name;
+        if (typeof envelope.description === 'string') result.description = envelope.description;
+        if (envelope.created === true) result.created = true;
+        resolve(result);
       }, MOCK_LATENCY_MS);
     });
   }
@@ -270,6 +324,7 @@
 
   global.SkillStore = {
     load:              load,
+    loadCreated:       loadCreated,
     save:              save,
     revert:            revert,
     hasLocalOverride:  hasLocalOverride,
