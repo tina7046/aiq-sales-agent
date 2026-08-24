@@ -75,6 +75,11 @@ $static-font-path: '/assets/fonts/webfonts';
   --icon-swap-blur: 2px;
   --icon-swap-start-scale: 0.25;
   --icon-swap-ease: ease-in-out;
+  /* Text states swap */
+  --text-swap-dur: 150ms;
+  --text-swap-translate-y: 4px;
+  --text-swap-blur: 2px;
+  --text-swap-ease: ease-in-out;
   /* Modal open / close — already in use on the conversation page */
   --modal-open-dur: 250ms;
   --modal-close-dur: 150ms;
@@ -126,6 +131,40 @@ $static-font-path: '/assets/fonts/webfonts';
 
 @media (prefers-reduced-motion: reduce) {
   .t-icon-swap .t-icon { transition: none !important; }
+}
+
+// ── Text states swap ──────────────────────────────────────────────────
+// Swaps a label in place: old text exits up with blur, new text enters
+// from below. Driven by JS — see running_lab.js `swapText`.
+//
+//   <span class="t-text-swap">Processing…</span>
+//
+// Verbatim from 04-text-states-swap.md, reduced-motion guard included.
+.t-text-swap {
+  display: inline-block;
+  transform: translateY(0);
+  filter: blur(0);
+  opacity: 1;
+  transition:
+    transform var(--text-swap-dur) var(--text-swap-ease),
+    filter    var(--text-swap-dur) var(--text-swap-ease),
+    opacity   var(--text-swap-dur) var(--text-swap-ease);
+  will-change: transform, filter, opacity;
+}
+.t-text-swap.is-exit {
+  transform: translateY(calc(var(--text-swap-translate-y) * -1));
+  filter: blur(var(--text-swap-blur));
+  opacity: 0;
+}
+.t-text-swap.is-enter-start {
+  transform: translateY(var(--text-swap-translate-y));
+  filter: blur(var(--text-swap-blur));
+  opacity: 0;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-text-swap { transition: none !important; }
 }
 
 //
