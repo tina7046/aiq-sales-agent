@@ -35,15 +35,17 @@
 //                     is edited.
 //   • statusTypes   — semantic status registry. Each entry:
 //                       - label        → screen-reader-friendly name
-//                       - dot          → "yellow" | "green" for the
-//                                         12-px circle indicator
-//                       - icon         → optional utility-sprite id
-//                                         to render instead of the
-//                                         dot (used by `paused` →
-//                                         solid `play` glyph)
-//                     Keys ("needs_approval" | "scheduled" | "paused")
-//                     are the `status` values referenced by each
-//                     workflow row.
+//                       - action       → verb for the status button's
+//                                         accessible name ("Pause
+//                                         Buyer Engage"), i.e. what a
+//                                         click does from this state
+//                     Keys are the `status` values referenced by each
+//                     workflow row, and they're the home feed's five
+//                     states verbatim ("completed" | "running" |
+//                     "scheduled" | "paused" | "failed") — the two
+//                     surfaces share one status control, so they have
+//                     to share its vocabulary. Which glyph each state
+//                     paints is decided in home.scss, not here.
 //   • workflows     — the rows. Each entry:
 //                       - id           → stable dom + event key
 //                       - title        → semibold 14 px name
@@ -107,30 +109,41 @@
   // bindScheduled() in home.js so the JSON never has to hand-track
   // them. `statuses: []` on "all" means the tab matches everything.
   //
-  // Approvals were promoted out of the "Scheduled" bucket into their
-  // own "Need attention" tab — they are the surface's most actionable
-  // state, so the design elevates them. "Scheduled" now covers
-  // workflows in a healthy cadence only. Default tab is "all" so a
-  // seller with mixed workflows lands on the fullest picture rather
-  // than an initially-empty "Need attention" tab.
+  // Errored workflows are promoted out of the "Scheduled" bucket into
+  // their own "Need attention" tab — the surface's most actionable
+  // state, so the design elevates it. Default tab is "all" so a seller
+  // with mixed workflows lands on the fullest picture rather than an
+  // initially-empty "Need attention" tab.
+  //
+  // "Scheduled" covers every workflow in a healthy cadence, which
+  // includes the ones mid-run and the ones whose last run finished:
+  // all three are on the same schedule, they're just at different
+  // points in it. Splitting them out would put a workflow in a
+  // different tab depending on the minute you looked, and leave rows
+  // reachable from no tab but "All".
   "tabs": {
     "defaultTabId": "all",
     "items": [
       { "id": "all",            "label": "All",            "statuses": [] },
-      { "id": "need_attention", "label": "Need attention", "statuses": ["needs_approval"] },
-      { "id": "scheduled",      "label": "Scheduled",      "statuses": ["scheduled"] },
+      { "id": "need_attention", "label": "Need attention", "statuses": ["failed"] },
+      { "id": "scheduled",      "label": "Scheduled",      "statuses": ["scheduled", "running", "completed"] },
       { "id": "paused",         "label": "Paused",         "statuses": ["paused"] }
     ]
   },
-  // Status registry — one entry per `workflow.status` value. Adding
-  // a new status (e.g. "failed") is a two-line change: append here +
-  // reference from a row's `status`. The row macro reads
-  // `statusTypes[<row.status>]` and paints either a colored dot or
-  // an inline utility-sprite icon (`paused` uses `play`).
+  // Status registry — one entry per `workflow.status` value, matching
+  // the home feed's states so a workflow reads the same on both
+  // surfaces. The glyph each state paints lives in home.scss (one
+  // mapping, shared with the feed); this block only carries copy.
+  //
+  // `action` is what the status button offers from that state, which
+  // is why `failed` says "Retry" rather than "Pause": what the seller
+  // came to an errored workflow for is to run it again.
   "statusTypes": {
-    "needs_approval": { "label": "Needs approval", "dot": "yellow" },
-    "scheduled":      { "label": "Scheduled",      "dot": "green"  },
-    "paused":         { "label": "Paused",         "icon": "play"  }
+    "failed":    { "label": "Needs attention", "action": "Retry"  },
+    "running":   { "label": "Running now",     "action": "Pause"  },
+    "completed": { "label": "Completed",       "action": "Pause"  },
+    "scheduled": { "label": "Scheduled",       "action": "Pause"  },
+    "paused":    { "label": "Paused",          "action": "Resume" }
   },
   // Workflows. A row drills in when it has somewhere to go: drop the
   // `linked: false` and give it an `href`, and the row macro renders it
@@ -141,12 +154,18 @@
   // block (index.json → conversations), which is what puts the
   // run-history side panel beside that thread. The remaining rows stay
   // `linked: false` until they have a conversation of their own.
+  //
+  // The states below are spread so every one the status button can
+  // paint is on screen at once — this is a prototype and the list is
+  // the only place to see them. Re-pointing a row at another state is
+  // a one-word edit; nothing in the template, CSS or JS is keyed to
+  // which row holds which.
   "workflows": [
     {
       "id":      "wf-daily-pipeline-snapshot",
       "title":   "Daily Pipeline Snapshot",
       "cadence": "Daily at 9:00 AM PST",
-      "status":  "needs_approval",
+      "status":  "failed",
       "linked":  true,
       "href":    "/home_conversation.html?id=conv-daily-pipeline-snapshot"
     },
@@ -154,14 +173,14 @@
       "id":      "wf-daily-deal-summary",
       "title":   "Daily Deal Summary",
       "cadence": "Daily at 9:30 AM PST",
-      "status":  "scheduled",
+      "status":  "running",
       "linked":  false
     },
     {
       "id":      "wf-buyer-engage",
       "title":   "Buyer Engage",
       "cadence": "Daily at 9:30 AM PST",
-      "status":  "scheduled",
+      "status":  "completed",
       "linked":  false
     },
     {

@@ -5,9 +5,9 @@
   cousin of `_home_knowledge_list.html`: same 56 px row, same
   ellipsis-then-truncate name-first policy, same overflow-menu-as-a-
   sibling pattern. Scheduled-specific differences are the leading
-  status indicator (colored dot OR solid play glyph) and a
-  secondary metadata line whose content varies per row (cadence,
-  next-run window, "Paused"). Owned by scheduled.html; consumes
+  status button (shared with the home feed — see `renderStatusButton`
+  below) and a secondary metadata line whose content varies per row
+  (cadence, next-run window, "Paused"). Owned by scheduled.html; consumes
   `workflows`, `statusTypes`, `rowActions`, and `emptyState` from
   scheduled.json (field-level comments live there).
 
@@ -25,7 +25,7 @@
     • Radius: 12 px (radius-border-3)
     • Surface: --slds-g-color-surface-1 (white)
     • Hairline: inset 0 0 0 1 px rgba(0,0,0,0.08) (matches Knowledge)
-    • Status indicator column: 24 px wide, dot 12 px OR play glyph 16 px
+    • Status button: 20 px hit target, 16 px glyph (feed-matched)
     • Indicator-to-text gap: 12 px (spacing-3)
     • Name: 14 px Semibold (font-weight 590), leading 19 px, color
       on-surface-2 (#2E2E2E), nowrap + ellipsis
@@ -42,6 +42,10 @@
       `<div>` with no href, no data-sh-workflow-open hook, and no
       chevron affordance — activation never navigates. Same defensive
       shape Knowledge uses for its unlinked doc rows.
+    • Status button is a native `<button>`, also a SIBLING of the row
+      body (same no-nested-interactives rule as the menu below), that
+      pauses / resumes / retries the row. Wired by the status
+      controller in bindScheduled(); a click never activates the row.
     • Overflow menu (⋮ + Edit / Pause / Resume / Duplicate / Delete)
       is a native `<button>` + `role="menu"` panel sitting as a
       SIBLING of the row body (nesting a `<button>` inside an `<a>`
@@ -59,39 +63,69 @@
 #}
 
 {#
-  Row status indicator.
+  Row status button.
   ---------------------------------------------------------------------
-  A tiny partial-in-a-partial because the visual grammar has two
-  shapes:
-    • `dot`  — a filled 12 px circle whose color comes from
-                `statusTypes[status].dot` (`yellow` | `green`).
-                Colors are painted from CSS custom properties on the
-                dot's variant class so a future palette shift is a
-                one-line CSS change.
-    • `icon` — a solid utility-sprite glyph (used by `paused` → the
-                `play` sprite). Rendered at 16 px so the visual
-                weight lines up with the 12 px dots.
-  `aria-hidden` because the status is exposed as text on the row's
-  wrapper (`aria-label` on the linked branch; visually-hidden span
-  in the unlinked branch below) — a screen reader echoing "yellow
-  dot" on top of "Needs approval" would be noise.
+  The same control the home feed carries at the head of every row
+  (`statusButton` in _home_feed.html), so a workflow reads and behaves
+  identically on both surfaces. At rest the glyph says what the row IS;
+  on hover it cross-fades to what a click WILL DO:
+
+    state       rest       hover / click
+    ─────────   ────────   ─────────────────
+    completed   check      pause
+    running     spinner    pause
+    scheduled   clock      pause
+    paused      pause      play        → resumes
+    failed      warning    refresh     → retries
+
+  A failed row is the one that doesn't offer pause — what the seller
+  came to an errored workflow for is to run it again.
+
+  Every glyph is rendered and CSS picks the visible pair off the row's
+  `data-sh-workflow-status`, which is also what the tab filter reads.
+  Same trade the feed makes: the hover swap is a cross-fade between
+  painted layers that can't lag the pointer, and the state→glyph
+  mapping lives in exactly one place (the stylesheet) instead of being
+  duplicated between this template and the JS that flips the state.
+
+  A SIBLING of the row body rather than its first child, for the same
+  reason the overflow menu is one: the body is an `<a>` on linked rows
+  and a `<button>` can't nest inside it. CSS drops it into the row's
+  reserved left cell. It sits before the body in source order so the
+  tab order matches the reading order (status → row → ⋮).
+
+  Only the accessible name is left for JS to keep in sync, since CSS
+  can't write one. Its verb comes from `statusTypes[status].action` so
+  the wording stays in scheduled.json.
 #}
-{% macro renderStatusIndicator(statusKey, statusMeta) %}
-  {% if statusMeta.icon %}
+{% macro renderStatusButton(workflow, statusMeta) %}
+  {% set verb = statusMeta.action if statusMeta and statusMeta.action else "Pause" %}
+  {% set actionLabel = verb ~ " " ~ workflow.title %}
+  <button
+    type="button"
+    class="seller-home__scheduled-status"
+    data-sh-workflow-run-toggle
+    data-sh-workflow-stop
+    aria-label="{{ actionLabel }}"
+    title="{{ actionLabel }}"
+  >
+    {# The running glyph is the shared `.sh-spinner` ring (index.scss,
+       linked on every page by _template.html), re-boxed to the glyph
+       slot. Parked until the row is running — see the stylesheet. #}
     <span
-      class="seller-home__scheduled-status seller-home__scheduled-status--icon seller-home__scheduled-status--{{ statusKey }}"
-      aria-hidden="true"
-    >
-      <svg class="seller-home__scheduled-status-icon" focusable="false">
-        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ statusMeta.icon }}"></use>
-      </svg>
-    </span>
-  {% else %}
-    <span
-      class="seller-home__scheduled-status seller-home__scheduled-status--dot seller-home__scheduled-status--{{ statusMeta.dot }}"
+      class="seller-home__scheduled-status-glyph seller-home__scheduled-status-glyph--spinner sh-spinner"
       aria-hidden="true"
     ></span>
-  {% endif %}
+    {% for glyph in ["check", "clock", "pause", "play", "warning", "refresh"] %}
+      <svg
+        class="seller-home__scheduled-status-glyph seller-home__scheduled-status-glyph--{{ glyph }}"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ glyph }}"></use>
+      </svg>
+    {% endfor %}
+  </button>
 {% endmacro %}
 
 {#
@@ -119,19 +153,33 @@
   {% set isLinked = not (workflow.linked == false) %}
   {% set workflowHref = workflow.href or "#" %}
   {% set statusLabel = statusMeta.label if statusMeta else workflow.status %}
+  {# Prefixes for the two places the status reaches AT as words. Stamped
+     as attributes so the toggle in home.js can re-compose either name
+     from `prefix + statusTypes[state].label` without holding any copy
+     of its own. #}
+  {% set rowLabelPrefix = "Open workflow, " ~ workflow.title ~ ", " %}
+  {% set rowTextPrefix = "Status: " %}
   <li
     class="seller-home__scheduled-workflow-item"
     data-sh-workflow-item
     data-sh-workflow-id="{{ workflow.id }}"
     data-sh-workflow-status="{{ workflow.status }}"
+    {# The state a resume returns to. Only non-paused rows declare one:
+       a row authored as paused has no run state to go back to, so the
+       toggle falls back to `scheduled`. #}
+    {% if workflow.status != "paused" %}data-sh-workflow-status-default="{{ workflow.status }}"{% endif %}
   >
+    {{ renderStatusButton(workflow, statusMeta) }}
+
     {% if isLinked %}
       <a
         class="seller-home__scheduled-workflow-row"
         href="{{ workflowHref }}"
         title="{{ workflow.title }}"
-        aria-label="Open workflow, {{ workflow.title }}, {{ statusLabel }}"
+        aria-label="{{ rowLabelPrefix }}{{ statusLabel }}"
         data-sh-workflow-open
+        data-sh-workflow-status-label
+        data-sh-workflow-status-prefix="{{ rowLabelPrefix }}"
       >
     {% else %}
       {# Inert branch — `<div>` instead of `<a>`. Same class list;
@@ -146,8 +194,6 @@
         title="{{ workflow.title }}"
       >
     {% endif %}
-      {{ renderStatusIndicator(workflow.status, statusMeta) }}
-
       <span class="seller-home__scheduled-workflow-body">
         <span class="seller-home__scheduled-workflow-title">{{ workflow.title }}</span>
         <span class="seller-home__scheduled-workflow-meta">{{ workflow.cadence }}</span>
@@ -156,7 +202,11 @@
            on unlinked rows there's no aria-label (no `<a>`), so
            this is the only place the status reaches AT users. #}
         {% if not isLinked %}
-          <span class="slds-assistive-text">Status: {{ statusLabel }}</span>
+          <span
+            class="slds-assistive-text"
+            data-sh-workflow-status-text
+            data-sh-workflow-status-prefix="{{ rowTextPrefix }}"
+          >{{ rowTextPrefix }}{{ statusLabel }}</span>
         {% endif %}
       </span>
     {% if isLinked %}</a>{% else %}</div>{% endif %}
@@ -236,10 +286,18 @@
   Step 5/6 controller in home.js (bindScheduled) so everything
   inside is handled via event delegation and future workflow rows
   added at runtime need no per-row binding.
+
+  `data-sh-workflow-status-types` hands the whole status registry to
+  that controller as JSON — the labels and action verbs it needs when
+  the status button flips a row's state. Same reasoning as the feed's
+  `data-sh-feed-state-order`: the runtime needs what the template
+  rendered with, and it should come from scheduled.json rather than a
+  second copy in home.js.
 #}
 <ul
   class="seller-home__scheduled-workflow-list"
   data-sh-scheduled-workflow-list
+  data-sh-workflow-status-types='{{ statusTypes | dump }}'
 >
   {% for workflow in workflows %}
     {% if not (workflow.hidden == true) %}

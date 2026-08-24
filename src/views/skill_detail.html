@@ -76,7 +76,7 @@
      block (header clusters, switcher panel, canvas, chips, toast). #}
   <link rel="stylesheet" href="/styles/home.css" />
   <link rel="stylesheet" href="/styles/knowledge.css" />
-  <link rel="stylesheet" href="/styles/skills.css?v=block-editor-43" />
+  <link rel="stylesheet" href="/styles/skills.css?v=block-editor-63" />
 {% endblock %}
 
 {% block content %}
@@ -394,11 +394,59 @@
              12 px left of the button group, vertically centered
              with the 32 px buttons. Hidden until the glue script
              has an `updatedAt` to fill. #}
-          <p
-            class="seller-home__skill-detail-edited"
-            data-sh-skill-detail-edited
+          <div
+            class="seller-home__skill-detail-edited-wrap"
+            data-sh-skill-detail-edited-wrap
             hidden
-          ></p>
+          >
+            <p
+              class="seller-home__skill-detail-edited"
+              data-sh-skill-detail-edited
+              tabindex="0"
+              aria-describedby="sh-skill-activity"
+            ></p>
+
+            {# ── Activity popover ──────────────────────────────────
+               Revealed on hover / keyboard focus of the edited stamp.
+               Header + two rows (Edited by / Created by), each with a
+               name and a short date, filled by skill_detail.js. #}
+            <div
+              class="seller-home__skill-activity"
+              id="sh-skill-activity"
+              role="tooltip"
+              data-sh-skill-activity
+            >
+              <p class="seller-home__skill-activity-title">Activity</p>
+              <ul class="seller-home__skill-activity-list">
+                <li class="seller-home__skill-activity-row">
+                  <span class="seller-home__skill-activity-label"
+                    >Edited by
+                    <span
+                      class="seller-home__skill-activity-name"
+                      data-sh-activity-edited-by
+                    ></span
+                  ></span>
+                  <span
+                    class="seller-home__skill-activity-date"
+                    data-sh-activity-edited-at
+                  ></span>
+                </li>
+                <li class="seller-home__skill-activity-row">
+                  <span class="seller-home__skill-activity-label"
+                    >Created by
+                    <span
+                      class="seller-home__skill-activity-name"
+                      data-sh-activity-created-by
+                    ></span
+                  ></span>
+                  <span
+                    class="seller-home__skill-activity-date"
+                    data-sh-activity-created-at
+                  ></span>
+                </li>
+              </ul>
+            </div>
+          </div>
 
           {# ── Skill actions button group ─────────────────────────
              Use in Chat + Schedule + the more-actions chevron form
@@ -842,7 +890,7 @@
      its own `renderMarkdown()`, so `KnowledgeDocumentView` is not
      needed here (nothing on this page calls `.create()`, the only
      thing that module exposes). #}
-  <script src="/scripts/skill_markdown_editor.js?v=block-editor-15"></script>
+  <script src="/scripts/skill_markdown_editor.js?v=block-editor-18"></script>
 
   {# Isolated persistence layer. Detail page NEVER reads/writes
      committed saves to storage directly — it goes through
@@ -862,5 +910,5 @@
      dead-ending the seller. #}
   <script src="/scripts/schedule_conversation.js"></script>
 
-  <script src="/scripts/skill_detail.js?v=block-editor-16"></script>
+  <script src="/scripts/skill_detail.js?v=block-editor-17"></script>
 {% endblock %}
