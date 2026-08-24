@@ -1,0 +1,477 @@
+{% extends "_template.html" %}
+
+{#
+  First-time onboarding — scripted conversation
+  =====================================================================
+  Route: /onboarding_conversation.html
+
+  Opened from /onboarding.html via Start now. Conversation chrome
+  without the left nav or workflow side panel — the same no-rail
+  layout running_lab.html uses.
+
+  This page auto-plays a scripted onboarding conversation, mirroring
+  the Seller Home -> conversation mechanic (echo the user, show a
+  thinking indicator, reveal the agent message on a timer). The beats
+  and their copy come from onboarding_conversation.md:
+
+    1. agent greeting  ("Hi! Let's run CRM discovery…")
+    2. user bubble     ("Start now")
+    3. thinking
+    4. agent discovery (CRM read table + assumptions + scope question)
+    5. user types "Everything" -> echo -> thinking (STOP for now)
+
+  The player is scripts/onboarding_conversation.js. It clones the inert
+  <template>s below; the shared conversation engine (home_conversation.js)
+  is deliberately NOT loaded — this flow is bespoke and self-contained.
+#}
+
+{% import "_home_conversation_messages.html" as convo %}
+
+{% block styles %}
+<link rel="stylesheet" href="/styles/home.css" />
+<link rel="stylesheet" href="/styles/home_conversation.css" />
+{# Rich agent-message content (headings, tables, bullets, code chips). #}
+<link rel="stylesheet" href="/styles/onboarding_conversation.css" />
+{# Run / chain-of-thought card, reused from the running lab. Its rules are
+   scoped under `.seller-home--conversation`, which this page carries. #}
+<link rel="stylesheet" href="/styles/running_lab.css" />
+{% endblock %}
+
+{% block content %}
+<div class="seller-home seller-home--conversation" data-onboarding-conv-root>
+  {# Single column — no left nav, no workflow side panel. #}
+  <div class="seller-home__conv-layout">
+    <div class="seller-home__conv" role="main" aria-label="Conversation" tabindex="-1">
+
+      <header class="seller-home__conv-header">
+        <div class="seller-home__conv-header-inner">
+          <span class="seller-home__conv-header-icon" aria-hidden="true">
+            <svg class="seller-home__conv-header-glyph" aria-hidden="true">
+              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#sparkle"></use>
+            </svg>
+          </span>
+          <h1 class="slds-assistive-text">Conversation</h1>
+        </div>
+      </header>
+
+      <section
+        class="seller-home__conv-thread"
+        aria-label="Conversation messages"
+      >
+        {# Starts empty; onboarding_conversation.js appends the scripted
+           beats into it. `role="log"` + `aria-live` announce each new
+           message the same way the real thread does. #}
+        <ol
+          class="seller-home__conv-thread-inner"
+          data-ob-thread
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions"
+        ></ol>
+      </section>
+
+      {# Real conversation composer. Wired by onboarding_conversation.js:
+         placeholder toggle, enable-on-input, Enter-to-send, and a submit
+         that echoes the typed text then shows a thinking indicator. #}
+      <form
+        class="seller-home__conv-composer"
+        data-sh-conv-composer
+        novalidate
+      >
+        <div class="seller-home__conv-composer-inner">
+          <div class="seller-home__conv-composer-editor">
+            <div class="seller-home__conv-composer-content">
+              <label id="onboarding-conv-input-label" for="onboarding-conv-input" class="slds-assistive-text">
+                Conversation
+              </label>
+              <div
+                id="onboarding-conv-input"
+                class="seller-home__conv-composer-textarea is-empty"
+                contenteditable="true"
+                role="textbox"
+                aria-multiline="true"
+                aria-labelledby="onboarding-conv-input-label"
+                data-sh-conv-composer-input
+                data-placeholder="Ask a follow up…"
+                spellcheck="true"
+              ></div>
+            </div>
+
+            <div
+              class="seller-home__conv-composer-toolbar"
+              role="toolbar"
+              aria-label="Composer actions"
+            >
+              <div
+                class="seller-home__conv-composer-slot seller-home__conv-composer-slot--start"
+                role="group"
+                aria-label="Attach and augment"
+              >
+                <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__conv-composer-btn" title="Add" aria-label="Add">
+                  <svg class="slds-button__icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Add</span>
+                </button>
+                <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__conv-composer-btn" title="Skills" aria-label="Skills">
+                  <span
+                    class="slds-button__icon seller-home__conv-composer-btn-image"
+                    style="--sh-composer-icon-image: url('/assets/images/nav-icons/skills.png')"
+                    aria-hidden="true"
+                  ></span>
+                  <span class="slds-assistive-text">Skills</span>
+                </button>
+                <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__conv-composer-btn" title="All tools" aria-label="All tools">
+                  <svg class="slds-button__icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#all"></use>
+                  </svg>
+                  <span class="slds-assistive-text">All tools</span>
+                </button>
+              </div>
+
+              <div
+                class="seller-home__conv-composer-slot seller-home__conv-composer-slot--end"
+                role="group"
+                aria-label="Send"
+              >
+                <button
+                  type="submit"
+                  class="slds-button slds-button_icon slds-button_icon-bare seller-home__conv-composer-btn seller-home__conv-composer-send"
+                  title="Send message"
+                  aria-label="Send message"
+                  data-sh-conv-composer-send
+                  disabled
+                >
+                  <svg class="slds-button__icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#send"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Send message</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="seller-home__composer-footer">
+          <div class="connected-sources">
+            <span class="connected-sources__label">Connections</span>
+            <div class="connected-sources__icon-container">
+              <ul class="source-icons" role="list">
+                <li class="source-icons__item">
+                  <span class="source-icons__wrapper" aria-label="Salesforce">
+                    <img class="source-icons__icon" src="/assets/images/source_icons/source_salesforce.svg" alt="Salesforce">
+                    <span class="slds-popover slds-popover_tooltip slds-nubbin_bottom source-icons__tooltip" role="tooltip"><div class="slds-popover__body">Salesforce</div></span>
+                  </span>
+                </li>
+                <li class="source-icons__item">
+                  <span class="source-icons__wrapper" aria-label="Gong">
+                    <img class="source-icons__icon" src="/assets/images/source_icons/source_gong.svg" alt="Gong">
+                    <span class="slds-popover slds-popover_tooltip slds-nubbin_bottom source-icons__tooltip" role="tooltip"><div class="slds-popover__body">Gong</div></span>
+                  </span>
+                </li>
+                <li class="source-icons__item">
+                  <span class="source-icons__wrapper" aria-label="ZoomInfo">
+                    <img class="source-icons__icon" src="/assets/images/source_icons/source_zoominfo.svg" alt="ZoomInfo">
+                    <span class="slds-popover slds-popover_tooltip slds-nubbin_bottom source-icons__tooltip" role="tooltip"><div class="slds-popover__body">ZoomInfo</div></span>
+                  </span>
+                </li>
+              </ul>
+              <button type="button" class="slds-button connected-sources__view-all">View all</button>
+            </div>
+          </div>
+
+          <span class="seller-home__composer-disclaimer">Generative AI can produce inaccurate responses. Review responses carefully.</span>
+
+          <button type="button" class="slds-button seller-home__composer-feedback">Share Feedback</button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  {# ── Scripted beats (inert templates cloned by the player) ────────── #}
+
+  {# 1. Agent greeting — two paragraphs from onboarding_conversation.md. #}
+  <template data-ob-tpl="greeting">
+    <li class="seller-home__conv-thread-item">
+      <article class="seller-home__conv-msg seller-home__conv-msg--agent" data-sh-conv-msg-type="agent" aria-label="Agent response">
+        <p class="seller-home__conv-msg-agent-text">Hi! Let's <strong>run CRM discovery</strong> so I can learn your team's sales motion. I'll inspect your Salesforce org first, then ask only the blocking scope question I can't safely infer.</p>
+        <p class="seller-home__conv-msg-agent-text">Ready to start? Just say <strong>yes</strong> and I'll begin the preflight.</p>
+      </article>
+    </li>
+  </template>
+
+  {# 2. User bubble — echoes the modal's Start now click. #}
+  <template data-ob-tpl="user-start">
+    <li class="seller-home__conv-thread-item">
+      <article class="seller-home__conv-msg seller-home__conv-msg--user" data-sh-conv-msg-type="user" aria-label="Your message">
+        <p class="seller-home__conv-msg-user-pill" data-sh-conv-msg-text>Start now</p>
+      </article>
+    </li>
+  </template>
+
+  {# 3. Thinking indicator — shared shimmer label + sparkles. Label is
+     overwritten per beat by the player via data-sh-conv-thinking-label. #}
+  <template data-ob-tpl="thinking">
+    {{ convo.thinkingIndicator("Inspecting your Salesforce org…") }}
+  </template>
+
+  {# 4. Agent discovery — the rich CRM read (tables + assumptions +
+     scope question), authored HTML from onboarding_conversation.md. #}
+  <template data-ob-tpl="discovery">
+    <li class="seller-home__conv-thread-item">
+      <article class="seller-home__conv-msg seller-home__conv-msg--agent" data-sh-conv-msg-type="agent" aria-label="Agent response">
+        <div class="onboarding-conv__rich">
+
+          <h2 class="onboarding-conv__heading">CRM Discovery — Initial Read</h2>
+          <table class="slds-table slds-table_cell-buffer slds-table_bordered onboarding-conv__table">
+            <thead>
+              <tr class="slds-line-height_reset">
+                <th scope="col">Observation</th>
+                <th scope="col">Evidence</th>
+                <th scope="col">Implication</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Trailing 12-month Opportunity volume is substantial</th>
+                <td><strong>5,800</strong> Opportunities</td>
+                <td>Enough volume for a GTM / selling-behavior analysis.</td>
+              </tr>
+              <tr>
+                <th scope="row">Closed outcomes are available</th>
+                <td><strong>526</strong> Closed Won, <strong>2,641</strong> Closed Lost</td>
+                <td>Standard <code>IsClosed</code>, <code>IsWon</code>, and <code>StageName</code> can support outcome analysis.</td>
+              </tr>
+              <tr>
+                <th scope="row">Open pipeline is also sizable</th>
+                <td><strong>2,633</strong> open Opportunities across active stages</td>
+                <td>We can analyze current-stage behavior, but outcome learning should focus on closed records.</td>
+              </tr>
+              <tr>
+                <th scope="row">Primary motion populations are clear</th>
+                <td>New Customer <strong>1,280</strong>; Existing Customer - Upgrade <strong>1,264</strong>; Replacement <strong>1,214</strong>; Downgrade <strong>1,204</strong>; blank Type <strong>812</strong></td>
+                <td>There are distinct motions; scope selection is the only blocking decision.</td>
+              </tr>
+              <tr>
+                <th scope="row">Activity coverage is usable but incomplete</th>
+                <td><strong>3,384 / 5,800</strong> Opportunities have <code>LastActivityDate</code> (58.3%)</td>
+                <td>Activity evidence can be used, with a coverage warning.</td>
+              </tr>
+              <tr>
+                <th scope="row">Stage model is standard enough for defaults</th>
+                <td>Closed Won / Closed Lost plus common sales stages like Qualification, Needs Analysis, Proposal, Negotiation</td>
+                <td>Default outcome definition is safe unless you want a custom success metric.</td>
+              </tr>
+              <tr>
+                <th scope="row">Potential Type hygiene issue</th>
+                <td><code>Type</code> has <strong>812 blank</strong> records and observed values beyond the described picklist values</td>
+                <td>We should exclude blanks by default unless you want them included.</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h2 class="onboarding-conv__heading">Default Assumptions</h2>
+          <ul class="onboarding-conv__list">
+            <li><strong>Window:</strong> Trailing 12 months by <code>CreatedDate</code></li>
+            <li><strong>Outcome definition:</strong> Standard Salesforce outcomes using <code>IsClosed</code>, <code>IsWon</code>, and <code>StageName</code></li>
+            <li><strong>Scope:</strong> All segments, geographies, owners, and products unless the selected motion requires otherwise</li>
+            <li><strong>Activity evidence:</strong> Use linked activity / conversation evidence where available; carry forward coverage caveats</li>
+            <li><strong>Goal:</strong> Learn what drives better selling / GTM effectiveness</li>
+          </ul>
+
+          <h2 class="onboarding-conv__heading">Blocking Scope Check</h2>
+          <p>I found these Opportunity populations:</p>
+          <table class="slds-table slds-table_cell-buffer slds-table_bordered onboarding-conv__table">
+            <thead>
+              <tr class="slds-line-height_reset">
+                <th scope="col">Opportunity Population</th>
+                <th scope="col">Count</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">New Customer</th><td>1,280</td></tr>
+              <tr><th scope="row">Existing Customer - Upgrade</th><td>1,264</td></tr>
+              <tr><th scope="row">Existing Customer - Replacement</th><td>1,214</td></tr>
+              <tr><th scope="row">Existing Customer - Downgrade</th><td>1,204</td></tr>
+              <tr><th scope="row">Blank Type</th><td>812</td></tr>
+              <tr><th scope="row">Existing Business</th><td>19</td></tr>
+              <tr><th scope="row">New Business</th><td>7</td></tr>
+            </tbody>
+          </table>
+
+          <p>Which population should I study for the selling-behavior analysis?</p>
+
+          <h2 class="onboarding-conv__heading">Next Steps</h2>
+          <p>If you want the default, I'll:</p>
+          <ul class="onboarding-conv__list">
+            <li>Use <strong>New Customer + Existing Customer - Upgrade</strong></li>
+            <li>Exclude <strong>Replacement</strong>, <strong>Downgrade</strong>, blank <code>Type</code>, and the tiny legacy <code>Existing Business</code> / <code>New Business</code> groups</li>
+          </ul>
+
+        </div>
+      </article>
+    </li>
+  </template>
+
+  {# 5. User echo — empty pill; the player writes the typed text in. #}
+  <template data-ob-tpl="user-echo">
+    <li class="seller-home__conv-thread-item">
+      <article class="seller-home__conv-msg seller-home__conv-msg--user" data-sh-conv-msg-type="user" aria-label="Your message">
+        <p class="seller-home__conv-msg-user-pill" data-sh-conv-msg-text></p>
+      </article>
+    </li>
+  </template>
+
+  {# 6. Run card — the long-running task, reused from the running lab
+     (running_lab.html). Driven by startRun() in onboarding_conversation.js
+     from the [data-ob-run-config] JSON below. The lab-only controls
+     (Skip/Pause/Restart) and the finished-result reveal are intentionally
+     omitted; the run just ends at "Completed". Three placeholder steps for
+     now — real copy drops into the config block. #}
+  <template data-ob-tpl="run">
+    <li class="seller-home__conv-thread-item">
+      <div class="rl-box rl-run slds-m-left_small" data-rl-status data-rl-cot-accordion>
+        <button
+          type="button"
+          class="rl-run__header rl-run__toggle slds-grid slds-grid_vertical-align-center slds-grid_align-spread"
+          data-rl-cot-toggle
+          aria-expanded="true"
+        >
+          <span class="slds-grid slds-grid_vertical-align-center">
+            <span class="rl-run__icon rl-swap" data-rl-status-icon aria-hidden="true">
+              <span class="rl-swap__glyph rl-swap__glyph--spinner sh-spinner"></span>
+              <svg class="rl-swap__glyph rl-swap__glyph--chevron" aria-hidden="true">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
+              </svg>
+            </span>
+            <span class="rl-run__title slds-m-left_small">
+              <span class="sh-typing rl-run__reasoning">
+                <span class="sh-typing__label" data-rl-cot-cycle aria-hidden="true">Working on step 1…</span>
+                <span class="slds-assistive-text" role="status">Agent is reasoning</span>
+              </span>
+              <span class="rl-run__label" data-rl-status-label></span>
+            </span>
+          </span>
+
+          <span class="rl-run__meta slds-grid slds-grid_vertical-align-center">
+            <span class="rl-elapsed">
+              <span class="slds-assistive-text">Time elapsed</span>
+              <span data-rl-elapsed>0 secs</span>
+            </span>
+          </span>
+        </button>
+
+        <div class="rl-run__body" data-rl-cot-sections>
+          {# One section per step. All start is-pending; the player
+             activates step 1, then advances through to Completed. #}
+          <div class="rl-phase is-pending" data-rl-phase="p1">
+            <button type="button" class="rl-phase__toggle slds-grid slds-grid_vertical-align-center" data-rl-phase-toggle aria-expanded="false">
+              <span class="rl-phase__heading slds-grid slds-grid_vertical-align-center">
+                <span class="rl-phase__icon rl-swap" title="Step 1">
+                  <span class="rl-swap__glyph rl-swap__glyph--topic rl-phase__check" aria-hidden="true">
+                    <svg class="rl-phase__check-mark" viewBox="0 0 9 7" fill="none" aria-hidden="true">
+                      <path fill-rule="evenodd" clip-rule="evenodd" d="M8.78334 1.65L3.68333 6.81667C3.48333 7.01667 3.15 7.01667 2.95 6.81667L0.15 3.98333C-0.05 3.78333 -0.05 3.45 0.15 3.25L0.883334 2.51667C1.08333 2.31667 1.41667 2.31667 1.61667 2.51667L3.08333 4.01667C3.21667 4.15 3.45 4.15 3.58333 4.01667L7.31667 0.15C7.51667 -0.05 7.85 -0.05 8.05 0.15L8.78334 0.883333C9.01667 1.08333 9.01667 1.41667 8.78334 1.65V1.65Z" fill="currentColor"></path>
+                    </svg>
+                  </span>
+                  <svg class="rl-swap__glyph rl-swap__glyph--chevron" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Step 1</span>
+                </span>
+                <span class="rl-phase__name t-text-swap slds-m-left_small" data-rl-phase-name>Step 1</span>
+              </span>
+            </button>
+            <div class="rl-phase__body" data-rl-phase-body>
+              <div class="rl-cot">
+                <div class="rl-cot__tools" data-rl-tools></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="rl-phase is-pending" data-rl-phase="p2">
+            <button type="button" class="rl-phase__toggle slds-grid slds-grid_vertical-align-center" data-rl-phase-toggle aria-expanded="false">
+              <span class="rl-phase__heading slds-grid slds-grid_vertical-align-center">
+                <span class="rl-phase__icon rl-swap" title="Step 2">
+                  <span class="rl-swap__glyph rl-swap__glyph--topic rl-phase__check" aria-hidden="true">
+                    <svg class="rl-phase__check-mark" viewBox="0 0 9 7" fill="none" aria-hidden="true">
+                      <path fill-rule="evenodd" clip-rule="evenodd" d="M8.78334 1.65L3.68333 6.81667C3.48333 7.01667 3.15 7.01667 2.95 6.81667L0.15 3.98333C-0.05 3.78333 -0.05 3.45 0.15 3.25L0.883334 2.51667C1.08333 2.31667 1.41667 2.31667 1.61667 2.51667L3.08333 4.01667C3.21667 4.15 3.45 4.15 3.58333 4.01667L7.31667 0.15C7.51667 -0.05 7.85 -0.05 8.05 0.15L8.78334 0.883333C9.01667 1.08333 9.01667 1.41667 8.78334 1.65V1.65Z" fill="currentColor"></path>
+                    </svg>
+                  </span>
+                  <svg class="rl-swap__glyph rl-swap__glyph--chevron" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Step 2</span>
+                </span>
+                <span class="rl-phase__name t-text-swap slds-m-left_small" data-rl-phase-name>Step 2</span>
+              </span>
+            </button>
+            <div class="rl-phase__body" data-rl-phase-body>
+              <div class="rl-cot">
+                <div class="rl-cot__tools" data-rl-tools></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="rl-phase is-pending" data-rl-phase="p3">
+            <button type="button" class="rl-phase__toggle slds-grid slds-grid_vertical-align-center" data-rl-phase-toggle aria-expanded="false">
+              <span class="rl-phase__heading slds-grid slds-grid_vertical-align-center">
+                <span class="rl-phase__icon rl-swap" title="Step 3">
+                  <span class="rl-swap__glyph rl-swap__glyph--topic rl-phase__check" aria-hidden="true">
+                    <svg class="rl-phase__check-mark" viewBox="0 0 9 7" fill="none" aria-hidden="true">
+                      <path fill-rule="evenodd" clip-rule="evenodd" d="M8.78334 1.65L3.68333 6.81667C3.48333 7.01667 3.15 7.01667 2.95 6.81667L0.15 3.98333C-0.05 3.78333 -0.05 3.45 0.15 3.25L0.883334 2.51667C1.08333 2.31667 1.41667 2.31667 1.61667 2.51667L3.08333 4.01667C3.21667 4.15 3.45 4.15 3.58333 4.01667L7.31667 0.15C7.51667 -0.05 7.85 -0.05 8.05 0.15L8.78334 0.883333C9.01667 1.08333 9.01667 1.41667 8.78334 1.65V1.65Z" fill="currentColor"></path>
+                    </svg>
+                  </span>
+                  <svg class="rl-swap__glyph rl-swap__glyph--chevron" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Step 3</span>
+                </span>
+                <span class="rl-phase__name t-text-swap slds-m-left_small" data-rl-phase-name>Step 3</span>
+              </span>
+            </button>
+            <div class="rl-phase__body" data-rl-phase-body>
+              <div class="rl-cot">
+                <div class="rl-cot__tools" data-rl-tools></div>
+              </div>
+            </div>
+          </div>
+        </div>{# /.rl-run__body #}
+      </div>{# /.rl-run #}
+    </li>
+  </template>
+
+  {# Run script — three placeholder steps over ~60s. Real steps (and any
+     per-beat tool rows) drop in here; the player derives the per-beat
+     dwell from totalMs so the run stays ~60s regardless of beat count. #}
+  <script type="application/json" data-ob-run-config>
+    {
+      "totalMs": 60000,
+      "phaseGapMs": 800,
+      "startDelay": 500,
+      "summary": "",
+      "phases": [
+        { "key": "p1", "name": "Step 1", "running": "Working on step 1\u2026", "substeps": [
+          { "label": "Sub-step 1", "icon": "search", "count": "12 results" },
+          { "label": "Sub-step 2", "icon": "database", "count": "47 matched" },
+          { "label": "Sub-step 3", "icon": "world", "count": "31 results" }
+        ] },
+        { "key": "p2", "name": "Step 2", "running": "Working on step 2\u2026", "substeps": [
+          { "label": "Sub-step 1", "icon": "people", "count": "7 accounts" },
+          { "label": "Sub-step 2", "icon": "org_chart", "count": "25 contacts" },
+          { "label": "Sub-step 3", "icon": "contact", "count": "25 new" }
+        ] },
+        { "key": "p3", "name": "Step 3", "running": "Working on step 3\u2026", "substeps": [
+          { "label": "Sub-step 1", "icon": "knowledge_base", "count": "loaded" },
+          { "label": "Sub-step 2", "icon": "ai_search", "count": "matched" },
+          { "label": "Sub-step 3", "icon": "email", "count": "75 drafts" }
+        ] }
+      ]
+    }
+  </script>
+
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="/scripts/onboarding_conversation.js"></script>
+{% endblock %}

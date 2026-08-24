@@ -79,6 +79,11 @@
   role="listitem"
   data-sh-nav="{{ item.id }}"
   {% if not item.href %}data-sh-nav-noroute{% endif %}
+  {# Opt this item into the shared Tools modal. tools_modal.js binds any
+     `[data-sh-tools-open]` (preventDefault + openToolsModal), so on a
+     page carrying the modal this opens it instead of following `href`;
+     `href` stays as the no-JS / no-modal fallback route. #}
+  {% if item.opensToolsModal %}data-sh-tools-open{% endif %}
   {% if isActive %}aria-current="page"{% endif %}
   title="{{ item.label }}"
 >

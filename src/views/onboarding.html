@@ -1,0 +1,184 @@
+{% extends "_template.html" %}
+
+{#
+  First-time onboarding — landing
+  =====================================================================
+  Route: /onboarding.html
+
+  Scaffolding for the end-user onboarding prototype. Same app shell as
+  Seller Home (`_template.html` global header + Sales context bar, then
+  `.seller-home` from home.css) with everything a first-time user does
+  not need stripped out: no left nav, no briefing, no composer, no feed,
+  no tools modal.
+
+  What stays:
+    • the god-rays shader, full-bleed (no nav to inset from)
+    • a Start now control that opens /onboarding_conversation.html
+    • a prototype Controls panel that tunes THIS page's shader only.
+      Index.html has its own inline mount + `#panel`; the two never
+      share state, storage, or a DOM host.
+#}
+
+{% block styles %}
+<link rel="stylesheet" href="/styles/home.css" />
+{# Tools modal visuals (`.morph-modal-container`, `.tool-modal-*`) — the
+   onboarding modal is a static port of that dialog's Connect panel. Kept
+   because the modal is only hidden (not removed). #}
+<link rel="stylesheet" href="/styles/tools.css" />
+{# Knowledge promo banner visuals (`.knowledge-banner*`), reused as the
+   onboarding landing card. #}
+<link rel="stylesheet" href="/styles/knowledge.css" />
+<link rel="stylesheet" href="/styles/onboarding.css" />
+{% endblock %}
+
+{% block content %}
+<div class="seller-home seller-home--onboarding" data-sh-root>
+	{# God-rays host. Empty and aria-hidden — decoration, no content.
+	   Geometry is `.seller-home__god-rays` in home.css, with the nav
+	   inset overridden by `.seller-home--onboarding` in onboarding.css
+	   so the box spans the full shell. #}
+	<div class="seller-home__god-rays" data-onboarding-god-rays aria-hidden="true"></div>
+
+	<div class="seller-home__main">
+		<div class="seller-home__main-inner">
+			{# Onboarding landing card — the promo banner reused from
+			   /knowledge.html (`.knowledge-banner`, styled by knowledge.css).
+			   Copy is the onboarding CRM-discovery message; the CTA is an
+			   anchor into the conversation (no dismiss controller here).
+			   HIDDEN for now — the Tools-style modal below is the landing
+			   card again; remove `hidden` here (and add it to the modal) to
+			   bring the banner back. #}
+			<div class="knowledge-banner knowledge-banner_grid-right" hidden>
+				<div class="knowledge-banner__content">
+					<div>
+						<span class="knowledge-banner__badge">Get started</span>
+						<p class="knowledge-banner__title">Let's run CRM discovery</p>
+						<p class="knowledge-banner__description">I'll learn your team's sales motion by inspecting your Salesforce org first, then ask only the blocking scope question I can't safely infer.</p>
+					</div>
+
+					<a href="/onboarding_conversation.html" class="slds-button slds-button_neutral knowledge-banner__button">start</a>
+				</div>
+
+				<div class="knowledge-banner__illustration-col">
+					<div class="knowledge-banner__illustration">
+						{{ inlineSvg("images/illustrations/Iso_Scan_bare.svg", {
+							"class": "knowledge-banner__illustration-svg",
+							"role": "img",
+							"aria-label": "A wand scanning a stack of sheets"
+						}) | safe }}
+					</div>
+				</div>
+			</div>
+
+			{# Static port of the Tools "Connect" dialog (Panel 2 of
+			   _tools_modal.html): the aurora-gradient header + reading
+			   column body. The landing card again (the knowledge banner
+			   above is hidden). Rendered open by default via
+			   `slds-fade-in-open` and with no `.slds-backdrop`, so the
+			   god-rays show through. The morph JS is not loaded here;
+			   onboarding.css renders the fixed SLDS modal statically
+			   (centred 640px card, pointer passthrough so the shader
+			   Controls stay usable). #}
+			<section
+				class="slds-modal slds-fade-in-open onboarding-modal"
+				role="dialog"
+				tabindex="-1"
+				aria-modal="false"
+				aria-labelledby="onboarding-modal-heading"
+			>
+				<div class="slds-modal__container morph-modal-container">
+
+					{# ── Gradient header ──────────────────────────────── #}
+					<div class="slds-modal__header tool-modal-top-col" style="padding:0; border:none;">
+						<div class="onboarding-modal__top-inner">
+							<div class="slds-grid slds-grid_align-center slds-m-top_large">
+								<div class="tool-modal-logo-container slds-m-around_x-small">
+									<div class="tool-modal-logo" style="background-image: url('/assets/images/tools-logos/salesforce.png');"></div>
+								</div>
+								<!-- <div class="tool-modal-logo-container slds-m-around_x-small">
+									<div class="tool-modal-logo" style="background-image: url('/assets/images/tools-logos/zoominfo.png');"></div>
+								</div> -->
+							</div>
+							<div class="tool-modal-title slds-m-top_small slds-m-bottom_large" id="onboarding-modal-heading">Title
+
+							</div>
+							<a href="/onboarding_conversation.html" class="slds-button slds-button_brand">Start now</a>
+						</div>
+					</div>
+
+					{# ── Body ─────────────────────────────────────────── #}
+					<div class="slds-modal__content tool-modal-bottom-col">
+						<div class="tool-modal-description slds-m-bottom_medium">Let's run CRM discovery so I can learn your team's sales motion. I'll inspect your Salesforce org first, then ask only
+						the blocking scope question I can't safely infer.</div>
+						<div class="tool-modal-description slds-m-bottom_xx-small">Lorem ipsum:</div>
+						<div class="tool-modal-bullet">
+							<span class="slds-icon_container slds-icon-utility-check">
+								<svg class="slds-icon slds-icon_xx-small tool-modal-bullet-color" aria-hidden="true">
+									<use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+								</svg>
+							</span>
+							<span class="tool-modal-description">Lorem ipsum dolor sit amet consectetur adipiscing elit.</span>
+						</div>
+						<div class="tool-modal-bullet">
+							<span class="slds-icon_container slds-icon-utility-check">
+								<svg class="slds-icon slds-icon_xx-small tool-modal-bullet-color" aria-hidden="true">
+									<use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+								</svg>
+							</span>
+							<span class="tool-modal-description">Sed do eiusmod tempor incididunt ut labore et dolore.</span>
+						</div>
+						<div class="tool-modal-bullet">
+							<span class="slds-icon_container slds-icon-utility-check">
+								<svg class="slds-icon slds-icon_xx-small tool-modal-bullet-color" aria-hidden="true">
+									<use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+								</svg>
+							</span>
+							<span class="tool-modal-description">Ut enim ad minim veniam quis nostrud exercitation.</span>
+						</div>
+					</div>
+
+				</div>
+			</section>
+		</div>
+	</div>
+</div>
+
+
+
+
+{# Prototype shader tuner — scoped ids so it cannot collide with
+   index.html's `#panel`. Wired only by onboarding_god_rays.js, which
+   mounts on `[data-onboarding-god-rays]` and never touches Seller Home. #}
+<div id="onboarding-panel" class="onboarding-panel closed">
+	<div class="onboarding-panel__head">
+		<button type="button" id="onboarding-panel-toggle">Controls</button>
+		<button type="button" id="onboarding-panel-copy" class="onboarding-panel__act" hidden>Copy</button>
+		<button type="button" id="onboarding-panel-reset" class="onboarding-panel__act" hidden>Reset</button>
+	</div>
+	<div class="onboarding-panel__body">
+		<div class="onboarding-panel__sect">
+			<h2>Ray colors</h2>
+			<div id="onboarding-ray-colors"></div>
+			<div class="onboarding-panel__row" id="onboarding-count-row"></div>
+		</div>
+		<div class="onboarding-panel__sect">
+			<h2>Background &amp; bloom</h2>
+			<div id="onboarding-other-colors"></div>
+		</div>
+		<div class="onboarding-panel__sect">
+			<h2>Clear cones (no rays)</h2>
+			<div id="onboarding-cones" class="onboarding-panel__cones"></div>
+		</div>
+		<div class="onboarding-panel__sect">
+			<h2>Shape</h2>
+			<div id="onboarding-rows"></div>
+		</div>
+	</div>
+</div>
+
+<pre id="onboarding-shader-err" class="onboarding-shader-err"></pre>
+{% endblock %}
+
+{% block scripts_extra %}
+<script type="module" src="/scripts/onboarding_god_rays.js"></script>
+{% endblock %}
