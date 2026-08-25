@@ -3760,14 +3760,16 @@ $sh-scheduled-status-rest: (
   scheduled: "clock",
   paused:    "pause",
   failed:    "warning",
+  archived:  "ban",
 );
 
 $sh-scheduled-status-action: (
-  completed: "pause",
-  running:   "pause",
-  scheduled: "pause",
+  completed: "play",
+  running:   "stop",
+  scheduled: "play",
   paused:    "play",
   failed:    "refresh",
+  archived:  "refresh",
 );
 
 // At rest: what the row IS.
@@ -3781,6 +3783,12 @@ $sh-scheduled-status-action: (
 // resting glyph so the hover swap to the retry arrow returns to grey.
 [data-sh-workflow-status="failed"] .seller-home__scheduled-status-glyph--warning {
   fill: var(--slds-g-color-palette-red-50, #ea001e);
+}
+
+// Archived rows rest on a muted "ban" glyph (hover swaps to Restart's
+// refresh, from the action map) — same treatment as the feed.
+[data-sh-workflow-status="archived"] .seller-home__scheduled-status-glyph--ban {
+  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
 }
 
 // On hover: what the click WILL DO. Latched off after a click so the
@@ -3800,6 +3808,17 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   [data-sh-workflow-status="#{$state}"] #{$sh-scheduled-status-preview}:hover .seller-home__scheduled-status-glyph--#{$glyph},
   [data-sh-workflow-status="#{$state}"] #{$sh-scheduled-status-preview}:focus-visible .seller-home__scheduled-status-glyph--#{$glyph} {
     @include sh-feed-glyph-shown;
+  }
+}
+
+// Per-state overflow scoping — mirrors the feed's action-visibility loop,
+// keyed off the row's `data-sh-workflow-status`. `onlyForState` /
+// `hideForState` take a space-separated list (hence `~=`), so Run now and
+// Archive can scope to "completed scheduled" at once.
+@each $state in $sh-feed-states {
+  [data-sh-workflow-status="#{$state}"] [data-sh-workflow-action-not~="#{$state}"],
+  [data-sh-workflow-status="#{$state}"] [data-sh-workflow-action-only]:not([data-sh-workflow-action-only~="#{$state}"]) {
+    display: none;
   }
 }
 

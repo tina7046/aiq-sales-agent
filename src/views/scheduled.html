@@ -61,17 +61,27 @@
    rows). `tabs`, `statusTypes`, `rowActions`, `banner` and `emptyState`
    still come from scheduled.json; only `workflows` is sourced here, so
    the tab counts below (which iterate `workflows` and read `.status`)
-   stay correct. Order follows the feed's authored order. #}
+   stay correct.
+
+   Rows are grouped by the feed's own `stateOrder` (completed before
+   running) rather than the feed's raw array order, so the Active tab
+   reads completed-on-top / running-below. Within a status the feed's
+   authored order is preserved (the inner loop keeps array order). #}
+{% set statusSort = readData("index").feed.stateOrder or ["completed", "running", "scheduled", "paused", "failed", "archived"] %}
 {% set workflows = [] %}
-{% for _it in (readData("index").feed.items or []) %}
-  {% set _ = workflows.push({
-    id:      _it.id,
-    title:   _it.title,
-    cadence: _it.cadence,
-    status:  _it.state,
-    linked:  (true if _it.conversationId else false),
-    href:    (("/home_conversation.html?id=" ~ _it.conversationId) if _it.conversationId else "")
-  }) %}
+{% for _st in statusSort %}
+  {% for _it in (readData("index").feed.items or []) %}
+    {% if _it.state == _st %}
+      {% set _ = workflows.push({
+        id:      _it.id,
+        title:   _it.title,
+        cadence: _it.cadence,
+        status:  _it.state,
+        linked:  (true if _it.conversationId else false),
+        href:    (("/home_conversation.html?id=" ~ _it.conversationId) if _it.conversationId else "")
+      }) %}
+    {% endif %}
+  {% endfor %}
 {% endfor %}
 
 {% block styles %}
@@ -167,7 +177,7 @@
             {% include "_seller_home_banner.html" %}
           {% endif %}
 
-          {# ── Tabs row (filter chips) + filter button ─────────────
+          {# ── Tabs row (filter chips) ─────────────────────────────
              ARIA note: these are filter chips over one list, NOT
              SLDS tabpanel-swapping tabs. So we use `role="radiogroup"`
              + `role="radio"` per the WAI-ARIA authoring practices
@@ -245,26 +255,6 @@
                 </button>
               {% endfor %}
             </div>
-
-            {# ── Filter icon-button (right-anchored) ─────────────
-               Circular icon-only affordance. Click dispatches
-               `sh:scheduled-filter` on `[data-sh-scheduled-root]`
-               so a future filter menu can bind without touching
-               this markup. Reuses SLDS 2's icon-bare button so
-               height, focus ring, and hover come from the base
-               stylesheet. #}
-            <button
-              type="button"
-              class="slds-button slds-button_icon slds-button_icon-bare seller-home__scheduled-filter"
-              data-sh-scheduled-filter
-              title="{{ filterAction.label }}"
-              aria-label="{{ filterAction.label }}"
-            >
-              <svg class="slds-button__icon" aria-hidden="true">
-                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ filterAction.icon }}"></use>
-              </svg>
-              <span class="slds-assistive-text">{{ filterAction.label }}</span>
-            </button>
           </div>
 
           {# ── Live-region — announces tab-switch results ─────────

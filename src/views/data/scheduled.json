@@ -121,13 +121,16 @@
   // points in it. Splitting them out would put a workflow in a
   // different tab depending on the minute you looked, and leave rows
   // reachable from no tab but "All".
+  // Tabs mirror the home feed's three filter views (Active / Scheduled /
+  // Archived). Active gathers the live states (completed + running +
+  // paused); Scheduled and Archived are single-state. Default is Active,
+  // matching the feed.
   "tabs": {
-    "defaultTabId": "all",
+    "defaultTabId": "active",
     "items": [
-      { "id": "all",            "label": "All",            "statuses": [] },
-      { "id": "need_attention", "label": "Need attention", "statuses": ["failed"] },
-      { "id": "scheduled",      "label": "Scheduled",      "statuses": ["scheduled", "running", "completed"] },
-      { "id": "paused",         "label": "Paused",         "statuses": ["paused"] }
+      { "id": "active",    "label": "Active",    "statuses": ["completed", "running", "paused"] },
+      { "id": "scheduled", "label": "Scheduled", "statuses": ["scheduled"] },
+      { "id": "archived",  "label": "Archived",  "statuses": ["archived"] }
     ]
   },
   // Status registry — one entry per `workflow.status` value, matching
@@ -139,11 +142,12 @@
   // is why `failed` says "Retry" rather than "Pause": what the seller
   // came to an errored workflow for is to run it again.
   "statusTypes": {
-    "failed":    { "label": "Needs attention", "action": "Retry"  },
-    "running":   { "label": "Running now",     "action": "Pause"  },
-    "completed": { "label": "Completed",       "action": "Pause"  },
-    "scheduled": { "label": "Scheduled",       "action": "Pause"  },
-    "paused":    { "label": "Paused",          "action": "Resume" }
+    "failed":    { "label": "Needs attention", "action": "Retry"   },
+    "running":   { "label": "Running now",     "action": "Stop"    },
+    "completed": { "label": "Completed",       "action": "Run now" },
+    "scheduled": { "label": "Scheduled",       "action": "Run now" },
+    "paused":    { "label": "Paused",          "action": "Resume"  },
+    "archived":  { "label": "Archived",        "action": "Restart" }
   },
   // Workflows. A row drills in when it has somewhere to go: drop the
   // `linked: false` and give it an `href`, and the row macro renders it
@@ -218,29 +222,24 @@
       "linked":  false
     }
   ],
-  // Per-row overflow menu (⋮). Actions dispatch `sh:workflow-action`
-  // CustomEvent with `{ workflowId, actionId }` so a future
-  // scheduler backend can bind without touching this markup.
-  // Keeping Pause / Resume as two entries rather than a toggle so
-  // the row can decide which one to show based on the current
-  // status. For now the template renders both; a future increment
-  // can hide the inapplicable one.
+  // Per-row overflow menu (⋮). Same per-state set the home feed uses,
+  // so the two surfaces offer identical actions. `onlyForState` scopes an
+  // action to the states it makes sense in (space-separated list,
+  // enforced in CSS off the row's `data-sh-workflow-status`), so per state
+  // the menu reads:
+  //   completed  Run now · Edit · Archive
+  //   running    Stop · Edit
+  //   scheduled  Run now · Edit · Archive
+  //   archived   Restart · Edit
+  // Run now / Stop / Restart / Archive change the row's state (home.js);
+  // all still emit `sh:workflow-action` for a future scheduler backend.
   "rowActions": [
-    { "id": "edit",      "label": "Edit",      "icon": "edit"      },
-    { "id": "pause",     "label": "Pause",     "icon": "pause"     },
-    { "id": "resume",    "label": "Resume",    "icon": "play"      },
-    { "id": "duplicate", "label": "Duplicate", "icon": "copy"      },
-    { "id": "delete",    "label": "Delete",    "icon": "delete"    }
+    { "id": "run_now", "label": "Run now", "icon": "play",    "onlyForState": "completed scheduled" },
+    { "id": "stop",    "label": "Stop",    "icon": "stop",    "onlyForState": "running" },
+    { "id": "restart", "label": "Restart", "icon": "refresh", "onlyForState": "archived" },
+    { "id": "edit",    "label": "Edit",    "icon": "edit" },
+    { "id": "archive", "label": "Archive", "icon": "archive", "onlyForState": "completed scheduled" }
   ],
-  // Right-anchored filter button next to the tabs. Icon-only,
-  // circular, brand-blue funnel glyph. Click emits
-  // `sh:scheduled-filter` — a future consumer can open a filter
-  // menu without changes here.
-  "filterAction": {
-    "id":       "filter",
-    "label":    "Filter workflows",
-    "icon":     "filterList"
-  },
   // Empty state — rendered as a sibling of the list. Hidden by
   // default; bindScheduled() toggles the `hidden` attribute when
   // the active tab filters out every workflow.

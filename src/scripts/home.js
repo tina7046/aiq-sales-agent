@@ -60,8 +60,7 @@
   //     hash sync (deep-linkable + Back / Forward respect it),
   //     `aria-live="polite"` result-count announcements, and a
   //     per-row `⋮ → Edit / Pause / Resume / Duplicate / Delete`
-  //     overflow menu that mirrors Knowledge's semantics. The
-  //     filter icon-button emits `sh:scheduled-filter`; row menu
+  //     overflow menu that mirrors Knowledge's semantics. Row menu
   //     actions emit `sh:workflow-action` with `{ action,
   //     workflowId }`.
 //
@@ -2831,9 +2830,6 @@
   //   • [data-sh-scheduled-status]       → visually-hidden aria-live
   //                                        region (announces the new
   //                                        result count on switch)
-  //   • [data-sh-scheduled-filter]       → right-anchored icon button;
-  //                                        emits `sh:scheduled-filter`
-  //                                        for a future consumer.
   //
   // Contract:
   //   • Server-side paints the first-active tab from
@@ -2896,11 +2892,14 @@
   // resume back into the error.
   function nextWorkflowStatus (item) {
     var status = item.getAttribute('data-sh-workflow-status')
-    if (status === 'paused') {
-      return item.getAttribute('data-sh-workflow-status-default') || 'scheduled'
-    }
+    // Same lifecycle as the home feed: Run now a scheduled/completed row,
+    // Stop a running one, Restart an archived one; a paused row resumes to
+    // its last real state; a failed one retries.
+    if (status === 'scheduled' || status === 'completed') return 'running'
+    if (status === 'running' || status === 'archived') return 'scheduled'
     if (status === 'failed') return 'running'
-    return 'paused'
+    if (status === 'paused') return item.getAttribute('data-sh-workflow-status-default') || 'scheduled'
+    return 'scheduled'
   }
 
   function applyWorkflowStatus (item, status, types) {
@@ -2909,7 +2908,7 @@
     var name = titleNode ? (titleNode.textContent || '').trim() : ''
 
     item.setAttribute('data-sh-workflow-status', status)
-    if (status !== 'paused') {
+    if (status !== 'paused' && status !== 'archived') {
       item.setAttribute('data-sh-workflow-status-default', status)
     }
 
@@ -2982,7 +2981,6 @@
     var listRoot = root.querySelector('[data-sh-scheduled-workflow-list]')
     var emptyPanel = root.querySelector('[data-sh-scheduled-empty]')
     var statusRegion = root.querySelector('[data-sh-scheduled-status]')
-    var filterBtn = root.querySelector('[data-sh-scheduled-filter]')
 
     // Set once the tab wiring below is known good. The status button is
     // bound before that point, so it reaches the recount through this
@@ -2994,22 +2992,11 @@
     // controller — bind them up front so per-row controls work even if
     // the tab wiring below early-returns due to malformed markup.
     if (listRoot) {
-      scheduledWorkflowOverflowController(listRoot)
-      scheduledStatusController(listRoot, function () {
+      scheduledWorkflowOverflowController(listRoot, function () {
         if (afterStatusChange) afterStatusChange()
       })
-    }
-
-    // Filter icon-button — just a dispatcher today. A future filter
-    // menu can bind on the event without changes here.
-    if (filterBtn) {
-      filterBtn.addEventListener('click', function (event) {
-        event.preventDefault()
-        document.dispatchEvent(new CustomEvent('sh:scheduled-filter', {
-          detail: { source: 'toolbar' }
-        }))
-        // eslint-disable-next-line no-console
-        console.info('[seller-home] scheduled filter dispatched')
+      scheduledStatusController(listRoot, function () {
+        if (afterStatusChange) afterStatusChange()
       })
     }
 
@@ -3065,7 +3052,13 @@
       })
     }
 
-    afterStatusChange = refreshTabCounts
+    afterStatusChange = function () {
+      refreshTabCounts()
+      // Re-run the active tab's filter so a row whose new state no longer
+      // matches (e.g. Archive while on Active) drops out of view — the way
+      // the feed moves a row between views.
+      activateTab(activeTabId, {})
+    }
 
     // Which tab is active right now. Track independently of the DOM
     // so tab-click handlers can early-return on a no-op reselect.
@@ -3265,9 +3258,19 @@
   // State: single-open menu enforced via the `openMenu` /
   // `openTrigger` pair — opening a second menu closes the first,
   // matching SLDS' one-menu-at-a-time convention.
-  function scheduledWorkflowOverflowController (listRoot) {
+  function scheduledWorkflowOverflowController (listRoot, onChange) {
     var openMenu = null
     var openTrigger = null
+
+    // Overflow actions that move the row to a new state — the same
+    // transitions the status button and the home feed make. `edit` isn't
+    // here, so it stays a dispatch-only placeholder.
+    var WORKFLOW_ACTION_STATES = {
+      run_now: 'running',
+      stop: 'scheduled',
+      restart: 'scheduled',
+      archive: 'archived'
+    }
 
     function setMenuState (trigger, menu, isOpen) {
       menu.hidden = !isOpen
@@ -3326,6 +3329,14 @@
       var actionId = actionBtn.getAttribute('data-sh-workflow-action')
       var row = closest(actionBtn, '[data-sh-workflow-item]')
       var workflowId = row ? row.getAttribute('data-sh-workflow-id') : ''
+
+      // Apply the state change (if any), then let the caller refresh the
+      // tab counts + re-filter so the row moves between tabs.
+      var target = WORKFLOW_ACTION_STATES[actionId]
+      if (target && row) {
+        applyWorkflowStatus(row, target, readWorkflowStatusTypes(listRoot))
+        if (onChange) onChange(row, actionId, target)
+      }
 
       document.dispatchEvent(new CustomEvent('sh:workflow-action', {
         detail: { action: actionId, workflowId: workflowId }

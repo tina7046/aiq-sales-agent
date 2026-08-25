@@ -116,7 +116,7 @@
       class="seller-home__scheduled-status-glyph seller-home__scheduled-status-glyph--spinner sh-spinner"
       aria-hidden="true"
     ></span>
-    {% for glyph in ["check", "clock", "pause", "play", "warning", "refresh"] %}
+    {% for glyph in ["check", "clock", "pause", "play", "warning", "refresh", "stop", "ban"] %}
       <svg
         class="seller-home__scheduled-status-glyph seller-home__scheduled-status-glyph--{{ glyph }}"
         aria-hidden="true"
@@ -252,7 +252,11 @@
       >
         <ul class="seller-home__scheduled-workflow-menu-items" role="none">
           {% for action in actions %}
-            <li role="none">
+            <li
+              role="none"
+              {%- if action.onlyForState %} data-sh-workflow-action-only="{{ action.onlyForState }}"{% endif %}
+              {%- if action.hideForState %} data-sh-workflow-action-not="{{ action.hideForState }}"{% endif %}
+            >
               <button
                 type="button"
                 class="seller-home__scheduled-workflow-menu-item"
