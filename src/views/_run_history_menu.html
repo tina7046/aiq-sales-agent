@@ -1,0 +1,202 @@
+{#
+  Run History dropdown
+  =====================================================================
+  Header control for a scheduled workflow whose every run appended into
+  the same conversation. Over weeks that thread gets long, so this is
+  how the seller moves between runs: the trigger reports the current
+  run, and picking an older one scrolls the feed to where that run
+  starts.
+
+  ── The trigger ──────────────────────────────────────────────────────
+  A standard SLDS picklist: the `slds-combobox_container >
+  slds-combobox.slds-dropdown-trigger_click` shell with a
+  `slds-input_faux slds-combobox__input` value box and a right chevron.
+  That gives it the bordered, full-height input look — the reason it's
+  this and not the short badge it used to be. It carries the current
+  run's state dot on the left (`slds-input-has-icon_left-right`); the
+  reference SLDS picklist has no left icon, but the dot is worth keeping
+  so the resting control shows the run's status at a glance.
+
+  It is NOT a text field — it's a `role="combobox"` box you click (or
+  Enter / Space / Down) to open. Typing happens on the search input
+  inside the popover, below.
+
+  ── The popover ──────────────────────────────────────────────────────
+  The panel, its search box, and its rows are the Seller Home composer's
+  agent switcher (`seller-home__composer-menu-list`, `-item`, `-label`,
+  `-check`, in home.scss), so the hover, row rhythm, dot alignment,
+  border-radius and check all match the agent chooser. Shown and hidden
+  with the `hidden` attribute — the contract the composer menus use,
+  which is why the combobox keeps `slds-dropdown-trigger_click` (the rule
+  that undoes SLDS' hiding is scoped to it).
+
+  The search is the cadence Prospect lookup's behaviour
+  (home_conversation_lookups.js): immediate `input` filter,
+  case-insensitive substring, an active row tracked with
+  `aria-activedescendant`, and a "No matches found" row. Rows filter by
+  toggling `hidden`.
+
+  ── Contract ─────────────────────────────────────────────────────────
+  Callers set, before including:
+    • runHistory        — `{ label?, runs: [...] }`, runs NEWEST-FIRST.
+    • runConversationId — the conversation id; scopes element ids.
+    • runInitialHidden  — true for every conversation but the active one;
+                          `switchRunHistory` flips it at boot.
+
+  Per run: `period` (pre-formatted date span for weekly, weekday+date
+  for daily), `label` (the exact timestamp, kept for the side panel and
+  search), and `status` (`running` | `completed` | `failed`). Selecting a
+  run scrolls to its header anchor — `"{runId}-header"`, the id
+  `expandRuns` (gulpfile.js) gives each run's `run_header`. The run's
+  number counts from the FIRST run (oldest = 1), so the newest carries
+  the highest number; the unit word comes from `runHistory.cadence`
+  ("weekly" → "Week", "daily" → "Day", else "Run"), and the two join as
+  "{unit} {n}: {period}" — e.g. "Week 24: Aug 24 - Aug 31".
+#}
+
+{# One state glyph, used by both the trigger and the rows. Running
+   borrows the shared `.sh-spinner` (index.scss); the other two are the
+   home feed's status glyphs — a solid `#circle` for done, a `#warning`
+   triangle for failed — tinted by status in home_conversation.scss.
+   Always aria-hidden: the status reaches AT as text in each row's
+   assistive span. #}
+{% macro runStateIcon(run, extraClass) %}
+  {%- if run.status == 'running' -%}
+    <span class="sh-spinner seller-home__run-history-spinner {{ extraClass }}" aria-hidden="true"></span>
+  {%- else -%}
+    <svg class="seller-home__run-history-icon seller-home__run-history-icon--{{ run.status }} {{ extraClass }}" aria-hidden="true" focusable="false">
+      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{% if run.status == 'completed' %}circle{% else %}warning{% endif %}"></use>
+    </svg>
+  {%- endif -%}
+{% endmacro %}
+
+{% set _runs = runHistory.runs or [] %}
+{% set _current = _runs[0] %}
+{% set _rid = "sh-run-history-" ~ runConversationId %}
+
+{# Cadence picks the unit word; the run's position picks the number.
+   Runs are newest-first, but Week 1 is the FIRST (oldest) run, so the
+   rows count with `loop.revindex` (the newest gets the highest number)
+   and the trigger — which shows the newest run — uses the run count.
+   Trigger and rows render "{unit} {n}: {period}". #}
+{% set _unit = "Week" if runHistory.cadence == "weekly" else ("Day" if runHistory.cadence == "daily" else "Run") %}
+
+{% if _current %}
+<div
+  class="seller-home__run-history"
+  data-sh-run-menu
+  data-sh-run-menu-conversation="{{ runConversationId }}"
+  {% if runInitialHidden %}hidden{% endif %}
+>
+  <span class="slds-assistive-text" id="{{ _rid }}-label">Run history — jump to a run</span>
+  <div class="slds-combobox_container seller-home__run-history-combobox">
+    <div
+      class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click"
+      data-slds-dropdown-manual
+    >
+      {# ── Trigger: SLDS faux-input picklist ──────────────────────── #}
+      <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_left-right" role="none">
+        {# Current run's state dot. The JS swaps it on select. #}
+        <span
+          class="slds-icon_container slds-input__icon slds-input__icon_left seller-home__run-history-trigger-icon"
+          data-sh-run-menu-trigger-icon
+          aria-hidden="true"
+        >{{ runStateIcon(_current, "seller-home__run-history-icon--trigger") }}</span>
+
+        <div
+          role="combobox"
+          tabindex="0"
+          class="slds-input_faux slds-combobox__input seller-home__run-history-trigger"
+          id="{{ _rid }}-trigger"
+          data-sh-run-menu-trigger
+          aria-controls="{{ _rid }}-panel"
+          aria-expanded="false"
+          aria-haspopup="listbox"
+          aria-labelledby="{{ _rid }}-label {{ _rid }}-value"
+          title="{{ runHistory.label or 'Run history' }}"
+        >
+          <span class="slds-truncate" id="{{ _rid }}-value" data-sh-run-menu-trigger-label>{{ _unit }} {{ _runs | length }}: {{ _current.period }}</span>
+        </div>
+
+        <span class="slds-icon_container slds-icon-utility-down slds-input__icon slds-input__icon_right" aria-hidden="true">
+          <svg class="slds-icon slds-icon_x-small slds-icon-text-default" aria-hidden="true" focusable="false">
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevrondown"></use>
+          </svg>
+        </span>
+      </div>
+
+      {# ── Popover: agent-switcher styling + in-panel search ───────── #}
+      <div
+        class="slds-dropdown slds-dropdown_right slds-dropdown_small seller-home__composer-menu-list seller-home__run-history-panel"
+        id="{{ _rid }}-panel"
+        data-sh-run-menu-panel
+        hidden
+      >
+        <div class="seller-home__run-history-search">
+          {# The input sits in its own inner wrapper: SLDS centres
+             `.slds-input__icon` on 50% of the element carrying
+             `slds-input-has-icon`, so keeping the search-row padding on
+             the wrapper ABOVE this one leaves the magnifier centred on
+             the input rather than the padded box. #}
+          <div class="slds-input-has-icon slds-input-has-icon_right">
+            <label class="slds-assistive-text" for="{{ _rid }}-search">Search runs</label>
+            <input
+              type="text"
+              id="{{ _rid }}-search"
+              class="slds-input slds-combobox__input"
+              role="combobox"
+              autocomplete="off"
+              aria-autocomplete="list"
+              aria-expanded="true"
+              aria-controls="{{ _rid }}-list"
+              placeholder="Search runs..."
+              data-sh-run-menu-search
+            />
+            <span class="slds-icon_container slds-icon-utility-search slds-input__icon slds-input__icon_right">
+              <svg class="slds-icon slds-icon_x-small slds-icon-text-default" aria-hidden="true" focusable="false">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#search"></use>
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <ul
+          class="seller-home__run-history-list"
+          id="{{ _rid }}-list"
+          role="listbox"
+          aria-label="{{ runHistory.label or 'Run history' }}"
+          data-sh-run-menu-list
+        >
+          {% for run in _runs %}
+          <li role="presentation">
+            <button
+              type="button"
+              class="seller-home__composer-menu-item seller-home__run-history-item"
+              id="{{ _rid }}-option-{{ loop.index0 }}"
+              role="option"
+              aria-selected="{% if loop.first %}true{% else %}false{% endif %}"
+              data-sh-run-menu-item="{{ run.runId }}"
+              data-sh-run-target="{{ run.runId }}-header"
+              data-sh-run-status="{{ run.status }}"
+              data-sh-run-label="{{ _unit }} {{ loop.revindex }}: {{ run.period }}"
+              data-sh-run-search="{{ _unit }} {{ loop.revindex }} {{ run.period }} {{ run.label }} {{ run.status }}"
+            >
+              {{ runStateIcon(run, "seller-home__run-history-icon--row") }}
+              <span class="seller-home__composer-menu-label">{{ _unit }} {{ loop.revindex }}: {{ run.period }}</span>
+              <span class="slds-assistive-text">{{ run.status }}</span>
+              <svg class="seller-home__composer-menu-check" aria-hidden="true" focusable="false">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+              </svg>
+            </button>
+          </li>
+          {% endfor %}
+        </ul>
+
+        {# Shown when the query hides every row. Outside the listbox so it
+           can never be mistaken for a selectable option. #}
+        <p class="seller-home__run-history-empty" data-sh-run-menu-empty hidden>No matches found</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}

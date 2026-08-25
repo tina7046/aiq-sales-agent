@@ -188,6 +188,87 @@
   // would only be bound on Seller Home surfaces.
   var RESET_PARAM = 'reset'
 
+  // Everything one run-through of the demo accumulates, in one list so
+  // every way of starting over clears exactly the same set.
+  //
+  // The schedule keys matter as much as Recents here. A confirmed
+  // schedule writes its conversation into `sh:convDrafts:list:v1`, which
+  // the rail renders on top of this session's history — and that store is
+  // localStorage. Left out of the reset (as it was), the row outlived the
+  // tab, the refresh, and the Home tab's own start-over button, so it
+  // read as a Recents item that could not be removed.
+  //
+  // Those keys are owned by schedule_conversation.js, which is not loaded
+  // on every surface this file is, so they are cleared by name and prefix
+  // here rather than through that module. Change a key there, change it
+  // here. The nav-collapse preference is deliberately NOT in this list —
+  // that one is a real preference, not demo state.
+  // `sh:convSeen` is home_conversation.js's record of which threads have
+  // already played their opening. It belongs in this list or a restart
+  // would clear the rail but still treat every conversation as read,
+  // painting them instantly instead of replaying them.
+  var DEMO_SESSION_KEYS = [RECENTS_KEY, KNOWLEDGE_BANNER_KEY, 'sh:convSeen']
+  var DEMO_LOCAL_KEYS = [DRAFT_LIST_KEY, 'sh:scheduledWorkflows:v1']
+  var DEMO_LOCAL_PREFIXES = ['sh:convDraft:v1:', 'sh:convSched:v1:']
+
+  function clearDemoState () {
+    try {
+      for (var i = 0; i < DEMO_SESSION_KEYS.length; i++) {
+        window.sessionStorage.removeItem(DEMO_SESSION_KEYS[i])
+      }
+    } catch (e) {
+      // Storage unavailable — nothing accumulated, nothing to clear.
+    }
+
+    try {
+      for (var j = 0; j < DEMO_LOCAL_KEYS.length; j++) {
+        window.localStorage.removeItem(DEMO_LOCAL_KEYS[j])
+      }
+      // The per-conversation records behind those lists. Collected first
+      // and removed after: deleting while walking `key(i)` reindexes the
+      // store underneath the loop and silently skips entries.
+      var doomed = []
+      for (var k = 0; k < window.localStorage.length; k++) {
+        var key = window.localStorage.key(k)
+        if (!key) continue
+        for (var p = 0; p < DEMO_LOCAL_PREFIXES.length; p++) {
+          if (key.indexOf(DEMO_LOCAL_PREFIXES[p]) === 0) {
+            doomed.push(key)
+            break
+          }
+        }
+      }
+      for (var d = 0; d < doomed.length; d++) {
+        window.localStorage.removeItem(doomed[d])
+      }
+    } catch (e) {
+      // As above.
+    }
+  }
+
+  // Was this page load a refresh, rather than a link followed?
+  //
+  // Refreshing is the demo's other start-over button, and the one people
+  // reach for first. Navigation Timing tells the two apart, which is what
+  // makes this safe: opening a conversation from the rail is a
+  // `navigate`, so clicking through the demo never wipes it — only F5
+  // does.
+  function isReload () {
+    try {
+      var perf = window.performance
+      if (perf && typeof perf.getEntriesByType === 'function') {
+        var entries = perf.getEntriesByType('navigation')
+        if (entries && entries.length && entries[0].type) {
+          return entries[0].type === 'reload'
+        }
+      }
+      // Browsers without Navigation Timing Level 2.
+      return !!(perf && perf.navigation && perf.navigation.type === 1)
+    } catch (e) {
+      return false
+    }
+  }
+
   // Clear on arrival if the flag is set, then strip it from the
   // address bar: the reset is a one-shot action, and leaving it in
   // place would fire again on every refresh and read as part of the
@@ -201,8 +282,7 @@
     try {
       var url = new URL(window.location.href)
       if (url.searchParams.get(RESET_PARAM) !== '1') return false
-      window.sessionStorage.removeItem(RECENTS_KEY)
-      window.sessionStorage.removeItem(KNOWLEDGE_BANNER_KEY)
+      clearDemoState()
       url.searchParams.delete(RESET_PARAM)
       window.history.replaceState({}, '', url.pathname + url.search + url.hash)
       return true
@@ -575,6 +655,12 @@
       })
     }
 
+    // A refresh starts the demo over. Outside the `nav` block below so it
+    // still fires on a surface with no Recents rail — the schedule state
+    // it clears is app-wide, and a reload on one page should not leave
+    // another page holding the last run-through.
+    if (isReload()) clearDemoState()
+
     var nav = root.querySelector('[data-sh-nav-root]')
 
     // Recents. Reset first (the Home tab's `?reset=1` wipes history),
@@ -632,6 +718,20 @@
     var composerRoot = root.querySelector('[data-sh-composer-root]')
     if (composerRoot) {
       bindComposer(composerRoot)
+    }
+
+    // The conversation page's composer carries the same agent switcher,
+    // so it needs the same menu controller — but ONLY that. It is
+    // deliberately not a `[data-sh-composer-root]`: `bindComposer` above
+    // would also give it Seller Home's submit, which navigates away to a
+    // new conversation, and this is a follow-up input that appends to the
+    // thread it is already in (`bindConvComposer` in
+    // home_conversation.js owns that). `bindComposerMenus` delegates on
+    // whatever root it is handed, so handing it this one wires the badge
+    // and nothing else.
+    var convComposer = document.querySelector('[data-sh-conv-composer]')
+    if (convComposer && convComposer.querySelector('[data-sh-composer-menu]')) {
+      bindComposerMenus(convComposer)
     }
 
     // Phase 4 — "Your agent at work" feed.

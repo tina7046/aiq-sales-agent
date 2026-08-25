@@ -105,6 +105,8 @@
 // title needs to wrap; Phase 1 titles are single-line so the visual
 // still lands on 48 px in practice.
 .seller-home__conv-header {
+  position: relative;
+
   flex: 0 0 auto;
   min-height: 3rem; // 48px
   padding-inline: var(--slds-g-spacing-4, 1rem);
@@ -126,6 +128,34 @@
   // viewport keeps the title anchored at the padding edge instead
   // of drifting toward the middle.
   justify-content: flex-start;
+
+  // The mirror of the composer's fade. The composer overlays the BOTTOM
+  // of the thread with `linear-gradient(to bottom, transparent, white)`,
+  // so messages dissolve into it as they scroll down. This does the same
+  // at the TOP: a white→transparent wash that spills below the header
+  // over the first slice of the thread, so messages dissolve up into the
+  // header instead of hard-cutting at its edge.
+  //
+  // A pseudo-element rather than the header's own background because the
+  // header — unlike the composer — is a solid band ABOVE the thread, not
+  // an overlay on it; the fade has to reach DOWN into the scrolling area
+  // to touch content. `pointer-events: none` so it never eats a click on
+  // the message underneath; `z-index` matches the composer so it sits
+  // over thread content the same way.
+  &::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: 100%;
+    block-size: 1.5rem;
+    background: linear-gradient(
+      to bottom,
+      var(--slds-g-color-surface-1, #ffffff) 0%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    pointer-events: none;
+    z-index: 10;
+  }
 }
 
 .seller-home__conv-header-inner {
@@ -268,6 +298,39 @@
   // agent + activity) is set on its OWN element via `align-self`
   // — the <li> stays neutral so a mix of message types in a single
   // stream all coexist.
+}
+
+// ── Run divider ──
+// The dashed seam between one scheduled run's output and the next
+// (macro `runDivider` in _home_conversation_messages.html). The <li>
+// carries the thread-item flex column; the <hr> inside is the rule.
+// It spans the full 800px column (no indent — runs are top-level
+// blocks, unlike the agent prose that sits inset from the edge). The
+// margin sits on top of the thread's 0.5rem gap so a run boundary gets
+// more air than the spacing between messages within one run.
+.seller-home__conv-run-divider-line {
+  block-size: 2px;
+  inline-size: 100%;
+  margin: var(--slds-g-spacing-3, 0.75rem) 0;
+  border: 0;
+
+  // Dashes drawn as a repeating gradient rather than a dashed border: a
+  // 32px tile that's neutral-90 for its first half and transparent for
+  // the rest gives an even 16px dash / 16px gap that holds at any width.
+  // (`0%` after `50%` clamps up to 50% — the hard edge between the two.)
+  background-image: linear-gradient(to right, var(--slds-g-color-neutral-base-90, #e5e5e5) 50%, rgba(255, 255, 255, 0) 0%);
+  background-position: bottom;
+  background-size: 32px 8px;
+  background-repeat: repeat-x;
+}
+
+// ── Run header ──
+// The "Weekly Top 3 | <date>" banner opening each run's block (macro
+// `runHeader`, reusing the snapshot title type). A touch of space above
+// sets the run apart from the divider; the thread's 0.5rem gap handles
+// the space down to the run's first message.
+.seller-home__conv-run-header {
+  margin-block-start: var(--slds-g-spacing-1, 0.25rem);
 }
 
 // Empty-thread scaffolding — same visual as the previous phase's
@@ -479,7 +542,22 @@
 .seller-home__conv-composer-slot {
   display: inline-flex;
   align-items: center;
-  gap: var(--slds-g-spacing-2, 0.5rem);
+  // No gap, matching the Seller Home composer: the icon buttons are 2rem
+  // pills (they carry `.seller-home__composer-btn`), so their own padding
+  // is the spacing and the pills sit flush at 16px between glyphs. A gap
+  // on top of that spread the glyphs wider than the hover pills implied.
+  // The agent badge keeps its own `slds-m-left_small`, so it stays set
+  // apart from the icons regardless.
+  gap: 0;
+}
+
+// SLDS puts `margin-inline-start: spacing-1` on any button following
+// another; it stacks on the gap above and outlives removing it. Scoped
+// through the slot to clear `.slds-button + .slds-button`'s specificity
+// outright — the same reset the Seller Home composer makes, and for the
+// same reason its comment gives.
+.seller-home__conv-composer-slot .seller-home__composer-btn + .seller-home__composer-btn {
+  margin-inline-start: 0;
 }
 
 .seller-home__conv-composer-btn {
@@ -4735,6 +4813,159 @@ $sh-linkedin-brand: #0a66c2;
   align-items: center;
   gap: var(--slds-g-spacing-2, 0.5rem);
   flex: 0 0 auto;
+}
+
+// ── Conversation header: Run History dropdown ─────────────────────────
+// A thread that is one scheduled workflow run many times gets long, so
+// this is how the seller moves between runs. Everything that decides how
+// it LOOKS is the composer's agent switcher — the trigger badge, the
+// panel surface, the rows, their hover, the check — so there is nothing
+// here about any of that. What is left is a place in the header, the
+// trigger's height (bumped to a standard picklist), a search box at the
+// top of the panel, and a glyph per run state.
+.seller-home__run-history {
+  position: relative;
+  flex: 0 0 auto;
+
+  // One dropdown renders per conversation with a run history and only the
+  // active one is shown, via the `hidden` attribute. Restoring it at
+  // class specificity is what makes that work: `.slds-dropdown-trigger`
+  // declares `display: inline-block`, and a class selector beats the UA
+  // sheet's `[hidden] { display: none }` — so without this the menu for
+  // one thread stays on screen in every other thread.
+  &[hidden] {
+    display: none;
+  }
+}
+
+// Trigger. It borrows the agent-switcher badge for its look, and only
+// two things are set here on top:
+//   • Height, bumped to a standard SLDS input (`.slds-input` is
+//     line-height 1.875rem + 1px borders ≈ 2rem) so the picklist reads
+//     as a control rather than the short chip the badge is by default.
+//     Local to this trigger, NOT the shared `.seller-home__composer-badge`,
+//     which the composer's agent switcher still wants at its own size.
+//   • The label carries a date, so it's the one part allowed to run long;
+//     the badge stays on one line and the header band keeps its height.
+.seller-home__run-history-trigger {
+  min-block-size: 2rem;
+  max-inline-size: 18rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+// Anchored to the trailing edge because the trigger sits at the end of
+// the header. Wider than `slds-dropdown_small` since every row spells
+// out "Run 5 : August 24 at 9:00 AM".
+.seller-home__run-history-panel {
+  inset-inline-end: 0;
+  inset-inline-start: auto;
+  min-inline-size: 19rem;
+}
+
+// The search row. No rule between it and the list: the input's own
+// border already reads as a boundary, and a second line under it made
+// the panel look like two stacked cards.
+//
+// This padding is why the input sits in its own inner wrapper (see the
+// partial): SLDS centres `.slds-input__icon` on 50% of the element
+// carrying `slds-input-has-icon`, so padding that element would centre
+// the magnifier on the padded box and leave it low.
+.seller-home__run-history-search {
+  padding: var(--slds-g-spacing-1, 0.25rem);
+  padding-block-end: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.seller-home__run-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  // The row pitch is ~2.1875rem (0.5rem padding top and bottom around a
+  // 1rem glyph / ~1.19rem label). Cap the list to seven of those plus a
+  // sliver of the eighth: seven runs show at rest, and the peek together
+  // with the scrollbar advertises that older runs are a scroll — or a
+  // search — away, rather than running the panel off the header.
+  max-block-size: calc(7.4 * 2.1875rem); // ~7 rows + a peek
+  overflow-y: auto;
+}
+
+// "No matches found". Centred and quiet — it is a report, not an option.
+.seller-home__run-history-empty {
+  margin: 0;
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  text-align: center;
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+// ── Run state glyphs ──
+// The icon says what the run IS: finished, failed, or still going. Sized
+// to the switcher's icon slot so rows keep its rhythm.
+.seller-home__run-history-icon {
+  flex-shrink: 0;
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+// The completed dot, matched to the home feed's status button so a run
+// reads the same on both surfaces. Two things are borrowed and both
+// matter:
+//
+// Size. `#circle` is a solid disc filling 92% of its viewBox, where the
+// rest of the set are line icons with margin built in — at the shared
+// 1rem box it lands far heavier than they do. It's SCALED down rather
+// than boxed down: the bounding box stays the same 1rem square as the
+// warning and spinner (from the base rule above) so every row's label
+// starts at the same x; only the glyph shrinks, to ~0.69rem, matching
+// the visual weight the smaller box used to give.
+//
+// Colour. A palette green rather than the success token its meaning
+// would suggest: `success-base-*` resolves teal in the agentic theme,
+// which reads as another shade of the running blue rather than "done".
+.seller-home__run-history-icon--completed {
+  fill: var(--slds-g-color-palette-green-70, #45c65a);
+  transform: scale(0.75);
+}
+
+// The one glyph that carries alarm, same red the feed's failed row uses.
+.seller-home__run-history-icon--failed {
+  fill: var(--slds-g-color-error-base-40, #ea001e);
+}
+
+// The shared spinner (index.scss), re-boxed to the glyph slot so
+// swapping it in doesn't change the row's metrics.
+.seller-home__run-history-spinner {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  inline-size: 1rem;
+  block-size: 1rem;
+  border-width: 2px;
+}
+
+// Two rules the roles force. The panel is a listbox rather than a menu
+// (it contains a text input, and a menu may not), so selection is
+// `aria-selected` where the switcher's is `aria-checked` — and the rule
+// revealing the check keys off that.
+.seller-home__run-history-item[aria-selected="true"] > .seller-home__composer-menu-check {
+  visibility: visible;
+}
+
+// And the keyboard's active row can't use `:hover` or `:focus-visible`:
+// focus stays in the search box while the arrows walk the list, so the
+// active row is a class. Same background the switcher hovers with.
+.seller-home__run-history-item.is-active {
+  background: var(--slds-g-color-brand-base-95, #eef4ff);
+}
+
+// Make the search filter actually remove non-matches. `filter()` sets
+// the `hidden` attribute on each row, but the agent-switcher row is
+// `display: flex`, and an author `display` beats the UA sheet's
+// `[hidden] { display: none }` — so without this the rows stayed
+// visible while typing, and "No matches found" showed alongside them.
+// Two classes clears `.seller-home__composer-menu-item`'s specificity.
+.seller-home__run-history-item[hidden] {
+  display: none;
 }
 
 // Hidden until there's a panel to reopen. Everything visual — fill,

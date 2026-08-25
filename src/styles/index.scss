@@ -15,6 +15,19 @@ $static-font-path: '/assets/fonts/webfonts';
 @import 'footer';
 
 // ══════════════════════════════════════════════════════════════════════
+// Reserve the scrollbar gutter globally
+// ----------------------------------------------------------------------
+// `stable` holds space for the scrollbar whether or not one is showing,
+// so a surface that grows past the viewport — or briefly locks scroll
+// while a modal or dropdown is open — doesn't shove the whole layout
+// sideways as the scrollbar appears and disappears. On the document
+// scroller here; inner scroll areas can opt in the same way where they
+// need it. In `index.scss` because _template.html links it on every page.
+html {
+  scrollbar-gutter: stable;
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // transitions.dev — motion tokens + shared transitions
 // ----------------------------------------------------------------------
 // Installed here, in the stylesheet every page loads via _template.html,
@@ -428,5 +441,153 @@ $static-font-path: '/assets/fonts/webfonts';
 }
 @media (prefers-reduced-motion: reduce) {
   .sh-spinner { animation: none; }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Conversation stream (reusable, global)
+// ──────────────────────────────────────────────────────────────────────
+// The reveal vocabulary shared by every conversation surface, driven by
+// scripts/conversation_stream.js (`window.ShStream`). Global for the same
+// reason `.sh-spinner` is: _template.html links index.css on every page,
+// so a surface opts in by calling the module, not by adding a stylesheet.
+//
+// Three reveals, one token set:
+//   .t-stream-w        a word (or inline chip) of agent prose
+//   .sh-stream-rows    a table whose body rows cascade in
+//   .sh-stream-block-in  a rich card landing as one piece
+//
+// Everything not yet reached is `display:none` from the JS side, so these
+// rules only describe how a thing arrives — never whether it is present.
+
+// ── Streaming text (transitions.dev) — agent writing ─────────────────
+// Each word rests invisible + blurred; the player adds `.is-in` one word
+// at a time so the text resolves through opacity and a small blur, like
+// live writing. `--stream-gap` is read by the JS, not used in CSS.
+:root {
+  --stream-gap: 60ms;
+  --stream-fade: 350ms;
+  --stream-blur: 1px;
+  --stream-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.t-stream-w {
+  opacity: 0;
+  filter: blur(var(--stream-blur));
+  transition:
+    opacity var(--stream-fade) var(--stream-ease),
+    filter var(--stream-fade) var(--stream-ease);
+}
+
+.t-stream-w.is-in {
+  opacity: 1;
+  filter: blur(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-stream-w {
+    transition: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+  }
+}
+
+// ── Streaming tables — staggered row fade ────────────────────────────
+// The whole table lands at once, then its body rows fade in as a quick
+// top-to-bottom cascade (per-row `animation-delay` stamped by the
+// player). The header in <thead> is unaffected, so rows drop in under a
+// heading that is already there. The class sits on whichever element the
+// player treated as the unit — the table, or the wrapper around it — so
+// the descendant selector catches both shapes.
+@keyframes sh-stream-row-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.sh-stream-rows tbody tr {
+  animation: sh-stream-row-fade var(--stream-fade, 350ms) var(--stream-ease, ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sh-stream-rows tbody tr {
+    animation: none !important;
+  }
+}
+
+// ── Streaming blocks — rich cards ────────────────────────────────────
+// Cadence cards, email drafts, snapshots, insight blocks: structured
+// layouts where streaming the words would read as noise. They arrive as
+// one piece instead.
+@keyframes sh-stream-block-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.sh-stream-block-in {
+  animation: sh-stream-block-fade var(--stream-fade, 350ms) var(--stream-ease, ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sh-stream-block-in {
+    animation: none !important;
+  }
+}
+
+// ── Number pop-in (transitions.dev) — result counters ────────────────
+// `ShStream.countUp` rolls a result up from 0 and rebuilds its `.t-digit`
+// children on every change; with `.is-animating` on the group, each new
+// digit replays this pop-in (translate + blur + fade, small stagger), so
+// the count-up reads as a motion-blurred roll that settles on the target.
+:root {
+  --digit-dur: 500ms;
+  --digit-distance: 8px;
+  --digit-stagger: 70ms;
+  --digit-blur: 2px;
+  --digit-ease: cubic-bezier(0.34, 1.45, 0.64, 1);
+  --digit-dir-x: 0;
+  --digit-dir-y: 1;
+}
+
+@keyframes t-digit-pop-in {
+  0% {
+    transform: translate(
+      calc(var(--digit-distance) * var(--digit-dir-x)),
+      calc(var(--digit-distance) * var(--digit-dir-y))
+    );
+    opacity: 0;
+    filter: blur(var(--digit-blur));
+  }
+  100% {
+    transform: translate(0, 0);
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+.t-digit-group {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.t-digit {
+  display: inline-block;
+  will-change: transform, opacity, filter;
+}
+
+.t-digit-group.is-animating .t-digit {
+  animation: t-digit-pop-in var(--digit-dur) var(--digit-ease) both;
+}
+
+.t-digit-group.is-animating .t-digit[data-stagger='1'] {
+  animation-delay: var(--digit-stagger);
+}
+
+.t-digit-group.is-animating .t-digit[data-stagger='2'] {
+  animation-delay: calc(var(--digit-stagger) * 2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-digit-group .t-digit {
+    animation: none !important;
+  }
 }
 

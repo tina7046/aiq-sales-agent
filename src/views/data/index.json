@@ -2259,6 +2259,628 @@
         }
       ]
     },
+    // ── conv-weekly-top-3 ───────────────────────────────────────────
+    // Run history. This thread is one scheduled workflow that has run
+    // five times, and every run appended into the same conversation
+    // rather than starting a new one — which is the point being
+    // prototyped: over weeks the feed gets long, so the header carries a
+    // Run History dropdown to jump between runs.
+    //
+    // Each run answers the same question conv-002 answers ("the 3 things
+    // you need to know right now") and reuses its `insight` shape: a
+    // ranked headline with a triage dot, the evidence under it, and the
+    // takeaway. Prose accepts `**bold**` / `_italic_` via the `emphasis`
+    // filter — see gulpfile.js.
+    //
+    // `runHistory` deliberately is NOT `workflowContext`: that key is
+    // what switches on the workflow side panel and the header's Activity
+    // button (see the include in home_conversation.html), and this
+    // surface navigates runs through the dropdown alone.
+    //
+    // No `opening` block, for the same reason the pipeline snapshot has
+    // none: accumulated history should be there when the thread opens,
+    // not re-thought a run at a time.
+    //
+    // Runs are newest-first here (the order the dropdown lists them);
+    // `messages` runs oldest-first (the order the feed reads). Each run's
+    // `messageId` points at its lead message, so selecting a run lands on
+    // the top of that run rather than the middle of it. States are spread
+    // across running / completed / failed so all three icons show.
+    "conv-weekly-top-3": {
+      "id": "conv-weekly-top-3",
+      "title": "Weekly Top 3 Things",
+      "subtitle": "Weekly Top 3 Things",
+      "workflow": { "id": "wf-weekly-top-3", "label": "Weekly Top 3 Things" },
+      "status": "scheduled",
+      "recentLabel": "Weekly Top 3 Things",
+      // Newest-first, 24 weekly runs — enough history for the dropdown to
+      // show ~7 at a time and scroll (or search) for the rest.
+      //
+      // Labels reflect the SCHEDULE, not a raw run number: `cadence`
+      // picks the unit word ("Week" for weekly, "Day" for daily) and the
+      // partial pairs it with the run's position — newest is #1 — and its
+      // `period`. So the top run reads "Week 1 - Aug 24-31". `period` is
+      // the pre-formatted date span (weekly) or weekday+date (daily);
+      // it's precomputed here because the templates don't do date math.
+      // `label` stays the exact timestamp (the workflow side panel still
+      // shows it).
+      //
+      // Only the five most recent carry real thread content (the
+      // `wt3-r5..r1-lead` messages below); everything older points at the
+      // oldest retained output, standing in for runs whose detail has
+      // aged out — realistic for a feed that keeps a rolling window.
+      // Statuses are mostly completed with a few failures sprinkled in so
+      // both glyphs show while scrolling and searching.
+      "runHistory": {
+        "label": "Run history",
+        "cadence": "weekly",
+        "headerTitle": "Weekly Top 3",
+        "runs": [
+          {
+            "runId": "wt3-run-5",
+            "status": "completed",
+            "label": "August 24 at 9:00 AM",
+            "period": "Aug 24 - Aug 31",
+            "startedAt": "2026-08-24T09:00:00-07:00",
+            "messageId": "wt3-r5-lead"
+          },
+          {
+            "runId": "wt3-run-4",
+            "status": "completed",
+            "label": "August 17 at 9:00 AM",
+            "period": "Aug 17 - Aug 24",
+            "startedAt": "2026-08-17T09:00:00-07:00",
+            "messageId": "wt3-r4-lead"
+          },
+          {
+            "runId": "wt3-run-3",
+            "status": "failed",
+            "label": "August 10 at 9:00 AM",
+            "period": "Aug 10 - Aug 17",
+            "startedAt": "2026-08-10T09:00:00-07:00",
+            "messageId": "wt3-r3-lead"
+          },
+          {
+            "runId": "wt3-run-2",
+            "status": "completed",
+            "label": "August 3 at 9:00 AM",
+            "period": "Aug 3 - Aug 10",
+            "startedAt": "2026-08-03T09:00:00-07:00",
+            "messageId": "wt3-r2-lead"
+          },
+          {
+            "runId": "wt3-run-1",
+            "status": "completed",
+            "label": "July 27 at 9:00 AM",
+            "period": "Jul 27 - Aug 3",
+            "startedAt": "2026-07-27T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h19",
+            "status": "completed",
+            "label": "July 20 at 9:00 AM",
+            "period": "Jul 20 - Jul 27",
+            "startedAt": "2026-07-20T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h18",
+            "status": "completed",
+            "label": "July 13 at 9:00 AM",
+            "period": "Jul 13 - Jul 20",
+            "startedAt": "2026-07-13T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h17",
+            "status": "failed",
+            "label": "July 6 at 9:00 AM",
+            "period": "Jul 6 - Jul 13",
+            "startedAt": "2026-07-06T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h16",
+            "status": "completed",
+            "label": "June 29 at 9:00 AM",
+            "period": "Jun 29 - Jul 6",
+            "startedAt": "2026-06-29T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h15",
+            "status": "completed",
+            "label": "June 22 at 9:00 AM",
+            "period": "Jun 22 - Jun 29",
+            "startedAt": "2026-06-22T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h14",
+            "status": "completed",
+            "label": "June 15 at 9:00 AM",
+            "period": "Jun 15 - Jun 22",
+            "startedAt": "2026-06-15T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h13",
+            "status": "completed",
+            "label": "June 8 at 9:00 AM",
+            "period": "Jun 8 - Jun 15",
+            "startedAt": "2026-06-08T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h12",
+            "status": "failed",
+            "label": "June 1 at 9:00 AM",
+            "period": "Jun 1 - Jun 8",
+            "startedAt": "2026-06-01T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h11",
+            "status": "completed",
+            "label": "May 25 at 9:00 AM",
+            "period": "May 25 - Jun 1",
+            "startedAt": "2026-05-25T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h10",
+            "status": "completed",
+            "label": "May 18 at 9:00 AM",
+            "period": "May 18 - May 25",
+            "startedAt": "2026-05-18T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h09",
+            "status": "completed",
+            "label": "May 11 at 9:00 AM",
+            "period": "May 11 - May 18",
+            "startedAt": "2026-05-11T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h08",
+            "status": "completed",
+            "label": "May 4 at 9:00 AM",
+            "period": "May 4 - May 11",
+            "startedAt": "2026-05-04T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h07",
+            "status": "completed",
+            "label": "April 27 at 9:00 AM",
+            "period": "Apr 27 - May 4",
+            "startedAt": "2026-04-27T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h06",
+            "status": "failed",
+            "label": "April 20 at 9:00 AM",
+            "period": "Apr 20 - Apr 27",
+            "startedAt": "2026-04-20T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h05",
+            "status": "completed",
+            "label": "April 13 at 9:00 AM",
+            "period": "Apr 13 - Apr 20",
+            "startedAt": "2026-04-13T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h04",
+            "status": "completed",
+            "label": "April 6 at 9:00 AM",
+            "period": "Apr 6 - Apr 13",
+            "startedAt": "2026-04-06T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h03",
+            "status": "completed",
+            "label": "March 30 at 9:00 AM",
+            "period": "Mar 30 - Apr 6",
+            "startedAt": "2026-03-30T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h02",
+            "status": "completed",
+            "label": "March 23 at 9:00 AM",
+            "period": "Mar 23 - Mar 30",
+            "startedAt": "2026-03-23T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h01",
+            "status": "completed",
+            "label": "March 16 at 9:00 AM",
+            "period": "Mar 16 - Mar 23",
+            "startedAt": "2026-03-16T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          }
+        ]
+      },
+      "messages": [
+        // ── Run 1 — July 27 ──
+        {
+          "id":   "wt3-r1-lead",
+          "type": "agent",
+          "runId": "wt3-run-1",
+          "text": "Here are the **3 things you need to know** for the week of **July 27**. Two need a decision from you today; the third is working and worth leaning on."
+        },
+        {
+          "id":       "wt3-r1-i1",
+          "type":     "insight",
+          "severity": "critical",
+          "rank":     1,
+          "heading":  "$48M closes inside 7 days with no meeting on the calendar",
+          "text":     "These four deals are dated to close this week and none of them has a next step booked:",
+          "tableTitle": "Closing This Week \u2014 No Meeting Scheduled",
+          "table": {
+            "id": "wt3-r1-closing",
+            "ariaLabel": "Deals closing within seven days with no meeting scheduled",
+            "columns": [
+              { "id": "deal",      "label": "Deal"       },
+              { "id": "amount",    "label": "Amount",     "align": "right" },
+              { "id": "closes",    "label": "Closes"     },
+              { "id": "nextStep",  "label": "Next Step"  }
+            ],
+            "rows": [
+              { "id": "r1c-01", "deal": "Datadog - Observability",  "amount": "$16.4M", "closes": "Jul 29", "nextStep": { "value": "None", "tone": "critical" } },
+              { "id": "r1c-02", "deal": "Snowflake - Data Cloud",   "amount": "$13.1M", "closes": "Jul 30", "nextStep": { "value": "None", "tone": "critical" } },
+              { "id": "r1c-03", "deal": "Okta - Identity",          "amount": "$10.2M", "closes": "Jul 31", "nextStep": "Email sent Jul 22" },
+              { "id": "r1c-04", "deal": "Twilio - Messaging",       "amount": "$8.6M",  "closes": "Jul 31", "nextStep": { "value": "None", "tone": "critical" } }
+            ]
+          },
+          "bottomLine": "**Bottom line:** A deal closing in four days without a meeting is not closing. Get a call on the calendar today or move the date."
+        },
+        {
+          "id":       "wt3-r1-i2",
+          "type":     "insight",
+          "severity": "warning",
+          "rank":     2,
+          "heading":  "Your two largest accounts have gone quiet for three weeks",
+          "text":     "No inbound or outbound activity on either since the first week of July:",
+          "tableTitle": "Largest Accounts \u2014 Days Since Last Touch",
+          "table": {
+            "id": "wt3-r1-quiet",
+            "ariaLabel": "Largest accounts by days since last touch",
+            "columns": [
+              { "id": "account",   "label": "Account"    },
+              { "id": "openPipe",  "label": "Open Pipe",  "align": "right" },
+              { "id": "lastTouch", "label": "Last Touch" },
+              { "id": "owner",     "label": "Champion"   }
+            ],
+            "rows": [
+              { "id": "r1q-01", "account": "Cirrus",      "openPipe": "$34.2M", "lastTouch": { "value": "22 days", "tone": "critical" }, "owner": "Robert Hayes" },
+              { "id": "r1q-02", "account": "Brightloop AI", "openPipe": "$21.8M", "lastTouch": { "value": "19 days", "tone": "warning" },  "owner": "Sofia Ramirez" }
+            ]
+          },
+          "bottomLine": "**Bottom line:** $56M of open pipeline is sitting behind two silent relationships. Re-open both this week."
+        },
+        {
+          "id":       "wt3-r1-i3",
+          "type":     "insight",
+          "severity": "positive",
+          "rank":     3,
+          "heading":  "Enterprise win rate climbed to 61% \u2014 lean on the pattern",
+          "stats": [
+            {
+              "label":  "Enterprise Win Rate",
+              "value":  "61%",
+              "trend":  "up",
+              "detail": "up from 48% last quarter"
+            },
+            {
+              "label":  "Avg Contacts Per Won Deal",
+              "value":  "4.2",
+              "trend":  "up",
+              "detail": "vs 1.9 on losses"
+            }
+          ],
+          "footnote": "The deals you win are the ones you **multi-thread**. Every loss last quarter averaged under two contacts. Apply that to the four deals above."
+        },
+        {
+          "id":   "wt3-r1-activity",
+          "type": "workflow_activity",
+          "workflowLabel": "Weekly Top 3 completed",
+          "workflowIcon":  "apps",
+          "statusText":    "1,840 open opportunities \u00b7 4 closing unscheduled \u00b7 2 accounts silent"
+        },
+        // ── Run 2 — August 3 ──
+        {
+          "id":   "wt3-r2-lead",
+          "type": "agent",
+          "runId": "wt3-run-2",
+          "text": "Here are the **3 things you need to know** for the week of **August 3**. Last week's silent accounts both re-opened \u2014 the new problem is where pipeline is coming from."
+        },
+        {
+          "id":       "wt3-r2-i1",
+          "type":     "insight",
+          "severity": "critical",
+          "rank":     1,
+          "heading":  "Six deals slipped out of July and landed in August untouched",
+          "text":     "They moved their close date but nothing else about them changed \u2014 same stage, same silence:",
+          "tableTitle": "Slipped From July \u2014 No Stage Movement",
+          "table": {
+            "id": "wt3-r2-slipped",
+            "ariaLabel": "Deals slipped from July with no stage movement",
+            "columns": [
+              { "id": "deal",     "label": "Deal"      },
+              { "id": "amount",   "label": "Amount",    "align": "right" },
+              { "id": "stage",    "label": "Stage"     },
+              { "id": "slips",    "label": "Times Slipped", "align": "right" }
+            ],
+            "rows": [
+              { "id": "r2s-01", "deal": "Datadog - Observability", "amount": "$16.4M", "stage": "Negotiation",    "slips": { "value": "3", "tone": "critical" } },
+              { "id": "r2s-02", "deal": "Twilio - Messaging",      "amount": "$8.6M",  "stage": "Value Prop",     "slips": { "value": "2", "tone": "warning" } },
+              { "id": "r2s-03", "deal": "Elastic - Search",        "amount": "$7.4M",  "stage": "Qualification",  "slips": "1" }
+            ]
+          },
+          "bottomLine": "**Bottom line:** A third slip is not a date problem, it is a qualification problem. Datadog needs a hard conversation this week."
+        },
+        {
+          "id":       "wt3-r2-i2",
+          "type":     "insight",
+          "severity": "warning",
+          "rank":     2,
+          "heading":  "New pipeline creation is down 22% week over week",
+          "stats": [
+            {
+              "label":  "New Pipeline Created",
+              "value":  "$12.4M",
+              "trend":  "down",
+              "detail": "down from $15.9M last week"
+            },
+            {
+              "label":  "New Opportunities",
+              "value":  "9",
+              "trend":  "down",
+              "detail": "vs 14 the week before"
+            }
+          ],
+          "footnote": "Two straight weeks of decline. At this rate you finish the quarter roughly **$9M short** of the coverage you need."
+        },
+        {
+          "id":       "wt3-r2-i3",
+          "type":     "insight",
+          "severity": "positive",
+          "rank":     3,
+          "heading":  "Both silent accounts re-opened after last week's outreach",
+          "stats": [
+            {
+              "label":  "Cirrus",
+              "value":  "Meeting booked",
+              "trend":  "up",
+              "detail": "Aug 6 with Robert Hayes"
+            },
+            {
+              "label":  "Brightloop AI",
+              "value":  "Replied Aug 1",
+              "trend":  "up",
+              "detail": "asked for pricing"
+            }
+          ],
+          "footnote": "That is **$56M** of pipeline back in motion from two emails. The same play is open on the three slipped deals above."
+        },
+        {
+          "id":   "wt3-r2-activity",
+          "type": "workflow_activity",
+          "workflowLabel": "Weekly Top 3 completed",
+          "workflowIcon":  "apps",
+          "statusText":    "1,871 open opportunities \u00b7 6 slipped from July \u00b7 2 accounts recovered"
+        },
+        // ── Run 3 — August 10 — failed ──
+        // The errored run. Its `messageId` points here, so selecting it
+        // from the dropdown still lands somewhere honest rather than
+        // doing nothing.
+        {
+          "id":   "wt3-r3-lead",
+          "type": "agent",
+          "runId": "wt3-run-3",
+          "text": "This run didn\u2019t finish. My Salesforce connection expired partway through reading your open opportunities, so I stopped rather than give you a partial answer built on half the pipeline. Reconnect and I\u2019ll re-run it for the week of **August 10**."
+        },
+        // ── Run 4 — August 17 ──
+        {
+          "id":   "wt3-r4-lead",
+          "type": "agent",
+          "runId": "wt3-run-4",
+          "text": "Here are the **3 things you need to know** for the week of **August 17**. Coverage recovered, but the risk moved downstream into legal."
+        },
+        {
+          "id":       "wt3-r4-i1",
+          "type":     "insight",
+          "severity": "critical",
+          "rank":     1,
+          "heading":  "$31M sits in Negotiation with no legal review started",
+          "text":     "Every one of these is dated to close this quarter, and none has been sent to legal. Redlines have averaged 18 days:",
+          "tableTitle": "In Negotiation \u2014 Legal Not Engaged",
+          "table": {
+            "id": "wt3-r4-legal",
+            "ariaLabel": "Deals in negotiation with no legal review started",
+            "columns": [
+              { "id": "deal",     "label": "Deal"      },
+              { "id": "amount",   "label": "Amount",    "align": "right" },
+              { "id": "closes",   "label": "Closes"    },
+              { "id": "legal",    "label": "Legal"     }
+            ],
+            "rows": [
+              { "id": "r4l-01", "deal": "Snowflake - Data Cloud", "amount": "$13.1M", "closes": "Sep 30", "legal": { "value": "Not sent", "tone": "critical" } },
+              { "id": "r4l-02", "deal": "Okta - Identity",        "amount": "$10.2M", "closes": "Sep 15", "legal": { "value": "Not sent", "tone": "critical" } },
+              { "id": "r4l-03", "deal": "Elastic - Search",       "amount": "$7.4M",  "closes": "Sep 30", "legal": "Verbal only" }
+            ]
+          },
+          "bottomLine": "**Bottom line:** An 18-day redline cycle means Okta is already late. Send all three to legal today."
+        },
+        {
+          "id":       "wt3-r4-i2",
+          "type":     "insight",
+          "severity": "warning",
+          "rank":     2,
+          "heading":  "Three champions changed roles at open accounts",
+          "text":     "Your primary contact moved on at each of these, and no second relationship exists to fall back on:",
+          "tableTitle": "Champion Changes \u2014 Single-Threaded Accounts",
+          "table": {
+            "id": "wt3-r4-champions",
+            "ariaLabel": "Accounts where the champion changed roles",
+            "columns": [
+              { "id": "account",  "label": "Account"   },
+              { "id": "openPipe", "label": "Open Pipe", "align": "right" },
+              { "id": "champion", "label": "Champion"  },
+              { "id": "contacts", "label": "Contacts",  "align": "right" }
+            ],
+            "rows": [
+              { "id": "r4c-01", "account": "Twilio",   "openPipe": "$8.6M", "champion": { "value": "Left company", "tone": "critical" }, "contacts": { "value": "1", "tone": "critical" } },
+              { "id": "r4c-02", "account": "Elastic",  "openPipe": "$7.4M", "champion": "Moved to Ops",                                 "contacts": { "value": "1", "tone": "warning" } },
+              { "id": "r4c-03", "account": "Confluent", "openPipe": "$5.2M", "champion": "New CRO",                                      "contacts": "2" }
+            ]
+          },
+          "bottomLine": "**Bottom line:** $21M behind one contact each. Twilio has nobody left \u2014 that deal needs a new entry point or it dies quietly."
+        },
+        {
+          "id":       "wt3-r4-i3",
+          "type":     "insight",
+          "severity": "positive",
+          "rank":     3,
+          "heading":  "Multi-threading is working \u2014 3.4 contacts per deal, up from 1.9",
+          "stats": [
+            {
+              "label":  "Avg Contacts Per Open Deal",
+              "value":  "3.4",
+              "trend":  "up",
+              "detail": "up from 1.9 in July"
+            },
+            {
+              "label":  "New Pipeline Created",
+              "value":  "$18.7M",
+              "trend":  "up",
+              "detail": "best week of the quarter"
+            }
+          ],
+          "footnote": "Coverage recovered and then some. The three single-threaded accounts above are now the **exception** rather than the pattern \u2014 close that gap and the quarter holds."
+        },
+        {
+          "id":   "wt3-r4-activity",
+          "type": "workflow_activity",
+          "workflowLabel": "Weekly Top 3 completed",
+          "workflowIcon":  "apps",
+          "statusText":    "1,904 open opportunities \u00b7 3 awaiting legal \u00b7 3 champion changes"
+        },
+        // ── Run 5 — August 24 — the current run ──
+        // Picks up where Run 4 left off: the legal queue it flagged and
+        // the champion it lost. Runs referring back to each other is what
+        // makes a run history worth scrolling.
+        {
+          "id":   "wt3-r5-lead",
+          "type": "agent",
+          "runId": "wt3-run-5",
+          "text": "Here are the **3 things you need to know** for the week of **August 24**. Legal moved on two of the three, and Twilio is no longer a dead end."
+        },
+        {
+          "id":       "wt3-r5-i1",
+          "type":     "insight",
+          "severity": "critical",
+          "rank":     1,
+          "heading":  "Okta is six days past its redline window and still unsigned",
+          "text":     "Legal cleared Snowflake and Elastic last week. Okta went out at the same time and has not come back:",
+          "tableTitle": "Legal Queue \u2014 Days In Review",
+          "table": {
+            "id": "wt3-r5-legal",
+            "ariaLabel": "Deals in legal review by days in review",
+            "columns": [
+              { "id": "deal",   "label": "Deal"    },
+              { "id": "amount", "label": "Amount",  "align": "right" },
+              { "id": "closes", "label": "Closes"  },
+              { "id": "status", "label": "Legal"   }
+            ],
+            "rows": [
+              { "id": "r5l-01", "deal": "Okta - Identity",        "amount": "$10.2M", "closes": "Sep 15", "status": { "value": "24 days", "tone": "critical" } },
+              { "id": "r5l-02", "deal": "Snowflake - Data Cloud", "amount": "$13.1M", "closes": "Sep 30", "status": { "value": "Cleared", "tone": "positive" } },
+              { "id": "r5l-03", "deal": "Elastic - Search",       "amount": "$7.4M",  "closes": "Sep 30", "status": { "value": "Cleared", "tone": "positive" } }
+            ]
+          },
+          "bottomLine": "**Bottom line:** Okta closes in three weeks and the redline is the only thing left. Escalate it today or move the date."
+        },
+        {
+          "id":       "wt3-r5-i2",
+          "type":     "insight",
+          "severity": "warning",
+          "rank":     2,
+          "heading":  "Two deals slipped past their close date over the weekend",
+          "text":     "Both were dated for August 21 and neither moved stage:",
+          "tableTitle": "Slipped Over The Weekend",
+          "table": {
+            "id": "wt3-r5-slipped",
+            "ariaLabel": "Deals that slipped past their close date over the weekend",
+            "columns": [
+              { "id": "deal",   "label": "Deal"   },
+              { "id": "amount", "label": "Amount", "align": "right" },
+              { "id": "stage",  "label": "Stage"  },
+              { "id": "silent", "label": "Days Silent", "align": "right" }
+            ],
+            "rows": [
+              { "id": "r5s-01", "deal": "Datadog - Observability", "amount": "$16.4M", "stage": "Negotiation", "silent": { "value": "11", "tone": "warning" } },
+              { "id": "r5s-02", "deal": "Confluent - Streaming",   "amount": "$5.2M",  "stage": "Value Prop",  "silent": "6" }
+            ]
+          },
+          "bottomLine": "**Bottom line:** Datadog has now slipped four times. It is time to either get a signature date in writing or take it out of the quarter."
+        },
+        {
+          "id":       "wt3-r5-i3",
+          "type":     "insight",
+          "severity": "positive",
+          "rank":     3,
+          "heading":  "Twilio has a new champion \u2014 the account is back to two contacts",
+          "stats": [
+            {
+              "label":  "Twilio",
+              "value":  "2 contacts",
+              "trend":  "up",
+              "detail": "new VP Eng engaged Aug 21"
+            },
+            {
+              "label":  "Avg Contacts Per Open Deal",
+              "value":  "3.6",
+              "trend":  "up",
+              "detail": "up from 3.4 last week"
+            }
+          ],
+          "footnote": "The single-threaded gap Run 4 flagged is closing. Elastic is the **last** account still resting on one relationship."
+        },
+        {
+          "id":   "wt3-r5-activity",
+          "type": "workflow_activity",
+          "workflowLabel": "Weekly Top 3 completed",
+          "workflowIcon":  "apps",
+          "statusText":    "1,926 open opportunities \u00b7 1 stuck in legal \u00b7 2 slipped"
+        }
+      ],
+      // One turn so a follow-up send doesn't dead-end, matching conv-002.
+      "scriptedTurns": [
+        {
+          "id": "wt3-turn-01",
+          "thinkingMs": 2200,
+          "thinkingLabel": "Pulling the legal status on all three\u2026",
+          "reply": [
+            {
+              "id":   "wt3-turn-01-reply",
+              "type": "agent",
+              "text": "On it. I\u2019ll package Snowflake, Okta, and Elastic for legal with the redline history attached, flag Okta as the one already past its normal cycle, and bring the confirmations back here before anything goes out."
+            }
+          ]
+        }
+      ]
+    },
     // ── conv-daily-pipeline-snapshot ────────────────────────────────
     // Drill-in target for the Daily Pipeline Snapshot row on
     // `/scheduled.html`, and the first conversation here to carry a
@@ -3290,6 +3912,29 @@
         "state": "running",
         "outputs": [
           { "icon": "message", "label": "12 of 30 drafted" }
+        ],
+        "workflow": { "id": "", "label": "" }
+      },
+      // The run-history surface. `conversationId` opens the thread where
+      // all five runs live — the header's Run History dropdown is how you
+      // move between them. `completed` because Run 5 has finished, which
+      // is what its Scheduled row and the dropdown's current run also
+      // report; the three have to agree or the prototype contradicts
+      // itself depending on which door you came through.
+      {
+        "id": "ri-weekly-top-3",
+        "conversationId": "conv-weekly-top-3",
+        "title": "Found this week\u2019s top 3 things",
+        "titles": {
+          "running": "Finding this week\u2019s top 3 things",
+          "neutral": "Weekly Top 3 Things"
+        },
+        "cadence": "Weekly",
+        "nextRun": "Next run Monday at 9:00 AM",
+        "lastRun": "Last run today",
+        "state": "completed",
+        "outputs": [
+          { "icon": "doc", "label": "3 things to know" }
         ],
         "workflow": { "id": "", "label": "" }
       }
