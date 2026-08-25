@@ -391,6 +391,9 @@
   {% if agent %}
     {% set rowLabel = rowLabel ~ ", " ~ agent.label %}
   {% endif %}
+  {% if skill.sharedBy %}
+    {% set rowLabel = rowLabel ~ ", Shared by " ~ skill.sharedBy %}
+  {% endif %}
 
   {# Menu id (used both by the trigger's aria-controls and the menu
      container's id). Namespaced with the skill id so list-wide id
@@ -497,13 +500,26 @@
           <span class="seller-home__skill-heading">
             <span class="seller-home__skill-title">{{ skill.name }}</span>
 
-            {% if agent or hasConnectedMeta %}
+            {% if agent or skill.sharedBy or hasConnectedMeta %}
               <span class="seller-home__skill-source">
                 {% if agent %}
                   <span class="seller-home__skill-source-label">{{ agent.label }}</span>
                 {% endif %}
 
-                {% if agent and hasConnectedMeta %}
+                {# "Shared by <name>" for a shared skill — set as another
+                   quiet fact on the attribute line, reusing the same
+                   `__skill-source-label` treatment as the agent name so
+                   the line reads as one phrase. Gated on `sharedBy` so
+                   non-shared rows are unchanged. #}
+                {% if agent and skill.sharedBy %}
+                  <span class="seller-home__skill-source-separator" aria-hidden="true">•</span>
+                {% endif %}
+
+                {% if skill.sharedBy %}
+                  <span class="seller-home__skill-source-label">Shared by {{ skill.sharedBy }}</span>
+                {% endif %}
+
+                {% if (agent or skill.sharedBy) and hasConnectedMeta %}
                   <span class="seller-home__skill-source-separator" aria-hidden="true">•</span>
                 {% endif %}
 

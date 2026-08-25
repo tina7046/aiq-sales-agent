@@ -483,7 +483,12 @@
     if (!root) return '';
     var blocks = toArray(root.childNodes)
       .map(function (n) {
-        if (n.nodeType === 1) return serializeBlock(n);
+        if (n.nodeType === 1) {
+          // The inline "Draft with AI" composer lives in the flow but is
+          // chrome, not content — never serialize it into the Markdown.
+          if (n.getAttribute && n.getAttribute('data-sh-skill-ai-composer') != null) return '';
+          return serializeBlock(n);
+        }
         if (n.nodeType === 3) {
           var t = String(n.nodeValue || '').trim();
           return t;
@@ -913,8 +918,21 @@
   // Parse a trusted, constant SVG string into a live SVG element without
   // touching innerHTML (all inputs here are hard-coded glyph markup).
   function makeSvg(str) {
-    var doc = new DOMParser().parseFromString(String(str || ''), 'image/svg+xml');
-    return document.importNode(doc.documentElement, true);
+    var s = String(str || '');
+    // `image/svg+xml` parsing only yields a renderable node when the root
+    // <svg> declares the SVG namespace. Several inline glyphs omit it, so
+    // inject it when missing (otherwise the parsed node renders as blank).
+    if (s.indexOf('xmlns=') === -1) {
+      s = s.replace(/^\s*<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+    var doc = new DOMParser().parseFromString(s, 'image/svg+xml');
+    var el = doc && doc.documentElement;
+    // Guard against a parser-error document (renders as blank text).
+    if (!el || el.nodeName === 'parsererror' ||
+        (el.getElementsByTagName && el.getElementsByTagName('parsererror').length)) {
+      return document.createTextNode('');
+    }
+    return document.importNode(el, true);
   }
 
   // Stroke glyphs from the prompt-builder `ce-popover` / `ce-toolbar`.
@@ -1279,7 +1297,14 @@
       var glyph = document.createElement('span');
       glyph.className = 'seller-home__skill-block-menu-glyph';
       glyph.setAttribute('aria-hidden', 'true');
-      if (item.iconRef) {
+      if (item.iconSvg) {
+        // Inline glyph on a filled badge (e.g. the skill icon).
+        if (item.iconBadge) {
+          glyph.classList.add('seller-home__skill-mention-glyph_badge');
+          glyph.classList.add('seller-home__skill-mention-glyph_' + String(item.iconBadge));
+        }
+        glyph.appendChild(makeSvg(item.iconSvg));
+      } else if (item.iconRef) {
         var img = document.createElement('img');
         img.className = 'seller-home__skill-mention-icon';
         img.src = String(item.iconRef);
@@ -1511,6 +1536,8 @@
 
     function openHandleMenu(block, grip) {
       ensureMenus();
+      // The block menu and AI composer must never be open together.
+      closeAiComposer(false);
       selectBlock(block);
       closeMenus();
       if (grip) grip.setAttribute('aria-expanded', 'true');
@@ -1524,6 +1551,7 @@
 
     function openConvertMenu(anchorRect, slashQuery, asToolbox) {
       ensureMenus();
+      closeAiComposer(false);
       convertHost.setAttribute('data-block-id', selectedBlock ? String(selectedBlock.getAttribute('data-block-uid') || '') : '');
       if (slashQuery != null) {
         convertHost.setAttribute('data-slash', '');
@@ -1561,7 +1589,7 @@
       }
       closeMenus();
       if (action === 'copy') copyBlock(block);
-      else if (action === 'refine') firePlaceholder('refine', btn);
+      else if (action === 'refine') openAiComposer(block);
       else if (action === 'up') moveBlock(block, -1);
       else if (action === 'down') moveBlock(block, 1);
       else if (action === 'delete') deleteBlock(block);
@@ -1599,6 +1627,251 @@
     function firePlaceholder(kind, trigger) {
       if (!onPlaceholder) return;
       try { onPlaceholder(kind, trigger || null); } catch (_) { /* ignore */ }
+    }
+
+    // ── Draft with AI — inline composer ──────────────────────────────
+    // A single reusable composer node is moved between blocks so only one
+    // is ever open. It sits in the normal document flow directly below the
+    // selected block; serializeDocument() skips it, so it never leaks into
+    // the Markdown or the dirty check. Opening it does not touch content;
+    // only a successful generate rewrites the block (and marks dirty).
+    var aiComposerEl = null;
+    var aiComposerBlock = null;
+    var aiComposerBusy = false;
+    var aiGenToken = 0;
+
+    var AI_SEND_SVG = '<svg class="seller-home__skill-ai-composer-icon" viewBox="0 0 520 520" aria-hidden="true" focusable="false"><path fill="currentColor" d="M21 445l44-163h186c5 0 10-5 10-10v-20c0-5-5-10-10-10H65L22 82l-2-8c0-7 7-14 15-13l5 1 450 185c6 2 10 8 10 14s-4 11-9 13L40 464l-6 1c-8-1-14-7-14-15z"/></svg>';
+    var AI_CLOSE_SVG = '<svg class="seller-home__skill-ai-composer-icon" viewBox="0 0 520 520" aria-hidden="true" focusable="false"><path fill="currentColor" d="M310 254l130-131c6-6 6-15 0-21l-20-21c-6-6-15-6-21 0L268 212a10 10 0 01-14 0L123 80c-6-6-15-6-21 0l-21 21c-6 6-6 15 0 21l131 131c4 4 4 10 0 14L80 399c-6 6-6 15 0 21l21 21c6 6 15 6 21 0l131-131a10 10 0 0114 0l131 131c6 6 15 6 21 0l21-21c6-6 6-15 0-21L310 268a10 10 0 010-14"/></svg>';
+
+    function aiComposerIsOpen() { return !!(aiComposerEl && aiComposerEl.parentNode); }
+
+    function aiSendReady() {
+      if (!aiComposerEl || aiComposerBusy) return false;
+      var field = aiComposerEl.querySelector('[data-sh-ai-field]');
+      return !!field && String(field.value || '').trim().length > 0;
+    }
+
+    function updateAiComposerState() {
+      if (!aiComposerEl) return;
+      var send = aiComposerEl.querySelector('[data-sh-ai-send]');
+      var ready = aiSendReady();
+      if (send) send.disabled = !ready;
+      aiComposerEl.classList.toggle('is-ready', ready);
+    }
+
+    function autoGrowAiField(field) {
+      if (!field) return;
+      field.style.height = 'auto';
+      field.style.height = Math.min(field.scrollHeight, 220) + 'px';
+    }
+
+    function buildAiComposer() {
+      var wrap = document.createElement('div');
+      wrap.className = 'seller-home__skill-ai-composer';
+      wrap.setAttribute('data-sh-skill-ai-composer', '');
+      wrap.setAttribute('contenteditable', 'false');
+      wrap.setAttribute('role', 'group');
+      wrap.setAttribute('aria-label', t('draftWithAi', 'Draft with AI'));
+
+      var main = document.createElement('div');
+      main.className = 'seller-home__skill-ai-composer-main';
+
+      var field = document.createElement('textarea');
+      field.className = 'seller-home__skill-ai-composer-field';
+      field.setAttribute('data-sh-ai-field', '');
+      field.setAttribute('rows', '1');
+      var ph = t('draftWithAiPlaceholder', 'Describe what you want your template to do…');
+      field.setAttribute('placeholder', ph);
+      field.setAttribute('aria-label', ph);
+
+      var actions = document.createElement('div');
+      actions.className = 'seller-home__skill-ai-composer-actions';
+
+      var send = document.createElement('button');
+      send.type = 'button';
+      send.className = 'seller-home__skill-ai-composer-send';
+      send.setAttribute('data-sh-ai-send', '');
+      send.disabled = true;
+      var sendLabel = t('draftWithAiSend', 'Generate template');
+      send.setAttribute('aria-label', sendLabel);
+      send.setAttribute('title', sendLabel);
+      send.innerHTML = AI_SEND_SVG + '<span class="seller-home__skill-ai-composer-spinner" aria-hidden="true"></span>';
+
+      var closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.className = 'seller-home__skill-ai-composer-close';
+      closeBtn.setAttribute('data-sh-ai-close', '');
+      var closeLabel = t('close', 'Close');
+      closeBtn.setAttribute('aria-label', closeLabel);
+      closeBtn.setAttribute('title', closeLabel);
+      closeBtn.innerHTML = AI_CLOSE_SVG;
+
+      actions.appendChild(send);
+      actions.appendChild(closeBtn);
+      main.appendChild(field);
+      main.appendChild(actions);
+      wrap.appendChild(main);
+
+      field.addEventListener('input', function () {
+        autoGrowAiField(field);
+        updateAiComposerState();
+      });
+      field.addEventListener('keydown', function (e) {
+        // Cmd/Ctrl+Enter submits; plain Enter keeps a newline.
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          e.stopPropagation();
+          submitAiComposer();
+          return;
+        }
+        if (e.key === 'Escape' || e.key === 'Esc') {
+          e.preventDefault();
+          e.stopPropagation();
+          closeAiComposer(true);
+        }
+      });
+      send.addEventListener('click', function (e) {
+        e.preventDefault();
+        submitAiComposer();
+      });
+      closeBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        closeAiComposer(true);
+      });
+      // Clicks inside the composer must not bubble to the document-level
+      // dismiss handler, which would clear the block selection.
+      wrap.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+
+      return wrap;
+    }
+
+    function openAiComposer(block) {
+      if (!canEdit || !block || !block.parentNode) return;
+      closeMenus();
+      if (!aiComposerEl) aiComposerEl = buildAiComposer();
+
+      // Reset any prior draft / busy state (covers moving to another block)
+      // and invalidate any in-flight simulated generation.
+      aiGenToken += 1;
+      aiComposerBusy = false;
+      aiComposerEl.classList.remove('is-busy');
+      aiComposerEl.classList.remove('is-ready');
+      var field = aiComposerEl.querySelector('[data-sh-ai-field]');
+      var send = aiComposerEl.querySelector('[data-sh-ai-send]');
+      var closeBtn = aiComposerEl.querySelector('[data-sh-ai-close]');
+      if (field) { field.value = ''; field.disabled = false; field.style.height = 'auto'; }
+      if (send) send.disabled = true;
+      if (closeBtn) closeBtn.disabled = false;
+
+      aiComposerBlock = block;
+      selectBlock(block);
+      block.parentNode.insertBefore(aiComposerEl, block.nextSibling);
+
+      updateAiComposerState();
+      if (field) {
+        autoGrowAiField(field);
+        try { field.focus(); } catch (_) { /* ignore */ }
+      }
+    }
+
+    function closeAiComposer(returnFocus) {
+      if (!aiComposerEl) return;
+      // Invalidate any in-flight simulated generation.
+      aiGenToken += 1;
+      var block = aiComposerBlock;
+      var field = aiComposerEl.querySelector('[data-sh-ai-field]');
+      if (aiComposerEl.parentNode) aiComposerEl.parentNode.removeChild(aiComposerEl);
+      if (field) { field.value = ''; field.disabled = false; field.style.height = 'auto'; }
+      aiComposerEl.classList.remove('is-busy');
+      aiComposerEl.classList.remove('is-ready');
+      aiComposerBusy = false;
+      aiComposerBlock = null;
+      // No refreshDraft() here: closing without submitting must leave the
+      // block content — and the document's dirty state — untouched.
+      if (returnFocus && block && block.parentNode) {
+        var body = blockBodyEl(block);
+        if (body && body.getAttribute('contenteditable') === 'true') {
+          try { placeCaretAtEnd(body); } catch (_) { /* ignore */ }
+        } else {
+          var grip = block.querySelector('[data-sh-skill-block-grip]');
+          if (grip) { try { grip.focus(); } catch (_) { /* ignore */ } }
+        }
+      }
+    }
+
+    function submitAiComposer() {
+      if (!aiComposerEl || aiComposerBusy || !aiSendReady()) return;
+      var field = aiComposerEl.querySelector('[data-sh-ai-field]');
+      var send = aiComposerEl.querySelector('[data-sh-ai-send]');
+      var closeBtn = aiComposerEl.querySelector('[data-sh-ai-close]');
+      var instruction = field ? String(field.value || '').trim() : '';
+      var block = aiComposerBlock;
+      if (!instruction) return;
+      if (!block || !block.parentNode) { closeAiComposer(false); return; }
+
+      aiComposerBusy = true;
+      aiComposerEl.classList.add('is-busy');
+      aiComposerEl.classList.remove('is-ready');
+      if (field) field.disabled = true;
+      if (send) send.disabled = true;
+      if (closeBtn) closeBtn.disabled = true;
+
+      // Simulated generation. Swap this timeout for a real async request
+      // that resolves to draft HTML to wire a live service later.
+      var token = ++aiGenToken;
+      global.setTimeout(function () {
+        // Bail if the composer was closed or moved to another block.
+        if (token !== aiGenToken) return;
+        if (block && block.parentNode) applyAiDraft(block, instruction);
+        closeAiComposer(false);
+        // Keep the freshly drafted block highlighted so it's easy to find.
+        if (block && block.parentNode) selectBlock(block);
+      }, 1100);
+    }
+
+    function applyAiDraft(block, instruction) {
+      var body = blockBodyEl(block);
+      if (!body) return;
+      var kind = block.getAttribute('data-block-kind') || 'p';
+      if (kind === 'hr') return;
+      body.innerHTML = generateDraftHtml(instruction, kind, String(body.textContent || ''));
+      if (!body.firstChild) body.appendChild(document.createElement('br'));
+      syncBlockEmpty(block);
+      if (onRender) { try { onRender(articleEl); } catch (_) { /* ignore */ } }
+      refreshDraft();
+    }
+
+    // Deterministic mock generator — produces block-appropriate draft
+    // content themed on the user's instruction. Structured so a real AI
+    // response can drop in behind the same signature.
+    function generateDraftHtml(instruction, kind, prevText) {
+      var focus = String(instruction || '')
+        .replace(/\s+/g, ' ')
+        .replace(/^(please\s+|can you\s+|could you\s+|i want (?:you )?to\s+|help me\s+)/i, '')
+        .replace(/[.?!]+$/, '')
+        .trim();
+      var lead = focus ? (focus.charAt(0).toLowerCase() + focus.slice(1)) : 'communicate this section clearly';
+
+      if (kind === 'ul' || kind === 'ol') {
+        var items = [
+          'Open by making the goal obvious so the reader instantly gets the point.',
+          'Lead with the strongest value and back it with one concrete proof point.',
+          'End with a clear, low-friction next step.'
+        ];
+        return items.map(function (it) { return '<li>' + escapeHtml(it) + '</li>'; }).join('');
+      }
+
+      if (kind === 'h1' || kind === 'h2' || kind === 'h3') {
+        var heading = focus.split(' ').filter(Boolean).slice(0, 7).map(function (w) {
+          return w.charAt(0).toUpperCase() + w.slice(1);
+        }).join(' ');
+        return escapeHtml(heading || 'Drafted Section');
+      }
+
+      var sentence = 'Here’s a draft written to ' + lead + '. '
+        + 'It keeps your intent front and center, leads with the most relevant point, '
+        + 'and stays clear and specific so it’s ready to refine.';
+      return escapeHtml(sentence);
     }
 
     // ── Block chrome ───────────────────────────────────────────────
@@ -1941,6 +2214,7 @@
     // ── Paint ──────────────────────────────────────────────────────
     function paint(md) {
       closeMenus();
+      closeAiComposer(false);
       clearSelection();
       articleEl.innerHTML = renderMarkdown(md);
       if (!articleEl.firstElementChild) {
@@ -2095,8 +2369,7 @@
       if (ai && articleEl.contains(ai)) {
         e.preventDefault();
         var aiBlock = closestSkillBlock(ai, articleEl);
-        if (aiBlock) selectBlock(aiBlock);
-        firePlaceholder('refine', ai);
+        if (aiBlock) openAiComposer(aiBlock);
         return;
       }
     });
@@ -2248,7 +2521,10 @@
       var inMenu = (menuHost && menuHost.contains(t)) || (convertHost && convertHost.contains(t));
       var inInline = inlineHost && inlineHost.contains(t);
       var inMention = mentionHost && mentionHost.contains(t);
-      if (selectedBlock && !inSelected && !inMenu && !inInline && !inMention) {
+      var inComposer = aiComposerEl && aiComposerEl.contains(t);
+      // Keep the block highlighted while its composer is open so the
+      // draft target stays obvious.
+      if (selectedBlock && !inSelected && !inMenu && !inInline && !inMention && !inComposer && !aiComposerIsOpen()) {
         clearSelection();
       }
       if (!menuHost && !convertHost) return;
