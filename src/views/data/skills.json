@@ -26,7 +26,7 @@
 // lives on a separate surface tuned for that job. The two data
 // models never share a field — no `runtimeState`, no `progress`,
 // no `runStatus` on a Skill; conversely no `ownership`, no
-// `connectedSkills`, no `canEdit` on a RecentChat.
+// `connectedTools`, no `canEdit` on a RecentChat.
 //
 // ── Data-model contract ───────────────────────────────────────────
 // Every top-level key documented below is part of the Skills page's
@@ -105,17 +105,6 @@
 //                     value here + `category` above, and add a
 //                     matching tab entry in `tabs.items` with its
 //                     `ownerships` list.
-//   referencedSkillCount
-//                  — integer. Number of sub-skills this skill
-//                     coordinates. Kept in sync with
-//                     `connectedSkills.length` so downstream views
-//                     (skill detail card, condensed row variants,
-//                     future search facets) can render a compact
-//                     "Referred N other skills" surface without
-//                     iterating the sub-skill array. 0 for
-//                     standalone skills. The list template still
-//                     reads `.length` for the visible chip label —
-//                     the two fields are additive, not competing.
 //   connectedTools — array<string>. Each entry is a KEY into
 //                     `toolLibrary` (see below). Rendered as small
 //                     icon chips beneath the description in the
@@ -136,29 +125,6 @@
 //   sharedBy       — string | null. Person or team who shared a
 //                     `ownership: "shared"` skill. Rendered on
 //                     detail views (not on the grid card).
-//   connectedSkills — array<{id, name}> | undefined. Sub-skills
-//                     this skill coordinates.
-//                       • Renders as a right-anchored "Uses N other
-//                         skill(s)" link in the card's footer row
-//                         (secondary-link styling — not a status
-//                         badge).
-//                       • Hover / focus on that link opens an
-//                         SLDS 2 popover (role="tooltip") listing
-//                         each sub-skill by NAME — see
-//                         `_skill_card_grid.html`.
-//                     Omit or leave empty for standalone skills;
-//                     both the link AND the popover are suppressed
-//                     when the array is missing / empty. Count comes
-//                     from `connectedSkills.length` so add / remove
-//                     is a one-line JSON edit and the singular /
-//                     plural label ("skill" vs. "skills") flips
-//                     automatically in the template. `id` is
-//                     forward-facing (future deep link to each sub-
-//                     skill's detail page); nothing currently
-//                     requires it to resolve to an entry in
-//                     `skills[]` — the template only reads `name`
-//                     for popover rendering and `.length` for the
-//                     link count.
 //   canEdit        — boolean. Whether the current user may edit
 //                     this skill. Consumed by the overflow menu
 //                     to gate Edit / Schedule / Duplicate.
@@ -468,7 +434,7 @@
   // prose elsewhere still says "Sales Agent", and that is fine, but the
   // badge is a label, not a sentence.
   "agentLibrary": {
-    "sales":    { "label": "Sales"    },
+    "sales":    { "label": "Hunter"   },
     "coworker": { "label": "CoWorker" },
     "tableau":  { "label": "Tableau"  }
   },
@@ -510,12 +476,6 @@
   // Six mock skills — order + labels match Figma "Coworker – Skills"
   // (node 9723:17362), 2026-08-11 refactor.
   //
-  // Only Daily Pipeline Snapshot ships a `connectedSkills` list
-  // AND a matching `referencedSkillCount: 3`; the rest are
-  // standalone (empty `connectedSkills` implied, `referenced-
-  // SkillCount: 0`) and render as simple title + description
-  // rows.
-  //
   // Each `ownership: "mine"` entry names its owning agent via
   // `agent` (a key into `agentLibrary` above): the first five belong
   // to `sales`, and Make Powerpoint belongs to `coworker`. The mix is
@@ -542,17 +502,36 @@
   // on RecentChat.
   //
   // ── Denormalized fields (audit note, 2026-08-11) ───────────────
-  // `referencedSkillCount` and `actions` are denormalized: both
-  // could be derived at render time from `connectedSkills.length`
-  // and the permission booleans respectively. They're carried
-  // explicitly so consumers other than the list row macro
-  // (skill detail card, condensed variants, future search
-  // facets) don't have to re-run the same computation. Whenever
-  // the underlying source of truth changes (add / remove a
-  // connectedSkill, flip a permission), the denormalized field
-  // must be updated in the same commit — the schema docblock
-  // above spells out the invariant.
+  // `actions` is denormalized: it could be derived at render time
+  // from the permission booleans. It's carried explicitly so
+  // consumers other than the list row macro don't have to re-run
+  // the same computation. Whenever a permission flips, update the
+  // list in the same commit — the schema docblock above spells out
+  // the invariant.
   "skills": [
+    {
+      "id":                   "sk-daily-deal-summary",
+      "name":                 "Find Prospects",
+      "agent":                "sales",
+      "status":               "published",
+      "description":          "Build deduplicated, prioritized prospect lists by discovering net-new target accounts, identifying relevant people at known accounts, or both.",
+      "category":             "mine",
+      "ownership":            "mine",
+      "connectedTools":       ["sf", "slack", "gmail"],
+      "nextRun":              null,
+      "sharedBy":             null,
+      "canEdit":              true,
+      "canShare":             true,
+      "canDelete":            true,
+      "actions":              ["use_in_chat", "schedule", "duplicate", "share", "delete"],
+      "createdBy":            "Caroline Alix",
+      "createdAt":            "Jan 12",
+      "updatedBy":            "Caroline Alix",
+      "updatedAt":            "3 days ago",
+      "version":              "V4",
+      "markdown":             "# Find Prospects\n\nBuild deduplicated, prioritized prospect lists by discovering net-new target accounts, identifying relevant people at known accounts, or doing both. Use for territory building, account discovery, persona-aligned contact discovery, buying-committee coverage, lookalike prospecting, or list refreshes; do not use for deep account research, outreach drafting or sending, meeting preparation, or pipeline management.\n\n## Purpose\n\nProduce a reviewable list of accounts and/or people who match the organization's target criteria, show relevant timing, and are not hidden duplicates or conflicts in CRM.\n\nUse three modes:\n\n- Account discovery: find and rank net-new target accounts.\n- Contact discovery: find and rank relevant people at specified or CRM accounts.\n- Account + contact discovery: find qualified accounts, then identify the right people within them.\n\nTreat the GTM Profile as the definition of organization-level fit, signals, anti-ICP classes, and personas. Treat CRM and external sources as evidence about each candidate. Named-account or contact restrictions, ownership, customer status, do-not-contact state, and collision rules belong in CRM configuration or policy. Never bake customer-specific criteria, titles, signals, vendor preferences, or suppression rules into this skill.\n\n## Trigger Logic\n\nRun this skill when the user asks to:\n\n- Find companies, accounts, leads, buyers, decision-makers, champions, or other prospects.\n- Build or refresh a territory, target-account list, contact list, or buying committee.\n- Find people with a particular responsibility at one or more known accounts.\n- Find accounts similar to a supplied customer or seed account.\n- Surface net-new prospects showing a relevant buying signal.\n\nInfer mode from the request:\n\n- \"Find companies/accounts\" -> Account discovery.\n- \"Find people/contacts at these accounts\" -> Contact discovery.\n- \"Build a prospect list\" with no object specified -> ask whether the user wants accounts, people at known accounts, or both.\n\nAsk one focused question only when the mode is ambiguous or when a missing territory, target cohort, or required delivery field would materially change the list. Mode is blocking because it changes cost, scope, and output.\n\n## Boundaries and Handoffs\n\nFor every handoff, pass the target record identifiers, bounded goal, user-selected or approved state, evidence references with dates, relevant constraints, and requested return format. Return control to the originating workflow when the handed-off result is needed to finish the request.\n\nFor net-new outbound, use this order: [Find Prospects](/skill_detail.html?id=sk-daily-deal-summary) identifies and verifies candidates; [Account Research](/skill_detail.html?id=sk-account-research-summary) deepens evidence only for user-selected accounts when needed; [Write Sales Emails](/skill_detail.html?id=sk-write-sales-emails) drafts only after the recipient is selected.\n\n- Use [Account Research](/skill_detail.html?id=sk-account-research-summary) for a deep, evidence-backed brief on shortlisted accounts.\n- Use [Write Sales Emails](/skill_detail.html?id=sk-write-sales-emails) after the user selects prospects and requests outreach.\n- Use [Pre-Meeting Prep](/skill_detail.html?id=sk-prepare-for-meetings) for scheduled customer interactions.\n- Use [Pipeline Management](/skill_detail.html?id=sk-pipeline-management) for live opportunity health and progression.\n- Use [Data Sourcing](/skill_detail.html?id=sk-data-sourcing) to select connected providers, enrichment recipes, waterfalls, validation, and fallbacks. Do not embed those choices here.\n- Do not infer or manufacture email addresses, phone numbers, employment, intent, or account fit.\n- Do not create CRM records, enroll sequences, or send messages unless the user separately requests the action and policy permits it.\n\n## Inputs\n\nResolve these inputs before sourcing.\n\n**Required or inferable**\n\n- Mode: account, contact, or account + contact discovery.\n- Scope: geography, segment, product, territory, named accounts, CRM view, or other target universe. Use GTM Profile defaults when the request omits scope.\n- Desired volume: use customer-configured defaults when available.\n\n**Optional**\n\n- Seed accounts, lookalike examples, explicit inclusions, or exclusions.\n- Required roles, responsibilities, seniority, buying-committee coverage, or persona.\n- Timing-signal requirement and lookback window.\n- Required contact channels or fields.\n- CRM owner, campaign, list, segment, or assignment context.\n- User-supplied candidates to enrich, validate, or deduplicate.\n\nIf neither the user nor Knowledge defines volume, use these defaults:\n\n- Account discovery: 25 accounts.\n- Contact discovery: up to 3 relevant people per account and 50 people total.\n- Account + contact discovery: 15 accounts and up to 2 relevant people per account.\n\nTreat these as output limits, not quotas. Return fewer candidates rather than weaken a hard criterion or fabricate data.\n\n## Knowledge Hydration\n\nLoad only the GTM Profile sections relevant to the selected mode. The platform resolves every link below and injects the section content into the runtime context.\n\n**Always load**\n\n- [GTM Profile -> Profile Scope](#gtm-profile-profile-scope)\n- [GTM Profile -> Target Accounts](#gtm-profile-target-accounts)\n\n**Load for account or account + contact discovery**\n\n- [GTM Profile -> Buying Signals](#gtm-profile-buying-signals)\n\n**Load for contact or account + contact discovery**\n\n- [GTM Profile -> Buyer Personas](#gtm-profile-buyer-personas)\n- [GTM Profile -> Buying Process](#gtm-profile-buying-process)\n\n**Load when relevance or prioritization requires it**\n\n- [GTM Profile -> Company and Offer](#gtm-profile-company-and-offer)\n- [GTM Profile -> Customer Problems and Use Cases](#gtm-profile-customer-problems-and-use-cases)\n- [GTM Profile -> Positioning](#gtm-profile-positioning)\n- [GTM Profile -> Objections](#gtm-profile-objections)\n\nExtract hard criteria, soft indicators, organization-level anti-ICP classes, signal definitions and windows, persona responsibilities, and buying roles. Knowledge guides candidate selection; it does not prove a candidate meets a criterion. Read named-account and contact restrictions, ownership, customer state, and do-not-contact rules from CRM configuration and policy.\n\nIf a required section is missing:\n\n1. Use explicit constraints in the user's request.\n2. Do not invent ICP or persona criteria.\n3. Return a clearly labeled partial result if it can still be useful.\n4. State which Knowledge section the admin should complete.\n\nIf a section is marked stale, superseded, draft, or low-confidence, preserve that status. Do not use uncertain guidance as a hard filter or decisive ranking factor; place affected candidates in Review unless the remaining current evidence supports a decision.\n\n## Source and Tool Contract\n\nRead Data Sourcing; the platform injects its content into the same runtime context. This skill defines who and what to find. Data Sourcing defines which providers and actions to call, waterfall order, validation, freshness, cost limits, and stopping conditions.\n\nUse the Data Gateway only to invoke exposed provider actions. The gateway contains no business logic. Never hard-code provider names or assume that a specific account, contact, email, intent, or enrichment action is connected.\n\n**Source roles**\n\n1. CRM: use first for deduplication, existing relationships, ownership, customer status, active opportunities, prior prospecting, contact restrictions, and suppression.\n2. Connected data providers: use according to Data Sourcing for account discovery, contact discovery, enrichment, verification, and provider-reported signals.\n3. Company first-party sources: use to verify domains, company identity, locations, products, hiring, and named leadership or employees when available.\n4. Authoritative external sources: use for dated events that support a buying signal.\n5. Other web sources: use for discovery or corroboration, not as the sole basis for a material decision when stronger evidence exists.\n\n**Evidence standard**\n\nRetain the following for every candidate:\n\n- Canonical identity: company name and domain; for people, full name, current company, and current title or responsibility.\n- Evidence for every hard-fit criterion and any claimed buying signal.\n- CRM match or an explicit \"No match found,\" plus the matching keys used.\n- Source URL or provider/internal record reference, source type, observed or published date, retrieval date, and confidence.\n- For contact methods, provider verification status and verification date.\n\nNever output a guessed or pattern-generated email address or phone number as verified. Label provider-modeled intent and inferred responsibilities explicitly.\n\n**Freshness defaults**\n\nFollow GTM Profile or Data Sourcing rules when present. Otherwise:\n\n- Employment and title: prefer verification within 30 days.\n- Email or phone validity: prefer verification within 90 days.\n- Time-sensitive buying signals: prefer evidence within 90 days.\n- Firmographics: prefer evidence observed within 180 days.\n\nPreserve older data as stale only when it remains useful. When sources conflict, preserve the conflict, prefer first-party and newer evidence for public facts, and lower confidence rather than selecting the convenient answer.\n\n## Workflow\n\n1. Set the mode and limit. Infer or confirm account, contact, or account + contact discovery; scope; desired volume; required fields; and as-of time.\n2. Hydrate Knowledge. Extract target-account criteria, exclusions, signals, personas, and buying roles. Read territory, ownership, and suppression behavior from live CRM configuration and the CRM Writeback Policy rather than inventing it here.\n3. Build a selection spec separating hard filters, soft indicators, explicit exclusions and inverse signals, persona responsibilities and buying roles, and required evidence and freshness.\n4. Build the CRM suppression set. Retrieve existing accounts, leads, contacts, customers, active opportunities, ownership, recent touches, campaign/list membership, bounce status, do-not-contact flags, and configured exclusions. Record counts by suppression reason.\n5. Generate candidate accounts. Use Data Sourcing rules to search the allowed universe. For lookalikes, derive the relevant attributes from Knowledge and independently verify that each candidate meets them; similarity alone is not qualification.\n6. Resolve and verify accounts. Confirm the canonical domain, parent/subsidiary relationship, hard-fit criteria, exclusions, and signal evidence. Do not spend on contact enrichment for an account that fails a hard filter.\n7. Generate candidate people. In contact modes, search only retained or supplied accounts. Match responsibilities and buying roles from Buyer Personas, not exact title strings alone. Include multiple roles only when they provide useful buying-committee coverage.\n8. Verify employment and contactability. Confirm current employer and role. Enrich only the contact fields required by the request. Preserve verification dates and return \"Not verified\" instead of guessing.\n9. Deduplicate deterministically. Match accounts by CRM ID when present, then canonical domain and parent/subsidiary. Match people by CRM ID, normalized email, or stable professional profile URL; use full name plus company only as a review candidate, never an automatic merge key.\n10. Apply suppression visibly. Exclude configured conflicts from the main list, but report the candidate and reason in an exclusions summary. If no rule governs an existing CRM relationship, flag it for review rather than silently excluding it.\n11. Rank the retained candidates. Apply customer-defined weighting when present. Otherwise use the default decision logic below.\n12. Check coverage. Confirm the result meets the requested account count, persona mix, buying-role mix, geography, and required field coverage without weakening hard criteria.\n13. Stop deliberately. Stop at the requested limit, configured cost/time ceiling, or when additional providers repeat candidates. Report shortfalls and the binding constraint.\n14. Produce the list. Put qualified candidates first, keep evidence adjacent to claims, and make the next handoff explicit.\n\nParallelize independent candidate searches and enrichments where safe. Resolve entities before deduplication or paid enrichment.\n\n## Decision Logic\n\nApply explicit GTM Profile, CRM configuration, and policy rules before these defaults.\n\n**Candidate status**\n\n- Qualified: all hard filters are supported, no exclusion is present, CRM conflict is cleared, and required identity fields are verified.\n- Review: likely fit, but one non-critical criterion, employment fact, CRM match, or buying-role interpretation remains uncertain.\n- Excluded: a hard exclusion, duplicate, current-customer rule, open-opportunity conflict, ownership rule, contact restriction, or explicit user constraint applies.\n- Insufficient data: a required identity, fit, or contactability field cannot be verified.\n\n**Default ranking**\n\nRank using these dimensions in order unless Knowledge supplies weights:\n\n1. Hard-fit confidence.\n2. Current, specific Knowledge-defined buying signal.\n3. Persona and buying-role alignment.\n4. Clean CRM status and territory ownership.\n5. Evidence and contact-data freshness.\n\nDo not rank a person higher only because of seniority. Prefer the person whose responsibilities and role in the buying process best match the GTM Profile. Use uncovered buying roles as a tie-breaker when building a committee.\n\nDo not weaken a hard filter to hit volume. If the qualified set is too small, report which constraint binds and ask whether the user wants to change it.\n\n## Output Requirements\n\n- State the mode, requested volume, actual volume, scope, as-of time, and Knowledge sections used.\n- Show qualified and review candidates separately from exclusions.\n- Explain why every included account fits and, when applicable, why it is timely.\n- Explain why every included person maps to a hydrated persona or buying role.\n- Show the CRM match, owner, and conflict status for every candidate.\n- Include only verified contact fields requested by the user; label unavailable or stale fields.\n- Cite hard-fit facts, signals, employment, and contact verification with sources and dates.\n- Include a suppression and deduplication summary; never silently drop a sourced candidate.\n- End with a clear handoff, such as Account Research on the top accounts or Write Sales Emails for user-selected contacts.\n\n## Output Format\n\nStart every result with:\n\n```\n# Prospect List: {scope or objective}\n**Mode:** {Account / Contact / Account + Contact}\n**As of:** {date and time}\n**Requested / returned:** {count} / {count}\n**Scope:** {territory, segment, named accounts, or other universe}\n**Coverage:** {required fields and completion rate}\n**Knowledge used:** {linked GTM Profile sections}\n\n### Qualified Accounts\n| Rank | Account | Domain | Fit | Why now | CRM status / owner | Confidence | Evidence |\n|---:|---|---|---|---|---|---|---|\n| 1 | {account} | {domain} | {matched criteria} | {signal and date, or \"No current signal required\"} | {status / owner} | {High / Medium / Low} | {[S#]} |\n\n### Qualified People\n| Rank | Person | Current role | Account | Persona / buying role | Why this person | Verified contactability | CRM status | Evidence |\n|---:|---|---|---|---|---|---|---|---|\n| 1 | {name} | {title} | {account} | {mapping} | {responsibility-based rationale} | {requested fields, status, and date} | {status / owner} | {[S#]} |\n\nOmit the accounts or people table when the selected mode does not produce it. In account + contact mode, keep people grouped or sortable by account.\n\n### Review Required\n| Candidate | Open question | Why it matters | Best next verification |\n|---|---|---|---|\n| {candidate} | {missing or conflicting fact} | {decision impact} | {specific action} |\n\n### Exclusions and Dedupe Summary\n- **Sourced candidates:** {count}\n- **Qualified:** {count}\n- **Review:** {count}\n- **Excluded:** {count by duplicate, customer, active opportunity, territory, restriction, hard-fit, stale/unverified, and other}\n\n| Candidate | Disposition | Reason | CRM or evidence reference |\n|---|---|---|---|\n| {candidate} | {Excluded / Merged / Suppressed} | {specific rule} | {[S#] or CRM link} |\n\n### Suggested Handoff\n{One recommended next action and the exact subset it applies to.}\n\n### Sources\n- **[S1]** {source label} - {clickable URL or internal/provider record reference}; {published/observed/verified date}; retrieved {date}; {source type}\n```\n\n## Actions and Writeback\n\n- Keep CRM and sourcing tools read-only by default.\n- Follow CRM Writeback Policy before creating or updating accounts, leads, contacts, list membership, campaigns, ownership, or prospecting status.\n- When the user requests writeback, preview the destination object, dedupe key, exact field values, source, owner, and collision behavior before mutation unless policy explicitly pre-authorizes it.\n- Create no CRM record for a Review or Insufficient data candidate unless the user explicitly accepts the gap.\n- Never overwrite verified contact data with stale data, rep-authored context with enrichment, or another seller's ownership.\n- After any policy-permitted write, return one result per target record with status, record ID, old and new values or action, source, error if any, and whether a failed item is safe to retry. Never retry a succeeded item.\n- Never enroll a sequence, draft an email, or send a message from this skill.\n\n## Quality Gate\n\nDo not deliver until all applicable checks pass:\n\n- [ ] Mode, scope, volume, required fields, and as-of time are explicit.\n- [ ] The relevant GTM Profile sections were loaded, or missing sections are disclosed.\n- [ ] Hard filters, soft indicators, exclusions, signals, and persona responsibilities are separated.\n- [ ] Account identities, canonical domains, and parent/subsidiary relationships are resolved.\n- [ ] CRM dedupe, ownership, customer, opportunity, recent-touch, and contact-restriction checks ran.\n- [ ] Every included candidate maps to hydrated account or persona criteria.\n- [ ] Material claims, signals, employment, and contact verification have sources and dates.\n- [ ] Inferred, modeled, stale, missing, and conflicting data is labeled.\n- [ ] No email address, phone number, employment, or intent was guessed.\n- [ ] Suppressed and merged candidates are counted and explained.\n- [ ] Hard criteria were not relaxed to hit volume.\n- [ ] The output is prioritized, scan-friendly, and ready for the stated handoff.\n- [ ] No CRM record, sequence, draft, or message was created without a separate authorized action.\n\n## Feedback Routing\n\nClassify durable feedback before proposing a change:\n\n- Which account classes, personas, buying roles, signals, or anti-ICP categories should our business care about? Propose an edit to the relevant GTM Profile section in Knowledge.\n- How should prospect discovery, qualification, ranking, deduplication, or coverage work? Propose an edit to this Find Prospects skill.\n- How should providers, waterfalls, enrichment fields, verification, freshness, or fallback work? Propose an edit to Data Sourcing.\n- Which provider actions are available or connected? Route to Data Gateway connector and tool configuration; do not add business logic there.\n- What is true about a specific account or person, or should that named record be restricted? Propose an evidence-backed CRM update under CRM Writeback Policy.\n- How may the agent create or update CRM records? Propose an edit to CRM Writeback Policy.\n- Is this instruction only for the current request? Apply it in-session and do not persist it.\n\nFor a durable change, present the destination, exact proposed change, and expected impact through the product's approval flow. Never hide customer-specific targeting or persona definitions inside this skill.\n",
+      "linked":               true
+    },
     {
       "id":                   "sk-daily-pipeline-snapshot",
       "name":                 "Daily Pipeline Snapshot",
@@ -562,22 +541,6 @@
       "category":             "mine",
       "ownership":            "mine",
       "connectedTools":       ["sf", "slack", "gmail"],
-      // Coordinating skill — invokes three sub-skills as part of
-      // its recipe. `name` is the string the SkillCard popover
-      // renders; `id` is forward-facing (future deep link to each
-      // sub-skill's detail page) and isn't required to resolve to
-      // an entry in `skills[]` today. When real dependency
-      // authoring lands, replace with the actual sub-skills the
-      // recipe references and the popover / link light up
-      // automatically. `referencedSkillCount` MUST stay in sync
-      // with the length of this array — see the denormalized-
-      // fields note above.
-      "connectedSkills": [
-        { "id": "sk-review-deal-health",         "name": "Review Deal Health"         },
-        { "id": "sk-identify-pipeline-changes",  "name": "Identify Pipeline Changes"  },
-        { "id": "sk-recommend-next-actions",     "name": "Recommend Next Actions"     }
-      ],
-      "referencedSkillCount": 3,
       "nextRun":              null,
       "sharedBy":             null,
       "canEdit":              true,
@@ -609,30 +572,6 @@
       "linked":               true
     },
     {
-      "id":                   "sk-daily-deal-summary",
-      "name":                 "Find Prospects",
-      "agent":                "sales",
-      "status":               "published",
-      "description":          "Build deduplicated, prioritized prospect lists by discovering net-new target accounts, identifying relevant people at known accounts, or both.",
-      "category":             "mine",
-      "ownership":            "mine",
-      "connectedTools":       ["sf", "slack", "gmail"],
-      "referencedSkillCount": 0,
-      "nextRun":              null,
-      "sharedBy":             null,
-      "canEdit":              true,
-      "canShare":             true,
-      "canDelete":            true,
-      "actions":              ["use_in_chat", "schedule", "duplicate", "share", "delete"],
-      "createdBy":            "Caroline Alix",
-      "createdAt":            "Jan 12",
-      "updatedBy":            "Caroline Alix",
-      "updatedAt":            "3 days ago",
-      "version":              "V4",
-      "markdown":             "# Find Prospects\n\nBuild deduplicated, prioritized prospect lists by discovering net-new target accounts, identifying relevant people at known accounts, or doing both. Use for territory building, account discovery, persona-aligned contact discovery, buying-committee coverage, lookalike prospecting, or list refreshes; do not use for deep account research, outreach drafting or sending, meeting preparation, or pipeline management.\n\n## Purpose\n\nProduce a reviewable list of accounts and/or people who match the organization's target criteria, show relevant timing, and are not hidden duplicates or conflicts in CRM.\n\nUse three modes:\n\n- Account discovery: find and rank net-new target accounts.\n- Contact discovery: find and rank relevant people at specified or CRM accounts.\n- Account + contact discovery: find qualified accounts, then identify the right people within them.\n\nTreat the GTM Profile as the definition of organization-level fit, signals, anti-ICP classes, and personas. Treat CRM and external sources as evidence about each candidate. Named-account or contact restrictions, ownership, customer status, do-not-contact state, and collision rules belong in CRM configuration or policy. Never bake customer-specific criteria, titles, signals, vendor preferences, or suppression rules into this skill.\n\n## Trigger Logic\n\nRun this skill when the user asks to:\n\n- Find companies, accounts, leads, buyers, decision-makers, champions, or other prospects.\n- Build or refresh a territory, target-account list, contact list, or buying committee.\n- Find people with a particular responsibility at one or more known accounts.\n- Find accounts similar to a supplied customer or seed account.\n- Surface net-new prospects showing a relevant buying signal.\n\nInfer mode from the request:\n\n- \"Find companies/accounts\" -> Account discovery.\n- \"Find people/contacts at these accounts\" -> Contact discovery.\n- \"Build a prospect list\" with no object specified -> ask whether the user wants accounts, people at known accounts, or both.\n\nAsk one focused question only when the mode is ambiguous or when a missing territory, target cohort, or required delivery field would materially change the list. Mode is blocking because it changes cost, scope, and output.\n\n## Boundaries and Handoffs\n\nFor every handoff, pass the target record identifiers, bounded goal, user-selected or approved state, evidence references with dates, relevant constraints, and requested return format. Return control to the originating workflow when the handed-off result is needed to finish the request.\n\nFor net-new outbound, use this order: [Find Prospects](/skill_detail.html?id=sk-daily-deal-summary) identifies and verifies candidates; [Account Research](/skill_detail.html?id=sk-account-research-summary) deepens evidence only for user-selected accounts when needed; [Write Sales Emails](/skill_detail.html?id=sk-write-sales-emails) drafts only after the recipient is selected.\n\n- Use [Account Research](/skill_detail.html?id=sk-account-research-summary) for a deep, evidence-backed brief on shortlisted accounts.\n- Use [Write Sales Emails](/skill_detail.html?id=sk-write-sales-emails) after the user selects prospects and requests outreach.\n- Use [Pre-Meeting Prep](/skill_detail.html?id=sk-prepare-for-meetings) for scheduled customer interactions.\n- Use [Pipeline Management](/skill_detail.html?id=sk-pipeline-management) for live opportunity health and progression.\n- Use [Data Sourcing](/skill_detail.html?id=sk-data-sourcing) to select connected providers, enrichment recipes, waterfalls, validation, and fallbacks. Do not embed those choices here.\n- Do not infer or manufacture email addresses, phone numbers, employment, intent, or account fit.\n- Do not create CRM records, enroll sequences, or send messages unless the user separately requests the action and policy permits it.\n\n## Inputs\n\nResolve these inputs before sourcing.\n\n**Required or inferable**\n\n- Mode: account, contact, or account + contact discovery.\n- Scope: geography, segment, product, territory, named accounts, CRM view, or other target universe. Use GTM Profile defaults when the request omits scope.\n- Desired volume: use customer-configured defaults when available.\n\n**Optional**\n\n- Seed accounts, lookalike examples, explicit inclusions, or exclusions.\n- Required roles, responsibilities, seniority, buying-committee coverage, or persona.\n- Timing-signal requirement and lookback window.\n- Required contact channels or fields.\n- CRM owner, campaign, list, segment, or assignment context.\n- User-supplied candidates to enrich, validate, or deduplicate.\n\nIf neither the user nor Knowledge defines volume, use these defaults:\n\n- Account discovery: 25 accounts.\n- Contact discovery: up to 3 relevant people per account and 50 people total.\n- Account + contact discovery: 15 accounts and up to 2 relevant people per account.\n\nTreat these as output limits, not quotas. Return fewer candidates rather than weaken a hard criterion or fabricate data.\n\n## Knowledge Hydration\n\nLoad only the GTM Profile sections relevant to the selected mode. The platform resolves every link below and injects the section content into the runtime context.\n\n**Always load**\n\n- [GTM Profile -> Profile Scope](#gtm-profile-profile-scope)\n- [GTM Profile -> Target Accounts](#gtm-profile-target-accounts)\n\n**Load for account or account + contact discovery**\n\n- [GTM Profile -> Buying Signals](#gtm-profile-buying-signals)\n\n**Load for contact or account + contact discovery**\n\n- [GTM Profile -> Buyer Personas](#gtm-profile-buyer-personas)\n- [GTM Profile -> Buying Process](#gtm-profile-buying-process)\n\n**Load when relevance or prioritization requires it**\n\n- [GTM Profile -> Company and Offer](#gtm-profile-company-and-offer)\n- [GTM Profile -> Customer Problems and Use Cases](#gtm-profile-customer-problems-and-use-cases)\n- [GTM Profile -> Positioning](#gtm-profile-positioning)\n- [GTM Profile -> Objections](#gtm-profile-objections)\n\nExtract hard criteria, soft indicators, organization-level anti-ICP classes, signal definitions and windows, persona responsibilities, and buying roles. Knowledge guides candidate selection; it does not prove a candidate meets a criterion. Read named-account and contact restrictions, ownership, customer state, and do-not-contact rules from CRM configuration and policy.\n\nIf a required section is missing:\n\n1. Use explicit constraints in the user's request.\n2. Do not invent ICP or persona criteria.\n3. Return a clearly labeled partial result if it can still be useful.\n4. State which Knowledge section the admin should complete.\n\nIf a section is marked stale, superseded, draft, or low-confidence, preserve that status. Do not use uncertain guidance as a hard filter or decisive ranking factor; place affected candidates in Review unless the remaining current evidence supports a decision.\n\n## Source and Tool Contract\n\nRead Data Sourcing; the platform injects its content into the same runtime context. This skill defines who and what to find. Data Sourcing defines which providers and actions to call, waterfall order, validation, freshness, cost limits, and stopping conditions.\n\nUse the Data Gateway only to invoke exposed provider actions. The gateway contains no business logic. Never hard-code provider names or assume that a specific account, contact, email, intent, or enrichment action is connected.\n\n**Source roles**\n\n1. CRM: use first for deduplication, existing relationships, ownership, customer status, active opportunities, prior prospecting, contact restrictions, and suppression.\n2. Connected data providers: use according to Data Sourcing for account discovery, contact discovery, enrichment, verification, and provider-reported signals.\n3. Company first-party sources: use to verify domains, company identity, locations, products, hiring, and named leadership or employees when available.\n4. Authoritative external sources: use for dated events that support a buying signal.\n5. Other web sources: use for discovery or corroboration, not as the sole basis for a material decision when stronger evidence exists.\n\n**Evidence standard**\n\nRetain the following for every candidate:\n\n- Canonical identity: company name and domain; for people, full name, current company, and current title or responsibility.\n- Evidence for every hard-fit criterion and any claimed buying signal.\n- CRM match or an explicit \"No match found,\" plus the matching keys used.\n- Source URL or provider/internal record reference, source type, observed or published date, retrieval date, and confidence.\n- For contact methods, provider verification status and verification date.\n\nNever output a guessed or pattern-generated email address or phone number as verified. Label provider-modeled intent and inferred responsibilities explicitly.\n\n**Freshness defaults**\n\nFollow GTM Profile or Data Sourcing rules when present. Otherwise:\n\n- Employment and title: prefer verification within 30 days.\n- Email or phone validity: prefer verification within 90 days.\n- Time-sensitive buying signals: prefer evidence within 90 days.\n- Firmographics: prefer evidence observed within 180 days.\n\nPreserve older data as stale only when it remains useful. When sources conflict, preserve the conflict, prefer first-party and newer evidence for public facts, and lower confidence rather than selecting the convenient answer.\n\n## Workflow\n\n1. Set the mode and limit. Infer or confirm account, contact, or account + contact discovery; scope; desired volume; required fields; and as-of time.\n2. Hydrate Knowledge. Extract target-account criteria, exclusions, signals, personas, and buying roles. Read territory, ownership, and suppression behavior from live CRM configuration and the CRM Writeback Policy rather than inventing it here.\n3. Build a selection spec separating hard filters, soft indicators, explicit exclusions and inverse signals, persona responsibilities and buying roles, and required evidence and freshness.\n4. Build the CRM suppression set. Retrieve existing accounts, leads, contacts, customers, active opportunities, ownership, recent touches, campaign/list membership, bounce status, do-not-contact flags, and configured exclusions. Record counts by suppression reason.\n5. Generate candidate accounts. Use Data Sourcing rules to search the allowed universe. For lookalikes, derive the relevant attributes from Knowledge and independently verify that each candidate meets them; similarity alone is not qualification.\n6. Resolve and verify accounts. Confirm the canonical domain, parent/subsidiary relationship, hard-fit criteria, exclusions, and signal evidence. Do not spend on contact enrichment for an account that fails a hard filter.\n7. Generate candidate people. In contact modes, search only retained or supplied accounts. Match responsibilities and buying roles from Buyer Personas, not exact title strings alone. Include multiple roles only when they provide useful buying-committee coverage.\n8. Verify employment and contactability. Confirm current employer and role. Enrich only the contact fields required by the request. Preserve verification dates and return \"Not verified\" instead of guessing.\n9. Deduplicate deterministically. Match accounts by CRM ID when present, then canonical domain and parent/subsidiary. Match people by CRM ID, normalized email, or stable professional profile URL; use full name plus company only as a review candidate, never an automatic merge key.\n10. Apply suppression visibly. Exclude configured conflicts from the main list, but report the candidate and reason in an exclusions summary. If no rule governs an existing CRM relationship, flag it for review rather than silently excluding it.\n11. Rank the retained candidates. Apply customer-defined weighting when present. Otherwise use the default decision logic below.\n12. Check coverage. Confirm the result meets the requested account count, persona mix, buying-role mix, geography, and required field coverage without weakening hard criteria.\n13. Stop deliberately. Stop at the requested limit, configured cost/time ceiling, or when additional providers repeat candidates. Report shortfalls and the binding constraint.\n14. Produce the list. Put qualified candidates first, keep evidence adjacent to claims, and make the next handoff explicit.\n\nParallelize independent candidate searches and enrichments where safe. Resolve entities before deduplication or paid enrichment.\n\n## Decision Logic\n\nApply explicit GTM Profile, CRM configuration, and policy rules before these defaults.\n\n**Candidate status**\n\n- Qualified: all hard filters are supported, no exclusion is present, CRM conflict is cleared, and required identity fields are verified.\n- Review: likely fit, but one non-critical criterion, employment fact, CRM match, or buying-role interpretation remains uncertain.\n- Excluded: a hard exclusion, duplicate, current-customer rule, open-opportunity conflict, ownership rule, contact restriction, or explicit user constraint applies.\n- Insufficient data: a required identity, fit, or contactability field cannot be verified.\n\n**Default ranking**\n\nRank using these dimensions in order unless Knowledge supplies weights:\n\n1. Hard-fit confidence.\n2. Current, specific Knowledge-defined buying signal.\n3. Persona and buying-role alignment.\n4. Clean CRM status and territory ownership.\n5. Evidence and contact-data freshness.\n\nDo not rank a person higher only because of seniority. Prefer the person whose responsibilities and role in the buying process best match the GTM Profile. Use uncovered buying roles as a tie-breaker when building a committee.\n\nDo not weaken a hard filter to hit volume. If the qualified set is too small, report which constraint binds and ask whether the user wants to change it.\n\n## Output Requirements\n\n- State the mode, requested volume, actual volume, scope, as-of time, and Knowledge sections used.\n- Show qualified and review candidates separately from exclusions.\n- Explain why every included account fits and, when applicable, why it is timely.\n- Explain why every included person maps to a hydrated persona or buying role.\n- Show the CRM match, owner, and conflict status for every candidate.\n- Include only verified contact fields requested by the user; label unavailable or stale fields.\n- Cite hard-fit facts, signals, employment, and contact verification with sources and dates.\n- Include a suppression and deduplication summary; never silently drop a sourced candidate.\n- End with a clear handoff, such as Account Research on the top accounts or Write Sales Emails for user-selected contacts.\n\n## Output Format\n\nStart every result with:\n\n```\n# Prospect List: {scope or objective}\n**Mode:** {Account / Contact / Account + Contact}\n**As of:** {date and time}\n**Requested / returned:** {count} / {count}\n**Scope:** {territory, segment, named accounts, or other universe}\n**Coverage:** {required fields and completion rate}\n**Knowledge used:** {linked GTM Profile sections}\n\n### Qualified Accounts\n| Rank | Account | Domain | Fit | Why now | CRM status / owner | Confidence | Evidence |\n|---:|---|---|---|---|---|---|---|\n| 1 | {account} | {domain} | {matched criteria} | {signal and date, or \"No current signal required\"} | {status / owner} | {High / Medium / Low} | {[S#]} |\n\n### Qualified People\n| Rank | Person | Current role | Account | Persona / buying role | Why this person | Verified contactability | CRM status | Evidence |\n|---:|---|---|---|---|---|---|---|---|\n| 1 | {name} | {title} | {account} | {mapping} | {responsibility-based rationale} | {requested fields, status, and date} | {status / owner} | {[S#]} |\n\nOmit the accounts or people table when the selected mode does not produce it. In account + contact mode, keep people grouped or sortable by account.\n\n### Review Required\n| Candidate | Open question | Why it matters | Best next verification |\n|---|---|---|---|\n| {candidate} | {missing or conflicting fact} | {decision impact} | {specific action} |\n\n### Exclusions and Dedupe Summary\n- **Sourced candidates:** {count}\n- **Qualified:** {count}\n- **Review:** {count}\n- **Excluded:** {count by duplicate, customer, active opportunity, territory, restriction, hard-fit, stale/unverified, and other}\n\n| Candidate | Disposition | Reason | CRM or evidence reference |\n|---|---|---|---|\n| {candidate} | {Excluded / Merged / Suppressed} | {specific rule} | {[S#] or CRM link} |\n\n### Suggested Handoff\n{One recommended next action and the exact subset it applies to.}\n\n### Sources\n- **[S1]** {source label} - {clickable URL or internal/provider record reference}; {published/observed/verified date}; retrieved {date}; {source type}\n```\n\n## Actions and Writeback\n\n- Keep CRM and sourcing tools read-only by default.\n- Follow CRM Writeback Policy before creating or updating accounts, leads, contacts, list membership, campaigns, ownership, or prospecting status.\n- When the user requests writeback, preview the destination object, dedupe key, exact field values, source, owner, and collision behavior before mutation unless policy explicitly pre-authorizes it.\n- Create no CRM record for a Review or Insufficient data candidate unless the user explicitly accepts the gap.\n- Never overwrite verified contact data with stale data, rep-authored context with enrichment, or another seller's ownership.\n- After any policy-permitted write, return one result per target record with status, record ID, old and new values or action, source, error if any, and whether a failed item is safe to retry. Never retry a succeeded item.\n- Never enroll a sequence, draft an email, or send a message from this skill.\n\n## Quality Gate\n\nDo not deliver until all applicable checks pass:\n\n- [ ] Mode, scope, volume, required fields, and as-of time are explicit.\n- [ ] The relevant GTM Profile sections were loaded, or missing sections are disclosed.\n- [ ] Hard filters, soft indicators, exclusions, signals, and persona responsibilities are separated.\n- [ ] Account identities, canonical domains, and parent/subsidiary relationships are resolved.\n- [ ] CRM dedupe, ownership, customer, opportunity, recent-touch, and contact-restriction checks ran.\n- [ ] Every included candidate maps to hydrated account or persona criteria.\n- [ ] Material claims, signals, employment, and contact verification have sources and dates.\n- [ ] Inferred, modeled, stale, missing, and conflicting data is labeled.\n- [ ] No email address, phone number, employment, or intent was guessed.\n- [ ] Suppressed and merged candidates are counted and explained.\n- [ ] Hard criteria were not relaxed to hit volume.\n- [ ] The output is prioritized, scan-friendly, and ready for the stated handoff.\n- [ ] No CRM record, sequence, draft, or message was created without a separate authorized action.\n\n## Feedback Routing\n\nClassify durable feedback before proposing a change:\n\n- Which account classes, personas, buying roles, signals, or anti-ICP categories should our business care about? Propose an edit to the relevant GTM Profile section in Knowledge.\n- How should prospect discovery, qualification, ranking, deduplication, or coverage work? Propose an edit to this Find Prospects skill.\n- How should providers, waterfalls, enrichment fields, verification, freshness, or fallback work? Propose an edit to Data Sourcing.\n- Which provider actions are available or connected? Route to Data Gateway connector and tool configuration; do not add business logic there.\n- What is true about a specific account or person, or should that named record be restricted? Propose an evidence-backed CRM update under CRM Writeback Policy.\n- How may the agent create or update CRM records? Propose an edit to CRM Writeback Policy.\n- Is this instruction only for the current request? Apply it in-session and do not persist it.\n\nFor a durable change, present the destination, exact proposed change, and expected impact through the product's approval flow. Never hide customer-specific targeting or persona definitions inside this skill.\n",
-      "linked":               true
-    },
-    {
       "id":                   "sk-buyer-engage",
       "name":                 "Buyer Engage",
       "agent":                "sales",
@@ -641,7 +580,6 @@
       "category":             "mine",
       "ownership":            "mine",
       "connectedTools":       ["sf", "slack", "gmail"],
-      "referencedSkillCount": 0,
       "nextRun":              null,
       "sharedBy":             null,
       "canEdit":              true,
@@ -665,7 +603,6 @@
       "category":             "mine",
       "ownership":            "mine",
       "connectedTools":       ["sf", "gmail"],
-      "referencedSkillCount": 0,
       "nextRun":              null,
       "sharedBy":             null,
       "canEdit":              true,
@@ -689,7 +626,6 @@
       "category":             "mine",
       "ownership":            "mine",
       "connectedTools":       ["sf", "gcal", "gmail"],
-      "referencedSkillCount": 0,
       "nextRun":              null,
       "sharedBy":             null,
       "canEdit":              true,
@@ -702,37 +638,6 @@
       "updatedAt":            "last week",
       "version":              "V3",
       "markdown":             "# Prepare for Meetings\n\nResearches the account, attendees, recent activity, and open opportunities to create a concise meeting brief before every customer conversation.\n\n## What this skill does\n\nAhead of each scheduled meeting with a customer or prospect, Prepare for Meetings assembles a one-page brief: attendees and their roles, the account's current state in Salesforce, open opportunities, recent activity across email and calendar, and the two or three most important questions to ask.\n\n## Instructions\n\n1. Pull upcoming meetings from Google Calendar for the current day and the following business day.\n2. For each meeting, identify the linked Salesforce account and any linked opportunities.\n3. Enrich the attendee list with role, title, and last-touch information from Salesforce.\n4. Summarize the account's current state in three to five bullets\u2014stage, momentum, key stakeholders, open risks.\n5. List the last five relevant activities (calls, emails, meetings, notes) in reverse chronological order.\n6. Propose two or three prepared questions grounded in the current opportunity stage.\n7. Deliver the brief no later than 15 minutes before the meeting starts.\n\n## Guardrails\n\n- Include only information the seller is authorized to view in Salesforce.\n- Do not surface private notes flagged as sensitive.\n- Skip meetings marked as personal in the seller's calendar.\n- Never send the brief to attendees; it is for the seller only.\n\n## Example output\n\nThe day-before brief lists the two most consequential meetings, a five-bullet snapshot of each account, the attendees with roles, and three prepared questions tuned to the current stage.\n",
-      "linked":               true
-    },
-    {
-      // The one Tableau Agent skill on this surface (Figma "Source
-      // Tile" node 9723:17458). Analytics authoring is the Tableau
-      // Agent's domain rather than a selling motion, hence the orange
-      // badge tint.
-      "id":                   "sk-build-dashboard",
-      "name":                 "Build Dashboard",
-      "agent":                "tableau",
-      "status":               "published",
-      "description":          "Turns pipeline and activity data into a dashboard with the views, filters, and breakdowns you ask for.",
-      "category":             "mine",
-      "ownership":            "mine",
-      // Salesforce only. `toolLibrary` ships no Tableau connector
-      // today; add one there (with its 32 x 32 icon asset) and append
-      // the key here when a real integration lands.
-      "connectedTools":       ["sf"],
-      "referencedSkillCount": 0,
-      "nextRun":              null,
-      "sharedBy":             null,
-      "canEdit":              true,
-      "canShare":             true,
-      "canDelete":            true,
-      "actions":              ["use_in_chat", "schedule", "duplicate", "share", "delete"],
-      "createdBy":            "Zubin Keith",
-      "createdAt":            "Apr 1",
-      "updatedBy":            "Zubin Keith",
-      "updatedAt":            "3 days ago",
-      "version":              "V2",
-      "markdown":             "# Build Dashboard\n\nTurns pipeline and activity data into a dashboard with the views, filters, and breakdowns you ask for.\n\n## What this skill does\n\nBuild Dashboard translates a question about the business \u2014 \"where is my quarter at risk?\", \"which segments are converting?\" \u2014 into a working dashboard. It picks the measures and dimensions that answer the question, proposes a layout, and wires up the filters a reader will reach for first.\n\n## Instructions\n\n1. Start from the question the dashboard needs to answer, not the chart type.\n2. Confirm the audience, the time grain, and the scope (team, territory, segment) before building.\n3. Identify the Salesforce objects and fields that carry the measures involved.\n4. Propose a layout and wait for confirmation before assembling the full dashboard.\n5. Lead with the single headline metric; put supporting breakdowns below it.\n6. Choose the chart type that fits the comparison \u2014 trend over time, share of total, distribution.\n7. Add filters for the dimensions the audience will actually slice by, and set sensible defaults.\n8. Label every axis and state the refresh cadence on the dashboard itself.\n\n## Guardrails\n\n- Never present a computed metric without making its definition inspectable.\n- Flag measures whose underlying Salesforce fields are sparsely populated.\n- Do not blend data sources at different grains without calling out the join.\n- Respect Salesforce permissions and sharing rules \u2014 a dashboard must not widen access to records the viewer cannot already see.\n- Present the layout for approval before publishing or sharing.\n\n## Example output\n\nA \"where is my quarter at risk?\" request comes back as a four-panel layout \u2014 committed versus closed to date, deals slipping stage, aging in current stage, and coverage against quota \u2014 with a segment filter defaulted to the seller's own book and each measure's definition one click away.\n",
       "linked":               true
     },
     {
@@ -752,7 +657,6 @@
       // connector today; add one there (with its 32 x 32 icon asset)
       // and append the key here when a real integration lands.
       "connectedTools":       ["sf"],
-      "referencedSkillCount": 0,
       "nextRun":              null,
       "sharedBy":             null,
       "canEdit":              true,
@@ -791,7 +695,6 @@
       "category":             "learned",
       "ownership":            "learned",
       "connectedTools":       ["sf"],
-      "referencedSkillCount": 0,
       "nextRun":              null,
       "sharedBy":             null,
       "canEdit":              true,
@@ -814,7 +717,6 @@
       "category":             "learned",
       "ownership":            "learned",
       "connectedTools":       ["sf"],
-      "referencedSkillCount": 0,
       "nextRun":              null,
       "sharedBy":             null,
       "canEdit":              true,
@@ -837,7 +739,6 @@
       "category":             "learned",
       "ownership":            "learned",
       "connectedTools":       ["sf", "gmail"],
-      "referencedSkillCount": 0,
       "nextRun":              null,
       "sharedBy":             null,
       "canEdit":              true,
@@ -861,7 +762,6 @@
       "category":             "mine",
       "ownership":            "mine",
       "connectedTools":       ["sf"],
-      "referencedSkillCount": 0,
       "nextRun":              null,
       "sharedBy":             null,
       "canEdit":              true,
@@ -885,7 +785,6 @@
       "category":             "mine",
       "ownership":            "mine",
       "connectedTools":       ["sf", "zoominfo"],
-      "referencedSkillCount": 0,
       "nextRun":              null,
       "sharedBy":             null,
       "canEdit":              true,
@@ -909,7 +808,6 @@
       "category":             "shared",
       "ownership":            "shared",
       "connectedTools":       ["sf"],
-      "referencedSkillCount": 0,
       "nextRun":              null,
       "sharedBy":             "Admin",
       "canEdit":              true,
@@ -1024,14 +922,10 @@
     //                   count that rides beside the selected scope.
     //   search*       — the filter field. Matches on skill name and
     //                   description, case-insensitive.
-    //   updatedTemplate / usesTemplate* — the two supporting-line
-    //                   fragments under each skill name. Parts whose
-    //                   placeholder resolves empty are dropped, and
-    //                   the survivors join with `metaSeparator` —
-    //                   same resilience rule as the header metadata
-    //                   caption above. `usesTemplateOne` handles the
-    //                   singular so a 1-skill recipe doesn't read
-    //                   "Uses 1 other skills".
+    //   updatedTemplate — the supporting line under each skill name.
+    //                   Dropped when `updatedAt` is empty, same
+    //                   resilience rule as the header metadata caption
+    //                   above.
     //   new*          — the "+" button. Navigates to
     //                   /skill_detail.html?new=1 (empty canvas).
     "switcher": {
@@ -1042,10 +936,7 @@
       "searchLabel":         "Search skills",
       "searchPlaceholder":   "Search...",
       "emptyLabel":          "No skills match your search.",
-      "metaSeparator":       " \u00b7 ",
       "updatedTemplate":     "Updated {updatedAt}",
-      "usesTemplate":        "Uses {referencedSkillCount} other skills",
-      "usesTemplateOne":     "Uses 1 other skill",
       "newLabel":            "Create skill",
       "newPlaceholderTitle": "Create skill",
       "newPlaceholderBody":  "Creating a skill isn\u2019t wired up yet. When it ships, this button will open the skill builder with a blank definition."

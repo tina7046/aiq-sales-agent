@@ -22,8 +22,6 @@
  *   • Per-row overflow menu — single-open enforcement, Escape and
  *     outside-click dismissal, Arrow-Up/Down within the menu, and focus
  *     restored to the trigger on close.
- *   • "Referred N other skills" popover — hover/focus disclosure on the
- *     row's meta chip, resolved through the trigger's aria-describedby.
  *   • Action router — routes `sh:skill-action` to the SLDS dialogs in
  *     _skills_dialogs.html (Edit / Schedule / Share open the shared
  *     placeholder; Duplicate clones the row; Delete confirms, then
@@ -194,13 +192,6 @@
     // (outside-click, keyboard) that shouldn't be re-registered
     // if bindSkills is ever re-invoked. Called once here.
     skillOverflowController(gridRoot)
-
-    // Wire the connected-skills popover controller — one popover
-    // per card that opts in via `skill.connectedSkills`. Handles
-    // hover / focus open, mouseleave / blur close (with a short
-    // grace timer so the pointer can transit from trigger to
-    // popover), Escape dismiss, and single-open enforcement.
-    skillUsesPopoverController(gridRoot)
 
     // Wire the overflow ACTION router (Edit / Schedule / Share /
     // Duplicate / Pause / Resume / Delete). The router subscribes
@@ -604,105 +595,6 @@
       var inside = closest(event.target, '[data-sh-skill-stop]')
       if (inside && inside.contains(openMenu)) return
       closeOpenMenu(false)
-    })
-  }
-
-  // ── Skills page — connected-skills popover controller ──────────
-  //
-  // For every SkillCard whose data ships `connectedSkills`, wire a
-  // strictly-trigger-scoped hover/focus disclosure. Contract:
-  //
-  //   • Hover trigger        → open
-  //   • Leave trigger        → close immediately
-  //   • Focus trigger (Tab)  → open
-  //   • Blur trigger         → close immediately
-  //   • Escape (document)    → close and return focus to the
-  //                            trigger
-  //
-  // What this controller EXPLICITLY DOES NOT DO:
-  //   • It does NOT keep the popover open while the pointer is
-  //     over the popover itself. The popover is purely a hover-
-  //     effect on the trigger — moving the pointer onto the
-  //     popover ALSO closes it (because the trigger's mouseleave
-  //     has already fired).
-  //   • It does NOT run a grace timer. Earlier versions had a
-  //     150 ms delay to allow the pointer to transit the 8 px
-  //     gap between trigger and popover and land on the popover
-  //     without flickering. That behavior was withdrawn per spec
-  //     — the popover is now a read-only glance affordance that
-  //     doesn't need cursor interaction beyond the trigger.
-  //   • The popover therefore holds no `mouseenter` / `mouseleave`
-  //     listeners of its own. If a future revision reintroduces
-  //     pointer-over-popover persistence, add both handlers along
-  //     with a small close-timer — the existing open/close helpers
-  //     below are shaped to accept a delayed-close variant without
-  //     restructuring.
-  //
-  // Single-open enforced: opening a second popover implicitly
-  // closes the first, matching the SLDS 2 popover convention. Even
-  // though rapid trigger-to-trigger hover is unlikely with only a
-  // couple of coordinating skills in the grid, the guard costs a
-  // single comparison per open() call.
-  //
-  // Direct listener attachment (not delegation) per trigger.
-  // `mouseenter` / `mouseleave` don't bubble, and delegating them
-  // via capture-phase would push complexity into the handler for
-  // no real payoff on a grid whose trigger count is bounded by
-  // the number of coordinating skills (small, single digits today,
-  // realistically double digits at scale).
-  function skillUsesPopoverController (gridRoot) {
-    var openPopover = null
-    var openTrigger = null
-
-    function open (trigger, popover) {
-      if (openPopover === popover) return
-      // Single-open — closing any prior popover so we don't leave
-      // orphans visible on rapid trigger-to-trigger hover.
-      if (openPopover) close()
-      popover.hidden = false
-      openPopover = popover
-      openTrigger = trigger
-    }
-
-    function close () {
-      if (!openPopover) return
-      openPopover.hidden = true
-      openPopover = null
-      openTrigger = null
-    }
-
-    // One-shot binding pass. `bindSkills` is called once per page
-    // load; the trigger set is stable at that point (Duplicate /
-    // Delete never touch connected-skills data today).
-    toArray(gridRoot.querySelectorAll('[data-sh-skill-uses]')).forEach(function (trigger) {
-      // Resolve the popover via the trigger's `aria-describedby`
-      // rather than a walk-up-and-query pattern so the wiring
-      // matches what a screen reader would follow — one source of
-      // truth for the trigger ↔ popover relationship.
-      var popoverId = trigger.getAttribute('aria-describedby')
-      if (!popoverId) return
-      var popover = document.getElementById(popoverId)
-      if (!popover) return
-
-      trigger.addEventListener('mouseenter', function () { open(trigger, popover) })
-      trigger.addEventListener('mouseleave', close)
-      trigger.addEventListener('focus',      function () { open(trigger, popover) })
-      trigger.addEventListener('blur',       close)
-
-      // No pointer handlers on the popover itself — the popover
-      // exists purely as a hover effect on the trigger. Moving
-      // the mouse off the trigger (in any direction, including
-      // onto the popover) closes it.
-    })
-
-    // Escape closes any open popover and returns focus to the
-    // trigger. Document-level so the handler catches the key
-    // regardless of what inside-card element currently has focus.
-    document.addEventListener('keydown', function (event) {
-      if (event.key !== 'Escape' || !openPopover) return
-      var trigger = openTrigger
-      close()
-      if (trigger && typeof trigger.focus === 'function') trigger.focus()
     })
   }
 

@@ -1779,26 +1779,13 @@
     return out;
   }
 
-  // "Updated yesterday · Uses 3 other skills". Same resilience rule
-  // as the header metadata caption: a part whose source field is
-  // empty is dropped rather than rendered with a hole in it.
-  //
-  // Returns the two segments as separate strings (instead of one
-  // pre-joined string) so the caller can paint them in different
-  // colours — Figma 10625:61336 gives the update-time portion the
-  // neutral on-surface-1 grey and the "Uses N other skills" portion
-  // the accent-tinted on-surface-3 navy, and both need to sit inside
-  // the same visual line-height without wrapping the separator into
-  // an extra text node the picker has to hunt for.
+  // "Updated yesterday". Same resilience rule as the header metadata
+  // caption: an empty source field is dropped rather than rendered
+  // with a hole in it.
   function switcherMeta(skill, copy) {
-    var out = { updated: '', uses: '' };
+    var out = { updated: '' };
     if (copy.updatedTemplate && skill.updatedAt) {
       out.updated = copy.updatedTemplate.replace('{updatedAt}', skill.updatedAt);
-    }
-    var uses = Number(skill.referencedSkillCount);
-    if (isFinite(uses) && uses > 0) {
-      var tpl = uses === 1 ? copy.usesTemplateOne : copy.usesTemplate;
-      if (tpl) out.uses = tpl.replace('{referencedSkillCount}', String(uses));
     }
     return out;
   }
@@ -1919,36 +1906,14 @@
         a.appendChild(titleRow);
 
         var metaParts = switcherMeta(skill, copy);
-        if (metaParts.updated || metaParts.uses) {
+        if (metaParts.updated) {
           var meta = document.createElement('span');
           meta.className = 'seller-home__skill-detail-switcher-link-meta';
 
-          if (metaParts.updated) {
-            var updSpan = document.createElement('span');
-            updSpan.className = 'seller-home__skill-detail-switcher-link-updated';
-            updSpan.textContent = metaParts.updated;
-            meta.appendChild(updSpan);
-          }
-
-          // Separator lives in its own span so screen readers get a
-          // clean pause between the two prose segments and CSS can
-          // hide it if we ever want the two pieces to sit on
-          // separate lines (e.g. a narrower breakpoint).
-          if (metaParts.updated && metaParts.uses) {
-            var sepChar = typeof copy.metaSeparator === 'string' ? copy.metaSeparator : ' \u00b7 ';
-            var sepSpan = document.createElement('span');
-            sepSpan.className = 'seller-home__skill-detail-switcher-link-sep';
-            sepSpan.setAttribute('aria-hidden', 'true');
-            sepSpan.textContent = sepChar;
-            meta.appendChild(sepSpan);
-          }
-
-          if (metaParts.uses) {
-            var usesSpan = document.createElement('span');
-            usesSpan.className = 'seller-home__skill-detail-switcher-link-uses';
-            usesSpan.textContent = metaParts.uses;
-            meta.appendChild(usesSpan);
-          }
+          var updSpan = document.createElement('span');
+          updSpan.className = 'seller-home__skill-detail-switcher-link-updated';
+          updSpan.textContent = metaParts.updated;
+          meta.appendChild(updSpan);
 
           a.appendChild(meta);
         }
@@ -2530,7 +2495,7 @@
 
     // Apply a persisted record back to the in-memory active skill.
     // Only the four fields SkillStore returns are touched — every
-    // other field (name, description, connectedSkills, ownership…)
+    // other field (name, description, connectedTools, ownership…)
     // stays as-shipped. Also refreshes the header edited stamp so
     // the seller sees the new date inline.
     function applyPersistedRecord(record) {

@@ -107,10 +107,10 @@
 
 // ── Row surface ───────────────────────────────────────────────────
 // Card-shaped row (Figma "Coworker – Skills", node 9723:17395).
-// Horizontal flex: [body: title/description stack] [meta: "Referred
-// N other skills"] [chevron]. `min-width: 0` on the row so the
-// body's ellipsis rule actually engages (a flex child defaults to
-// `min-width: auto`, which prevents text overflow).
+// Horizontal flex: [body: title/description stack] [chevron].
+// `min-width: 0` on the row so the body's ellipsis rule actually
+// engages (a flex child defaults to `min-width: auto`, which
+// prevents text overflow).
 //
 // The row carries an inset 1-px hairline shadow rather than a
 // border-1px so the outline sits INSIDE the row's 12-px radius and
@@ -803,6 +803,51 @@
   max-width: 680px;
 }
 
+// ── Version A: owner / modified meta ↔ description hover swap ───────
+// Version A shows an "Owned by <person> · Last modified <date>" line
+// at rest, and swaps it for the skill description while the row is
+// hovered, keyboard-focused, or has its overflow menu open — the same
+// <li>-driven states that light the card wash and reveal the chevron,
+// so all three move together.
+//
+// Scoped by `:has(.seller-home__skill-ownership)` on the body so it
+// applies to Version A ONLY: Version B's body has no ownership line,
+// so its description keeps showing at rest, untouched.
+.seller-home__skill-ownership {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem; // 4px between facts
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: 0.75rem; // 12px
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 680px;
+}
+
+// Rest state: in Version A the description yields the slot to the
+// meta line.
+.seller-home__skill-body:has(.seller-home__skill-ownership) .seller-home__skill-description {
+  display: none;
+}
+
+// Hover / keyboard focus / open-menu: swap — description in, meta out.
+.seller-home__skill-item:hover .seller-home__skill-body:has(.seller-home__skill-ownership) .seller-home__skill-description,
+.seller-home__skill-item:focus-within .seller-home__skill-body:has(.seller-home__skill-ownership) .seller-home__skill-description,
+.seller-home__skill-item.is-menu-open .seller-home__skill-body:has(.seller-home__skill-ownership) .seller-home__skill-description {
+  display: block;
+}
+.seller-home__skill-item:hover .seller-home__skill-ownership,
+.seller-home__skill-item:focus-within .seller-home__skill-ownership,
+.seller-home__skill-item.is-menu-open .seller-home__skill-ownership {
+  display: none;
+}
+
 // Footer row — tool chips (left) + optional right-anchored meta.
 // `flex-wrap: wrap` lets the meta drop below the chips on very
 // narrow cards; on the default 2-column layout there's plenty of
@@ -830,289 +875,6 @@
   height: 2rem;
   display: block;
   flex: 0 0 auto;
-}
-
-// Right-anchored meta container inside `.seller-home__skill-footer`.
-// Right-anchored container for the card footer's meta channel.
-// Today this holds a single item — the "Uses N other skills" link.
-// Kept as a wrapper (rather than making the link a direct footer
-// child) so the footer's `justify-content: space-between` reliably
-// lays out as tools-left / meta-right, and so a future second meta
-// channel (that respects the Skill / RecentChat split — no run
-// state) can slot in without restructuring. A previous "Last run …"
-// channel used to live here and was removed on 2026-08-03; the
-// column layout and 2 px gap are dormant capacity for a future
-// second-channel reintroduction.
-.seller-home__skill-meta-group {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.125rem; // 2px — dormant; single-item today
-  flex: 0 0 auto;
-  min-width: 0;
-}
-
-// Wrapper for the "Uses N other skills" trigger + its popover.
-// `position: relative` is the ONLY reason this element exists —
-// the popover is absolute-positioned off this wrapper so the
-// trigger's own text width doesn't affect popover width, and no
-// external positioning library (Popper etc.) is needed.
-//
-// In the list-row layout the wrap sits as a direct child of the
-// row anchor (`.seller-home__skill-row`) — not inside a meta-group
-// column as it did on the card variant. `flex: 0 0 auto` locks the
-// wrap to its intrinsic width so the body's ellipsis owns any
-// remaining space; `align-items: center` keeps the trigger
-// vertically centered against the row's title/description stack
-// (in the card variant this was `baseline`, which lined up with a
-// single title line but drifted against the row's two-line stack).
-//
-// The kebab overflow trigger normally sits to the RIGHT of this
-// wrap when both are present (the trigger is an absolute-
-// positioned sibling of the row anchor; see `.seller-home__skill-
-// menu` below). A trailing `margin-right` reserves clear space so
-// the wrap and the hover-revealed kebab never share pixels.
-.seller-home__skill-uses-wrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  flex: 0 0 auto;
-  min-width: 0;
-  // Clears the kebab's 32-px hover box, which reveals to the right of
-  // this label (`right: 2.25rem` on `.seller-home__skill-menu`, so the
-  // box lands 36–68 px inside the row's right edge). 40 px puts the
-  // label's edge at 80 px, leaving the 12 px Version B's cluster keeps
-  // between its text column and its actions — the circle is a painted
-  // surface once hovered, and at 8 px it read as touching the label.
-  margin-right: 2.5rem; // 40px
-  // The popover's top-right nubbin needs a small gutter above so
-  // it doesn't sit flush against the trigger's underline on hover.
-  // Handled by the popover's `top: calc(100% + …)` rule below.
-}
-
-// "Uses N other skills" link — connected-skills affordance in the
-// footer row, right-anchored beside the tool chips. Secondary-link
-// styling per spec: discoverable (accent-2 tint), NOT a status
-// badge (no pill background, no border). The whole card is
-// already inside an <a>, so this element is a <span> that visually
-// reads as a link; clicks bubble to the parent card anchor and the
-// existing `sh:skill-open` handler fires. No independent click
-// target — matches the "whole card is one activation region"
-// interaction model that Prepare for Meetings and the other cards
-// share.
-//
-// `tabindex="0"` on the underlying <span> makes it a keyboard-
-// reachable disclosure trigger for the connected-skills popover.
-// Nested focusable inside an <a> is technically an HTML content-
-// model violation (validators flag it); the alternative would be
-// a structural refactor to move the trigger outside the anchor.
-// See the template comment in _skill_card_grid.html for the full
-// rationale.
-//
-// A visible focus ring is provided so keyboard users can see the
-// trigger has focus — SLDS 2 focus-ring token when available, a
-// 2 px accent-2 outline otherwise.
-//
-// `text-decoration` is skipped at rest for a cleaner catalog
-// aesthetic and only appears on `:hover` / `:focus-visible` — the
-// standard SLDS 2 secondary-link treatment. Font size stays at
-// 12 px to match the sibling "Last run …" meta so both right-
-// anchored labels sit on the same baseline when both are present.
-.seller-home__skill-uses-link {
-  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
-  font-weight: 400;
-  line-height: 1.0625rem; // 17px — Figma Body/font-scale-neg-1/Regular
-  // Palette-indigo-40 per Figma "Coworker – Skills" (node
-  // 9723:19728). Deliberately different from `--slds-g-color-
-  // accent-2` (which the active tab underline uses) so the
-  // "Referred N" affordance reads as a secondary link rather than
-  // an accent-color counterpart to the tab / filter chrome above.
-  color: var(--slds-g-color-palette-indigo-40, #3a49da);
-  white-space: nowrap;
-  cursor: pointer;
-  // Reset any inherited outline styles so :focus-visible below is
-  // the SINGLE authoritative source for the focus ring on this
-  // trigger. Prevents the browser default outline stacking with
-  // the token-driven one.
-  outline: none;
-  // Small border-radius so the focus ring has soft corners rather
-  // than a rectangle glued to the ascender / descender lines.
-  border-radius: 0.125rem; // 2px
-
-  // The whole row is the click target, but a small pointer-affordance
-  // on hover of just this label is nice for users who visually
-  // parse it as a link. The parent <a>'s hover cascades a background
-  // shift already; this rule adds only the underline.
-  //
-  // The `.seller-home__skill-card` selectors below are dormant —
-  // preserved so a future card-shape reintroduction keeps the
-  // same hover-underline treatment without needing a re-edit here.
-  .seller-home__skill-row:hover &,
-  .seller-home__skill-row:focus-visible &,
-  .seller-home__skill-card:hover &,
-  .seller-home__skill-card:focus-visible & {
-    text-decoration: none;
-  }
-
-  // Keyboard focus ring. SLDS 2 focus-outline token when available;
-  // 2 px accent-2 outline as fallback. Uses `:focus-visible` so
-  // mouse-hover activation doesn't paint a permanent ring. The
-  // ring uses accent-2 (brand blue) rather than the link's own
-  // indigo-40 so the focus vocabulary matches every other
-  // interactive control on the page.
-  &:focus-visible {
-    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
-    outline-offset: 2px;
-  }
-}
-
-// Connected-skills popover — SLDS 2 tooltip-role disclosure.
-// -------------------------------------------------------------------
-// Composition: the popover inherits its full visual vocabulary
-// (background, border, radius, elevation, z-index) from the
-// SLDS 2 `.slds-popover` class in `slds2_agentic.scss`. That base
-// rule already ships:
-//   • `background-color: var(--slds-g-color-surface-container-1)`
-//   • `border: 1px solid var(--slds-g-color-border-1)`
-//   • `border-radius: var(--slds-g-radius-border-2)`
-//   • `box-shadow: var(--_slds-c-popover-box-shadow)`
-//   • `z-index: var(--slds-c-popover-position-zindex, 6000)`
-//   • `min-height: 2rem`
-// Do NOT re-declare any of the above here — the SLDS defaults are
-// the correct SLDS 2 component look, and overriding them would
-// silently drift from the design system when tokens are updated
-// upstream.
-//
-// Only two things belong in this local rule:
-//   1. Positioning off the `.seller-home__skill-uses-wrap` sibling
-//      (SLDS's base is `position: relative`; we need `absolute`
-//      because the popover is anchored to a specific trigger).
-//   2. Sizing constraints tuned to the "This skill uses" list
-//      (SLDS's default width is `--slds-g-sizing-15` ≈ 15 rem;
-//      our content wants a slightly wider band so 3–5-word skill
-//      names sit on single lines).
-//
-// The `top: calc(100% + 0.5rem)` offset is dictated by the SLDS 2
-// `.slds-nubbin_top-right` geometry:
-//   • The nubbin is a 1 rem square rotated 45°, positioned at
-//     `inset-block-start: -.5rem` (i.e. its top edge is 8 px above
-//     the popover top).
-//   • With an 8 px gap between trigger bottom and popover top,
-//     the visible tip of the (rotated) nubbin lands FLUSH against
-//     the trigger's bottom edge — the SLDS-native attachment.
-//   • Any offset larger than 0.5rem leaves a visible gap between
-//     the nubbin tip and the trigger; any smaller lets the nubbin
-//     overlap the trigger's descender. Do not tune this value
-//     without adjusting the nubbin variant too.
-//
-// The `right: 0` right-alignment against the wrapper mirrors the
-// trigger's right edge. SLDS's `slds-nubbin_top-right` places the
-// nubbin `--slds-g-spacing-5` (20 px) from the popover's right
-// edge, so the nubbin visually attaches near the trigger's right-
-// biased midpoint. Adequate for the "Uses N other skills"
-// affordance where the trigger's right edge is what draws the eye.
-.seller-home__skill-uses-popover {
-  position: absolute;
-  top: calc(100% + 0.375rem); // 6px gap below the trigger
-  right: 0; // right-aligned to the trigger (the wrap shrink-wraps it)
-  width: 13.75rem; // 220px — fixed
-
-  // Chrome reused from the skill-detail activity popover
-  // (`.seller-home__skill-activity`) so the two read as one component.
-  // Set explicitly rather than inherited from the SLDS `.slds-popover`
-  // base: the base ships shadowless (its `--_slds-c-popover-box-shadow`
-  // token is never declared upstream) and carries a different border /
-  // radius, so pinning all four here is what makes the surfaces match.
-  // 4-px interior padding insets the title and list from the edge.
-  padding: var(--slds-g-spacing-1, 0.25rem); // 4px
-  background-color: var(--slds-g-color-surface-container-1, #ffffff);
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 0 2px rgba(0, 0, 0, 0.08);
-}
-
-// Nubbin removal. The template still tags the popover with an SLDS
-// `slds-nubbin_top-right` / `_top-left` class (kept so the JS contract
-// and the responsive `left`/`right` flip stay untouched), and SLDS
-// draws the arrow with `:before` / `:after` pseudo-elements on that
-// element. Suppressing both here drops the nubbin without editing the
-// markup, matching the flat-edged activity popover. Combined with
-// `.slds-popover` (always present) so this beats the base
-// `.slds-nubbin_top-right:before` regardless of which nubbin variant
-// the row shipped.
-.seller-home__skill-uses-popover.slds-popover::before,
-.seller-home__skill-uses-popover.slds-popover::after {
-  display: none;
-}
-
-// `hidden`-attribute guard.
-// -------------------------------------------------------------------
-// The JS controller flips `popover.hidden = true / false` to toggle
-// visibility. Ordinarily the browser's UA stylesheet handles
-// `[hidden]` via `display: none` — but that rule loses to any author
-// rule of equal specificity, and the SLDS 2 base `.slds-popover`
-// class ships `display: inline-block` (see slds2_agentic.scss —
-// `.slds-popover` block near line 10120). Author `.slds-popover`
-// (specificity 0,1,0) beats UA `[hidden]` (0,1,0) purely because
-// author > UA in the cascade, so `hidden` becomes a visual no-op
-// and the popover renders open at first paint.
-//
-// The scoped `[hidden]` selector below wins because it stacks
-// class + attribute — specificity 0,2,0 — over the base 0,1,0.
-// Kept adjacent to the base rule above (rather than tucked away
-// elsewhere) so anyone editing the popover sees the pairing at
-// a glance. If we ever switch to toggling `.slds-popover_hide`
-// on the JS side instead, this guard can be deleted.
-.seller-home__skill-uses-popover[hidden] {
-  display: none;
-}
-
-// Popover body — the container above now holds the 4-px outer gutter
-// (matching the activity popover), and the title / items carry their
-// own row padding, so the SLDS `.slds-popover__body` default padding
-// is zeroed out here to avoid a double inset.
-.seller-home__skill-uses-popover-body {
-  padding: 0;
-}
-
-// "This skill uses" — caption above the list. Mirrors the activity
-// popover's title: 12 px semibold on-surface-2, 4 / 8 px row padding,
-// and a 2 px gap to the first item.
-.seller-home__skill-uses-popover-title {
-  margin: 0 0 2px;
-  padding: var(--slds-g-spacing-1, 0.25rem) var(--slds-g-spacing-2, 0.5rem); // 4px 8px
-  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: 0.75rem; // 12px
-  font-weight: var(--slds-g-font-weight-6, 600);
-  line-height: 1.3;
-  color: var(--slds-g-color-on-surface-2, #5c5c5c);
-}
-
-// Sub-skill list — one name per line, no bullets. The per-item row
-// padding below supplies the vertical rhythm (like the activity
-// popover's rows), so no list-level gap is needed.
-.seller-home__skill-uses-popover-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.seller-home__skill-uses-popover-item {
-  padding: var(--slds-g-spacing-1, 0.25rem) var(--slds-g-spacing-2, 0.5rem); // 4px 8px
-  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: 0.8125rem; // 13px
-  font-weight: 400;
-  line-height: 1.3;
-  color: var(--slds-g-color-on-surface-1, #181818);
-  // Whitespace-normal so long localized names wrap gracefully
-  // instead of overflowing the popover's max-width. `min-width: 0`
-  // is a defensive guard against flex-item shrink refusal.
-  white-space: normal;
-  overflow-wrap: anywhere;
-  min-width: 0;
 }
 
 // Note: `.seller-home__skill-meta` (the "Last run …" caption on the
@@ -1273,8 +1035,6 @@
 //     row midline. `right: 2.25rem` (36 px) puts its hover box at
 //     36–68, so it clears the chevron by 8 px — the same gap Version
 //     B's action cluster keeps between its two controls.
-//   • "Uses N other skills" ends at 80 px, 12 px clear of that box
-//     (see `margin-right` on `.seller-home__skill-uses-wrap`).
 .seller-home__skill-menu {
   position: absolute;
   top: 50%;
@@ -1774,20 +1534,11 @@
 // The list is already single-column, so the previous
 // `grid-template-columns: 1fr` fallback for `.seller-home__skill-
 // grid` (the 2-column card variant) is no longer needed and was
-// deleted 2026-08-11. Two things change at the narrow tier:
-//
-//   1. Row-shape wrap. The row is a horizontal flex row at desktop:
-//      `[body: title / description] [uses chip] [chevron]`. On
-//      narrow viewports the body needs the full width so the
-//      description doesn't compress to two words + ellipsis, so we
-//      wrap the "Referred N other skills" chip onto its own line
-//      beneath the body. `flex-wrap: wrap` + explicit `order` +
-//      `flex-basis: 100%` on the uses-wrap gives us this deterministic
-//      wrap ordering (see the block-level comments below).
-//   2. Padding trim. The row's inner padding drops from 16 px all
-//      sides to 14 / 16 (top/bottom / left/right) so the visual
-//      density matches Scheduled's workflow row at the same
-//      viewport width.
+// deleted 2026-08-11. At the narrow tier the row's inner padding
+// drops from 16 px all sides to 14 / 16 (top/bottom / left/right) so
+// the visual density matches Scheduled's workflow row at the same
+// viewport width. (`flex-wrap` is retained as dormant capacity; the
+// row is `[body] [chevron]` and nothing wraps today.)
 //
 // The chevron stays inline with the body on line 1 and the kebab
 // (absolute-positioned) stays vertically centered against the
@@ -1803,23 +1554,6 @@
     padding: 0.875rem 1rem 0.875rem 1rem; // 14 / 16 / 14 / 16
     flex-wrap: wrap;
     row-gap: var(--slds-g-spacing-1, 0.25rem); // 4px between wrapped rows
-  }
-
-  // Uses-wrap wraps to its own line. `order: 3` forces it to be the
-  // LAST visual sibling in flex-layout order — DOM order is
-  // [body, uses-wrap, chevron], so without `order` the wrap would
-  // push the chevron off line 1 instead of the uses chip.
-  // `flex-basis: 100%` (via the shorthand) guarantees the wrap:
-  // the chip is now full-row width, and its inner content is
-  // right-aligned via `justify-content: flex-end` so it visually
-  // mirrors the desktop's right-anchored position.
-  .seller-home__skill-uses-wrap {
-    order: 3;
-    flex: 0 0 100%;
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    margin-right: 0;
   }
 
   // Force the header title to take a full line so the trailing
@@ -4009,10 +3743,7 @@
     white-space: nowrap;
   }
 
-  // Meta line = two coloured prose spans separated by a middot.
-  // The container carries the layout; each span picks its own hue
-  // so "supporting metadata" and "connected-skills affordance" read
-  // as distinct concepts even though they share a line.
+  // Meta line — the skill's "Updated {date}" caption under its name.
   .seller-home__skill-detail-switcher-link-meta {
     display: block;
     font-size: var(--slds-g-font-scale-neg-1, 0.75rem);    // 12 px
@@ -4023,12 +3754,8 @@
     white-space: nowrap;
   }
 
-  .seller-home__skill-detail-switcher-link-updated,
-  .seller-home__skill-detail-switcher-link-sep {
+  .seller-home__skill-detail-switcher-link-updated {
     color: var(--slds-g-color-on-surface-1, #5c5c5c);
-  }
-  .seller-home__skill-detail-switcher-link-uses {
-    color: var(--slds-g-color-on-surface-3, #001e5b);
   }
 
   .seller-home__skill-detail-switcher-empty {
@@ -4517,13 +4244,12 @@
 // B's card restacks A's row into three lines:
 //
 //     Daily Pipeline Snapshot
-//     Sales • Referred 3 other skills
+//     Sales
 //     Get a prioritized daily view of pipeline changes, at-risk …
 //
 // Same facts as Version A, moved: the agent leaves the tinted pill
-// beside the name, the connected-skills disclosure leaves the
-// right-anchored cluster, and both land on one 10-px muted attribute
-// line under the name. Author and last-edited are not shown at all.
+// beside the name and lands on a muted attribute line under the name.
+// Author and last-edited are not shown at all.
 //
 // The row's structure, hooks, hover reveal, overflow menu, and chevron
 // are UNCHANGED and keep coming from the shared rules above — the
@@ -4573,9 +4299,8 @@
   }
 
   // ── Attribute line ───────────────────────────────────────────────
-  // "Sales • Referred 3 other skills" — where the skill came from and
-  // what it pulls in, set as quietly as the type system allows (10 px)
-  // so it annotates the name instead of competing with it.
+  // "Sales" — where the skill came from, set as quietly as the type
+  // system allows so it annotates the name instead of competing with it.
   .seller-home__skill-source {
     display: flex;
     align-items: center;
@@ -4583,17 +4308,14 @@
     min-width: 0;
   }
 
-  // Every fact on the line shares one size, weight, leading, and tone
-  // so the line reads as a single phrase — the agent name here, and
-  // the connected-skills trigger, which is a `__skill-uses-link` the
-  // shared rules above tint indigo.
+  // The agent name (and any other fact on the line) shares one size,
+  // weight, leading, and tone so the line reads as a single phrase.
   //
   // 12 px / 17 px, matching the description below it: the 2026-08-18
   // Figma revision stepped this line up from 10 px / 14 px, so the
   // attribute line and the description now share one size and differ
   // only in what they say. The bullet stayed at 10 px — see below.
-  .seller-home__skill-source-label,
-  .seller-home__skill-uses-link {
+  .seller-home__skill-source-label {
     font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
     font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
     font-weight: var(--slds-g-font-weight-4, 400);
@@ -4628,41 +4350,6 @@
   // (the shared rule's unitless 1.3 works out to ~15.6 px).
   .seller-home__skill-description {
     line-height: 1.0625rem; // 17px
-  }
-
-  // ── Connected-skills disclosure, relocated ───────────────────────
-  // The trigger is a fact ON the attribute line here instead of a
-  // right-anchored chip, so two things the shared rules do for the chip
-  // have to be undone. It stays a hover / focus disclosure: the
-  // underline and the focus ring keep coming from the shared rules,
-  // untouched — only the type changed (above) to match its neighbours.
-  //
-  // `order` / `flex` / `justify-content` reset the narrow-viewport rule
-  // further up this sheet, which hands the chip its own full-width row
-  // at ≤ 40 rem. Inside a flex attribute line that would drop "Referred
-  // N other skills" onto a line of its own and orphan the bullet.
-  // Higher specificity (0,2,0 over 0,1,0) wins regardless of source
-  // order, so the reset does not need repeating inside the media query.
-  //
-  // `margin-right` is the 36-px gutter the chip reserves so it never
-  // shares pixels with the hover-revealed kebab. The kebab is on the
-  // far side of the card from here, so that gutter would just punch a
-  // 36-px hole into the middle of the line.
-  .seller-home__skill-uses-wrap {
-    order: 0;
-    flex: 0 0 auto;
-    justify-content: flex-start;
-    margin-right: 0;
-  }
-
-  // Popover flips to hang down-and-RIGHT: left-aligned to the trigger,
-  // with the matching `top-left` nubbin set in the template. Keeping
-  // Version A's right-alignment would run the popover (192 px minimum)
-  // off the left edge of the card, since the trigger now sits only
-  // ~60 px in from it.
-  .seller-home__skill-uses-popover {
-    right: auto;
-    left: 0;
   }
 
   // ── Action cluster (Figma 11194:24333) ───────────────────────────
@@ -5208,7 +4895,7 @@
 //
 // Z-INDEX 500 is chosen to sit above the page and below SLDS overlays.
 // The action dialogs this page ships (`_skills_dialogs.html`) sit at
-// 9500, and the connected-skills popover at 6000 (see the
+// 9500, and SLDS popovers at 6000 (see the
 // `--slds-c-popover-position-zindex` note earlier in this file), so the
 // switcher never covers an open dialog, its backdrop, or a popover —
 // while still clearing the row overflow menus, which top out at 5.

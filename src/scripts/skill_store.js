@@ -102,7 +102,7 @@
   //   `shipped` is the JSON-shipped skill record (or null). If a local
   //   override exists, its fields TAKE PRECEDENCE for markdown +
   //   updatedAt + updatedBy + version. Fields the override doesn't
-  //   touch (createdBy, name, description, connectedSkills…) fall
+  //   touch (createdBy, name, description, connectedTools…) fall
   //   through to the shipped record untouched. Returns a merged
   //   plain object; never mutates `shipped`.
   //
@@ -121,7 +121,7 @@
     }
     // Shallow-merge the override onto the base so ONLY the fields the
     // save flow touches get promoted. If a future save writes more
-    // fields (e.g. connectedSkills), add them to the override
+    // fields (e.g. connectedTools), add them to the override
     // whitelist below rather than merging the whole envelope
     // wholesale.
     var merged = {};
