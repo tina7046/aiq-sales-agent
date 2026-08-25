@@ -54,14 +54,49 @@
       "paused": "Paused"
     },
 
+    // ── Filter (LAB ONLY) ─────────────────────────────────────────────
+    // Defining `filter` is what turns the whole feature on: the section
+    // kebab becomes a Filter control, the list gets `data-sh-feed-filter`,
+    // and home.js/home.scss switch on that attribute. index.json has no
+    // `filter` block, so Seller Home is untouched until it's ported.
+    //
+    //   options   the three views, in menu order. `default` is the one
+    //             the list opens on.
+    //   sections  Active-view sub-groups: state -> heading. Active shows
+    //             completed (Ready), running (Running) and paused; the
+    //             other two views are single-state and get no sections.
+    "filter": {
+      "default": "active",
+      "options": [
+        { "id": "active",    "label": "Active"    },
+        { "id": "scheduled", "label": "Scheduled" },
+        { "id": "archived",  "label": "Archived"  }
+      ],
+      "sections": {
+        "completed": "Ready",
+        "running":   "Running",
+        "paused":    "Paused"
+      },
+      // A message per view for when it has no rows — the filter's
+      // equivalent of `feed.empty`. home.scss shows the matching one when
+      // that view's states are all absent (e.g. every archived row has
+      // been restored, or you Run the last scheduled item).
+      "empty": {
+        "active":    { "heading": "No active workflows",  "body": "Runs in progress and recent results show up here." },
+        "scheduled": { "heading": "Nothing scheduled",     "body": "Upcoming runs will appear here." },
+        "archived":  { "heading": "No archived workflows", "body": "Anything you archive lands here." }
+      }
+    },
+
     "statusLabels": {
       "completed": "Completed",
       "running":   "Running now",
       "paused":    "Paused",
-      "failed":    "Failed"
+      "failed":    "Failed",
+      "archived":  "Archived"
     },
 
-    // Shown in place of the list once every row has been dismissed, so
+    // Shown in place of the list once every row has been cleared, so
     // the section holds its shape instead of collapsing to a bare
     // header. Which one is visible is decided in CSS off whether any
     // rows are left, so it also covers a page that loads with none.
@@ -84,7 +119,7 @@
     // above everything: it's still a finished run, just one that didn't
     // work, so it belongs with the other outcomes instead of
     // interrupting them.
-    "stateOrder": ["completed", "failed", "running", "scheduled", "paused"],
+    "stateOrder": ["completed", "failed", "running", "scheduled", "paused", "archived"],
     "overflowActions": [
       { "id": "view_all",        "label": "View all" },
       { "id": "review_settings", "label": "Review settings" }
@@ -114,7 +149,7 @@
       { "id": "pause",    "label": "Pause",    "icon": "pause", "onlyForState": "running" },
       { "id": "complete", "label": "Complete", "icon": "check", "hideForState": "completed" },
       { "id": "schedule", "label": "Schedule", "icon": "clock", "hideForState": "scheduled" },
-      { "id": "dismiss",  "label": "Dismiss",  "icon": "close" }
+      { "id": "archive",  "label": "Archive",  "icon": "archive", "hideForState": "archived" }
     ],
     // Semantic-category → SLDS utility-sprite map (Figma node
     // 8797:228978). Row outputs pick an `icon` from this map's
@@ -230,6 +265,24 @@
         "workflow": { "id": "", "label": "" }
       },
       {
+        // A one-time run with no recurring schedule (no `nextRun`).
+        // Clicking its status button archives it (there's nothing to
+        // schedule), where the other completed rows go to Scheduled.
+        "id": "ri-04",
+        "title": "Exported Q3 win/loss report",
+        "titles": {
+          "running": "Exporting Q3 win/loss report",
+          "neutral": "Export Q3 win/loss report"
+        },
+        "cadence": "One-time",
+        "lastRun": "Ran today",
+        "state": "completed",
+        "outputs": [
+          { "icon": "doc", "label": "Win/loss report" }
+        ],
+        "workflow": { "id": "", "label": "" }
+      },
+      {
         "id": "ri-03",
         "title": "Weekly exec brief",
         "titles": {
@@ -287,6 +340,59 @@
         "state": "running",
         "outputs": [
           { "icon": "message", "label": "12 of 30 drafted" }
+        ],
+        "workflow": { "id": "", "label": "" }
+      },
+      // ── Lab-only: seed the Paused section and the Archived view ──────
+      // The filter's Active view has a Paused section and there's an
+      // Archived view, so the list needs a row in each state to show
+      // them on load. Dismissing a row in the running app moves it into
+      // `archived` (home.js); these are the ones that ship pre-archived.
+      {
+        "id": "pau-01",
+        "title": "Re-engage stalled opportunities",
+        "titles": {
+          "running": "Re-engaging stalled opportunities",
+          "neutral": "Re-engage stalled opportunities"
+        },
+        "cadence": "Weekly",
+        "nextRun": "Next run Tuesday at 8:00 AM",
+        "lastRun": "Last run Tuesday",
+        "state": "paused",
+        "outputs": [
+          { "icon": "doc", "label": "Re-engagement plan" }
+        ],
+        "workflow": { "id": "", "label": "" }
+      },
+      {
+        "id": "dis-01",
+        "title": "Summarized competitor news",
+        "titles": {
+          "running": "Summarizing competitor news",
+          "neutral": "Summarize competitor news"
+        },
+        "cadence": "Daily",
+        "nextRun": "Next run tomorrow at 7:00 AM",
+        "lastRun": "Archived today",
+        "state": "archived",
+        "outputs": [
+          { "icon": "doc", "label": "Competitor news summary" }
+        ],
+        "workflow": { "id": "", "label": "" }
+      },
+      {
+        "id": "dis-02",
+        "title": "Cleaned up duplicate leads",
+        "titles": {
+          "running": "Cleaning up duplicate leads",
+          "neutral": "Clean up duplicate leads"
+        },
+        "cadence": "Weekly",
+        "nextRun": "Next run Monday at 6:00 AM",
+        "lastRun": "Archived yesterday",
+        "state": "archived",
+        "outputs": [
+          { "icon": "doc", "label": "Duplicate cleanup report" }
         ],
         "workflow": { "id": "", "label": "" }
       }

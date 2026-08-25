@@ -45,9 +45,13 @@
 
   Per run: `period` (pre-formatted date span for weekly, weekday+date
   for daily), `label` (the exact timestamp, kept for the side panel and
-  search), and `status` (`running` | `completed` | `failed`). Selecting a
-  run scrolls to its header anchor — `"{runId}-header"`, the id
-  `expandRuns` (gulpfile.js) gives each run's `run_header`. The run's
+  search), `status` (`running` | `completed` | `failed`), and — when the
+  conversation is NOT template-expanded — a `messageId` to scroll to.
+  Selecting a run scrolls to: its header anchor `"{runId}-header"` when
+  `runHistory.expandFromTemplates` (the id `expandRuns` in gulpfile.js
+  gives each cloned run's `run_header`), otherwise the run's own
+  `messageId` (a message already in the thread — the Daily Pipeline
+  snapshots, or nothing for a single-run thread). The run's
   number counts from the FIRST run (oldest = 1), so the newest carries
   the highest number; the unit word comes from `runHistory.cadence`
   ("weekly" → "Week", "daily" → "Day", else "Run"), and the two join as
@@ -94,35 +98,37 @@
       class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click"
       data-slds-dropdown-manual
     >
-      {# ── Trigger: SLDS faux-input picklist ──────────────────────── #}
-      <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_left-right" role="none">
-        {# Current run's state dot. The JS swaps it on select. #}
-        <span
-          class="slds-icon_container slds-input__icon slds-input__icon_left seller-home__run-history-trigger-icon"
-          data-sh-run-menu-trigger-icon
-          aria-hidden="true"
-        >{{ runStateIcon(_current, "seller-home__run-history-icon--trigger") }}</span>
-
-        <div
-          role="combobox"
-          tabindex="0"
-          class="slds-input_faux slds-combobox__input seller-home__run-history-trigger"
-          id="{{ _rid }}-trigger"
-          data-sh-run-menu-trigger
-          aria-controls="{{ _rid }}-panel"
-          aria-expanded="false"
-          aria-haspopup="listbox"
-          aria-labelledby="{{ _rid }}-label {{ _rid }}-value"
-          title="{{ runHistory.label or 'Run history' }}"
-        >
-          <span class="slds-truncate" id="{{ _rid }}-value" data-sh-run-menu-trigger-label>{{ _unit }} {{ _runs | length }}: {{ _current.period }}</span>
-        </div>
-
-        <span class="slds-icon_container slds-icon-utility-down slds-input__icon slds-input__icon_right" aria-hidden="true">
-          <svg class="slds-icon slds-icon_x-small slds-icon-text-default" aria-hidden="true" focusable="false">
-            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevrondown"></use>
-          </svg>
-        </span>
+      {# ── Trigger: recent glyph + chevron ─────────────────────────
+         A compact, borderless control (the border appears on hover) —
+         the `#recent` utility glyph and a chevron, no visible run label.
+         The current run still reaches assistive tech through the
+         visually-hidden value span, which stays the JS write target so a
+         selection updates the accessible name. The glyph is STATIC: it
+         carries no `data-sh-run-menu-trigger-icon`, so the select
+         handler leaves it be rather than swapping in the run's state
+         dot. The icons live INSIDE the trigger so the whole control is
+         one click target. #}
+      <div
+        role="combobox"
+        tabindex="0"
+        class="seller-home__run-history-trigger"
+        id="{{ _rid }}-trigger"
+        data-sh-run-menu-trigger
+        aria-controls="{{ _rid }}-panel"
+        aria-expanded="false"
+        aria-haspopup="listbox"
+        aria-labelledby="{{ _rid }}-label {{ _rid }}-value"
+        title="{{ runHistory.label or 'Run history' }}"
+      >
+        {# `#clock` utility glyph — the run-history "recent / time"
+           affordance, using an icon the sprite already ships. #}
+        <svg class="slds-icon slds-icon-text-default seller-home__run-history-trigger-glyph" aria-hidden="true" focusable="false">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#clock"></use>
+        </svg>
+        <span class="slds-assistive-text" id="{{ _rid }}-value" data-sh-run-menu-trigger-label>{{ _unit }} {{ _runs | length }}: {{ _current.period }}</span>
+        <svg class="slds-icon slds-icon-text-default seller-home__run-history-trigger-chevron" aria-hidden="true" focusable="false">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevrondown"></use>
+        </svg>
       </div>
 
       {# ── Popover: agent-switcher styling + in-panel search ───────── #}
@@ -176,7 +182,7 @@
               role="option"
               aria-selected="{% if loop.first %}true{% else %}false{% endif %}"
               data-sh-run-menu-item="{{ run.runId }}"
-              data-sh-run-target="{{ run.runId }}-header"
+              data-sh-run-target="{% if runHistory.expandFromTemplates %}{{ run.runId }}-header{% else %}{{ run.messageId }}{% endif %}"
               data-sh-run-status="{{ run.status }}"
               data-sh-run-label="{{ _unit }} {{ loop.revindex }}: {{ run.period }}"
               data-sh-run-search="{{ _unit }} {{ loop.revindex }} {{ run.period }} {{ run.label }} {{ run.status }}"

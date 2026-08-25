@@ -173,8 +173,16 @@ nunjucksEnv.addGlobal('expandRuns', (conv) => {
   const fmtLong = (iso) => { const p = String(iso).slice(0, 10).split('-').map(Number); return MONTHS[p[1] - 1] + ' ' + p[2] + ', ' + p[0] }
   const fmtMonthDay = (iso) => { const p = String(iso).slice(0, 10).split('-').map(Number); return MONTHS[p[1] - 1] + ' ' + p[2] }
 
+  // Only conversations that opt in with `expandFromTemplates` are built
+  // from templates. A run-based thread whose messages ARE the runs
+  // already (e.g. the Daily Pipeline snapshots), or a conversation that
+  // just wants the header dropdown over its own single run, keeps its
+  // authored messages untouched — it returns here unchanged and only the
+  // Run History dropdown (rendered separately) is added.
   const rh = conv && conv.runHistory
-  if (!rh || !Array.isArray(rh.runs) || !rh.runs.length) return (conv && conv.messages) || []
+  if (!rh || !rh.expandFromTemplates || !Array.isArray(rh.runs) || !rh.runs.length) {
+    return (conv && conv.messages) || []
+  }
   const msgs = conv.messages || []
   if (!msgs.length) return msgs
 

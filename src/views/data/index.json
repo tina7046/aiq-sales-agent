@@ -543,6 +543,26 @@
       "workflow": { "id": "buyer_engage", "label": "Buyer Engage" },
       "status":   "in_progress",
       "recentLabel": "Found new prospects",
+      // Run History dropdown, one run. No `expandFromTemplates`, so the
+      // thread below is untouched — this only adds the header control for
+      // consistency with the other workflow threads. With a single run
+      // there is nowhere to navigate, so `messageId` is null and
+      // selecting it is a no-op.
+      "runHistory": {
+        "label": "Run history",
+        "cadence": "weekly",
+        "headerTitle": "Found new prospects",
+        "runs": [
+          {
+            "runId": "conv-001-run-1",
+            "status": "completed",
+            "label": "August 20 at 9:00 AM",
+            "period": "Aug 17 - Aug 24",
+            "startedAt": "2026-08-20T09:00:00-07:00",
+            "messageId": null
+          }
+        ]
+      },
       // Thread content, in display order. Which of these paint
       // immediately and which arrive on a timer is decided by
       // `opening` below — a message named there is held back and
@@ -2082,6 +2102,24 @@
       "workflow": { "id": "pipeline_review", "label": "Pipeline Review" },
       "status": "in_progress",
       "recentLabel": "Pipeline reality check",
+      // Run History dropdown, one run (header control only; no
+      // `expandFromTemplates`, so the thread is unchanged). Single run,
+      // so `messageId` is null and selecting it is a no-op.
+      "runHistory": {
+        "label": "Run history",
+        "cadence": "weekly",
+        "headerTitle": "Pipeline Review",
+        "runs": [
+          {
+            "runId": "conv-002-run-1",
+            "status": "completed",
+            "label": "August 24 at 9:00 AM",
+            "period": "Aug 17 - Aug 24",
+            "startedAt": "2026-08-24T09:00:00-07:00",
+            "messageId": null
+          }
+        ]
+      },
       "messages": [
         {
           "id":   "c2-intro",
@@ -2315,6 +2353,11 @@
         "label": "Run history",
         "cadence": "weekly",
         "headerTitle": "Weekly Top 3",
+        // The one conversation built FROM templates: five authored runs
+        // (below) cloned across the 24 entries here. Every other
+        // conversation's runHistory omits this and keeps its own
+        // messages (see `expandRuns` in gulpfile.js).
+        "expandFromTemplates": true,
         "runs": [
           {
             "runId": "wt3-run-5",
@@ -2917,6 +2960,44 @@
       "workflow": { "id": "wf-daily-pipeline-snapshot", "label": "Daily Pipeline Snapshot" },
       "status": "scheduled",
       "recentLabel": "Daily Pipeline Snapshot",
+      // Run History dropdown for the three daily snapshots this thread
+      // already holds. Unlike Weekly Top 3, this is NOT built from
+      // templates (no `expandFromTemplates`): the runs map to the
+      // snapshot messages that are authored below, so `messageId` points
+      // straight at each one and selecting a run scrolls to it. `daily`
+      // cadence renders the labels as "Day N: <weekday date>", newest
+      // first. This is the same run list the retired side panel showed.
+      "runHistory": {
+        "label": "Run history",
+        "cadence": "daily",
+        "headerTitle": "Daily Pipeline",
+        "runs": [
+          {
+            "runId": "run-2026-08-07-0804",
+            "status": "completed",
+            "label": "August 7 at 8:04 AM",
+            "period": "Fri Aug 7",
+            "startedAt": "2026-08-07T08:04:00-07:00",
+            "messageId": "msg-run-2026-08-07-0804"
+          },
+          {
+            "runId": "run-2026-08-06-0804",
+            "status": "completed",
+            "label": "August 6 at 8:04 AM",
+            "period": "Thu Aug 6",
+            "startedAt": "2026-08-06T08:04:00-07:00",
+            "messageId": "msg-run-2026-08-06-0804"
+          },
+          {
+            "runId": "run-2026-08-05-0804",
+            "status": "completed",
+            "label": "August 5 at 8:04 AM",
+            "period": "Wed Aug 5",
+            "startedAt": "2026-08-05T08:04:00-07:00",
+            "messageId": "msg-run-2026-08-05-0804"
+          }
+        ]
+      },
       // Feed order is chronological ascending — oldest run at the top,
       // newest at the bottom, the way a thread grows. The Activity
       // panel inverts that for its own list.
@@ -3399,6 +3480,25 @@
       "workflow": { "id": "buyer_engage", "label": "Buyer Engage" },
       "status": "in_progress",
       "recentLabel": "Meeting Next Steps",
+      // Run History dropdown, one run (header control only; no
+      // `expandFromTemplates`, so the thread is unchanged). `daily`
+      // cadence renders the label as "Day 1: <weekday date>". Single
+      // run, so `messageId` is null and selecting it is a no-op.
+      "runHistory": {
+        "label": "Run history",
+        "cadence": "daily",
+        "headerTitle": "Meeting Next Steps",
+        "runs": [
+          {
+            "runId": "conv-003-run-1",
+            "status": "completed",
+            "label": "August 24 at 9:00 AM",
+            "period": "Mon Aug 24",
+            "startedAt": "2026-08-24T09:00:00-07:00",
+            "messageId": null
+          }
+        ]
+      },
       "messages": [
         {
           "id":   "c3-context",
@@ -3873,6 +3973,30 @@
         "state": "completed",
         "outputs": [
           { "icon": "doc", "label": "3 things to know" }
+        ],
+        "workflow": { "id": "", "label": "" }
+      },
+      // Daily Pipeline Snapshot. Surfaced here so the feed and the
+      // Scheduled tab list the same workflows; `conversationId` opens the
+      // snapshot thread, whose header Run History dropdown holds the
+      // three daily snapshots. `completed` — its latest run finished, so
+      // it carries an `outputs` pill like the other completed rows (and
+      // its Scheduled row reads Completed too, since both are sourced
+      // from this entry).
+      {
+        "id": "ri-daily-pipeline-snapshot",
+        "conversationId": "conv-daily-pipeline-snapshot",
+        "title": "Daily Pipeline Snapshot",
+        "titles": {
+          "running": "Preparing the daily pipeline snapshot",
+          "neutral": "Daily Pipeline Snapshot"
+        },
+        "cadence": "Daily",
+        "nextRun": "Next run tomorrow at 9:00 AM",
+        "lastRun": "Last run today at 9:00 AM",
+        "state": "completed",
+        "outputs": [
+          { "icon": "doc", "label": "Daily pipeline snapshot" }
         ],
         "workflow": { "id": "", "label": "" }
       }

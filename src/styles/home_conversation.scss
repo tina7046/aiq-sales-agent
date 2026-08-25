@@ -1443,10 +1443,18 @@ $sh-conv-table-rows: 5.5;
 // the container. Both are overridden here — equal specificity, later
 // stylesheet — and that translate was a no-op to begin with.
 :root {
-  --modal-open-dur: 250ms;
-  --modal-close-dur: 150ms;
-  --modal-scale: 0.96;
-  --modal-scale-close: 0.96;
+  // Expand/collapse is instant — no scale or fade on open or close; the
+  // table dialog snaps in and out. These durations drive both the
+  // `.t-modal` transitions below AND the JS close timing (it reads
+  // `--modal-close-dur` to schedule the table's return to the thread), so
+  // zeroing them here — the conversation page's copy, which loads after
+  // and wins over the global default in index.scss — turns the whole
+  // interaction off in one place. Scale is pinned to 1 so nothing zooms
+  // even for a frame.
+  --modal-open-dur: 0ms;
+  --modal-close-dur: 0ms;
+  --modal-scale: 1;
+  --modal-scale-close: 1;
   --modal-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -4853,11 +4861,49 @@ $sh-linkedin-brand: #0a66c2;
 //     which the composer's agent switcher still wants at its own size.
 //   • The label carries a date, so it's the one part allowed to run long;
 //     the badge stays on one line and the header band keeps its height.
+// ── Trigger: clock glyph + chevron ──
+// A compact, borderless picklist. Hover / focus / open tint it with a
+// neutral-95 fill (the same subtle wash the menu rows use) rather than an
+// outline — no border in any state.
 .seller-home__run-history-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);
   min-block-size: 2rem;
-  max-inline-size: 18rem;
-  white-space: nowrap;
+  padding-inline: var(--slds-g-spacing-2, 0.5rem);
+  border: 0;
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  background: transparent;
   cursor: pointer;
+
+  &:hover,
+  &:focus-visible,
+  &[aria-expanded="true"] {
+    background-color: var(--slds-g-color-neutral-base-95, #f3f3f3);
+  }
+
+  // The neutral fill is the affordance; no outline ring on top of it.
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+// Both glyphs need an explicit fill: outside SLDS' `slds-input__icon`
+// wrapper (which used to colour the chevron), `slds-icon-text-default`
+// leaves them unfilled here, so they rendered white. A neutral mid-grey
+// reads as a utility control.
+.seller-home__run-history-trigger-glyph {
+  flex-shrink: 0;
+  inline-size: 1rem;
+  block-size: 1rem;
+  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+.seller-home__run-history-trigger-chevron {
+  flex-shrink: 0;
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
 }
 
 // Anchored to the trailing edge because the trigger sits at the end of

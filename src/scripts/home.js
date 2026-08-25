@@ -1931,7 +1931,7 @@
 
   // What the status button's accessible name says it will do. Anything
   // not listed pauses.
-  var FEED_VERBS = { paused: 'Resume ', failed: 'Retry ' }
+  var FEED_VERBS = { paused: 'Resume ', failed: 'Retry ', archived: 'Restore ' }
 
   // Which set of subline strings a state reads. Every slot carries all
   // three as attributes, so this picks a suffix rather than wording —
@@ -1944,6 +1944,7 @@
     // the subline and title tense follow the way pause and run already do.
     if (state === 'completed') return 'completed'
     if (state === 'scheduled') return 'scheduled'
+    if (state === 'archived') return 'archived'
     return 'default'
   }
 
@@ -1955,10 +1956,11 @@
 
     row.setAttribute('data-sh-feed-state', state)
 
-    // "Home" is the last state the row was in that wasn't paused, not
-    // the one it first rendered in — otherwise retrying a failed row and
-    // then pausing it would resume back into `failed`, undoing the retry.
-    if (state !== 'paused') row.setAttribute('data-sh-feed-state-default', state)
+    // "Home" is the last state the row was in that wasn't paused or
+    // archived — the two temporary "set aside" states — so resuming or
+    // restoring returns it to what it was actually doing rather than to
+    // paused/archived.
+    if (state !== 'paused' && state !== 'archived') row.setAttribute('data-sh-feed-state-default', state)
 
     // Three slots: the row's title and both halves of its subline. Each
     // carries every string it may need as an attribute, so this picks
@@ -1969,9 +1971,10 @@
       if (value === null) return
 
       slot.textContent = value
-      // Same reason: the strings a resume returns to have to track the
-      // row's current presentation, not the one the template rendered.
-      if (state !== 'paused') slot.setAttribute('data-sh-feed-slot-default', value)
+      // Same reason: the strings a resume/restore returns to have to
+      // track the row's current presentation, not the one the template
+      // rendered.
+      if (state !== 'paused' && state !== 'archived') slot.setAttribute('data-sh-feed-slot-default', value)
     })
 
     // The title is one of those slots, so it may have just changed
@@ -1985,8 +1988,14 @@
     }
 
     if (toggle) {
-      var label = (FEED_VERBS[state] || 'Pause ') +
-        (title ? title.textContent.trim() : '')
+      // Scheduled offers "Run" under the filter (starting a waiting run
+      // is the obvious intent there) and "Pause" everywhere else; the
+      // other verbs come from FEED_VERBS.
+      var verb = FEED_VERBS[state]
+      if (!verb) {
+        verb = (state === 'scheduled' && closest(row, '[data-sh-feed-filter]')) ? 'Run ' : 'Pause '
+      }
+      var label = verb + (title ? title.textContent.trim() : '')
       toggle.setAttribute('aria-label', label)
       toggle.setAttribute('title', label)
     }
@@ -1995,10 +2004,24 @@
   // What pressing the status button turns the row into.
   function nextFeedState (row) {
     var state = row.getAttribute('data-sh-feed-state')
-    if (state === 'paused') {
+    var filtered = !!closest(row, '[data-sh-feed-filter]')
+    // Under the filter, Resume starts the agent running — it moves into
+    // the Running section and stays in view. Returning it to its schedule
+    // (the Seller Home behaviour below) would hide it from the Active
+    // view, which reads as the row being archived.
+    if (state === 'paused' && filtered) return 'running'
+    // Paused resumes, archived restores — both return to the row's last
+    // real "home" state.
+    if (state === 'paused' || state === 'archived') {
       return row.getAttribute('data-sh-feed-state-default') || 'scheduled'
     }
     if (state === 'failed') return 'running'
+    // Under the filter a scheduled row Runs (→ running) instead of
+    // pausing something that isn't running.
+    if (state === 'scheduled' && filtered) return 'running'
+    // Completed rows pause from the status button like everywhere else —
+    // their advance-to-Scheduled/Archived gesture is the card click
+    // (bindFeedRowClicks), so the icon-swap stays a consistent Pause.
     return 'paused'
   }
 
@@ -2108,6 +2131,23 @@
       return
     }
 
+    // Under the filter, if the new state isn't shown in the current view
+    // the row is leaving it: fade it out here, then apply the change
+    // (now hidden by the view rules) and drop it into place. It stays in
+    // the DOM — one list, filtered by CSS — so it's already waiting under
+    // whatever view does show it (Run a scheduled row from Scheduled and
+    // it's under Active > Running; archive from Active and it's under
+    // Archived).
+    var filter = currentFeedFilter(feedRoot)
+    if (filter && !feedStateVisibleIn(filter, state)) {
+      feedFadeOutThen(li, function () {
+        applyFeedState(row, state)
+        placeFeedRow(feedRoot, li)
+        feedResetRowStyles(li)
+      })
+      return
+    }
+
     // Group labels are handled inside `feedReshuffle` — it can measure
     // which of them the move actually shifts, which is not something
     // this function could work out from the state change alone.
@@ -2155,6 +2195,64 @@
         marginBottom: 0,
         duration: FEED_MOTION.collapse
       }, '<+=0.1')
+  }
+
+  // ── Filter view (LAB) ───────────────────────────────────────────────
+  // These do something only when the feed carries `data-sh-feed-filter`
+  // (the `feed.filter` data flag). Without it, `currentFeedFilter`
+  // returns null and the feed behaves exactly as it always has.
+
+  // Which states each view SHOWS. Mirrors `$sh-feed-filter-hidden` in
+  // home.scss, kept here as the visible set for a direct membership test.
+  var FEED_FILTER_VISIBLE = {
+    active: ['completed', 'running', 'paused'],
+    scheduled: ['scheduled'],
+    archived: ['archived']
+  }
+
+  function currentFeedFilter (feedRoot) {
+    var list = feedRoot.querySelector('.seller-home__feed-list[data-sh-feed-filter]')
+    return list ? list.getAttribute('data-sh-feed-filter') : null
+  }
+
+  function feedStateVisibleIn (filter, state) {
+    var shown = FEED_FILTER_VISIBLE[filter]
+    return !shown || shown.indexOf(state) > -1
+  }
+
+  // Fade a row out of the current view WITHOUT removing it — the dismiss
+  // animation, but ending in a callback rather than a DOM delete.
+  // Reduced motion / no GSAP: skip straight to the callback.
+  function feedFadeOutThen (li, done) {
+    if (!li) { if (done) done(); return }
+    if (!feedCanAnimate()) { if (done) done(); return }
+
+    var row = li.querySelector('[data-sh-feed-item]') || li
+    gsap.set(li, { overflow: 'hidden' })
+    gsap.timeline({
+      defaults: { ease: FEED_MOTION.ease },
+      onComplete: function () { if (done) done() }
+    })
+      .to(row, { x: FEED_MOTION.offset, opacity: 0, duration: FEED_MOTION.slide })
+      .to(li, { height: 0, marginBottom: 0, duration: FEED_MOTION.collapse }, '<+=0.1')
+  }
+
+  // Clear the fade's inline styles so the row renders normally once the
+  // view that shows it is opened. Safe while it's display:none in the
+  // current view — nothing paints until then.
+  function feedResetRowStyles (li) {
+    if (!li) return
+    var row = li.querySelector('[data-sh-feed-item]') || li
+    if (typeof gsap !== 'undefined') {
+      gsap.set(li, { clearProps: 'height,marginBottom,overflow' })
+      gsap.set(row, { clearProps: 'x,opacity,transform' })
+    } else {
+      li.style.height = ''
+      li.style.marginBottom = ''
+      li.style.overflow = ''
+      row.style.opacity = ''
+      row.style.transform = ''
+    }
   }
 
   // ── Menus ─────────────────────────────────────────────────────────
@@ -2265,7 +2363,14 @@
         // reach — Run now / Pause echo the status button, Complete and
         // Schedule move it into a finished or waiting state — so they all
         // go through `changeFeedState` rather than inventing a second path.
-        if (actionId === 'dismiss') dismissListItem(closest(item, '[data-sh-feed-list-item]'))
+        if (actionId === 'archive' || actionId === 'dismiss') {
+          // Under the filter, Archive sets the row aside as `archived` (it
+          // fades out of the current view and reappears under the Archived
+          // view) instead of deleting it. Without the filter, Dismiss
+          // still hard-removes, as Seller Home does.
+          if (row && currentFeedFilter(feedRoot)) changeFeedState(feedRoot, row, 'archived')
+          else dismissListItem(closest(item, '[data-sh-feed-list-item]'))
+        }
         else if (actionId === 'run_now' && row) changeFeedState(feedRoot, row, 'running')
         else if (actionId === 'pause' && row) changeFeedState(feedRoot, row, 'paused')
         else if (actionId === 'complete' && row) changeFeedState(feedRoot, row, 'completed')
@@ -2387,6 +2492,17 @@
       var row = closest(event.target, '[data-sh-feed-item]')
       if (!row) return
 
+      // Under the filter, clicking a completed (Ready) row advances it out
+      // of Ready — to Scheduled if it has an upcoming run, otherwise to
+      // Archived. This is the card's own gesture (the status button still
+      // just pauses), so it overrides the title link's navigation.
+      if (currentFeedFilter(feedRoot) && row.getAttribute('data-sh-feed-state') === 'completed') {
+        event.preventDefault()
+        changeFeedState(feedRoot, row,
+          row.hasAttribute('data-sh-feed-has-schedule') ? 'scheduled' : 'archived')
+        return
+      }
+
       var link = row.querySelector('[data-sh-feed-item-link]')
 
       document.dispatchEvent(new CustomEvent('sh:feed-item-select', {
@@ -2410,6 +2526,89 @@
       })
   }
 
+  // ── Filter control (LAB) ────────────────────────────────────────────
+  // The section kebab becomes a Filter when the data defines `feed.filter`
+  // (see _home_feed.html). This wires it: open/close the listbox, and on
+  // choosing a view write `data-sh-feed-filter` onto the list so the view
+  // rules in home.scss switch. No-ops when the filter control isn't on the
+  // page, so Seller Home is unaffected.
+  function bindFeedFilter (feedRoot) {
+    var root = feedRoot.querySelector('[data-sh-feed-filter-root]')
+    if (!root) return
+
+    var trigger = root.querySelector('[data-sh-feed-filter-trigger]')
+    var menu = root.querySelector('[data-sh-feed-filter-menu]')
+    var list = feedRoot.querySelector('.seller-home__feed-list')
+    if (!trigger || !menu || !list) return
+
+    function options () {
+      return toArray(menu.querySelectorAll('[data-sh-feed-filter-option]'))
+    }
+
+    function openMenu () {
+      menu.hidden = false
+      menu.classList.add('is-open')
+      trigger.setAttribute('aria-expanded', 'true')
+      var sel = menu.querySelector('[data-sh-feed-filter-option][aria-selected="true"]') ||
+        options()[0]
+      if (sel) sel.focus()
+    }
+
+    function closeMenu (focusTrigger) {
+      menu.hidden = true
+      menu.classList.remove('is-open')
+      trigger.setAttribute('aria-expanded', 'false')
+      if (focusTrigger) trigger.focus()
+    }
+
+    function select (id) {
+      if (!id) return
+      list.setAttribute('data-sh-feed-filter', id)
+      options().forEach(function (opt) {
+        opt.setAttribute('aria-selected',
+          opt.getAttribute('data-sh-feed-filter-option') === id ? 'true' : 'false')
+      })
+    }
+
+    trigger.addEventListener('click', function (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (menu.hidden) openMenu()
+      else closeMenu(true)
+    })
+
+    menu.addEventListener('click', function (event) {
+      var opt = closest(event.target, '[data-sh-feed-filter-option]')
+      if (!opt) return
+      event.preventDefault()
+      event.stopPropagation()
+      select(opt.getAttribute('data-sh-feed-filter-option'))
+      closeMenu(true)
+    })
+
+    root.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        if (!menu.hidden) { event.preventDefault(); closeMenu(true) }
+        return
+      }
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+      if (menu.hidden) return
+      var all = options()
+      if (!all.length) return
+      var at = all.indexOf(document.activeElement)
+      event.preventDefault()
+      if (event.key === 'ArrowDown') all[(at + 1) % all.length].focus()
+      else all[(at - 1 + all.length) % all.length].focus()
+    })
+
+    // Outside click closes it — scoped to the filter root so a click
+    // anywhere else (including on the list) dismisses the menu.
+    document.addEventListener('click', function (event) {
+      if (closest(event.target, '[data-sh-feed-filter-root]')) return
+      if (!menu.hidden) closeMenu(false)
+    })
+  }
+
   function bindFeed (feedRoot) {
     if (typeof gsap !== 'undefined' && typeof Flip !== 'undefined') {
       gsap.registerPlugin(Flip)
@@ -2417,6 +2616,7 @@
 
     stampFeedOrder(feedRoot)
     bindFeedMenus(feedRoot)
+    bindFeedFilter(feedRoot)
     bindFeedRowControls(feedRoot)
     bindFeedRowClicks(feedRoot)
   }

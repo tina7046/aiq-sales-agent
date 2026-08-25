@@ -51,6 +51,29 @@
 {% set navFooter  = readData("index").navFooter %}
 {% set recents    = readData("index").recents %}
 
+{# ── One list, two surfaces ────────────────────────────────────────
+   The Scheduled tab shows the SAME workflows the home "Agents at Work"
+   feed does, so the two can't drift: rather than keep a parallel list in
+   scheduled.json, build the rows here from index.json's `feed.items`.
+   Each feed item maps to a scheduled row — its `state` becomes the
+   `status` the shared status button reads, and a `conversationId`
+   becomes the drill-in href (items without one render as unlinked
+   rows). `tabs`, `statusTypes`, `rowActions`, `banner` and `emptyState`
+   still come from scheduled.json; only `workflows` is sourced here, so
+   the tab counts below (which iterate `workflows` and read `.status`)
+   stay correct. Order follows the feed's authored order. #}
+{% set workflows = [] %}
+{% for _it in (readData("index").feed.items or []) %}
+  {% set _ = workflows.push({
+    id:      _it.id,
+    title:   _it.title,
+    cadence: _it.cadence,
+    status:  _it.state,
+    linked:  (true if _it.conversationId else false),
+    href:    (("/home_conversation.html?id=" ~ _it.conversationId) if _it.conversationId else "")
+  }) %}
+{% endfor %}
+
 {% block styles %}
   <link rel="stylesheet" href="/styles/home.css" />
   <link rel="stylesheet" href="/styles/knowledge.css" />

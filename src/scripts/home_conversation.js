@@ -1694,22 +1694,23 @@
   // table out of the thread and into the dialog at the bottom of
   // home_conversation.html; closing moves it back.
   //
-  // Moving rather than cloning is the whole design. The table is a live
-  // surface — every row has an X that drops a prospect from the batch,
-  // and the cadence card is listening — so a copy would be a second
-  // list with the same row ids, and a prospect dropped in one would
-  // still be in the other. One node means one truth, and every handler,
-  // attribute, and subscription travels with it for free.
+  // The dialog gets a CLONE, not the table itself. Moving the real node
+  // out and back was the old design (one node, one source of truth), but
+  // re-inserting a node on close made the thread re-lay-out its copy —
+  // it read as the prospect list "reloading" every time the dialog shut.
+  // Leaving the thread's own table untouched is the fix: nothing about it
+  // changes when the dialog opens or closes, so there is nothing to
+  // reload.
   //
-  // A comment node holds the table's place in the thread, so it returns
-  // exactly where it was even if messages have been appended in the
-  // meantime. What doesn't survive the round trip is the table's scroll
-  // offset: moving a node resets it. Reading the expanded table top-down
-  // is the point, so that's the right way for it to arrive, and coming
-  // back to the top of a 5.5-row window costs nothing.
+  // The clone stays live: its reject Xs are wired, so a drop still fires
+  // the `sh:conv-row-decision` the cadence card listens for. It starts
+  // from the thread table's current state (cloneNode copies each row's
+  // `data-sh-review-status`), and on close any drops made in the dialog
+  // are written back to the thread table by row id — so the two copies
+  // never disagree even though they're two nodes.
   //
-  // Only one table can be expanded at a time, which is what makes a
-  // single dialog (and a single placeholder) sufficient.
+  // Only one table can be expanded at a time, so a single dialog and a
+  // single clone are sufficient.
   function bindTableExpand () {
     var modal    = document.querySelector(SELECTORS.tableModal)
     var backdrop = document.querySelector(SELECTORS.tableModalBack)
@@ -1733,11 +1734,11 @@
       getComputedStyle(document.documentElement).getPropertyValue('--modal-close-dur')
     ) || 150
 
-    // Per-open state: the table currently in the dialog, the marker
-    // holding its spot in the thread, the trigger to hand focus back
-    // to, and the trap handler to unbind.
+    // Per-open state: the CLONE currently in the dialog, the thread
+    // table it was cloned from (drops are written back to it on close),
+    // the trigger to hand focus back to, and the trap handler to unbind.
     var expanded    = null
-    var placeholder = null
+    var source      = null
     var lastFocused = null
     var trapHandler = null
     // Non-null only while the close animation is playing. It's both the
@@ -1745,8 +1746,8 @@
     var closeTimer  = null
 
     function open (button) {
-      // Already open — a second trigger would orphan the first table's
-      // placeholder, so it's ignored rather than swapped.
+      // Already open — ignore a second trigger rather than stacking a
+      // second clone in the dialog.
       if (expanded) return
 
       var tableId = button.getAttribute('data-sh-conv-expand')
@@ -1765,17 +1766,45 @@
       if (title && label) title.textContent = label
       if (meta) meta.textContent = button.getAttribute('data-sh-conv-expand-meta') || ''
 
-      placeholder = document.createComment(' expanded: ' + tableId + ' ')
-      table.parentNode.insertBefore(placeholder, table)
-      host.appendChild(table)
-      expanded = table
+      // Clone into the dialog; the thread's table stays exactly where it
+      // is. `cloneNode(true)` copies each row's current
+      // `data-sh-review-status`, so a prospect already dropped in the
+      // thread shows dropped here too.
+      source = table
+      var clone = table.cloneNode(true)
+
+      // A clone re-entering the document restarts any CSS animation it
+      // still carries — drop the streaming-reveal class so the rows
+      // don't re-deal themselves as the dialog opens.
+      if (clone.classList) clone.classList.remove('sh-stream-rows')
+      var streamNodes = clone.querySelectorAll('.sh-stream-rows')
+      for (var sn = 0; sn < streamNodes.length; sn++) {
+        streamNodes[sn].classList.remove('sh-stream-rows')
+      }
+      var streamRows = clone.querySelectorAll('tbody tr')
+      for (var srx = 0; srx < streamRows.length; srx++) {
+        streamRows[srx].style.animationDelay = ''
+      }
+
+      host.innerHTML = ''
+      host.appendChild(clone)
+      expanded = clone
+
+      // Wire the clone's reject Xs — just the click, not the full
+      // `bindProspectTable`, whose document-level review listener would
+      // leak one per open on a node discarded at close. A drop still
+      // fires `sh:conv-row-decision`, so the cadence card reacts, and the
+      // thread table catches up from `finishClose`.
+      clone.addEventListener('click', function (event) {
+        var t = event.target
+        if (t && t.closest) handleDecisionClick(t, clone)
+      })
 
       // The Signal column is a fixed 18rem in both places, so the fit
-      // that was computed in the thread still holds here. Re-run anyway:
-      // it's one pass over 37 cells, and it means the dialog can't be
-      // the place where a future width change shows up as a clipped
-      // badge.
-      fitSignalBadges(table)
+      // the clone copied from the thread still holds. Re-run anyway: one
+      // pass over 37 cells, and the dialog can't then be where a future
+      // width change first clips a badge.
+      fitSignalBadges(clone)
 
       lastFocused = button
 
@@ -1838,22 +1867,24 @@
       }
       backdrop.classList.remove(BACKDROP_OPEN_CLASS)
 
-      closeTimer = window.setTimeout(finishClose, closeMs)
+      // With the close animation disabled (`--modal-close-dur: 0`) there
+      // is nothing to wait for: finish in the same task so the table is
+      // back in the thread the instant the dialog goes — no fade, and no
+      // frame where neither the dialog nor the thread shows it. A real
+      // duration still defers cleanup until the fade has played.
+      if (closeMs > 0) {
+        closeTimer = window.setTimeout(finishClose, closeMs)
+      } else {
+        finishClose()
+      }
     }
 
-    // The other half — everything that would cut the animation short if
-    // it ran at the click instead.
-    //
-    // `hidden` is the obvious one: it resolves to `display: none`, so
-    // setting it up front means there's nothing left to animate. The
-    // table's trip home is the subtler one. Moving it back into the
-    // thread empties the dialog, and the dialog is still visible, so
-    // doing it early would play a 150 ms fade-out of an empty box while
-    // the table reappeared behind it.
-    //
-    // `expanded` deliberately stays set until this runs. It's what
-    // `open` tests to refuse a second trigger, which keeps the table
-    // from being pulled out of a dialog that's mid-close.
+    // The other half — cleanup deferred until the dialog's fade (if any)
+    // has played. `hidden` resolves to `display: none`, so setting it up
+    // front would leave nothing to animate; writing the clone's drops
+    // back and discarding it waits here for the same reason. `expanded`
+    // stays set until this runs — it's the flag `open` tests to refuse a
+    // second trigger mid-close.
     function finishClose () {
       closeTimer = null
 
@@ -1864,16 +1895,22 @@
       // the closing state and skip its own animation.
       if (container) container.classList.remove('is-closing')
 
-      // Home again. If the marker is gone — the thread was rebuilt
-      // under an open dialog — the table stays in the host rather than
-      // being appended somewhere arbitrary, and the next open is still
-      // clean because `expanded` is cleared either way.
-      if (expanded && placeholder && placeholder.parentNode) {
-        placeholder.parentNode.insertBefore(expanded, placeholder)
-        placeholder.parentNode.removeChild(placeholder)
+      // Write any drops made in the dialog back to the thread's table by
+      // row id so the two copies agree, then discard the clone. The
+      // thread table was never touched, so there is nothing to move home
+      // and nothing for it to re-lay-out — which is the whole point.
+      if (expanded && source) {
+        var rows = expanded.querySelectorAll(SELECTORS.convRow)
+        for (var i = 0; i < rows.length; i++) {
+          var id = rows[i].getAttribute('data-sh-conv-row-id')
+          if (!id) continue
+          var srcRow = source.querySelector('[data-sh-conv-row][data-sh-conv-row-id="' + id + '"]')
+          if (srcRow) paintRowStatus(srcRow, rows[i].getAttribute('data-sh-review-status') || null)
+        }
       }
+      if (expanded && expanded.parentNode) expanded.parentNode.removeChild(expanded)
       expanded = null
-      placeholder = null
+      source = null
     }
 
     document.addEventListener('click', function (event) {

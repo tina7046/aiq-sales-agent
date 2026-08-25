@@ -2441,6 +2441,19 @@ main.app-wrapper {
   }
 }
 
+// ── Filter empty states (LAB) ──────────────────────────────────────────
+// In filter mode the list always has rows (archiving retains them as
+// `archived`), so the "no list items" rule above never fires. Each
+// view's message shows instead when that view's own states are all
+// absent. The `~` combinator ties the message (a following sibling of the
+// list) to the list's current filter and contents; the `:not(:has(...))`
+// is a single `:has()`, never nested inside another.
+.seller-home__feed-list[data-sh-feed-filter="active"]:not(:has([data-sh-feed-state="completed"], [data-sh-feed-state="running"], [data-sh-feed-state="paused"])) ~ .seller-home__feed-empty[data-sh-feed-empty-view="active"],
+.seller-home__feed-list[data-sh-feed-filter="scheduled"]:not(:has([data-sh-feed-state="scheduled"])) ~ .seller-home__feed-empty[data-sh-feed-empty-view="scheduled"],
+.seller-home__feed-list[data-sh-feed-filter="archived"]:not(:has([data-sh-feed-state="archived"])) ~ .seller-home__feed-empty[data-sh-feed-empty-view="archived"] {
+  display: flex;
+}
+
 // ══════════════════════════════════════════════════════════════════════
 //  Status button
 // ----------------------------------------------------------------------
@@ -2654,6 +2667,7 @@ $sh-feed-status-rest: (
   scheduled: "clock",
   paused:    "pause",
   failed:    "warning",
+  archived:  "ban",
 );
 
 $sh-feed-status-action: (
@@ -2662,6 +2676,7 @@ $sh-feed-status-action: (
   scheduled: "pause",
   paused:    "play",
   failed:    "refresh",
+  archived:  "refresh",
 );
 
 @each $state, $glyph in $sh-feed-status-rest {
@@ -2684,6 +2699,13 @@ $sh-feed-status-action: (
 
 [data-sh-feed-state="failed"] .seller-home__feed-item-status-glyph--warning {
   fill: var(--slds-g-color-error-base-40, #ea001e);
+}
+
+// Archived rows live in their own view; a muted "ban" glyph keeps them
+// reading as set-aside next to the live states. (Its hover action is
+// Restore — the refresh glyph — from the action map above.)
+[data-sh-feed-state="archived"] .seller-home__feed-item-status-glyph--ban {
+  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
 }
 
 // The status button, but only while it should be previewing the action.
@@ -2710,6 +2732,86 @@ $sh-feed-status-preview: ".seller-home__feed-item-status:not([data-sh-feed-hover
   [data-sh-feed-state="#{$state}"] #{$sh-feed-status-preview}:focus-visible .seller-home__feed-item-status-glyph--#{$glyph} {
     @include sh-feed-glyph-shown;
   }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Feed filter (LAB ONLY)
+// ----------------------------------------------------------------------
+// Engaged only when the list carries `data-sh-feed-filter` (written from
+// the data flag `feed.filter`; Seller Home has none, so none of this
+// applies there). One list, three views: CSS hides the states a view
+// doesn't show, so switching views is instant and the Flip re-sort keeps
+// working across all of them.
+// ══════════════════════════════════════════════════════════════════════
+
+// The states each view HIDES (the complement of what it shows). Active =
+// completed + running + paused; Scheduled and Archived are single-state.
+$sh-feed-filter-hidden: (
+  active:    ("scheduled", "archived", "failed"),
+  scheduled: ("completed", "running", "paused", "archived", "failed"),
+  archived:  ("completed", "running", "paused", "scheduled", "failed"),
+);
+@each $view, $states in $sh-feed-filter-hidden {
+  @each $state in $states {
+    .seller-home__feed-list[data-sh-feed-filter="#{$view}"]
+      .seller-home__feed-list-item:has([data-sh-feed-state="#{$state}"]) {
+      display: none;
+    }
+  }
+}
+
+// Section headers belong to the Active view; the single-state views drop
+// them all.
+.seller-home__feed-list[data-sh-feed-filter="scheduled"] .seller-home__feed-group,
+.seller-home__feed-list[data-sh-feed-filter="archived"] .seller-home__feed-group {
+  display: none;
+}
+
+// Within Active, a section header hides when its state has no rows. The
+// unscoped Paused rule further up already covers paused; these cover the
+// Ready and Running headers (whose group names aren't "paused"/"active").
+@each $state in ("completed", "running") {
+  .seller-home__feed-list[data-sh-feed-filter="active"]:not(:has([data-sh-feed-state="#{$state}"]))
+    .seller-home__feed-group[data-sh-feed-group-state="#{$state}"] {
+    display: none;
+  }
+}
+
+// Under the filter a scheduled row's action is Run (play), not Pause —
+// starting a waiting run is the obvious intent. The extra
+// `[data-sh-feed-filter]` ancestor outweighs the base action rule.
+[data-sh-feed-filter] [data-sh-feed-state="scheduled"] #{$sh-feed-status-preview}:hover .seller-home__feed-item-status-glyph--pause,
+[data-sh-feed-filter] [data-sh-feed-state="scheduled"] #{$sh-feed-status-preview}:focus-visible .seller-home__feed-item-status-glyph--pause {
+  @include sh-feed-glyph-hidden;
+}
+[data-sh-feed-filter] [data-sh-feed-state="scheduled"] #{$sh-feed-status-preview}:hover .seller-home__feed-item-status-glyph--play,
+[data-sh-feed-filter] [data-sh-feed-state="scheduled"] #{$sh-feed-status-preview}:focus-visible .seller-home__feed-item-status-glyph--play {
+  @include sh-feed-glyph-shown;
+}
+
+// Filter menu options: label on the left, a check on the selected view.
+.seller-home__feed-filter-item {
+  justify-content: space-between;
+}
+
+.seller-home__feed-filter-item-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seller-home__feed-filter-item-check {
+  flex-shrink: 0;
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
+  margin-inline-start: var(--slds-g-spacing-3, 0.75rem);
+  fill: var(--slds-g-color-accent-2, #0250d9);
+  visibility: hidden;
+}
+
+.seller-home__feed-filter-item[aria-selected="true"] .seller-home__feed-filter-item-check {
+  visibility: visible;
 }
 
 // ── Row ───────────────────────────────────────────────────────────────
