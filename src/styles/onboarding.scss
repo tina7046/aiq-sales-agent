@@ -1,0 +1,274 @@
+// First-time onboarding — landing chrome
+// =====================================================================
+// Compiles to /styles/onboarding.css and is loaded by onboarding.html
+// on top of home.css. Conversation chrome for the follow-on page lives
+// in home_conversation.css; this file is landing-only.
+//
+// Overrides the Seller Home god-rays host so it is full-bleed: that
+// host insets its left edge by the nav width so the focal point sits
+// on the content column, and there is no nav here.
+
+$onboarding-god-rays-overscan: 90px; // same as $sh-god-rays-overscan in home.scss
+
+.seller-home--onboarding {
+  .seller-home__god-rays {
+    left: -$onboarding-god-rays-overscan;
+  }
+
+  // Fill the shell so the landing control can sit in the vertical
+  // centre of the content column. `.seller-home__main` is already a
+  // column flex container; growing the inner and centering its children
+  // is the only extra layout this page needs.
+  .seller-home__main-inner {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+  }
+
+  // The banner is an in-flow child of the centred column, which uses
+  // `align-items: center` (so children aren't stretched). Give it a width
+  // and a sensible cap so it fills the column without running edge-to-edge.
+  .knowledge-banner {
+    width: 100%;
+    max-width: 60rem;
+  }
+}
+
+// ── Ported Tools "Connect" modal ─────────────────────────────────────
+// A static port of _tools_modal.html's Panel 2. The morph controller
+// (tools_modal.js) is NOT loaded here, so these rules stand in for what
+// it would otherwise set at runtime: make the fixed SLDS modal visible
+// (via `slds-fade-in-open` in the markup), size and centre the card, and
+// let clicks fall through the backdrop-less overlay to the shader and
+// its Controls panel underneath.
+.onboarding-modal {
+  // The overlay covers the viewport (`.slds-modal` is fixed inset:0) but
+  // has no backdrop, so without this it would swallow every click on the
+  // page behind it. Only the card itself needs to be interactive.
+  //
+  // Centre the card in the viewport: the base `.slds-modal` is not a flex
+  // container and `.morph-modal-container` top-anchors the card with a
+  // 3rem margin (that's where the morph engine parks it). Making the
+  // overlay a flex centring context and neutralising that margin below
+  // puts the card dead centre instead.
+  &.slds-modal {
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  // Hidden state — the knowledge banner is the landing card now, but the
+  // modal is kept in the DOM. `[hidden]`'s UA `display:none` would lose to
+  // the `display:flex` above, so restore it at higher specificity.
+  &.slds-modal[hidden] {
+    display: none;
+  }
+
+  .slds-modal__container {
+    pointer-events: auto;
+  }
+
+  // Beat the morph rule (`.slds-modal .slds-modal__container.morph-modal-container`,
+  // equal specificity) by loading after tools.css: pin Panel 2's width,
+  // drop the top/bottom offset so the flex overlay can centre it, and cap
+  // the height so a short window scrolls the body instead of clipping.
+  .slds-modal__container.morph-modal-container {
+    width: 100%;
+    max-width: 640px;
+    height: auto;
+    margin: 0 auto;
+    max-height: calc(100vh - 3rem);
+  }
+
+  // Header content column. The source centres these through the
+  // `.morph-fade` layer, which only exists for the animation; recreate
+  // the centring directly on our own wrapper.
+  .onboarding-modal__top-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+  }
+}
+
+// ── Shader Controls panel ────────────────────────────────────────────
+// Visual copy of index.html's `#panel`, namespaced so none of those
+// unscoped `#panel` / `.crow` / `.row` rules leak in either direction.
+// This stylesheet is only loaded on /onboarding.html.
+
+.onboarding-panel {
+  display: block;
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  top: 100px;
+  z-index: 3;
+  width: 268px;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(13, 27, 42, 0.10);
+  border-radius: 14px;
+  padding: 13px 15px 15px;
+  font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #0d1b2a;
+  box-shadow: 0 8px 30px rgba(13, 27, 42, 0.10);
+
+  &.closed {
+    top: auto;
+    width: auto;
+    padding: 10px 14px;
+    overflow: visible;
+  }
+
+  &.closed .onboarding-panel__body {
+    display: none;
+  }
+
+  // `all: unset` below resets `display` to `inline`, which overrides
+  // the UA `[hidden] { display: none }` — restore it so Copy/Reset
+  // stay hidden when collapsed.
+  button[hidden] {
+    display: none;
+  }
+
+  button {
+    all: unset;
+    cursor: pointer;
+    font: 500 11px/1 ui-monospace, Menlo, monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #4a5b6b;
+  }
+
+  .onboarding-panel__act {
+    color: #148eff;
+  }
+
+  .onboarding-panel__tog {
+    display: block;
+    text-align: center;
+    padding: 6px 0;
+    border-radius: 7px;
+    border: 1px solid rgba(13, 27, 42, 0.14);
+    background: rgba(255, 255, 255, 0.5);
+    color: #8493a3;
+    font-size: 9.5px;
+    letter-spacing: 0.05em;
+
+    &.on {
+      background: #148eff;
+      border-color: #148eff;
+      color: #fff;
+    }
+  }
+
+  input[type='range'] {
+    width: 100%;
+    accent-color: #148eff;
+  }
+}
+
+.onboarding-panel__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.onboarding-panel__sect {
+  margin-top: 13px;
+  padding-top: 11px;
+  border-top: 1px solid rgba(13, 27, 42, 0.09);
+
+  &:first-child {
+    margin-top: 12px;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  h2 {
+    font: 500 10px/1 ui-monospace, Menlo, monospace;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #8493a3;
+    margin: 0 0 9px;
+  }
+}
+
+.onboarding-panel__crow {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 7px;
+
+  &.off {
+    opacity: 0.32;
+  }
+
+  input[type='color'] {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid rgba(13, 27, 42, 0.18);
+    border-radius: 6px;
+    background: none;
+    cursor: pointer;
+  }
+
+  .onboarding-panel__stack {
+    display: grid;
+    gap: 1px;
+  }
+
+  .onboarding-panel__hex {
+    display: flex;
+    justify-content: space-between;
+    color: #33455a;
+    font-size: 11px;
+  }
+}
+
+.onboarding-panel__cones {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  margin-bottom: 4px;
+}
+
+.onboarding-panel__row {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.onboarding-panel__lbl {
+  display: flex;
+  justify-content: space-between;
+  color: #33455a;
+}
+
+.onboarding-panel__val {
+  font-variant-numeric: tabular-nums;
+}
+
+.onboarding-shader-err {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 4;
+  max-width: 520px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #fff5f5;
+  border: 1px solid #f3c2c2;
+  color: #a02525;
+  font: 400 13px/1.5 ui-monospace, Menlo, monospace;
+  display: none;
+  white-space: pre-wrap;
+}

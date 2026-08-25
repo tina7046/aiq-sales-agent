@@ -1235,6 +1235,8 @@
       textarea.focus()
     })
 
+    bindComposerMenus(composerRoot)
+
     // Peripheral action buttons — stub for now, hooks reserved for
     // future phases (file picker, MediaRecorder, quick-action menu,
     // skills chooser). Same event-delegation pattern as briefing
@@ -1254,6 +1256,355 @@
       // eslint-disable-next-line no-console
       console.info('[seller-home] composer action:', actionId)
     })
+  }
+
+  // ── Composer action menus ─────────────────────────────────────────
+  // A toolbar button that picks one of a set — the agent chooser today.
+  // Delegated on the composer root, so a second menu in the toolbar
+  // needs only data.
+  //
+  // `aria-checked` on the items is the whole selection model: the check
+  // is revealed off it in CSS, so choosing is one attribute write per
+  // item and there's no class or JS-held state that could disagree with
+  // what a screen reader is told.
+  // How long the detail panel waits before closing once the pointer
+  // leaves a row. The source's 200ms, and it's load-bearing: the panel
+  // sits to the right with a gap, so without a grace period the pointer
+  // closes it on the way to reading it.
+  var COMPOSER_DETAIL_DELAY = 200
+  var COMPOSER_DETAIL_GAP = 8
+
+  function bindComposerMenus (composerRoot) {
+    // Hover would otherwise fight the keyboard: arrowing moves the
+    // panel, but the pointer is still sitting over whatever row it was
+    // over, and that row's `mouseenter` has already fired. Ignore hover
+    // until the mouse actually moves again. Straight from the source.
+    var pointerMoved = true
+    var hideTimer = null
+
+    // Rows are what the list shows and the arrow keys walk. Agents are
+    // what can be selected. They're mostly the same elements, but not
+    // always: a row that opens a submenu isn't selectable, and the
+    // agents inside that submenu aren't rows.
+    function menuRows (scope) {
+      return toArray(scope.querySelectorAll('[data-sh-composer-menu-row]'))
+    }
+
+    function menuAgents (scope) {
+      return toArray(scope.querySelectorAll('[data-sh-composer-menu-item]'))
+    }
+
+    function detailFor (row) {
+      var menu = closest(row, '[data-sh-composer-menu]')
+      var id = row.getAttribute('data-sh-composer-menu-row')
+      return menu
+        ? menu.querySelector('[data-sh-composer-menu-detail="' + id + '"]')
+        : null
+    }
+
+    // The row a panel belongs to — the inverse of `detailFor`, for
+    // walking back out of a submenu.
+    function rowFor (panel) {
+      var menu = closest(panel, '[data-sh-composer-menu]')
+      var id = panel.getAttribute('data-sh-composer-menu-detail')
+      return menu
+        ? menu.querySelector('[data-sh-composer-menu-row="' + id + '"]')
+        : null
+    }
+
+    function cancelHide () {
+      if (hideTimer) {
+        clearTimeout(hideTimer)
+        hideTimer = null
+      }
+    }
+
+    function hideDetails (menu) {
+      cancelHide()
+      toArray(menu.querySelectorAll('[data-sh-composer-menu-detail]'))
+        .forEach(function (panel) { panel.hidden = true })
+      menuRows(menu).forEach(function (row) {
+        row.removeAttribute('aria-describedby')
+        // Submenu rows advertise their panel's state; description rows
+        // have no `aria-expanded` to reset.
+        if (row.hasAttribute('aria-haspopup')) {
+          row.setAttribute('aria-expanded', 'false')
+        }
+      })
+    }
+
+    // Right of the list, top-aligned to the row — the source's geometry.
+    // Measured at show time rather than cached, because the row's
+    // position depends on where the composer is on screen.
+    function showDetail (row) {
+      var menu = closest(row, '[data-sh-composer-menu]')
+      var list = menu && menu.querySelector('[data-sh-composer-menu-list]')
+      var panel = detailFor(row)
+      if (!menu || !list || !panel) return
+
+      cancelHide()
+      hideDetails(menu)
+
+      var listRect = list.getBoundingClientRect()
+      var rowRect = row.getBoundingClientRect()
+
+      panel.style.left = (listRect.right + COMPOSER_DETAIL_GAP) + 'px'
+      panel.style.top = rowRect.top + 'px'
+      panel.hidden = false
+
+      if (row.hasAttribute('aria-haspopup')) {
+        // A submenu is announced as open, not as a description of the
+        // row — `aria-describedby` would have a screen reader read the
+        // agent names as if they described the row that opens them.
+        row.setAttribute('aria-expanded', 'true')
+      } else if (panel.id) {
+        row.setAttribute('aria-describedby', panel.id)
+      }
+    }
+
+    function scheduleHide (menu) {
+      cancelHide()
+      hideTimer = setTimeout(function () { hideDetails(menu) }, COMPOSER_DETAIL_DELAY)
+    }
+
+    function closeMenu (menu, returnFocus) {
+      var list = menu.querySelector('[data-sh-composer-menu-list]')
+      var trigger = menu.querySelector('[data-sh-composer-menu-trigger]')
+      if (!list || list.hidden) return
+
+      hideDetails(menu)
+      list.hidden = true
+      if (trigger) {
+        trigger.setAttribute('aria-expanded', 'false')
+        if (returnFocus) trigger.focus()
+      }
+    }
+
+    function closeAll (except) {
+      toArray(composerRoot.querySelectorAll('[data-sh-composer-menu]'))
+        .forEach(function (menu) { if (menu !== except) closeMenu(menu, false) })
+    }
+
+    composerRoot.addEventListener('click', function (event) {
+      var trigger = closest(event.target, '[data-sh-composer-menu-trigger]')
+
+      if (trigger) {
+        var menu = closest(trigger, '[data-sh-composer-menu]')
+        var list = menu && menu.querySelector('[data-sh-composer-menu-list]')
+        if (!list) return
+
+        event.preventDefault()
+        event.stopPropagation()
+
+        if (list.hidden) {
+          closeAll(menu)
+          list.hidden = false
+          trigger.setAttribute('aria-expanded', 'true')
+
+          // Open on the current choice rather than the first row, so
+          // Arrow keys move relative to where the selection actually
+          // is. When that choice lives in a submenu it isn't a row, so
+          // fall back to the row that leads to it — focus has to land
+          // in the list either way.
+          var checked = menu.querySelector('[aria-checked="true"]')
+          var landing = checked && checked.hasAttribute('data-sh-composer-menu-row')
+            ? checked
+            : checked && closest(checked, '[data-sh-composer-menu-detail]')
+              ? rowFor(closest(checked, '[data-sh-composer-menu-detail]'))
+              : null
+
+          var first = landing || menuRows(list)[0]
+          if (first) first.focus()
+        } else {
+          closeMenu(menu, true)
+        }
+        return
+      }
+
+      var item = closest(event.target, '[data-sh-composer-menu-item]')
+      if (!item) return
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      var itemMenu = closest(item, '[data-sh-composer-menu]')
+      var itemTrigger = itemMenu.querySelector('[data-sh-composer-menu-trigger]')
+
+      // Scoped to the whole menu, not the list: the agents are split
+      // across the list and its submenu panels, but they're still one
+      // set — picking a custom agent has to clear the check on Hunter.
+      menuAgents(itemMenu).forEach(function (other) {
+        other.setAttribute('aria-checked', String(other === item))
+      })
+
+      // Carry the choice up to the trigger badge, which names the
+      // selected agent.
+      if (itemTrigger) {
+        var chosen = item.querySelector('.seller-home__composer-menu-label')
+        var chosenName = chosen ? chosen.textContent.trim() : ''
+        var label = itemTrigger.getAttribute('title') || ''
+
+        // The badge wears a short form of the name, so it comes off the
+        // row's own attribute rather than the row's visible text.
+        var badgeLabel = itemTrigger.querySelector('[data-sh-composer-badge-label]')
+        var badgeText = item.getAttribute('data-sh-composer-badge-text') || chosenName
+        if (badgeLabel && badgeText) badgeLabel.textContent = badgeText
+
+        // The badge carries every agent's icon and shows one. Agents
+        // come with two kinds of artwork — a portrait or a sprite glyph
+        // on a disc — and picking between pre-rendered markup keeps
+        // that difference in the template rather than teaching this to
+        // build both.
+        var chosen = item.getAttribute('data-sh-composer-menu-item')
+        toArray(itemTrigger.querySelectorAll('[data-sh-composer-badge-icon]'))
+          .forEach(function (slot) {
+            slot.hidden = slot.getAttribute('data-sh-composer-badge-icon') !== chosen
+          })
+
+        // Which is why the accessible name keeps the full one: the
+        // badge alone doesn't say which agent "Hunter" is.
+        itemTrigger.setAttribute(
+          'aria-label', label + (chosenName ? ': ' + chosenName : '')
+        )
+      }
+
+      document.dispatchEvent(new CustomEvent('sh:composer-menu-select', {
+        detail: {
+          menu: itemTrigger ? itemTrigger.getAttribute('data-sh-composer-action') : null,
+          value: item.getAttribute('data-sh-composer-menu-item'),
+          source: 'composer'
+        }
+      }))
+
+      closeMenu(itemMenu, true)
+    })
+
+    var COMPOSER_MENU_KEYS = [
+      'Escape', 'ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft'
+    ]
+
+    composerRoot.addEventListener('keydown', function (event) {
+      if (COMPOSER_MENU_KEYS.indexOf(event.key) === -1) return
+
+      var menu = closest(event.target, '[data-sh-composer-menu]')
+      if (!menu) return
+      var list = menu.querySelector('[data-sh-composer-menu-list]')
+      if (!list || list.hidden) return
+
+      // Focus is either on a row in the list or on an agent inside an
+      // open submenu, and every key below means something different
+      // depending on which.
+      var panel = closest(event.target, '[data-sh-composer-menu-detail]')
+
+      event.preventDefault()
+
+      // Keyboard drives the panel, and takes hover out of the running
+      // until the pointer moves — otherwise the row the mouse happens
+      // to rest on would pull the panel straight back.
+      pointerMoved = false
+
+      if (event.key === 'Escape') {
+        // Out of the submenu first, then out of the menu: one Escape
+        // shouldn't close everything from two levels down.
+        if (panel) {
+          var owner = rowFor(panel)
+          hideDetails(menu)
+          if (owner) owner.focus()
+        } else {
+          closeMenu(menu, true)
+        }
+        return
+      }
+
+      // Into a submenu, and back out of one.
+      if (event.key === 'ArrowRight' && !panel) {
+        var row = closest(event.target, '[data-sh-composer-menu-row]')
+        if (row && row.hasAttribute('aria-haspopup')) {
+          showDetail(row)
+          var opened = detailFor(row)
+          var firstAgent = opened && menuAgents(opened)[0]
+          if (firstAgent) firstAgent.focus()
+        }
+        return
+      }
+
+      if (event.key === 'ArrowLeft') {
+        if (panel) {
+          var back = rowFor(panel)
+          hideDetails(menu)
+          if (back) back.focus()
+        }
+        return
+      }
+
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+
+      var all = panel ? menuAgents(panel) : menuRows(list)
+      if (!all.length) return
+      var at = all.indexOf(document.activeElement)
+      var next = event.key === 'ArrowDown'
+        ? all[(at + 1) % all.length]
+        : all[(at - 1 + all.length) % all.length]
+
+      next.focus()
+      // Only the list drives the panel. Arrowing within a submenu is
+      // moving inside the panel that's already open, and re-showing it
+      // would tear down the element focus just landed on.
+      if (!panel) showDetail(next)
+    })
+
+    // ── Hover ───────────────────────────────────────────────────────
+    // `mouseover` rather than `mouseenter` so one delegated listener
+    // covers every row; `mouseenter` doesn't bubble.
+    composerRoot.addEventListener('mousemove', function () {
+      pointerMoved = true
+    })
+
+    composerRoot.addEventListener('mouseover', function (event) {
+      if (!pointerMoved) return
+
+      // Rows, not agents: hovering an agent inside a submenu must not
+      // re-show that submenu, and the row that opens one isn't an agent
+      // at all.
+      var row = closest(event.target, '[data-sh-composer-menu-row]')
+      if (row) {
+        showDetail(row)
+        return
+      }
+
+      // Inside the panel itself: the pointer travelled there to read it
+      // or to pick from it, so hold it open.
+      if (closest(event.target, '[data-sh-composer-menu-detail]')) cancelHide()
+    })
+
+    composerRoot.addEventListener('mouseout', function (event) {
+      var from = closest(event.target, '[data-sh-composer-menu-row]') ||
+        closest(event.target, '[data-sh-composer-menu-detail]')
+      if (!from) return
+
+      // Moving between the row and its panel, or within either, isn't
+      // leaving — only a landing spot outside both starts the timer.
+      var to = event.relatedTarget
+      if (to && (closest(to, '[data-sh-composer-menu-row]') ||
+                 closest(to, '[data-sh-composer-menu-detail]'))) return
+
+      var menu = closest(from, '[data-sh-composer-menu]')
+      if (menu) scheduleHide(menu)
+    })
+
+    document.addEventListener('click', function (event) {
+      if (closest(event.target, '[data-sh-composer-menu]')) return
+      closeAll(null)
+    })
+
+    // The panels are `position: fixed`, so they don't travel with the
+    // composer. Rather than reposition on every frame of a scroll, shut
+    // the menu — which is what a dropdown should do anyway. Capture
+    // phase because the scroll happens on `.seller-home__main`, an
+    // ancestor, and scroll events don't bubble.
+    document.addEventListener('scroll', function () {
+      closeAll(null)
+    }, true)
   }
 
   // Placeholder typewriter. Types out each sample prompt from
@@ -1488,6 +1839,11 @@
   function feedSublineKey (state, home) {
     if (state === 'paused') return 'paused'
     if (state === 'running' && home !== 'running') return 'running'
+    // Complete / Schedule from the kebab move the row into a finished or
+    // waiting state; each slot carries the authored copy for those, so
+    // the subline and title tense follow the way pause and run already do.
+    if (state === 'completed') return 'completed'
+    if (state === 'scheduled') return 'scheduled'
     return 'default'
   }
 
@@ -1805,12 +2161,15 @@
           detail: { action: actionId, rowId: rowId, source: 'feed' }
         }))
 
-        // The two run actions are transitions the status button already
-        // makes, reached from the menu instead — so they go through the
-        // same path rather than inventing a second one.
+        // Every state-changing action is a transition the row can already
+        // reach — Run now / Pause echo the status button, Complete and
+        // Schedule move it into a finished or waiting state — so they all
+        // go through `changeFeedState` rather than inventing a second path.
         if (actionId === 'dismiss') dismissListItem(closest(item, '[data-sh-feed-list-item]'))
         else if (actionId === 'run_now' && row) changeFeedState(feedRoot, row, 'running')
         else if (actionId === 'pause' && row) changeFeedState(feedRoot, row, 'paused')
+        else if (actionId === 'complete' && row) changeFeedState(feedRoot, row, 'completed')
+        else if (actionId === 'schedule' && row) changeFeedState(feedRoot, row, 'scheduled')
         return
       }
     })
@@ -2207,6 +2566,115 @@
   // reorder. Row detail-view opens are a separate future increment;
   // every row today is authored with `linked: false` so activation
   // is a no-op.
+  // ── Scheduled status button ───────────────────────────────────────
+  // Restores the feed-style status control on the Scheduled list (its
+  // CSS + JS were dropped when issa/skills-scheduled-pages merged into
+  // main). Mirrors the feed's control with three deliberate differences:
+  // the row keeps its place (no re-sort), it isn't re-filtered under the
+  // pointer, and state lives on `data-sh-workflow-status` — the same
+  // attribute the tab filter reads.
+
+  // The status registry from scheduled.json, handed to us as JSON on the
+  // list root. Labels and action verbs only — which glyph a state paints
+  // is the stylesheet's business.
+  function readWorkflowStatusTypes (listRoot) {
+    var raw = listRoot.getAttribute('data-sh-workflow-status-types')
+    if (!raw) return {}
+    try {
+      return JSON.parse(raw) || {}
+    } catch (err) {
+      // A malformed registry costs the accessible names, not the toggle
+      // — better a button that still works than a dead list.
+      return {}
+    }
+  }
+
+  // What pressing the status button turns the row into. Same rule the
+  // feed uses, including "resume returns to the last state that wasn't
+  // paused" so retrying an errored row and then pausing it doesn't
+  // resume back into the error.
+  function nextWorkflowStatus (item) {
+    var status = item.getAttribute('data-sh-workflow-status')
+    if (status === 'paused') {
+      return item.getAttribute('data-sh-workflow-status-default') || 'scheduled'
+    }
+    if (status === 'failed') return 'running'
+    return 'paused'
+  }
+
+  function applyWorkflowStatus (item, status, types) {
+    var meta = types[status] || {}
+    var titleNode = item.querySelector('.seller-home__scheduled-workflow-title')
+    var name = titleNode ? (titleNode.textContent || '').trim() : ''
+
+    item.setAttribute('data-sh-workflow-status', status)
+    if (status !== 'paused') {
+      item.setAttribute('data-sh-workflow-status-default', status)
+    }
+
+    // Accessible names are all CSS can't do here. Each element carries
+    // the prefix the template composed it with, so this picks strings
+    // out of the registry and never words anything itself — which is
+    // what keeps the copy in scheduled.json.
+    var toggle = item.querySelector('[data-sh-workflow-run-toggle]')
+    if (toggle && meta.action) {
+      var action = meta.action + ' ' + name
+      toggle.setAttribute('aria-label', action)
+      toggle.setAttribute('title', action)
+    }
+
+    if (!meta.label) return
+
+    // Linked rows carry the status inside the row's own `aria-label`;
+    // unlinked ones have no label to carry it, so it's a visually-hidden
+    // span instead. A row has one or the other.
+    var labelled = item.querySelector('[data-sh-workflow-status-label]')
+    if (labelled) {
+      labelled.setAttribute('aria-label',
+        (labelled.getAttribute('data-sh-workflow-status-prefix') || '') + meta.label)
+    }
+
+    var text = item.querySelector('[data-sh-workflow-status-text]')
+    if (text) {
+      text.textContent =
+        (text.getAttribute('data-sh-workflow-status-prefix') || '') + meta.label
+    }
+  }
+
+  function scheduledStatusController (listRoot, onChange) {
+    var types = readWorkflowStatusTypes(listRoot)
+
+    listRoot.addEventListener('click', function (event) {
+      var toggle = closest(event.target, '[data-sh-workflow-run-toggle]')
+      if (!toggle) return
+
+      var item = closest(toggle, '[data-sh-workflow-item]')
+      if (!item) return
+
+      // The button is painted over the row's full-row click surface, so
+      // pressing it must not also open the row.
+      event.preventDefault()
+      event.stopPropagation()
+
+      var from = item.getAttribute('data-sh-workflow-status') || ''
+      var to = nextWorkflowStatus(item)
+
+      applyWorkflowStatus(item, to, types)
+      latchStatusHover(toggle, 'data-sh-workflow-hover-latched')
+      if (onChange) onChange(item, from, to)
+
+      document.dispatchEvent(new CustomEvent('sh:workflow-run-toggle', {
+        detail: {
+          workflowId: item.getAttribute('data-sh-workflow-id'),
+          from: from,
+          to: to,
+          paused: to === 'paused',
+          source: 'scheduled'
+        }
+      }))
+    })
+  }
+
   function bindScheduled (root) {
     var tabsRoot = root.querySelector('[data-sh-scheduled-tabs]')
     var listRegion = root.querySelector('[data-sh-scheduled-list-region]')
@@ -2270,12 +2738,11 @@
     // MutationObserver.
     var rows = toArray(listRoot.querySelectorAll('[data-sh-workflow-item]'))
 
-    // Tab counts are painted server-side from scheduled.json and
-    // nothing else updates them, so a row that changes state at runtime
-    // has to bring them with it — pausing the last scheduled workflow
-    // would otherwise leave "Scheduled 3" over a tab that now holds 2.
-    // Same recount `scheduled_drafts.js` runs after splicing a
-    // confirmed schedule in.
+    // Tab counts are painted server-side from scheduled.json and nothing
+    // else updates them, so a row that changes state at runtime has to
+    // bring them with it — pausing the last scheduled workflow would
+    // otherwise leave "Scheduled 3" over a tab that now holds 2. Same
+    // recount `scheduled_drafts.js` runs after splicing a schedule in.
     function refreshTabCounts () {
       tabs.forEach(function (tab) {
         var statuses = tabStatusesById[tab.getAttribute('data-sh-scheduled-tab')] || []
@@ -2485,125 +2952,6 @@
     if (count === 0) return 'No workflows match this filter'
     return 'Showing ' + count + ' ' + (label ? label + ' ' : '') +
       'workflow' + (count === 1 ? '' : 's')
-  }
-
-  // ── Row status button (/scheduled.html) ─────────────────────────
-  // The home feed's status control on this surface, so a workflow
-  // behaves the same in both places: what a click does depends on the
-  // row's state — a paused row resumes, an errored one retries,
-  // anything else pauses.
-  //
-  // Three deliberate differences from `bindFeedRowControls`:
-  //   • the row keeps its place. The feed re-sorts on every state
-  //     change; this list is a schedule the seller authored, and
-  //     reordering it under them on a pause would lose the row.
-  //   • the row is not re-filtered either. Pausing while the
-  //     "Scheduled" tab is active would make the row vanish under the
-  //     pointer that just pressed it. Counts follow immediately; the
-  //     filter re-applies on the next tab activation, which is a
-  //     deliberate act.
-  //   • state lives on `data-sh-workflow-status`, the attribute the tab
-  //     filter already reads, rather than a second one beside it.
-
-  // The status registry from scheduled.json, handed to us as JSON on
-  // the list root. Labels and action verbs only — which glyph a state
-  // paints is the stylesheet's business.
-  function readWorkflowStatusTypes (listRoot) {
-    var raw = listRoot.getAttribute('data-sh-workflow-status-types')
-    if (!raw) return {}
-    try {
-      return JSON.parse(raw) || {}
-    } catch (err) {
-      // A malformed registry costs the accessible names, not the
-      // toggle — better a button that still works than a dead list.
-      return {}
-    }
-  }
-
-  // What pressing the status button turns the row into. Same rule the
-  // feed uses, including "resume returns to the last state that wasn't
-  // paused" so retrying an errored row and then pausing it doesn't
-  // resume back into the error.
-  function nextWorkflowStatus (item) {
-    var status = item.getAttribute('data-sh-workflow-status')
-    if (status === 'paused') {
-      return item.getAttribute('data-sh-workflow-status-default') || 'scheduled'
-    }
-    if (status === 'failed') return 'running'
-    return 'paused'
-  }
-
-  function applyWorkflowStatus (item, status, types) {
-    var meta = types[status] || {}
-    var titleNode = item.querySelector('.seller-home__scheduled-workflow-title')
-    var name = titleNode ? (titleNode.textContent || '').trim() : ''
-
-    item.setAttribute('data-sh-workflow-status', status)
-    if (status !== 'paused') {
-      item.setAttribute('data-sh-workflow-status-default', status)
-    }
-
-    // Accessible names are all CSS can't do here. Each element carries
-    // the prefix the template composed it with, so this picks strings
-    // out of the registry and never words anything itself — which is
-    // what keeps the copy in scheduled.json.
-    var toggle = item.querySelector('[data-sh-workflow-run-toggle]')
-    if (toggle && meta.action) {
-      var action = meta.action + ' ' + name
-      toggle.setAttribute('aria-label', action)
-      toggle.setAttribute('title', action)
-    }
-
-    if (!meta.label) return
-
-    // Linked rows carry the status inside the row's own `aria-label`;
-    // unlinked ones have no label to carry it, so it's a
-    // visually-hidden span instead. A row has one or the other.
-    var labelled = item.querySelector('[data-sh-workflow-status-label]')
-    if (labelled) {
-      labelled.setAttribute('aria-label',
-        (labelled.getAttribute('data-sh-workflow-status-prefix') || '') + meta.label)
-    }
-
-    var text = item.querySelector('[data-sh-workflow-status-text]')
-    if (text) {
-      text.textContent =
-        (text.getAttribute('data-sh-workflow-status-prefix') || '') + meta.label
-    }
-  }
-
-  function scheduledStatusController (listRoot, onChange) {
-    var types = readWorkflowStatusTypes(listRoot)
-
-    listRoot.addEventListener('click', function (event) {
-      var toggle = closest(event.target, '[data-sh-workflow-run-toggle]')
-      if (!toggle) return
-
-      var item = closest(toggle, '[data-sh-workflow-item]')
-      if (!item) return
-
-      // The button is painted over the row's full-row click surface, so
-      // pressing it must not also open the row.
-      event.preventDefault()
-      event.stopPropagation()
-
-      var from = item.getAttribute('data-sh-workflow-status') || ''
-      var to = nextWorkflowStatus(item)
-
-      applyWorkflowStatus(item, to, types)
-      latchStatusHover(toggle, 'data-sh-workflow-hover-latched')
-      if (onChange) onChange(item, from, to)
-
-      document.dispatchEvent(new CustomEvent('sh:workflow-run-toggle', {
-        detail: {
-          workflowId: item.getAttribute('data-sh-workflow-id'),
-          from: from,
-          to: to,
-          paused: to === 'paused',
-          source: 'scheduled'
-        }
-      }))
-    })
   }
 
   // Per-row overflow menu controller for /scheduled.html. Cloned

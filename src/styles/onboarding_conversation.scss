@@ -1,0 +1,214 @@
+// Onboarding — scripted conversation, rich agent content
+// =====================================================================
+// Compiles to /styles/onboarding_conversation.css and is loaded ONLY by
+// onboarding_conversation.html, on top of home_conversation.css.
+//
+// The bubbles, thread, and thinking indicator are the real conversation
+// components (home_conversation.css). This file styles ONLY the rich
+// content the onboarding agent message carries — headings, the two SLDS
+// tables, the assumptions bullet list, and inline code chips for the
+// Salesforce field names — none of which the stock agent bubble ships.
+//
+// Everything is scoped under `.onboarding-conv__rich` (the wrapper inside
+// the discovery agent bubble), so it can't touch any other surface.
+
+.onboarding-conv__rich {
+  // Vertical rhythm between the stacked blocks (headings, tables, prose).
+  > * + * {
+    margin-top: var(--slds-g-spacing-4, 1rem);
+  }
+
+  .onboarding-conv__heading {
+    font-size: var(--slds-g-font-scale-2, 1rem);
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+    // A little extra air above a new section, but not before the first.
+    margin-top: var(--slds-g-spacing-5, 1.5rem);
+  }
+
+  > .onboarding-conv__heading:first-child {
+    margin-top: 0;
+  }
+
+  p {
+    margin: 0;
+    color: var(--slds-g-color-on-surface-2, #444);
+    line-height: 1.5;
+  }
+
+  // ── Tables ──────────────────────────────────────────────────────────
+  // SLDS paints borders / cell buffers; this only sizes the table to the
+  // bubble width and keeps the row-header column readable (no truncation,
+  // left-aligned, top-aligned with the evidence/implication cells).
+  .onboarding-conv__table {
+    width: 100%;
+    table-layout: auto;
+
+    th,
+    td {
+      vertical-align: top;
+      white-space: normal;
+      line-height: 1.4;
+    }
+
+    thead th {
+      font-weight: 600;
+      color: var(--slds-g-color-on-surface-3, #001e5b);
+    }
+
+    tbody th[scope='row'] {
+      font-weight: 600;
+      color: var(--slds-g-color-on-surface-2, #444);
+    }
+  }
+
+  // ── Assumptions bullet list ─────────────────────────────────────────
+  .onboarding-conv__list {
+    margin: 0;
+    padding-left: 1.25rem;
+    list-style: disc;
+
+    li {
+      list-style: disc;
+      line-height: 1.5;
+      color: var(--slds-g-color-on-surface-2, #444);
+    }
+
+    li + li {
+      margin-top: var(--slds-g-spacing-1, 0.25rem);
+    }
+  }
+
+  // ── Inline field-name chips ─────────────────────────────────────────
+  // Matches the monospace treatment the source screenshots use for
+  // Salesforce fields (IsClosed, StageName, CreatedDate, …).
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.85em;
+    padding: 0.05em 0.35em;
+    border-radius: 4px;
+    background: var(--slds-g-color-neutral-base-95, #f3f3f3);
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+  }
+
+  strong {
+    font-weight: 600;
+  }
+}
+
+// The run card and its chain-of-thought (the "sub-steps") are styled
+// entirely by running_lab.css now: the player renders each sub-step as a
+// `.agent-reasoning__tool` row inside `.rl-cot__tools`, exactly like the
+// running lab, so no onboarding-specific run-card CSS is needed here.
+
+// ── Number pop-in (transitions.dev) — sub-step result counters ───────
+// The player rolls each result up from 0 and rebuilds its `.t-digit`
+// children on every change; with `.is-animating` on the group, each new
+// digit replays this pop-in (translate + blur + fade, small stagger), so
+// the count-up reads as a motion-blurred roll that settles on the target.
+:root {
+  --digit-dur: 500ms;
+  --digit-distance: 8px;
+  --digit-stagger: 70ms;
+  --digit-blur: 2px;
+  --digit-ease: cubic-bezier(0.34, 1.45, 0.64, 1);
+  --digit-dir-x: 0;
+  --digit-dir-y: 1;
+}
+
+@keyframes t-digit-pop-in {
+  0% {
+    transform: translate(
+      calc(var(--digit-distance) * var(--digit-dir-x)),
+      calc(var(--digit-distance) * var(--digit-dir-y))
+    );
+    opacity: 0;
+    filter: blur(var(--digit-blur));
+  }
+  100% {
+    transform: translate(0, 0);
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+.t-digit-group {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.t-digit {
+  display: inline-block;
+  will-change: transform, opacity, filter;
+}
+
+.t-digit-group.is-animating .t-digit {
+  animation: t-digit-pop-in var(--digit-dur) var(--digit-ease) both;
+}
+
+.t-digit-group.is-animating .t-digit[data-stagger='1'] {
+  animation-delay: var(--digit-stagger);
+}
+
+.t-digit-group.is-animating .t-digit[data-stagger='2'] {
+  animation-delay: calc(var(--digit-stagger) * 2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-digit-group .t-digit {
+    animation: none !important;
+  }
+}
+
+// ── Streaming text (transitions.dev) — agent writing ─────────────────
+// The player wraps each word of the agent's prose in a `.t-stream-w`
+// span (resting invisible + blurred) and adds `.is-in` word by word, so
+// the text resolves through opacity + a small blur, like live writing.
+:root {
+  --stream-gap: 60ms;
+  --stream-fade: 350ms;
+  --stream-blur: 1px;
+  --stream-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.t-stream-w {
+  opacity: 0;
+  filter: blur(var(--stream-blur));
+  transition:
+    opacity var(--stream-fade) var(--stream-ease),
+    filter var(--stream-fade) var(--stream-ease);
+}
+
+.t-stream-w.is-in {
+  opacity: 1;
+  filter: blur(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-stream-w {
+    transition: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+  }
+}
+
+// ── Streaming tables — staggered row fade ────────────────────────────
+// When the player reveals a discovery table it's tagged `ob-streaming` and
+// the whole table appears at once; its body rows then fade in as a quick
+// top-to-bottom cascade (per-row `animation-delay` set by the player). The
+// header (in <thead>) is unaffected. Numbers are static (no count-up).
+@keyframes ob-row-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.onboarding-conv__table.ob-streaming tbody tr {
+  animation: ob-row-fade var(--stream-fade, 350ms) var(--stream-ease, ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-conv__table.ob-streaming tbody tr {
+    animation: none !important;
+  }
+}

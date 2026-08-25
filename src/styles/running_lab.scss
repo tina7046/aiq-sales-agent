@@ -1,0 +1,479 @@
+// "Running item → agent at work" — lab styles
+// =====================================================================
+// The page reuses the conversation shell, so the layout comes for free:
+//   • header / thread / composer   → home_conversation.scss
+//   • the outer `.seller-home` row  → home.scss
+//   • global sparkle / typing / spinner → index.scss (via _template)
+//
+// Everything below is scoped under `.seller-home--conversation` so it
+// can't leak into the real pages. It styles the ~1-minute run
+// simulation: the combined run/chain-of-thought component, the three
+// phase sections, and the revealed finished result.
+
+.rl-box {
+  border-radius: var(--slds-g-radius-border-3, .75rem);
+  padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
+  border: 1px solid var(--slds-g-color-palette-neutral-90, #e5e5e5);
+}
+
+// Icon-swap crossfade ends — the two states a stacked glyph swaps
+// between. Opacity + blur only; `transform` is left untouched so the
+// chevron can rotate with expand state and the spinner can keep
+// spinning. Same recipe as the feed's status-glyph swap (home.scss),
+// reading the shared `--icon-swap-*` tokens installed in index.scss.
+@mixin rl-glyph-shown {
+  opacity: 1;
+  filter: blur(0);
+}
+@mixin rl-glyph-hidden {
+  opacity: 0;
+  filter: blur(var(--icon-swap-blur, 1px));
+}
+
+.seller-home--conversation {
+  // ── Icon-swap slot ──────────────────────────────────────────────
+  // Two glyphs stacked in one grid cell; only one is "up" at a time,
+  // crossfading on state/hover. Used by both the run header
+  // (spinner ⇄ chevron) and each phase header (topic icon ⇄ chevron).
+  .rl-swap {
+    --icon-swap-blur: 1px; // softer than the default; tuned for ~14px glyphs
+    display: inline-grid;
+    place-items: center;
+  }
+
+  .rl-swap__glyph {
+    grid-area: 1 / 1;
+    opacity: 0;
+    filter: blur(var(--icon-swap-blur, 1px));
+    transition:
+      opacity var(--icon-swap-dur, 250ms) var(--icon-swap-ease, ease-in-out),
+      filter var(--icon-swap-dur, 250ms) var(--icon-swap-ease, ease-in-out),
+      transform var(--icon-swap-dur, 250ms) var(--icon-swap-ease, ease-in-out);
+  }
+
+  // The chevron never scales in the swap — it only fades and rotates
+  // with expand state, so its transform is free for the rotation.
+  .rl-swap__glyph--chevron {
+    width: 0.9rem;
+    height: 0.9rem;
+    fill: currentColor;
+    transform: rotate(0deg);
+  }
+
+  // ── Combined run + chain-of-thought component ───────────────────
+  // One `.rl-box`: a header button (spinner/caret + label + timer)
+  // that toggles the phase sections in `.rl-run__body`. A collapsed
+  // card is the header, so the whole box is the hit target.
+  .rl-run__header {
+    width: 100%;
+  }
+
+  .rl-run.is-collapsed {
+    cursor: pointer;
+  }
+
+  // Reset the button chrome so the header reads as the status row.
+  .rl-run__toggle {
+    padding: 0;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+  }
+
+  // Icon slot: a swap slot holding the spinner + a disclosure chevron.
+  .rl-run__icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  }
+
+  // Lab-only: keep the shared grey track, replace only the accent
+  // segment (`.sh-spinner`'s `border-bottom`) with the same blue →
+  // violet band as `.sh-typing__label`. A 90° overlay sits on the
+  // bottom quarter and rotates with the spinner.
+  .rl-run__icon .rl-swap__glyph--spinner.sh-spinner {
+    position: relative;
+    border-bottom-color: var(--slds-g-color-neutral-base-90, #e5e5e5);
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: -3px;
+      border-radius: inherit;
+      background: conic-gradient(
+        from 0deg,
+        transparent 0deg 90deg,
+        var(--slds-g-color-brand-base-40, #0250d9) 90deg,
+        var(--slds-g-color-palette-violet-40, #9602c7) 180deg,
+        transparent 180deg
+      );
+      -webkit-mask: radial-gradient(
+        farthest-side,
+        transparent calc(100% - 3px),
+        #000 calc(100% - 3px)
+      );
+      mask: radial-gradient(
+        farthest-side,
+        transparent calc(100% - 3px),
+        #000 calc(100% - 3px)
+      );
+    }
+  }
+
+  // Resting glyph while running is the spinner; the chevron reveals on
+  // hover/focus of the toggle (advertising that the CoT can collapse).
+  .rl-run__icon .rl-swap__glyph--spinner {
+    @include rl-glyph-shown;
+  }
+
+  .rl-run:not(.is-complete) .rl-run__toggle:hover .rl-run__icon .rl-swap__glyph--spinner,
+  .rl-run:not(.is-complete) .rl-run__toggle:focus-visible .rl-run__icon .rl-swap__glyph--spinner {
+    @include rl-glyph-hidden;
+  }
+
+  .rl-run:not(.is-complete) .rl-run__toggle:hover .rl-run__icon .rl-swap__glyph--chevron,
+  .rl-run:not(.is-complete) .rl-run__toggle:focus-visible .rl-run__icon .rl-swap__glyph--chevron {
+    @include rl-glyph-shown;
+  }
+
+  // On completion the spinner retires and the chevron is the resting
+  // glyph — the run is now a plain expand/collapse accordion.
+  .rl-run.is-complete .rl-run__icon .rl-swap__glyph--spinner {
+    @include rl-glyph-hidden;
+    animation: none;
+  }
+
+  .rl-run.is-complete .rl-run__icon .rl-swap__glyph--chevron {
+    @include rl-glyph-shown;
+  }
+
+  // Chevron points down when the accordion body is open.
+  .rl-run:not(.is-collapsed) .rl-run__icon .rl-swap__glyph--chevron {
+    transform: rotate(90deg);
+  }
+
+  // Paused: freeze the spinner in place as a visual cue.
+  .rl-run.is-paused .rl-run__icon .rl-swap__glyph--spinner {
+    animation-play-state: paused;
+  }
+
+  // Title slot: holds the live reasoning shimmer (while running) and the
+  // terminal summary label (once complete). Only one shows at a time.
+  .rl-run__title {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  // The reasoning indicator is the title while running. It owns the font
+  // (the .sh-typing__label shimmer only sets the paint), matching the
+  // weight/size the summary label uses so the swap doesn't jump.
+  .rl-run__reasoning {
+    font-weight: 400;
+    font-size: var(--slds-g-font-scale-1, 0.875rem);
+  }
+
+  .rl-run__label {
+    font-weight: 400;
+    font-size: var(--slds-g-font-scale-1, 0.875rem);
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+    display: none; // hidden until the run completes
+  }
+
+  // On completion the reasoning shimmer retires and the summary shows.
+  .rl-run.is-complete .rl-run__reasoning {
+    display: none;
+  }
+
+  .rl-run.is-complete .rl-run__label {
+    display: inline;
+  }
+
+  // Lab-only playback controls sit above the run card, not in it.
+  .rl-lab-controls {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .rl-run__meta {
+    flex: 0 0 auto;
+  }
+
+  // SLDS sets `.slds-button { display: inline-flex }`, an author rule that
+  // overrides the UA `[hidden]` stylesheet — so `hidden` alone won't hide
+  // these toggled controls (Pause shows only during the run, Restart only
+  // after). Restate the hide at class+attribute specificity so the JS
+  // `.hidden` flags actually take effect.
+  .rl-run__pause[hidden],
+  .rl-run__restart[hidden] {
+    display: none;
+  }
+
+  // Live elapsed-time counter. Tabular figures so the width doesn't
+  // jitter as the digits tick over.
+  .rl-elapsed {
+    font-variant-numeric: tabular-nums;
+    font-size: var(--slds-g-font-scale-neg-1, .75rem); // 12px
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  }
+
+  // Hover affordance only once it's an expandable accordion.
+  .rl-run.is-complete .rl-run__toggle:hover .rl-run__label {
+    text-decoration: underline;
+  }
+
+  .rl-run.is-complete {
+    
+  }
+
+  // Phase sections live here; a divider separates them from the header.
+  .rl-run__body {
+ 
+  
+  }
+
+  .rl-run.is-collapsed .rl-run__body {
+    display: none;
+  }
+
+  // ── Phase sections ──────────────────────────────────────────────
+  // All three are always on screen. Active shows the live CoT body;
+  // done collapses to its summary count; pending sits dimmed.
+  .rl-phase {
+    padding: 0.75rem 0;
+
+    &:first-child {
+      padding-top: 1rem;
+    }
+
+    &:last-child {
+      padding-bottom: 0;
+    }
+  }
+
+  // The phase header is a toggle button. Inert (default cursor) while the
+  // phase is pending/active; becomes a pointer once it's done and its body
+  // can be expanded.
+  .rl-phase__toggle {
+    width: 100%;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: default;
+  }
+
+  .rl-phase.is-done .rl-phase__toggle {
+    cursor: pointer;
+  }
+
+  // Phase icon is a swap slot: a 20px check-circle at rest, crossfading
+  // to a chevron on hover once the phase is done. The circle matches
+  // the run-header spinner slot; the check is 10px, centered.
+  .rl-phase__icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex: 0 0 1.25rem;
+    color: var(--slds-s-icon-color-foreground);
+  }
+
+  .rl-phase__icon .rl-swap__glyph--chevron {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .rl-phase__check {
+    @include rl-glyph-shown;
+    box-sizing: border-box;
+    display: inline-grid;
+    place-items: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 50%;
+    // Pending: grey ring, grey check.
+    border: 2px solid var(--slds-g-color-palette-neutral-90);
+    color: var(--slds-g-color-neutral-base-50, #747474);
+    background-color: transparent;
+    transition:
+      opacity var(--icon-swap-dur, 250ms) var(--icon-swap-ease, ease-in-out),
+      filter var(--icon-swap-dur, 250ms) var(--icon-swap-ease, ease-in-out),
+      transform var(--icon-swap-dur, 250ms) var(--icon-swap-ease, ease-in-out),
+      color var(--icon-swap-dur, 250ms) var(--icon-swap-ease, ease-in-out),
+      background-color var(--icon-swap-dur, 250ms) var(--icon-swap-ease, ease-in-out),
+      border-color var(--icon-swap-dur, 250ms) var(--icon-swap-ease, ease-in-out);
+  }
+
+  .rl-phase__check-mark {
+    width: 10px;
+    height: 10px;
+    display: block;
+  }
+
+  // In progress: electric-blue-50 ring + check.
+  .rl-phase.is-active .rl-phase__check {
+    border-color: var(--slds-g-color-palette-electric-blue-50, #066afe);
+    color: var(--slds-g-color-palette-electric-blue-50, #066afe);
+  }
+
+  // Done: filled electric-blue-50 circle, white check, no ring.
+  .rl-phase.is-done .rl-phase__check {
+    border-color: transparent;
+    border-width: 0;
+    color: var(--slds-g-color-palette-neutral-100, #fff);
+    background-color: var(--slds-g-color-palette-electric-blue-50, #066afe);
+  }
+
+  // Done + hover/focus → swap the topic icon out for the chevron.
+  .rl-phase.is-done .rl-phase__toggle:hover .rl-phase__icon .rl-swap__glyph--topic,
+  .rl-phase.is-done .rl-phase__toggle:focus-visible .rl-phase__icon .rl-swap__glyph--topic {
+    @include rl-glyph-hidden;
+  }
+
+  .rl-phase.is-done .rl-phase__toggle:hover .rl-phase__icon .rl-swap__glyph--chevron,
+  .rl-phase.is-done .rl-phase__toggle:focus-visible .rl-phase__icon .rl-swap__glyph--chevron {
+    @include rl-glyph-shown;
+  }
+
+  // Chevron points down when the finished phase is expanded.
+  .rl-phase.is-expanded .rl-phase__icon .rl-swap__glyph--chevron {
+    transform: rotate(90deg);
+  }
+
+  .rl-phase__name {
+    font-size: var(--slds-g-font-scale-1, 0.875rem);
+    color: var(--slds-s-icon-color-foreground);
+    min-width: 0;
+  }
+
+  // Name wraps when an active beat's thought is longer than the
+  // resting phase title. Icon + text stay vertically centered.
+  .rl-phase__heading {
+    min-width: 0;
+    flex: 1 1 auto;
+    align-items: center;
+  }
+
+  // While a phase is live, its name slot carries the current thought
+  // (body weight, wrapping) instead of the short title. Icon + thought
+  // + tool rows share `--slds-s-icon-color-foreground` so the live
+  // step reads as one color.
+  .rl-phase.is-active {
+    --slds-c-icon-color-foreground: var(--slds-s-icon-color-foreground);
+
+    .rl-phase__name {
+      font-weight: 400;
+      line-height: 1.5;
+    }
+
+    .agent-reasoning__tool {
+      color: var(--slds-s-icon-color-foreground);
+
+      .slds-icon {
+        fill: var(--slds-s-icon-color-foreground);
+      }
+    }
+  }
+
+  // Thought line is shown in the phase name while active; hide the
+  // duplicate in the body. The node is still filled so an expanded
+  // finished phase can reveal the last thought with the tools.
+  .rl-phase.is-active [data-rl-thought] {
+    display: none;
+  }
+
+  // If the active phase hasn't produced a tool row yet, collapse the
+  // body so the thought-in-name isn't followed by an empty gap.
+  .rl-phase.is-active .rl-phase__body:not(:has(.rl-cot__tools > *)) {
+    display: none;
+  }
+
+  // Body (the CoT) shows only for the active phase.
+  .rl-phase__body {
+    margin-top: 0.75rem;
+    padding-left: 2rem;
+  }
+
+  .rl-phase.is-pending {
+    opacity: 0.45;
+
+    .rl-phase__body {
+      display: none;
+    }
+  }
+
+  .rl-phase.is-done {
+    // Collapsed to its summary count by default; the header toggles the
+    // body open to reveal the finished phase's details.
+    .rl-phase__body {
+      display: none;
+    }
+  }
+
+  .rl-phase.is-done.is-expanded .rl-phase__body {
+    display: block;
+  }
+
+  // ── Chain-of-thought body (reasoning stream) ────────────────────
+  // Layout only — icons, muted text, truncation all come from SLDS
+  // utility classes. The `.agent-reasoning__*` wrapper rules are ported
+  // from feed_components.html, which keeps them page-local there.
+  .rl-cot {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .rl-cot__tools {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .agent-reasoning__text {
+    margin: 0;
+
+    p {
+      margin: 0;
+      font-size: 0.875rem;
+      line-height: 1.5;
+    }
+  }
+
+  .agent-reasoning__tool {
+    margin: 0;
+  }
+
+  // ── Finished result ─────────────────────────────────────────────
+  // conv-001's real messages, revealed at the end. The inner <ol> keeps
+  // the message <li>s valid; spacing mirrors the real thread.
+  .rl-result {
+    margin-top: 0.5rem;
+  }
+
+  // The result <li> is also a `.seller-home__conv-thread-item`, which
+  // sets `display: flex` — that overrides the UA `[hidden]` rule, so the
+  // `hidden` attribute alone won't hide it during the run. Restate the
+  // hide at higher specificity (class + attribute) so it stays hidden
+  // until running_lab.js clears `hidden` on completion.
+  .rl-result[hidden] {
+    display: none;
+  }
+
+  .rl-result__thread {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}

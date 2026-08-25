@@ -52,10 +52,19 @@
   <link rel="stylesheet" href="/styles/home.css" />
   <link rel="stylesheet" href="/styles/knowledge.css" />
   <link rel="stylesheet" href="/styles/skills.css" />
+  {# Tools modal visuals — the left-nav Connections item opens it here. #}
+  <link rel="stylesheet" href="/styles/tools.css" />
 {% endblock %}
 
 {% block content %}
   {% include "_skills_body_v2.html" %}
+
+  {# Tools "Connections" modal — opened by the left-nav Connections item
+     (data-sh-tools-open), same dialog the composer's "View all" uses. #}
+  {% include "_tools_modal.html" %}
+  <script type="application/json" id="sh-tools-config">
+    {{ { "tools": shared.toolsModal.tools } | tojson | safe }}
+  </script>
 {% endblock %}
 
 {% block scripts_extra %}
@@ -65,4 +74,10 @@
      long as its body keeps including the shared partials. #}
   <script src="/scripts/home.js"></script>
   <script src="/scripts/skills.js"></script>
+
+  {# Tools modal (left-nav Connections). GSAP loads before the controller,
+     which reads it off the global; tools_filter.js drives the category bar. #}
+  <script src="/scripts/tools_filter.js"></script>
+  <script src="/scripts/vendor/gsap.min.js"></script>
+  <script type="module" src="/scripts/tools_modal.js"></script>
 {% endblock %}
