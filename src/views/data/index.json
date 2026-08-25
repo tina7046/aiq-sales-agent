@@ -2917,68 +2917,6 @@
       "workflow": { "id": "wf-daily-pipeline-snapshot", "label": "Daily Pipeline Snapshot" },
       "status": "scheduled",
       "recentLabel": "Daily Pipeline Snapshot",
-      "workflowContext": {
-        "scheduledWorkflowId": "wf-daily-pipeline-snapshot",
-        "description": "Summarizes pipeline movement, emerging risks, and deals requiring attention.",
-        "filters": {
-          "status": "all",
-          "range":  "last_30_days"
-        },
-        "filterOptions": {
-          "status": [
-            { "value": "all",       "label": "All Statuses" },
-            { "value": "completed", "label": "Completed"    },
-            { "value": "failed",    "label": "Failed"       }
-          ],
-          "range": [
-            { "value": "today",        "label": "Today"        },
-            { "value": "last_7_days",  "label": "Last 7 days"  },
-            { "value": "last_30_days", "label": "Last 30 days" }
-          ]
-        },
-        "runs": [
-          {
-            "runId":     "run-2026-08-07-0804",
-            "status":    "completed",
-            "startedAt": "2026-08-07T08:04:00-07:00",
-            "label":     "August 7 at 8:04 AM",
-            "summary":   "68 opportunities reviewed \u00b7 7 risks found \u00b7 3 actions recommended",
-            "messageId": "msg-run-2026-08-07-0804"
-          },
-          {
-            "runId":     "run-2026-08-06-0804",
-            "status":    "completed",
-            "startedAt": "2026-08-06T08:04:00-07:00",
-            "label":     "August 6 at 8:04 AM",
-            "summary":   "71 opportunities reviewed \u00b7 5 risks found \u00b7 2 actions recommended",
-            "messageId": "msg-run-2026-08-06-0804"
-          },
-          {
-            "runId":     "run-2026-08-05-0804",
-            "status":    "completed",
-            "startedAt": "2026-08-05T08:04:00-07:00",
-            "label":     "August 5 at 8:04 AM",
-            "summary":   "66 opportunities reviewed \u00b7 4 risks found \u00b7 2 actions recommended",
-            "messageId": "msg-run-2026-08-05-0804"
-          },
-          // No `messageId`: the run failed before it produced output,
-          // so there is nothing in the thread to scroll to. The panel
-          // renders this tile with a Retry button instead of a link.
-          {
-            "runId":     "run-2026-08-03-0900",
-            "status":    "failed",
-            "startedAt": "2026-08-03T09:00:00-07:00",
-            "label":     "August 3 at 9:00 AM",
-            "summary":   "Salesforce access expired before the snapshot was created",
-            "messageId": null,
-            "errorAction": {
-              "id":    "act-retry-run-2026-08-03",
-              "label": "Retry",
-              "kind":  "retry"
-            }
-          }
-        ]
-      },
       // Feed order is chronological ascending — oldest run at the top,
       // newest at the bottom, the way a thread grows. The Activity
       // panel inverts that for its own list.

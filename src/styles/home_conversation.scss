@@ -145,7 +145,13 @@
   &::after {
     content: "";
     position: absolute;
-    inset-inline: 0;
+    // Start 10px in from the left, the same inset the composer uses
+    // (`.seller-home__conv-composer { left: 10px }`). The left nav casts
+    // a drop shadow that bleeds a few px into this column; at
+    // `inset-inline: 0` the white wash painted over that strip, clashing
+    // with the shadow. Clearing the first 10px lets the shadow run
+    // straight down past the header instead.
+    inset-inline: 10px 0;
     top: 100%;
     block-size: 1.5rem;
     background: linear-gradient(
