@@ -918,8 +918,21 @@
   // Parse a trusted, constant SVG string into a live SVG element without
   // touching innerHTML (all inputs here are hard-coded glyph markup).
   function makeSvg(str) {
-    var doc = new DOMParser().parseFromString(String(str || ''), 'image/svg+xml');
-    return document.importNode(doc.documentElement, true);
+    var s = String(str || '');
+    // `image/svg+xml` parsing only yields a renderable node when the root
+    // <svg> declares the SVG namespace. Several inline glyphs omit it, so
+    // inject it when missing (otherwise the parsed node renders as blank).
+    if (s.indexOf('xmlns=') === -1) {
+      s = s.replace(/^\s*<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+    var doc = new DOMParser().parseFromString(s, 'image/svg+xml');
+    var el = doc && doc.documentElement;
+    // Guard against a parser-error document (renders as blank text).
+    if (!el || el.nodeName === 'parsererror' ||
+        (el.getElementsByTagName && el.getElementsByTagName('parsererror').length)) {
+      return document.createTextNode('');
+    }
+    return document.importNode(el, true);
   }
 
   // Stroke glyphs from the prompt-builder `ce-popover` / `ce-toolbar`.
@@ -1284,7 +1297,14 @@
       var glyph = document.createElement('span');
       glyph.className = 'seller-home__skill-block-menu-glyph';
       glyph.setAttribute('aria-hidden', 'true');
-      if (item.iconRef) {
+      if (item.iconSvg) {
+        // Inline glyph on a filled badge (e.g. the skill icon).
+        if (item.iconBadge) {
+          glyph.classList.add('seller-home__skill-mention-glyph_badge');
+          glyph.classList.add('seller-home__skill-mention-glyph_' + String(item.iconBadge));
+        }
+        glyph.appendChild(makeSvg(item.iconSvg));
+      } else if (item.iconRef) {
         var img = document.createElement('img');
         img.className = 'seller-home__skill-mention-icon';
         img.src = String(item.iconRef);

@@ -3211,11 +3211,9 @@
     display: inline-flex;
     align-items: center;
     gap: var(--slds-g-spacing-1, 0.25rem);
-    // SLDS pill padding: tight block, roomier inline, with a hair less
-    // start padding so the icon container optically balances the label.
-    padding-block: 1px;
-    padding-inline: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-2, 0.5rem);
-    padding-inline-start: var(--slds-g-spacing-1, 0.25rem);
+    // Figma Resource Chip padding: 2px block / 4px inline.
+    padding-block: 2px;
+    padding-inline: 4px;
     margin: 0;
     min-block-size: 1.5rem; // 24px — matches `.slds-pill` min-height
     box-sizing: border-box;
@@ -3225,8 +3223,8 @@
     // (`--slds-c-badge-radius-border: 999px`).
     border-radius: 999px;
     color: #2e2e2e;
-    font-size: var(--slds-g-font-scale-1, 0.8125rem); // 13px, SLDS pill label
-    line-height: 1.25;
+    font-size: 0.75rem; // 12px — Figma Resource Chip label
+    line-height: 1.0625rem; // 17px
     font-weight: var(--slds-g-font-weight-4, 400);
     text-decoration: none;
     user-select: all;
@@ -3262,15 +3260,12 @@
   }
 
   .seller-home__skill-canvas-doc .seller-home__skill-chip-icon {
-    width: 16px;
-    height: 16px;
-    // Cloudy Blue overrides the parent anchor's own accent-blue link
-    // colour. Setting `color` (not `fill`) lets the SVG's
-    // `fill="currentColor"` cascade continue to work — the icon
-    // renders in Cloudy Blue while the chip label keeps whatever
-    // colour the anchor uses for the link text itself.
-    color: #1b96ff;
-    fill: currentColor;
+    // Figma Resource Chip: a 14px circular indigo badge. The disc fill
+    // (#2f2cb7) and white glyph are baked into the inline SVG, so the
+    // chip only needs to size + clip it here.
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
     flex: 0 0 auto;
   }
 
@@ -4458,13 +4453,11 @@
 }
 
 .seller-home__skill-chip-icon {
-  width: 0.875rem;
+  // 14px circular indigo badge — disc fill + white glyph baked into the
+  // inline SVG (see the scoped `.seller-home__skill-canvas-doc` rule).
+  width: 0.875rem; // 14px
   height: 0.875rem;
-  // See the scoped `.seller-home__skill-canvas-doc` rule above for
-  // the rationale — Cloudy Blue tint on the icon that leaves the
-  // chip label colour alone.
-  color: #1b96ff;
-  fill: currentColor;
+  border-radius: 50%;
   flex: 0 0 auto;
 }
 
@@ -5076,6 +5069,26 @@
   inline-size: 1.25rem; // 20px
   block-size: 1.25rem;
   object-fit: contain;
+}
+
+// Skill mention item — circular indigo skill badge. The disc and white
+// glyph are baked into SKILL_MENTION_ICON_SVG, so the container only needs
+// to size the icon (no background / fill overrides).
+.seller-home__skill-block-menu-glyph.seller-home__skill-mention-glyph_badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1.5rem; // 24px
+  block-size: 1.5rem;
+  flex: 0 0 auto;
+  background: transparent;
+}
+
+.seller-home__skill-mention-glyph_badge svg {
+  display: block;
+  inline-size: 1.5rem; // 24px — the SVG carries the circle
+  block-size: 1.5rem;
+  border-radius: 50%;
 }
 
 // ============================================================

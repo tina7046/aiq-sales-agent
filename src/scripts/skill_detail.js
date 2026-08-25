@@ -66,29 +66,27 @@
     return;
   }
 
-  // ── Supporting-skill chip icon (inline SVG) ──────────────────────────
-  // Figma 9891:29260 "Resource Chip / Icon" — the design ships the
-  // glyph as two separate `<path>` runs:
+  // ── Skill badge icon (inline SVG) ────────────────────────────────────
+  // Per the Figma Resource Chip (node 11930:29439) the skill glyph sits
+  // on a circular indigo disc (SLDS `--slds-g-color-palette-indigo-30`,
+  // #2f2cb7) in white. The glyph itself is the two `<path>` runs Figma
+  // ships — a scroll body + a diamond sparkle — each wrapped in a
+  // `<g transform>` (so re-syncing from a future export is a raw-path
+  // drop-in, no coordinate arithmetic) and re-tinted white here.
   //
-  //   • Scroll body (14.7692 × 14.1538) positioned inside the 16-px
-  //     container at inset (3.85%, 5.77%) → translate(0.616 0.9232).
-  //   • Diamond sparkle (6.15296 × 6.153) positioned at
-  //     top: 23.08%, left: 36.54%, right: 25%, bottom: 38.46%
-  //     → translate(5.8464 3.6928).
-  //
-  // Both runs are wrapped in a `<g transform>` rather than manually
-  // baked into the `d` coordinates so re-syncing from a future
-  // Figma export just means dropping in the raw path string, no
-  // arithmetic. `fill="currentColor"` on the root cascades to both
-  // paths (the Figma export uses `#1B96FF` inline; we strip that so
-  // CSS can drive the tint from `.seller-home__skill-chip-icon`).
-  //
-  // Verbatim inline copy of `src/assets/images/skill-chip.svg` —
-  // keep the two in sync so any downstream consumer of the file (or
-  // an offline tooling script that reads it) sees the same geometry.
-  // Rendered via `insertAdjacentHTML('afterbegin', …)` inside each
-  // supporting-skill anchor by `enrichSupportingSkillLinks`.
-  var SKILL_CHIP_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" class="seller-home__skill-chip-icon" data-sh-skill-chip-icon viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false"><g transform="translate(0.616 0.9232)"><path fill-rule="evenodd" clip-rule="evenodd" d="M11.4591 0C12.434 0 13.2409 0.758083 13.3017 1.73107L13.8242 10.0922H13.8462C14.3702 10.0922 14.7692 10.5235 14.7692 11.0231V12.277C14.7692 13.2992 13.9569 14.1538 12.9231 14.1538H5.23077V14.153C5.21938 14.1532 5.20797 14.1538 5.19652 14.1538C4.19111 14.1538 3.39997 13.3304 3.38523 12.3402L2.92969 4.61538H0.923077C0.413277 4.61538 0 4.20212 0 3.69231V1.84615C0 0.826551 0.826551 0 1.84615 0H11.4591ZM7.0084 12.3119C7.0084 12.5253 6.97191 12.731 6.90535 12.9231H12.9231C13.2487 12.9231 13.5384 12.6482 13.5385 12.277V11.323H7.0084V12.3119ZM3.88643 1.23077C3.95646 1.42473 3.99597 1.63301 3.99911 1.84916L4.61418 12.2758L4.61538 12.2939V12.3119C4.61538 12.6638 4.88978 12.923 5.19652 12.9231C5.50326 12.9231 5.77763 12.6638 5.77763 12.3119V11.0231C5.77763 10.5235 6.17674 10.0923 6.70071 10.0922H12.591L12.0733 1.80769C12.053 1.4834 11.7841 1.23077 11.4591 1.23077H3.88643ZM1.84615 1.23077C1.50629 1.23077 1.23077 1.50629 1.23077 1.84615V3.38462H2.85726L2.77043 1.91316L2.76923 1.89513V1.8768C2.76917 1.50559 2.47945 1.23077 2.15385 1.23077H1.84615Z"/></g><g transform="translate(5.8464 3.6928)"><path d="M2.80839 0.135688C2.89334 -0.0416965 3.14762 -0.0461579 3.23867 0.128181L3.8826 1.36166C4.07491 1.73298 4.3835 2.03049 4.76153 2.2096L6.01722 2.80997C6.19473 2.89483 6.1991 3.14889 6.02473 3.23993L4.79067 3.88387C4.41913 4.07609 4.12131 4.38437 3.94211 4.76218L3.34143 6.01729C3.25651 6.1947 3.00223 6.19917 2.91116 6.0248L2.26691 4.79132C2.07463 4.42006 1.7663 4.12249 1.38833 3.94338L0.135619 3.3427C-0.0416732 3.25778 -0.046135 3.00409 0.128111 2.91304L1.36217 2.2691C1.73371 2.07689 2.03147 1.76535 2.21073 1.3908L2.80839 0.135688Z"/></g></svg>';
+  // Kept as valid XML (every attribute valued, xmlns declared) so it
+  // survives the editor's `image/svg+xml` DOMParser path — this exact
+  // string feeds the @-mention menu.
+  var SKILL_MENTION_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="12" fill="#2f2cb7"/><g fill="#ffffff" transform="translate(5.2 5.2) scale(0.85)"><g transform="translate(0.616 0.9232)"><path fill-rule="evenodd" clip-rule="evenodd" d="M11.4591 0C12.434 0 13.2409 0.758083 13.3017 1.73107L13.8242 10.0922H13.8462C14.3702 10.0922 14.7692 10.5235 14.7692 11.0231V12.277C14.7692 13.2992 13.9569 14.1538 12.9231 14.1538H5.23077V14.153C5.21938 14.1532 5.20797 14.1538 5.19652 14.1538C4.19111 14.1538 3.39997 13.3304 3.38523 12.3402L2.92969 4.61538H0.923077C0.413277 4.61538 0 4.20212 0 3.69231V1.84615C0 0.826551 0.826551 0 1.84615 0H11.4591ZM7.0084 12.3119C7.0084 12.5253 6.97191 12.731 6.90535 12.9231H12.9231C13.2487 12.9231 13.5384 12.6482 13.5385 12.277V11.323H7.0084V12.3119ZM3.88643 1.23077C3.95646 1.42473 3.99597 1.63301 3.99911 1.84916L4.61418 12.2758L4.61538 12.2939V12.3119C4.61538 12.6638 4.88978 12.923 5.19652 12.9231C5.50326 12.9231 5.77763 12.6638 5.77763 12.3119V11.0231C5.77763 10.5235 6.17674 10.0923 6.70071 10.0922H12.591L12.0733 1.80769C12.053 1.4834 11.7841 1.23077 11.4591 1.23077H3.88643ZM1.84615 1.23077C1.50629 1.23077 1.23077 1.50629 1.23077 1.84615V3.38462H2.85726L2.77043 1.91316L2.76923 1.89513V1.8768C2.76917 1.50559 2.47945 1.23077 2.15385 1.23077H1.84615Z"/></g><g transform="translate(5.8464 3.6928)"><path d="M2.80839 0.135688C2.89334 -0.0416965 3.14762 -0.0461579 3.23867 0.128181L3.8826 1.36166C4.07491 1.73298 4.3835 2.03049 4.76153 2.2096L6.01722 2.80997C6.19473 2.89483 6.1991 3.14889 6.02473 3.23993L4.79067 3.88387C4.41913 4.07609 4.12131 4.38437 3.94211 4.76218L3.34143 6.01729C3.25651 6.1947 3.00223 6.19917 2.91116 6.0248L2.26691 4.79132C2.07463 4.42006 1.7663 4.12249 1.38833 3.94338L0.135619 3.3427C-0.0416732 3.25778 -0.046135 3.00409 0.128111 2.91304L1.36217 2.2691C1.73371 2.07689 2.03147 1.76535 2.21073 1.3908L2.80839 0.135688Z"/></g></g></svg>';
+
+  // Inline-chip variant of the same badge. The @-mention icon is parsed
+  // as strict XML, so it can't carry the valueless hooks the chip needs;
+  // here we inject the class (for CSS sizing) + the `data-*` marker (the
+  // chip enrich pass uses it as a duplicate-render guard) into a copy.
+  var SKILL_CHIP_BADGE_SVG = SKILL_MENTION_ICON_SVG.replace(
+    '<svg xmlns="http://www.w3.org/2000/svg"',
+    '<svg xmlns="http://www.w3.org/2000/svg" class="seller-home__skill-chip-icon" data-sh-skill-chip-icon=""'
+  );
 
   // ── Storage keys / knobs ─────────────────────────────────────────────
   // Draft envelope key stays LOCAL to this controller. Committed
@@ -1287,7 +1285,7 @@
           // "missing" path all continue to apply.
           a.insertAdjacentHTML(
             'afterbegin',
-            SKILL_CHIP_ICON_SVG
+            SKILL_CHIP_BADGE_SVG
           );
         }
       } else {
@@ -1334,7 +1332,10 @@
       seen[s.id] = true;
       skillItems.push({
         label: s.name || s.id,
-        href:  '/skill_detail.html?id=' + encodeURIComponent(s.id)
+        href:  '/skill_detail.html?id=' + encodeURIComponent(s.id),
+        // Self-contained circular indigo skill badge (white glyph baked in).
+        iconSvg: SKILL_MENTION_ICON_SVG,
+        iconBadge: 'skill'
       });
     }
     if (skillItems.length) groups.push({ label: 'Skills', items: skillItems });
