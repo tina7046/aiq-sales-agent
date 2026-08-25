@@ -148,17 +148,24 @@
   `bindFeed` switches slots by key and never composes wording, which is
   what keeps all the copy in index.json.
 #}
+{#
+  Every slot value is coalesced to "" before `trim`, because a state a
+  given page doesn't define (e.g. Seller Home has no `statusLabels.archived`
+  — that's lab-only) would otherwise arrive here undefined, and `trim`
+  calls `.replace` on it, which throws and drops the whole page from the
+  build. An empty slot is harmless: that state never renders on that page.
+#}
 {% macro sublineSlot(name, klass, rest, paused, running, completed, scheduled, archived) %}
 <span
   class="{{ klass }}"
   data-sh-feed-slot="{{ name }}"
-  data-sh-feed-slot-default="{{ rest | trim }}"
-  data-sh-feed-slot-paused="{{ paused | trim }}"
-  data-sh-feed-slot-running="{{ running | trim }}"
-  data-sh-feed-slot-completed="{{ completed | trim }}"
-  data-sh-feed-slot-scheduled="{{ scheduled | trim }}"
-  data-sh-feed-slot-archived="{{ archived | trim }}"
->{{ rest | trim }}</span>
+  data-sh-feed-slot-default="{{ (rest or "") | trim }}"
+  data-sh-feed-slot-paused="{{ (paused or "") | trim }}"
+  data-sh-feed-slot-running="{{ (running or "") | trim }}"
+  data-sh-feed-slot-completed="{{ (completed or "") | trim }}"
+  data-sh-feed-slot-scheduled="{{ (scheduled or "") | trim }}"
+  data-sh-feed-slot-archived="{{ (archived or "") | trim }}"
+>{{ (rest or "") | trim }}</span>
 {% endmacro %}
 
 
