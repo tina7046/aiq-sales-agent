@@ -142,6 +142,18 @@
   text-decoration: none;
   transition: background-color 120ms ease, box-shadow 120ms ease;
 
+  // Base-stylesheet `a:hover, a:focus { text-decoration: underline }`
+  // (dist/styles/index.css) beats the resting `text-decoration: none`
+  // above on state due to the pseudo-class specificity bump, so pin
+  // it explicitly on both states. `text-decoration` set on this anchor
+  // is propagated to its descendant text, so a child-scoped reset can't
+  // undo the underline — it has to be killed here on the anchor itself.
+  &:hover,
+  &:focus,
+  &:focus-visible {
+    text-decoration: none;
+  }
+
   // NOTE: the hover / focus-within / menu-open WASH is intentionally
   // NOT an anchor-scoped `&:hover` here. It is driven by the parent
   // <li> (`.seller-home__skill-item`) — see the
@@ -933,7 +945,7 @@
   .seller-home__skill-row:focus-visible &,
   .seller-home__skill-card:hover &,
   .seller-home__skill-card:focus-visible & {
-    text-decoration: underline;
+    text-decoration: none;
   }
 
   // Keyboard focus ring. SLDS 2 focus-outline token when available;
