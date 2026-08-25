@@ -10,9 +10,9 @@
 
   STATUS: the page frame still matches Version A (same header band,
   banner, toolbar, and body scroll); the SKILL CARD is where B has
-  diverged — Figma 11194:24307 restacks the row into name / agent •
-  referred-skills / description, with no author or last-edit line. That
-  card lives in the shared `_skill_list.html` behind the
+  diverged — Figma 11194:24307 restacks the row into name / agent /
+  description, with no author or last-edit line. That card lives in
+  the shared `_skill_list.html` behind the
   `skillListVariant` flag set below, not in a second copy of the row
   markup.
 
@@ -26,9 +26,9 @@
        `_skills_toolbar.html` / `_skill_list.html` /
        `_skills_dialogs.html`. They are the contract skills.js binds
        to: tab switching, keyboard nav, row filtering, empty states,
-       hash sync, overflow menus, connected-skills popovers, and the
-       action dialogs all stop working the moment a hook is renamed or
-       a partial is replaced with hand-written markup.
+       hash sync, overflow menus, and the action dialogs all stop
+       working the moment a hook is renamed or a partial is replaced
+       with hand-written markup.
     4. If B needs different CONTENT (not layout), add it to skills.json
        and read it in both versions — never inline copy here, or the
        versions start telling different stories.
@@ -50,7 +50,7 @@
 {% set emptyState   = skillsData.emptyState %}
 
 {# Version B's card shape (Figma 11194:24307): the skill name over a
-   muted "agent • referred-skills" attribute line over the description,
+   muted "agent" attribute line over the description,
    with a "Use Skill" + kebab action cluster at the right.
    `_skill_list.html` reads this flag to pick the body layout and the
    trailing treatment — the row's anchor, menu markup, popovers, and

@@ -18,8 +18,8 @@
                     — which landing VERSION is asking for the row:
                        unset / "v1" → Version A's two-line row,
                        "v2" → Version B's three-line card (name over an
-                       agent • referred-skills attribute line, over the
-                       description) with a right-side action cluster.
+                       agent attribute line, over the description) with
+                       a right-side action cluster.
                        Added 2026-08-17; see the `renderSkillRow`
                        docblock for both shapes.
     • useAction     — copy + action id for Version B's "Use Skill"
@@ -27,8 +27,7 @@
 
   ── What changed from the card partial ────────────────────────────
   • The row is horizontally laid out: [title/description block]
-    [right-anchored meta: "Uses N other skills" chip + overflow ⋮
-    + trailing chevron].
+    [overflow ⋮ + trailing chevron].
   • The leading "+" indicator glyph and the connector-tool chip
     footer are NOT rendered. The underlying data
     (`skill.connectedTools`, `toolLibrary`) is kept in JSON so a
@@ -40,8 +39,8 @@
   ── What did NOT change (contract-preserving surgery) ─────────────
   Every `data-sh-skill-*` attribute the JS controllers read is
   preserved verbatim, so `bindSkills`, `skillOverflowController`,
-  `skillUsesPopoverController`, and `skillActionRouter` (all in
-  `home.js`) continue to work with no code changes:
+  and `skillActionRouter` (all in `home.js`) continue to work with
+  no code changes:
 
     • `data-sh-skill-grid`        — delegation root on the outer <ul>.
     • `data-sh-skill-item`        — each row (also the positioning
@@ -53,13 +52,11 @@
     • `data-sh-skill-open`        — anchor that fires `sh:skill-open`.
     • `data-sh-skill-menu` / -menu-trigger / -menu-list / -action /
       -stop                        — overflow menu contract.
-    • `data-sh-skill-uses` / -uses-popover
-                                    — "Referred N other skills" popover.
 
   ── Row structure — one shape for every row ───────────────────────
 
     ┌──────────────────────────────────────────────────────────────┐
-    │ Name  (Sales)                       Referred 3 other …   ⋮  › │
+    │ Name  (Sales)                                        ⋮  › │
     │ Description that clamps to one line with an ellipsis.        │
     └──────────────────────────────────────────────────────────────┘
 
@@ -118,78 +115,6 @@
     {% if agent %}
       <span class="slds-badge seller-home__skill-agent-badge seller-home__skill-agent-badge--{{ skill.agent }}">{{ agent.label }}</span>
     {% endif %}
-  </span>
-{% endmacro %}
-
-
-{#
-  "Referred N other skills" disclosure — trigger + popover.
-  ---------------------------------------------------------------------
-  Its own macro because the two landing versions put this affordance in
-  different PLACES and it must stay one implementation: Version A keeps
-  it in the row's right-anchored cluster, Version B moves it into the
-  attribute line under the skill name (Figma 11194:24307). The trigger,
-  its `data-sh-skill-uses` hook, the `aria-describedby` → popover
-  pairing, and the popover's contents are identical in both.
-
-  `nubbin` selects which SLDS nubbin variant the popover carries, since
-  that has to match where the trigger sits: `top-right` for the
-  right-anchored placement (popover hangs down-and-left), `top-left`
-  for the attribute line (popover hangs down-and-right, because a
-  left-biased trigger has no room to its left). See the
-  `.seller-home__skill-uses-popover` rules in skills.scss — the
-  matching `left` / `right` offset is scoped per version there.
-
-  Wrapper is `position: relative` so the popover can absolute-position
-  off the trigger without needing an offset library.
-
-  Trigger is a `<span>` — the whole row is already inside an `<a>`, and
-  HTML forbids interactive descendants of an anchor. We deliberately
-  make it keyboard-focusable (`tabindex="0"`) so the popover can also
-  open on Tab, per spec ("Open on hover and keyboard focus"). The
-  nested tabindex is a minor spec caveat (validators flag it, browsers
-  render it), but the alternative — restructuring the row so the
-  trigger sits as a sibling of the anchor — would be a
-  disproportionate refactor for a prototype affordance. The WAI-ARIA
-  "tooltip" pattern (trigger + `aria-describedby` → element with
-  `role="tooltip"`) still resolves correctly.
-
-  `hidden` on the popover is authoritative — the JS controller toggles
-  it via `element.hidden = …`, and resolves WHICH popover through the
-  trigger's `aria-describedby`, so this pair can move anywhere in the
-  row without touching skills.js. Nothing inside is focusable, so no
-  focus trap is needed; hover / focus of the trigger drives open and
-  close entirely.
-#}
-{% macro renderSkillUses(skill, count, popoverId, nubbin) %}
-  <span class="seller-home__skill-uses-wrap">
-    <span
-      class="seller-home__skill-uses-link"
-      data-sh-skill-uses
-      tabindex="0"
-      aria-describedby="{{ popoverId }}"
-    >Referred {{ count }} other skill{% if count != 1 %}s{% endif %}</span>
-
-    {# SLDS 2 popover shell (`.slds-popover` + `.slds-popover__body`)
-       so we inherit the component's border, radius, elevation, and
-       inner padding directly from SLDS design tokens. `role="tooltip"`
-       matches the information-only nature of the disclosure. #}
-    <div
-      class="slds-popover slds-nubbin_{{ nubbin or 'top-right' }} seller-home__skill-uses-popover"
-      role="tooltip"
-      id="{{ popoverId }}"
-      data-sh-skill-uses-popover
-      hidden
-    >
-      <div class="slds-popover__body seller-home__skill-uses-popover-body">
-        <p class="seller-home__skill-uses-popover-title">This skill uses</p>
-        <ul class="seller-home__skill-uses-popover-list">
-          {% for sub in skill.connectedSkills %}
-            <li class="seller-home__skill-uses-popover-item">{{ sub.name }}</li>
-          {% endfor %}
-        </ul>
-      </div>
-    </div>
   </span>
 {% endmacro %}
 
@@ -313,7 +238,7 @@
   Version A (default — `variant` unset or "v1"):
 
     ┌──────────────────────────────────────────────────────────────┐
-    │ Name  (Sales)                       Referred 3 other …   ⋮  › │
+    │ Name  (Sales)                                        ⋮  › │
     │ Description that clamps to one line with an ellipsis.        │
     └──────────────────────────────────────────────────────────────┘
 
@@ -321,15 +246,14 @@
 
     ┌──────────────────────────────────────────────────────────────┐
     │ Name                                                          │
-    │ Sales • Referred 3 other skills          [Use Skill]  (⋮)     │
+    │ Sales                                    [Use Skill]  (⋮)     │
     │ Description that clamps to one line with an ellipsis.        │
     └──────────────────────────────────────────────────────────────┘
 
   Version B carries the SAME facts as Version A, restacked: the agent
-  drops out of the badge beside the name and the connected-skills
-  disclosure drops out of the right-anchored cluster, and both land on
-  one muted attribute line under the name. Author and last-edit are not
-  shown at all (they remain on /skill_detail.html).
+  drops out of the badge beside the name and lands on a muted attribute
+  line under the name. Author and last-edit are not shown at all (they
+  remain on /skill_detail.html).
 
   Version B's right side is an ACTION CLUSTER instead of hover
   affordances: "Use Skill" plus a bordered kebab, both always visible,
@@ -337,9 +261,8 @@
   the bare hover kebab are Version A's shape only.
 
   `variant` selects the body stack AND which trailing treatment ships;
-  the anchor, the overflow menu MARKUP, the connected-skills popover
-  markup (one macro each, two placements), and every `data-sh-*` hook
-  are single-sourced below, so the two landing versions cannot drift on
+  the anchor, the overflow menu MARKUP, and every `data-sh-*` hook are
+  single-sourced below, so the two landing versions cannot drift on
   behavior. `variant` and `useAction` are both optional; omitting them
   is exactly what Version A does.
 #}
@@ -371,22 +294,10 @@
      is enough to open /skill_detail.html on row activation. #}
   {% set skillHref = skill.href or ("/skill_detail.html?id=" ~ skill.id) or "#" %}
 
-  {# Connected-skills count, derived up front because the two versions
-     render the disclosure in different places (right-anchored cluster
-     in Version A, attribute line in Version B) and both branches below
-     need the gate. The count comes from `.length` — never hard-coded —
-     and the singular / plural label flips automatically at N == 1. #}
-  {% set connectedSkillCount = (skill.connectedSkills or []) | length %}
-  {% set hasConnectedMeta    = connectedSkillCount > 0 %}
-  {% set usesPopoverId       = "skill-" ~ skill.id ~ "-uses-popover" %}
-
   {# Accessible name for the linked row, assembled up front because
      an anchor's aria-label REPLACES its inner text for assistive
      tech: anything the row shows visually has to be restated here or
-     it goes unannounced. The connected-skills trigger is the one
-     exception — it is separately focusable and describes itself
-     through `aria-describedby`, so restating it here would announce
-     it twice. #}
+     it goes unannounced. #}
   {% set rowLabel = "Open skill, " ~ skill.name %}
   {% if agent %}
     {% set rowLabel = rowLabel ~ ", " ~ agent.label %}
@@ -424,11 +335,10 @@
   >
     {% if isLinked %}
       {# Linked branch — the row body is a native <a>. It contains
-         the title / description block, the "Uses N other skills"
-         wrap, and the trailing chevron, so clicking anywhere on
-         the row activates the anchor. bindSkills() intercepts
-         `href="#"` clicks and dispatches `sh:skill-open` so no
-         scroll-to-top happens.
+         the title / description block and the trailing chevron, so
+         clicking anywhere on the row activates the anchor.
+         bindSkills() intercepts `href="#"` clicks and dispatches
+         `sh:skill-open` so no scroll-to-top happens.
 
          The aria-label reads "Open skill, {name}" plus the agent
          badge when one is authored — an anchor's aria-label
@@ -477,10 +387,9 @@
            concept. #}
         {% if isV2 %}
           {# ── Version B heading: name over an attribute line ─────
-             Figma 11194:24307. The name owns its line, and the facts
-             that Version A spreads across a badge beside the name and
-             a chip on the far right collapse into one 10-px muted line
-             directly beneath it: agent • referred-skills.
+             Figma 11194:24307. The name owns its line, and the agent
+             that Version A shows as a badge beside the name collapses
+             into one 10-px muted line directly beneath it.
 
              The heading wrapper exists to hold the name and the
              attribute line as one unit with NO gap between them
@@ -500,7 +409,7 @@
           <span class="seller-home__skill-heading">
             <span class="seller-home__skill-title">{{ skill.name }}</span>
 
-            {% if agent or skill.sharedBy or hasConnectedMeta %}
+            {% if agent or skill.sharedBy %}
               <span class="seller-home__skill-source">
                 {% if agent %}
                   <span class="seller-home__skill-source-label">{{ agent.label }}</span>
@@ -518,14 +427,6 @@
                 {% if skill.sharedBy %}
                   <span class="seller-home__skill-source-label">Shared by {{ skill.sharedBy }}</span>
                 {% endif %}
-
-                {% if (agent or skill.sharedBy) and hasConnectedMeta %}
-                  <span class="seller-home__skill-source-separator" aria-hidden="true">•</span>
-                {% endif %}
-
-                {% if hasConnectedMeta %}
-                  {{ renderSkillUses(skill, connectedSkillCount, usesPopoverId, "top-left") }}
-                {% endif %}
               </span>
             {% endif %}
           </span>
@@ -533,6 +434,29 @@
           {# Version A: the title row is the first line of the stack,
              with no tile and no stamp. #}
           {{ renderSkillTitleRow(skill, agent) }}
+
+          {# Version A rest-state meta line — "Owned by <person> ·
+             Last modified <date>". It occupies the slot the
+             description sits in; the row's hover / focus-within /
+             open-menu state swaps it for the description (see the
+             swap rules in skills.scss). Owner resolves to "You" for
+             the current user's own skills, else the sharer / author.
+             Each half is independently gated so a missing field can
+             never leave a dangling separator. #}
+          {% set ownerName = "You" if skill.ownership == "mine" else (skill.sharedBy or skill.createdBy) %}
+          {% if ownerName or skill.updatedAt %}
+            <p class="seller-home__skill-ownership">
+              {% if ownerName %}
+                <span>Owned by {{ ownerName }}</span>
+              {% endif %}
+              {% if ownerName and skill.updatedAt %}
+                <span class="seller-home__skill-ownership-sep" aria-hidden="true">·</span>
+              {% endif %}
+              {% if skill.updatedAt %}
+                <span>Last modified {{ skill.updatedAt }}</span>
+              {% endif %}
+            </p>
+          {% endif %}
         {% endif %}
 
         {# Description — authored once for both variants (they differ
@@ -548,15 +472,6 @@
         >{{ skill.description }}</p>
 
       </div>
-
-      {# ── Right-anchored meta cluster (Version A only) ────────
-         The "Referred N other skills" disclosure. Version B renders
-         the same macro inside its attribute line under the skill
-         name instead, so this slot is empty there and the chevron
-         becomes the row's only trailing element. #}
-      {% if hasConnectedMeta and not isV2 %}
-        {{ renderSkillUses(skill, connectedSkillCount, usesPopoverId, "top-right") }}
-      {% endif %}
 
       {# Trailing chevron — HIDDEN by default; revealed via CSS on
          hover / focus-within / is-menu-open of the <li> wrapper.
