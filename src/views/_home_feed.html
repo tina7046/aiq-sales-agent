@@ -85,9 +85,13 @@
   Only the accessible name is left for JS to keep in sync, since CSS
   can't write one.
 #}
-{% macro statusButton(item) %}
+{% macro statusButton(item, filtered) %}
 {% if item.state == "failed" %}{% set verb = "Retry " %}
 {% elif item.state == "paused" %}{% set verb = "Resume " %}
+{% elif filtered and item.state == "running" %}{% set verb = "Stop " %}
+{% elif filtered and item.state == "completed" %}{% set verb = "Run " %}
+{% elif filtered and item.state == "scheduled" %}{% set verb = "Run " %}
+{% elif filtered and item.state == "archived" %}{% set verb = "Restart " %}
 {% else %}{% set verb = "Pause " %}{% endif %}
 {% set label = verb ~ item.title %}
 <button
@@ -102,7 +106,7 @@
     class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--spinner sh-spinner"
     aria-hidden="true"
   ></span>
-  {% for glyph in ["circle", "clock", "pause", "play", "warning", "refresh", "ban"] %}
+  {% for glyph in ["circle", "clock", "pause", "play", "warning", "refresh", "stop", "ban"] %}
   <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--{{ glyph }}" aria-hidden="true">
     <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ glyph }}"></use>
   </svg>
@@ -150,10 +154,10 @@
 #}
 {#
   Every slot value is coalesced to "" before `trim`, because a state a
-  given page doesn't define (e.g. Seller Home has no `statusLabels.archived`
-  — that's lab-only) would otherwise arrive here undefined, and `trim`
-  calls `.replace` on it, which throws and drops the whole page from the
-  build. An empty slot is harmless: that state never renders on that page.
+  given page doesn't define would otherwise arrive here undefined, and
+  `trim` calls `.replace` on it, which throws and drops the whole page
+  from the build. An empty slot is harmless: that state never renders on
+  that page.
 #}
 {% macro sublineSlot(name, klass, rest, paused, running, completed, scheduled, archived) %}
 <span
@@ -302,16 +306,16 @@
   `<a href="#">`, which announced a link, sat in the tab order as a
   link, and then had its navigation cancelled in JS.
 #}
-{% macro feedItem(item, outputTypes, rowActions, statusLabels, retryTime) %}
+{% macro feedItem(item, outputTypes, rowActions, statusLabels, retryTime, filtered) %}
 {% set descId = "seller-home-feed-" ~ item.id ~ "-desc" %}
 {% set menuId = "seller-home-feed-" ~ item.id ~ "-menu" %}
 {% set isPaused = item.state == "paused" %}
 {% set hasWorkflow = item.workflow and item.workflow.label %}
 {% set linkName = item.title ~ (", workflow: " ~ item.workflow.label if hasWorkflow else "") %}
-{# Where a resumed / restored row returns to. A row that ships paused or
-   archived goes back into the schedule rather than back into that
-   set-aside state. (Under the filter, Resume overrides this to `running`
-   in home.js; this stays the fallback / Seller Home behaviour.) #}
+{# Where a resumed row returns to. A row that ships paused goes back into
+   the schedule rather than back into "paused". (Under the filter, Resume
+   overrides this to `running` in home.js; this stays the fallback /
+   Seller Home behaviour.) #}
 {% set homeState = "scheduled" if (isPaused or item.state == "archived") else item.state %}
 {# A third line under the subline — pills or an error badge — is what
    turns the compact 56px card into the padded variant. Keyed on either,
@@ -333,7 +337,7 @@
   {%- endif %}
 >
   <div class="seller-home__feed-item-main">
-    {{ statusButton(item) }}
+    {{ statusButton(item, filtered) }}
 
     <div class="seller-home__feed-item-body">
       {# `aria-label` is only set when there's a workflow to append —
@@ -470,13 +474,16 @@
         aria-haspopup="listbox"
         aria-expanded="false"
         aria-controls="seller-home-feed-filter-menu"
-        title="Filter"
-        aria-label="Filter"
+        title="Filter: {% for opt in feed.filter.options %}{% if opt.id == feed.filter.default %}{{ opt.label }}{% endif %}{% endfor %}"
+        aria-label="Filter: {% for opt in feed.filter.options %}{% if opt.id == feed.filter.default %}{{ opt.label }}{% endif %}{% endfor %}"
       >
         <svg class="slds-button__icon" aria-hidden="true">
           <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#filterList"></use>
         </svg>
-        <span class="slds-assistive-text">Filter</span>
+        {# The current view, shown beside the icon. aria-hidden because the
+           button's aria-label already carries it; home.js keeps both in
+           sync when the view changes. #}
+        <span class="seller-home__feed-filter-label" aria-hidden="true" data-sh-feed-filter-label>{% for opt in feed.filter.options %}{% if opt.id == feed.filter.default %}{{ opt.label }}{% endif %}{% endfor %}</span>
       </button>
 
       <div
@@ -586,7 +593,7 @@
       {% for item in feed.items %}
         {% if item.state == state %}
           <li class="seller-home__feed-list-item" data-sh-feed-list-item>
-            {{ feedItem(item, feed.outputTypes, feed.rowActions, feed.statusLabels, feed.retryTime) }}
+            {{ feedItem(item, feed.outputTypes, feed.rowActions, feed.statusLabels, feed.retryTime, feed.filter) }}
           </li>
         {% endif %}
       {% endfor %}

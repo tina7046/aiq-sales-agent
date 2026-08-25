@@ -63,8 +63,8 @@
     //   options   the three views, in menu order. `default` is the one
     //             the list opens on.
     //   sections  Active-view sub-groups: state -> heading. Active shows
-    //             completed (Ready), running (Running) and paused; the
-    //             other two views are single-state and get no sections.
+    //             completed (Ready) and running (Running); Scheduled and
+    //             Archived are single-state and get no sections.
     "filter": {
       "default": "active",
       "options": [
@@ -74,13 +74,11 @@
       ],
       "sections": {
         "completed": "Ready",
-        "running":   "Running",
-        "paused":    "Paused"
+        "running":   "Running"
       },
       // A message per view for when it has no rows — the filter's
       // equivalent of `feed.empty`. home.scss shows the matching one when
-      // that view's states are all absent (e.g. every archived row has
-      // been restored, or you Run the last scheduled item).
+      // that view's states are all absent.
       "empty": {
         "active":    { "heading": "No active workflows",  "body": "Runs in progress and recent results show up here." },
         "scheduled": { "heading": "Nothing scheduled",     "body": "Upcoming runs will appear here." },
@@ -137,19 +135,21 @@
     // `onlyForState` / `hideForState` scope an action to the states it
     // makes sense in, and they're enforced in CSS off the row's
     // `data-sh-feed-state` rather than at render time — a row can change
-    // state while its menu already exists. Here that means the top item
-    // reads "Run now" on every row except a running one, which offers
-    // "Pause" in the same slot instead.
+    // state while its menu already exists. `onlyForState` takes a
+    // space-separated list, so an action can scope to several states —
+    // e.g. Run now and Archive show on completed and scheduled rows.
     //
-    // Both reuse transitions the row's status button already makes, so
-    // neither is a second way of doing something that already had one.
-    // Dismiss stays last: it's the destructive one.
+    // Per state the menu reads:
+    //   completed  Run now · Edit · Archive
+    //   running    Stop · Edit
+    //   scheduled  Run now · Edit · Archive
+    //   archived   Restart · Edit
     "rowActions": [
-      { "id": "run_now",  "label": "Run now",  "icon": "play",  "hideForState": "running" },
-      { "id": "pause",    "label": "Pause",    "icon": "pause", "onlyForState": "running" },
-      { "id": "complete", "label": "Complete", "icon": "check", "hideForState": "completed" },
-      { "id": "schedule", "label": "Schedule", "icon": "clock", "hideForState": "scheduled" },
-      { "id": "archive",  "label": "Archive",  "icon": "archive", "hideForState": "archived" }
+      { "id": "run_now", "label": "Run now", "icon": "play",    "onlyForState": "completed scheduled" },
+      { "id": "stop",    "label": "Stop",    "icon": "stop",    "onlyForState": "running" },
+      { "id": "restart", "label": "Restart", "icon": "refresh", "onlyForState": "archived" },
+      { "id": "edit",    "label": "Edit",    "icon": "edit" },
+      { "id": "archive", "label": "Archive", "icon": "archive", "onlyForState": "completed scheduled" }
     ],
     // Semantic-category → SLDS utility-sprite map (Figma node
     // 8797:228978). Row outputs pick an `icon` from this map's
@@ -250,6 +250,7 @@
       },
       {
         "id": "ri-02",
+        "conversationId": "conv-002",
         "title": "Drafted proposals to send",
         "titles": {
           "running": "Drafting proposals to send",
@@ -261,24 +262,6 @@
         "state": "completed",
         "outputs": [
           { "icon": "pdf", "label": "10 proposals" }
-        ],
-        "workflow": { "id": "", "label": "" }
-      },
-      {
-        // A one-time run with no recurring schedule (no `nextRun`).
-        // Clicking its status button archives it (there's nothing to
-        // schedule), where the other completed rows go to Scheduled.
-        "id": "ri-04",
-        "title": "Exported Q3 win/loss report",
-        "titles": {
-          "running": "Exporting Q3 win/loss report",
-          "neutral": "Export Q3 win/loss report"
-        },
-        "cadence": "One-time",
-        "lastRun": "Ran today",
-        "state": "completed",
-        "outputs": [
-          { "icon": "doc", "label": "Win/loss report" }
         ],
         "workflow": { "id": "", "label": "" }
       },
@@ -343,11 +326,9 @@
         ],
         "workflow": { "id": "", "label": "" }
       },
-      // ── Lab-only: seed the Paused section and the Archived view ──────
-      // The filter's Active view has a Paused section and there's an
-      // Archived view, so the list needs a row in each state to show
-      // them on load. Dismissing a row in the running app moves it into
-      // `archived` (home.js); these are the ones that ship pre-archived.
+      // Lab-only: a scheduled row so the Scheduled view has content on
+      // load. Nothing ships paused — the running-row action is Stop, which
+      // sends it back to Scheduled, not Paused.
       {
         "id": "pau-01",
         "title": "Re-engage stalled opportunities",
@@ -358,14 +339,17 @@
         "cadence": "Weekly",
         "nextRun": "Next run Tuesday at 8:00 AM",
         "lastRun": "Last run Tuesday",
-        "state": "paused",
+        "state": "scheduled",
         "outputs": [
           { "icon": "doc", "label": "Re-engagement plan" }
         ],
         "workflow": { "id": "", "label": "" }
       },
+      // Lab-only: two archived rows so the Archived view has content on
+      // load. Archive (kebab) on a completed/scheduled row moves it here;
+      // Restart sends an archived row back to Scheduled.
       {
-        "id": "dis-01",
+        "id": "arc-01",
         "title": "Summarized competitor news",
         "titles": {
           "running": "Summarizing competitor news",
@@ -381,7 +365,7 @@
         "workflow": { "id": "", "label": "" }
       },
       {
-        "id": "dis-02",
+        "id": "arc-02",
         "title": "Cleaned up duplicate leads",
         "titles": {
           "running": "Cleaning up duplicate leads",

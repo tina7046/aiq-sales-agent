@@ -3701,11 +3701,42 @@
       "paused": "Paused"
     },
 
+    // ── Filter (Active / Scheduled / Archived) ────────────────────────
+    // Defining `filter` turns the whole feature on: the section kebab
+    // becomes a Filter control (with the current view labelled beside its
+    // icon), the list gets `data-sh-feed-filter`, and home.js/home.scss
+    // switch on that attribute. Prototyped on agent_at_work.html first.
+    //
+    //   options   the three views, in menu order. `default` is the one
+    //             the list opens on.
+    //   sections  Active-view sub-groups: state -> heading. Active shows
+    //             completed (Ready) and running (Running); Scheduled and
+    //             Archived are single-state and get no sections.
+    //   empty     a message per view for when it has no rows.
+    "filter": {
+      "default": "active",
+      "options": [
+        { "id": "active",    "label": "Active"    },
+        { "id": "scheduled", "label": "Scheduled" },
+        { "id": "archived",  "label": "Archived"  }
+      ],
+      "sections": {
+        "completed": "Ready",
+        "running":   "Running"
+      },
+      "empty": {
+        "active":    { "heading": "No active workflows",  "body": "Runs in progress and recent results show up here." },
+        "scheduled": { "heading": "Nothing scheduled",     "body": "Upcoming runs will appear here." },
+        "archived":  { "heading": "No archived workflows", "body": "Anything you archive lands here." }
+      }
+    },
+
     "statusLabels": {
       "completed": "Completed",
       "running":   "Running now",
       "paused":    "Paused",
-      "failed":    "Failed"
+      "failed":    "Failed",
+      "archived":  "Archived"
     },
 
     // Shown in place of the list once every row has been dismissed, so
@@ -3731,7 +3762,7 @@
     // above everything: it's still a finished run, just one that didn't
     // work, so it belongs with the other outcomes instead of
     // interrupting them.
-    "stateOrder": ["completed", "failed", "running", "scheduled", "paused"],
+    "stateOrder": ["completed", "failed", "running", "scheduled", "paused", "archived"],
     "overflowActions": [
       { "id": "view_all",        "label": "View all" },
       { "id": "review_settings", "label": "Review settings" }
@@ -3746,22 +3777,23 @@
     // Additional actions (Snooze, Assign, etc.) drop in as new entries
     // here without any template or JS changes.
     //
-    // `onlyForState` / `hideForState` scope an action to the states it
-    // makes sense in, and they're enforced in CSS off the row's
-    // `data-sh-feed-state` rather than at render time — a row can change
-    // state while its menu already exists. Here that means the top item
-    // reads "Run now" on every row except a running one, which offers
-    // "Pause" in the same slot instead.
+    // `onlyForState` scopes an action to the states it makes sense in and
+    // is enforced in CSS off the row's `data-sh-feed-state`, not at render
+    // time — a row can change state while its menu already exists. It
+    // takes a space-separated list, so an action can scope to several
+    // states (Run now and Archive show on completed and scheduled rows).
     //
-    // Both reuse transitions the row's status button already makes, so
-    // neither is a second way of doing something that already had one.
-    // Dismiss stays last: it's the destructive one.
+    // Per state the menu reads:
+    //   completed  Run now · Edit · Archive
+    //   running    Stop · Edit
+    //   scheduled  Run now · Edit · Archive
+    //   archived   Restart · Edit
     "rowActions": [
-      { "id": "run_now",  "label": "Run now",  "icon": "play",  "hideForState": "running" },
-      { "id": "pause",    "label": "Pause",    "icon": "pause", "onlyForState": "running" },
-      { "id": "complete", "label": "Complete", "icon": "check", "hideForState": "completed" },
-      { "id": "schedule", "label": "Schedule", "icon": "clock", "hideForState": "scheduled" },
-      { "id": "dismiss",  "label": "Dismiss",  "icon": "close" }
+      { "id": "run_now", "label": "Run now", "icon": "play",    "onlyForState": "completed scheduled" },
+      { "id": "stop",    "label": "Stop",    "icon": "stop",    "onlyForState": "running" },
+      { "id": "restart", "label": "Restart", "icon": "refresh", "onlyForState": "archived" },
+      { "id": "edit",    "label": "Edit",    "icon": "edit" },
+      { "id": "archive", "label": "Archive", "icon": "archive", "onlyForState": "completed scheduled" }
     ],
     // Semantic-category → SLDS utility-sprite map (Figma node
     // 8797:228978). Row outputs pick an `icon` from this map's

@@ -1931,7 +1931,7 @@
 
   // What the status button's accessible name says it will do. Anything
   // not listed pauses.
-  var FEED_VERBS = { paused: 'Resume ', failed: 'Retry ', archived: 'Restore ' }
+  var FEED_VERBS = { paused: 'Resume ', failed: 'Retry ', archived: 'Restart ' }
 
   // Which set of subline strings a state reads. Every slot carries all
   // three as attributes, so this picks a suffix rather than wording —
@@ -1957,9 +1957,8 @@
     row.setAttribute('data-sh-feed-state', state)
 
     // "Home" is the last state the row was in that wasn't paused or
-    // archived — the two temporary "set aside" states — so resuming or
-    // restoring returns it to what it was actually doing rather than to
-    // paused/archived.
+    // archived — the "set aside" states — so resuming returns it to what
+    // it was actually doing rather than to that holding state.
     if (state !== 'paused' && state !== 'archived') row.setAttribute('data-sh-feed-state-default', state)
 
     // Three slots: the row's title and both halves of its subline. Each
@@ -1971,9 +1970,8 @@
       if (value === null) return
 
       slot.textContent = value
-      // Same reason: the strings a resume/restore returns to have to
-      // track the row's current presentation, not the one the template
-      // rendered.
+      // Same reason: the strings a resume returns to have to track the
+      // row's current presentation, not the one the template rendered.
       if (state !== 'paused' && state !== 'archived') slot.setAttribute('data-sh-feed-slot-default', value)
     })
 
@@ -1988,12 +1986,20 @@
     }
 
     if (toggle) {
-      // Scheduled offers "Run" under the filter (starting a waiting run
-      // is the obvious intent there) and "Pause" everywhere else; the
-      // other verbs come from FEED_VERBS.
+      // Under the filter the status button drives the lab lifecycle: Run a
+      // scheduled row, Stop a running one, Clear a completed one. Off the
+      // filter (Seller Home) the live states pause. Resume/Retry come from
+      // FEED_VERBS either way.
       var verb = FEED_VERBS[state]
       if (!verb) {
-        verb = (state === 'scheduled' && closest(row, '[data-sh-feed-filter]')) ? 'Run ' : 'Pause '
+        if (closest(row, '[data-sh-feed-filter]')) {
+          verb = state === 'scheduled' ? 'Run '
+            : state === 'completed' ? 'Run '
+            : state === 'running' ? 'Stop '
+            : 'Pause '
+        } else {
+          verb = 'Pause '
+        }
       }
       var label = verb + (title ? title.textContent.trim() : '')
       toggle.setAttribute('aria-label', label)
@@ -2005,23 +2011,23 @@
   function nextFeedState (row) {
     var state = row.getAttribute('data-sh-feed-state')
     var filtered = !!closest(row, '[data-sh-feed-filter]')
-    // Under the filter, Resume starts the agent running — it moves into
-    // the Running section and stays in view. Returning it to its schedule
-    // (the Seller Home behaviour below) would hide it from the Active
-    // view, which reads as the row being archived.
-    if (state === 'paused' && filtered) return 'running'
-    // Paused resumes, archived restores — both return to the row's last
-    // real "home" state.
-    if (state === 'paused' || state === 'archived') {
-      return row.getAttribute('data-sh-feed-state-default') || 'scheduled'
+    if (filtered) {
+      // Lab lifecycle, all off the one status button:
+      //   scheduled → running   (Run now)
+      //   completed → running   (Run now — re-run the workflow)
+      //   running   → scheduled (Stop — back to its next run)
+      //   archived  → scheduled (Restart — back into the schedule)
+      //   failed    → running   (Retry)
+      if (state === 'scheduled') return 'running'
+      if (state === 'completed') return 'running'
+      if (state === 'running') return 'scheduled'
+      if (state === 'archived') return 'scheduled'
+      if (state === 'failed') return 'running'
     }
+    // Seller Home (no filter): pause the live ones, resume a paused one,
+    // retry a failed one.
+    if (state === 'paused') return row.getAttribute('data-sh-feed-state-default') || 'scheduled'
     if (state === 'failed') return 'running'
-    // Under the filter a scheduled row Runs (→ running) instead of
-    // pausing something that isn't running.
-    if (state === 'scheduled' && filtered) return 'running'
-    // Completed rows pause from the status button like everywhere else —
-    // their advance-to-Scheduled/Archived gesture is the card click
-    // (bindFeedRowClicks), so the icon-swap stays a consistent Pause.
     return 'paused'
   }
 
@@ -2136,8 +2142,8 @@
     // (now hidden by the view rules) and drop it into place. It stays in
     // the DOM — one list, filtered by CSS — so it's already waiting under
     // whatever view does show it (Run a scheduled row from Scheduled and
-    // it's under Active > Running; archive from Active and it's under
-    // Archived).
+    // it's under Active > Running; Stop or Clear a row in Active and it's
+    // waiting under Scheduled).
     var filter = currentFeedFilter(feedRoot)
     if (filter && !feedStateVisibleIn(filter, state)) {
       feedFadeOutThen(li, function () {
@@ -2363,15 +2369,11 @@
         // reach — Run now / Pause echo the status button, Complete and
         // Schedule move it into a finished or waiting state — so they all
         // go through `changeFeedState` rather than inventing a second path.
-        if (actionId === 'archive' || actionId === 'dismiss') {
-          // Under the filter, Archive sets the row aside as `archived` (it
-          // fades out of the current view and reappears under the Archived
-          // view) instead of deleting it. Without the filter, Dismiss
-          // still hard-removes, as Seller Home does.
-          if (row && currentFeedFilter(feedRoot)) changeFeedState(feedRoot, row, 'archived')
-          else dismissListItem(closest(item, '[data-sh-feed-list-item]'))
-        }
+        if (actionId === 'dismiss') dismissListItem(closest(item, '[data-sh-feed-list-item]'))
         else if (actionId === 'run_now' && row) changeFeedState(feedRoot, row, 'running')
+        else if (actionId === 'stop' && row) changeFeedState(feedRoot, row, 'scheduled')
+        else if (actionId === 'archive' && row) changeFeedState(feedRoot, row, 'archived')
+        else if (actionId === 'restart' && row) changeFeedState(feedRoot, row, 'scheduled')
         else if (actionId === 'pause' && row) changeFeedState(feedRoot, row, 'paused')
         else if (actionId === 'complete' && row) changeFeedState(feedRoot, row, 'completed')
         else if (actionId === 'schedule' && row) changeFeedState(feedRoot, row, 'scheduled')
@@ -2492,17 +2494,6 @@
       var row = closest(event.target, '[data-sh-feed-item]')
       if (!row) return
 
-      // Under the filter, clicking a completed (Ready) row advances it out
-      // of Ready — to Scheduled if it has an upcoming run, otherwise to
-      // Archived. This is the card's own gesture (the status button still
-      // just pauses), so it overrides the title link's navigation.
-      if (currentFeedFilter(feedRoot) && row.getAttribute('data-sh-feed-state') === 'completed') {
-        event.preventDefault()
-        changeFeedState(feedRoot, row,
-          row.hasAttribute('data-sh-feed-has-schedule') ? 'scheduled' : 'archived')
-        return
-      }
-
       var link = row.querySelector('[data-sh-feed-item-link]')
 
       document.dispatchEvent(new CustomEvent('sh:feed-item-select', {
@@ -2564,10 +2555,20 @@
     function select (id) {
       if (!id) return
       list.setAttribute('data-sh-feed-filter', id)
+      var chosen = null
       options().forEach(function (opt) {
-        opt.setAttribute('aria-selected',
-          opt.getAttribute('data-sh-feed-filter-option') === id ? 'true' : 'false')
+        var match = opt.getAttribute('data-sh-feed-filter-option') === id
+        opt.setAttribute('aria-selected', match ? 'true' : 'false')
+        if (match) chosen = opt
       })
+      // Reflect the chosen view in the trigger's label + accessible name.
+      var labelSrc = chosen && chosen.querySelector('.seller-home__feed-filter-item-label')
+      var text = (labelSrc || chosen || {}).textContent
+      text = text ? text.trim() : id
+      var labelEl = trigger.querySelector('[data-sh-feed-filter-label]')
+      if (labelEl) labelEl.textContent = text
+      trigger.setAttribute('aria-label', 'Filter: ' + text)
+      trigger.setAttribute('title', 'Filter: ' + text)
     }
 
     trigger.addEventListener('click', function (event) {
