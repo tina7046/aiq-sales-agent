@@ -761,6 +761,13 @@
 // label here is `on-surface-2` on a -95 wash (~11:1), and the dot is
 // decorative — the word carries the meaning.
 .seller-home__skill-status-badge--published {
+  // "Published" is hidden for now: it's currently the only lifecycle
+  // status in the data and reads as noise on every skill. Scoped to the
+  // `--published` variant (not the base badge) so a future non-published
+  // status would still render. The JS reveals the badge via the `hidden`
+  // attribute rather than an inline `display`, so this override holds.
+  display: none;
+
   --slds-c-badge-color-background:      var(--slds-g-color-palette-teal-95, #def9f3);
   --slds-c-badge-color-border:          var(--slds-g-color-palette-teal-90, #acf3e4);
   --slds-c-badge-icon-color-foreground: var(--slds-g-color-palette-teal-65, #03b4a7);
@@ -1007,21 +1014,36 @@
 // affordance where the trigger's right edge is what draws the eye.
 .seller-home__skill-uses-popover {
   position: absolute;
-  top: calc(100% + 0.5rem); // 8px gap — see nubbin geometry note above
-  right: 0;
-  min-width: 12rem;   // 192px  — fits "This skill uses" comfortably
-  max-width: 18rem;   // 288px  — clamps long localized names
-  // SLDS 2 native popover shadow. The base `.slds-popover` rule in
-  // slds2_agentic.scss reads `box-shadow: var(--_slds-c-popover-box-
-  // shadow)`, but that private token is never declared upstream, so
-  // the base value resolves to `none` and every consumer of
-  // `.slds-popover` ships shadowless unless they set a shadow of
-  // their own. `--slds-g-shadow-2` is the SLDS 2 popover-elevation
-  // token — a subtle three-layer 3 px shadow at ~9 % opacity — and
-  // it's the same token the color-picker's `.slds-popover` variant
-  // opts into (slds2_agentic.scss, line ~6251). Matches the Figma
-  // popover reference and reads as "subtle drop shadow" per spec.
-  box-shadow: var(--slds-g-shadow-2);
+  top: calc(100% + 0.375rem); // 6px gap below the trigger
+  right: 0; // right-aligned to the trigger (the wrap shrink-wraps it)
+  width: 13.75rem; // 220px — fixed
+
+  // Chrome reused from the skill-detail activity popover
+  // (`.seller-home__skill-activity`) so the two read as one component.
+  // Set explicitly rather than inherited from the SLDS `.slds-popover`
+  // base: the base ships shadowless (its `--_slds-c-popover-box-shadow`
+  // token is never declared upstream) and carries a different border /
+  // radius, so pinning all four here is what makes the surfaces match.
+  // 4-px interior padding insets the title and list from the edge.
+  padding: var(--slds-g-spacing-1, 0.25rem); // 4px
+  background-color: var(--slds-g-color-surface-container-1, #ffffff);
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 0 2px rgba(0, 0, 0, 0.08);
+}
+
+// Nubbin removal. The template still tags the popover with an SLDS
+// `slds-nubbin_top-right` / `_top-left` class (kept so the JS contract
+// and the responsive `left`/`right` flip stay untouched), and SLDS
+// draws the arrow with `:before` / `:after` pseudo-elements on that
+// element. Suppressing both here drops the nubbin without editing the
+// markup, matching the flat-edged activity popover. Combined with
+// `.slds-popover` (always present) so this beats the base
+// `.slds-nubbin_top-right:before` regardless of which nubbin variant
+// the row shipped.
+.seller-home__skill-uses-popover.slds-popover::before,
+.seller-home__skill-uses-popover.slds-popover::after {
+  display: none;
 }
 
 // `hidden`-attribute guard.
@@ -1046,46 +1068,44 @@
   display: none;
 }
 
-// Popover body override — SLDS 2's `.slds-popover__body` default
-// padding (12 / 16 px) reads slightly loose for this three-line
-// list. Trim to 10 / 12 px so the heading and list sit closer to
-// the popover edges without feeling cramped.
+// Popover body — the container above now holds the 4-px outer gutter
+// (matching the activity popover), and the title / items carry their
+// own row padding, so the SLDS `.slds-popover__body` default padding
+// is zeroed out here to avoid a double inset.
 .seller-home__skill-uses-popover-body {
-  padding: 0.625rem 0.75rem; // 10 / 12 px
+  padding: 0;
 }
 
-// "This skill uses" — muted 12 px caption above the list. Uses the
-// same on-surface-2 (secondary text) color as the "Last run …"
-// meta line so both look like the same class of supplementary
-// text on the card. Bottom margin gives 6 px between the header
-// baseline and the first list item.
+// "This skill uses" — caption above the list. Mirrors the activity
+// popover's title: 12 px semibold on-surface-2, 4 / 8 px row padding,
+// and a 2 px gap to the first item.
 .seller-home__skill-uses-popover-title {
-  margin: 0 0 0.375rem;
+  margin: 0 0 2px;
+  padding: var(--slds-g-spacing-1, 0.25rem) var(--slds-g-spacing-2, 0.5rem); // 4px 8px
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
   font-size: 0.75rem; // 12px
-  font-weight: 400;
+  font-weight: var(--slds-g-font-weight-6, 600);
   line-height: 1.3;
   color: var(--slds-g-color-on-surface-2, #5c5c5c);
 }
 
-// Sub-skill list — one name per line, no bullets, tight vertical
-// rhythm. Base list styles are reset via `list-style: none` +
-// zero padding because the SLDS 2 popover component doesn't
-// prescribe list styles.
+// Sub-skill list — one name per line, no bullets. The per-item row
+// padding below supplies the vertical rhythm (like the activity
+// popover's rows), so no list-level gap is needed.
 .seller-home__skill-uses-popover-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem; // 4px between items — matches SLDS 2 dense-list rhythm
 }
 
 .seller-home__skill-uses-popover-item {
+  padding: var(--slds-g-spacing-1, 0.25rem) var(--slds-g-spacing-2, 0.5rem); // 4px 8px
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: 0.8125rem; // 13px — one step above the caption
+  font-size: 0.8125rem; // 13px
   font-weight: 400;
-  line-height: 1.35;
+  line-height: 1.3;
   color: var(--slds-g-color-on-surface-1, #181818);
   // Whitespace-normal so long localized names wrap gracefully
   // instead of overflowing the popover's max-width. `min-width: 0`
@@ -1391,18 +1411,22 @@
   background: var(--slds-g-color-surface-container-1, #ffffff);
   border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
 
-  // 12 px. Clipped because the items run the full width of the surface
-  // with square hover fills, and at this radius the top and bottom
-  // ones visibly cut the corner — nothing inside a menu needs to
-  // escape its own box.
+  // 12 px. Matches the homepage composer dropdown
+  // (`.seller-home__composer-menu-list`). The items are inset by the
+  // container padding below and carry their own 8-px radius, so they
+  // never reach these corners — no `overflow: hidden` clip is needed.
   border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
-  overflow: hidden;
 
-  // Elevation/2 - down, the shadow the design attaches to this
-  // surface. Replaces a hand-rolled pair that predated the token.
-  box-shadow: var(--slds-g-shadow-2);
+  // Same two-layer elevation the homepage composer dropdown uses, so
+  // the two menus read as one component.
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
 
-  padding-block: var(--slds-g-spacing-1, 0.25rem); // 4px vertical
+  // 4 px on every side (was block-only): the interior gutter that
+  // insets each item so its rounded hover fill floats clear of the
+  // surface edge, exactly as on the homepage dropdown.
+  padding: var(--slds-g-spacing-1, 0.25rem); // 4px
 }
 
 // Narrow-viewport guard. The left-anchored surface overhangs its card —
@@ -1454,19 +1478,25 @@
   align-items: center;
   gap: var(--slds-g-spacing-2, 0.5rem); // 8px icon-to-label
 
-  padding: 0.5625rem var(--slds-g-spacing-3, 0.75rem); // 9px 12px
+  // Row metrics + typography reused from the homepage composer
+  // dropdown (`.seller-home__composer-menu-item`): 8-px padding on
+  // every side and an 8-px radius so each row is an inset, rounded
+  // hover target rather than a full-bleed strip.
+  padding: var(--slds-g-spacing-2, 0.5rem); // 8px
+  border-radius: var(--slds-g-radius-border-2, 0.5rem); // 8px
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
   font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
   font-weight: var(--slds-g-font-weight-4, 400);
-  line-height: 1.125rem; // 18px
+  line-height: 1.1875rem; // 19px — matches the composer menu label
   color: var(--slds-g-color-on-surface-2, #2e2e2e);
 
-  transition: background-color 120ms ease, color 120ms ease;
+  transition: background-color 120ms ease;
 
+  // Brand tint on hover / keyboard focus, same as the homepage
+  // dropdown — the label keeps its resting color (no recolor).
   &:hover,
   &:focus-visible {
-    background: var(--slds-g-color-surface-container-2, #f3f3f3);
-    color: var(--slds-g-color-on-surface-3, #001e5b);
+    background: var(--slds-g-color-brand-base-95, #eef4ff);
     outline: none;
   }
 
@@ -1492,24 +1522,16 @@
   min-width: 0;
 }
 
-// Destructive row divider — per Figma (node 11305:26088), Delete is
-// separated from the actions above it by a full-width hairline with
-// 4 px of breathing room on each side. The line sits on the <li>
-// (`--destructive`), so it spans the menu's inner width edge-to-edge;
-// the 4 px `padding-top` keeps the button's hover fill clear of the
-// line, and `margin-top` opens the matching gap above it.
-.seller-home__skill-menu-row--destructive {
-  margin-block-start: var(--slds-g-spacing-1, 0.25rem); // 4px above line
-  padding-block-start: var(--slds-g-spacing-1, 0.25rem); // 4px below line
-  border-block-start: 1px solid #e5e5e5;
-}
-
 // Destructive variant — used for Delete. `currentColor` on the
 // button's foreground drives both the label and the icon (the icon
 // rule below re-opts into `currentColor` for this variant), so
-// setting `color` here paints both red in one rule. Hover / focus
-// deepen the same red rather than swapping to the accent-blue
-// treatment the neutral items use.
+// setting `color` here paints both red in one rule.
+//
+// No separating hairline above it: the menu is a clean vertical list
+// like the homepage dropdown, so Delete follows the same spacing and
+// radius as every other row and stays recognizable purely by its red
+// icon + label. Hover keeps the shared brand tint and only deepens
+// the red so the destructive meaning still reads.
 //
 // Matches SLDS 2's destructive-menu-item token (`--slds-g-color-
 // error-base-40` = #ba0517), with a Salesforce-safe fallback for
@@ -1519,7 +1541,7 @@
 
   &:hover,
   &:focus-visible {
-    background: var(--slds-g-color-surface-container-2, #f3f3f3);
+    background: var(--slds-g-color-brand-base-95, #eef4ff);
     color: var(--slds-g-color-error-base-30, #8e030f);
   }
 
@@ -2094,28 +2116,38 @@
   }
 
   // ── Toast (success confirmation) ─────────────────────────────────
-  // Small floating pill at the bottom-center of the detail surface.
-  // Fades in on `[data-sh-toast-visible="true"]` and fades out
-  // shortly after the auto-dismiss timer fires. Idle state is
+  // SLDS 2 "Toast — Success" blueprint (Figma 11879:29089). Docks at
+  // the TOP-center of the viewport, slides/fades in on
+  // `[data-sh-toast-visible="true"]`, then auto-dismisses (or the
+  // trailing close button dismisses it manually). Idle state is
   // `hidden` so it never occupies layout for silent flows.
+  // Tokens: success-container surface + on-success text/icon, 8-px
+  // radius, font-scale-2 Semibold (16/22), Elevation-3 shadow.
   .seller-home__skill-detail-toast {
     position: fixed;
-    inset-block-end: var(--slds-g-spacing-6, 2rem);
+    inset-block-start: var(--slds-g-spacing-6, 2rem);
     inset-inline-start: 50%;
-    transform: translateX(-50%) translateY(0.5rem);
+    transform: translateX(-50%) translateY(-0.5rem);
 
     display: inline-flex;
     align-items: center;
-    gap: var(--slds-g-spacing-2, 0.5rem);
-    padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-4, 1rem);
+    gap: var(--slds-g-spacing-3, 0.75rem);
+    padding-block: var(--slds-g-spacing-2, 0.5rem);
+    padding-inline: var(--slds-g-spacing-3, 0.75rem);
+    max-inline-size: min(30rem, calc(100vw - 2rem));
 
-    background-color: var(--slds-g-color-success-base-30, #2e844a);
-    color: #ffffff;
-    border-radius: var(--slds-g-radius-border-circle, 9999px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.08);
+    background-color: var(--slds-g-color-success-container-1, #acf3e4);
+    color: var(--slds-g-color-on-success-1, #056764);
+    border-radius: var(--slds-g-radius-border-2, 0.5rem);
+    // Elevation 3 (down): stacked ambient + key shadows.
+    box-shadow:
+      0 -1px 2px rgba(0, 0, 0, 0.08),
+      0 5px 5px rgba(0, 0, 0, 0.14),
+      0 0 7px rgba(0, 0, 0, 0.14);
 
-    font-size: 0.8125rem;
+    font-size: var(--slds-g-font-scale-2, 1rem);
     font-weight: var(--slds-g-font-weight-6, 600);
+    line-height: 1.375; // 22 / 16
     z-index: 9500;
 
     opacity: 0;
@@ -2129,9 +2161,49 @@
       pointer-events: auto;
     }
   }
+  // Leading success glyph — filled circle-check painted in on-success.
   .seller-home__skill-detail-toast-icon {
-    inline-size: 1rem;
-    block-size: 1rem;
+    flex: 0 0 auto;
+    inline-size: var(--slds-g-sizing-5, 1rem);
+    block-size: var(--slds-g-sizing-5, 1rem);
+    fill: currentColor;
+  }
+  // Message text takes the remaining width; close button pins to the
+  // trailing edge.
+  .seller-home__skill-detail-toast-message {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+  }
+  // Trailing bare close button (SLDS "Button Icon — Bare"). Inherits
+  // the on-success tint; a subtle wash on hover / focus keeps it flat.
+  .seller-home__skill-detail-toast-close {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--slds-g-radius-border-1, 0.25rem);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+
+    &:hover {
+      background-color: rgba(5, 103, 100, 0.12);
+    }
+    &:focus-visible {
+      background-color: rgba(5, 103, 100, 0.12);
+      outline: 2px solid var(--slds-g-color-on-success-1, #056764);
+      outline-offset: 1px;
+    }
+  }
+  .seller-home__skill-detail-toast-close-icon {
+    inline-size: var(--slds-g-sizing-5, 1rem);
+    block-size: var(--slds-g-sizing-5, 1rem);
     fill: currentColor;
   }
 
@@ -2949,6 +3021,167 @@
   .seller-home__skill-block[data-block-kind="hr"] [data-sh-skill-block-body] {
     width: 100%;
     pointer-events: none;
+  }
+
+  // ── Draft with AI — inline composer ─────────────────────────────
+  // Sits in normal flow directly under the selected (washed) block, so
+  // it pushes later content down rather than overlapping it. White card
+  // with a subtle border + elevated shadow, matching the popover chrome.
+  .seller-home__skill-ai-composer {
+    margin-block: 6px 4px;
+    margin-inline: 4px;
+    background: var(--slds-g-color-surface-1, #ffffff);
+    border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+    border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 0 2px rgba(0, 0, 0, 0.08);
+    padding-inline: 0.75rem;
+    padding-block: 0.25rem;
+  }
+
+  .seller-home__skill-ai-composer-main {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-block-size: 2.5rem;
+  }
+
+  // Borderless, ring-free textarea that grows with content. Uses the
+  // editor's own body typography so the draft prompt reads inline.
+  .seller-home__skill-ai-composer-field {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-self: center;
+    margin: 0;
+    padding-block: 0.5rem;
+    padding-inline: 0;
+    border: 0;
+    outline: none;
+    resize: none;
+    overflow-y: auto;
+    max-block-size: 220px;
+    background: transparent;
+    box-shadow: none;
+    font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+    font-size: 0.9375rem;
+    line-height: 1.375rem;
+    color: var(--slds-g-color-on-surface-1, #181818);
+
+    &::placeholder {
+      color: var(--slds-g-color-on-surface-3, #939393);
+    }
+
+    &:focus,
+    &:focus-visible {
+      outline: none;
+      box-shadow: none;
+    }
+
+    &:disabled {
+      color: var(--slds-g-color-on-surface-3, #939393);
+      -webkit-text-fill-color: var(--slds-g-color-on-surface-3, #939393);
+    }
+  }
+
+  .seller-home__skill-ai-composer-actions {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    align-self: center;
+  }
+
+  .seller-home__skill-ai-composer-send,
+  .seller-home__skill-ai-composer-close {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 2rem;
+    block-size: 2rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--slds-g-radius-border-circle, 9999px);
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease, opacity 120ms ease;
+  }
+
+  .seller-home__skill-ai-composer-icon {
+    inline-size: 1rem;
+    block-size: 1rem;
+    display: block;
+  }
+
+  // Send — empty state: neutral gray circle, non-interactive.
+  .seller-home__skill-ai-composer-send {
+    background: var(--slds-g-color-surface-container-3, #ebebeb);
+    color: var(--slds-g-color-on-surface-3, #939393);
+
+    &:disabled {
+      cursor: default;
+    }
+  }
+
+  // Send — ready state: brand-blue circle, white icon.
+  .seller-home__skill-ai-composer.is-ready .seller-home__skill-ai-composer-send:not(:disabled) {
+    background: var(--slds-g-color-accent-2, #0250d9);
+    color: #ffffff;
+
+    &:hover {
+      background: var(--slds-g-color-accent-1, #032d60);
+    }
+  }
+
+  .seller-home__skill-ai-composer-close {
+    background: transparent;
+    color: var(--slds-g-color-on-surface-2, #5c5c5c);
+
+    &:hover {
+      background: var(--slds-g-color-surface-container-2, #f3f3f3);
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.5;
+    }
+  }
+
+  .seller-home__skill-ai-composer-send:focus-visible,
+  .seller-home__skill-ai-composer-close:focus-visible {
+    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
+    outline-offset: 2px;
+  }
+
+  // Busy state — hide the send glyph, show a spinning ring in its place.
+  .seller-home__skill-ai-composer-spinner {
+    display: none;
+    position: absolute;
+    inline-size: 1rem;
+    block-size: 1rem;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    animation: seller-home__skill-ai-spin 0.6s linear infinite;
+  }
+
+  .seller-home__skill-ai-composer.is-busy {
+    .seller-home__skill-ai-composer-send {
+      background: var(--slds-g-color-accent-2, #0250d9);
+      color: #ffffff;
+      cursor: default;
+    }
+
+    .seller-home__skill-ai-composer-send .seller-home__skill-ai-composer-icon {
+      visibility: hidden;
+    }
+
+    .seller-home__skill-ai-composer-spinner {
+      display: block;
+    }
+  }
+
+  @keyframes seller-home__skill-ai-spin {
+    to { transform: rotate(360deg); }
   }
 
   // ── Supporting-skill chip row (post-render enrichment) ──────────
@@ -4520,6 +4753,23 @@
     align-items: center;
   }
 
+  // The action cluster above sets `pointer-events: none` so its empty
+  // space doesn't steal clicks from the row; the buttons opt back in
+  // with `auto`, but the dropdown — a descendant of the cluster in this
+  // version — was left inheriting `none`, so its items couldn't be
+  // hovered or clicked. Re-enable hit-testing on the open menu. Harmless
+  // while it's hidden; scoped to v2 so Version A is untouched.
+  .seller-home__skill-menu-list {
+    pointer-events: auto;
+  }
+
+  // "Use Skill" quick-action button hidden for now — the cluster
+  // degrades to just the overflow kebab, and the same action still
+  // ships as the first item in that menu ("Use Skill"). Scoped to v2.
+  .seller-home__skill-action-use {
+    display: none;
+  }
+
   // ── Hover / focus interaction (Version B only) ─────────────────
   // The action cluster is a SIBLING of the row, sitting on top of it.
   // Hovering a button therefore is NOT hovering `.seller-home__skill-
@@ -4559,16 +4809,17 @@
     pointer-events: auto;
   }
 
-  // White circle on the hovered / focused icon only, so it reads
-  // against the card's #f3f3f3 wash. The shared rule paints
-  // surface-2 (#f3f3f3) — invisible on that wash — and also latches
-  // it on `[aria-expanded="true"]`; the transparent reset below
-  // drops that latch so only the pointer/keyboard target is selected.
+  // #E5E5E5 circle on the hovered / focused icon only, so it reads
+  // against the card's #f3f3f3 wash (one step darker than it). The
+  // shared rule paints surface-2 (#f3f3f3) — invisible on that wash —
+  // and also latches it on `[aria-expanded="true"]`; the transparent
+  // reset below drops that latch so only the pointer/keyboard target
+  // is selected.
   .seller-home__skill-action-use:hover,
   .seller-home__skill-action-use:focus-visible,
   .seller-home__skill-menu-trigger:hover,
   .seller-home__skill-menu-trigger:focus-visible {
-    background: var(--slds-g-color-surface-1, #fff);
+    background: #e5e5e5;
   }
 
   .seller-home__skill-menu-trigger[aria-expanded="true"]:not(:hover):not(:focus-visible) {

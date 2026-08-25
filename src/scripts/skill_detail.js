@@ -1339,18 +1339,23 @@
     }
     if (skillItems.length) groups.push({ label: 'Skills', items: skillItems });
 
-    var lib = (config.toolLibrary && typeof config.toolLibrary === 'object') ? config.toolLibrary : {};
-    var toolItems = [];
-    for (var key in lib) {
-      if (!Object.prototype.hasOwnProperty.call(lib, key)) continue;
-      var entry = lib[key] || {};
-      toolItems.push({
-        label:   entry.name || key,
-        href:    '#tool/' + encodeURIComponent(key),
-        iconRef: entry.iconRef || entry.icon || ''
-      });
+    // Tools group temporarily hidden from the @-mention menu. Flip
+    // SHOW_TOOLS_MENTION_GROUP back to true to restore it.
+    var SHOW_TOOLS_MENTION_GROUP = false;
+    if (SHOW_TOOLS_MENTION_GROUP) {
+      var lib = (config.toolLibrary && typeof config.toolLibrary === 'object') ? config.toolLibrary : {};
+      var toolItems = [];
+      for (var key in lib) {
+        if (!Object.prototype.hasOwnProperty.call(lib, key)) continue;
+        var entry = lib[key] || {};
+        toolItems.push({
+          label:   entry.name || key,
+          href:    '#tool/' + encodeURIComponent(key),
+          iconRef: entry.iconRef || entry.icon || ''
+        });
+      }
+      if (toolItems.length) groups.push({ label: 'Tools', items: toolItems });
     }
-    if (toolItems.length) groups.push({ label: 'Tools', items: toolItems });
     return groups;
   }
 
@@ -2163,6 +2168,7 @@
     var errorDismissEl = root.querySelector('[data-sh-skill-detail-save-error-dismiss]');
     var toastEl = root.querySelector('[data-sh-skill-detail-toast]');
     var toastMessageEl = root.querySelector('[data-sh-skill-detail-toast-message]');
+    var toastCloseEl = root.querySelector('[data-sh-skill-detail-toast-close]');
 
     function showCommit() { if (commitEl) commitEl.hidden = false; }
     function hideCommit() { if (commitEl) commitEl.hidden = true;  }
@@ -2628,6 +2634,7 @@
     }
     function hideToast() {
       if (!toastEl) return;
+      if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
       toastEl.removeAttribute('data-sh-toast-visible');
       // Wait out the fade before removing from the a11y tree so
       // the announcement isn't cut short.
@@ -2636,6 +2643,12 @@
           toastEl.hidden = true;
         }
       }, 220);
+    }
+
+    // Trailing close button dismisses the toast immediately (and
+    // cancels the pending auto-dismiss timer via hideToast).
+    if (toastCloseEl) {
+      toastCloseEl.addEventListener('click', function () { hideToast(); });
     }
 
     function isCanvasEmpty() {
