@@ -2479,9 +2479,9 @@ main.app-wrapper {
   // The completed dot, sized on its own. `#circle` is a solid disc
   // filling 92% of its viewBox, where the rest of the set are line icons
   // with margin built in, so at a shared box it lands far heavier than
-  // they do. 0.75rem puts the disc at ~11px against their 16px slot,
-  // which is the weight the checkmark used to carry.
-  --sh-status-dot: 0.75rem;
+  // they do. 0.5rem puts the disc at ~8px against their 16px slot, so the
+  // green "done" dot reads lighter than the line glyphs around it.
+  --sh-status-dot: 0.5rem;
 
   position: relative; // lifts it above the row's stretched-link overlay
   z-index: 2;
@@ -2586,6 +2586,11 @@ main.app-wrapper {
   // surface align the button to the title and land the glyph on it.
   --sh-status-size: 1.25rem;
   --sh-status-glyph: 1rem;
+
+  // The completed "done" dot, sized well below the 16px line glyphs: the
+  // `#circle` sprite is a solid disc, so at the shared box it would read
+  // far heavier than the line icons. Matches the feed's green dot.
+  --sh-status-dot: 0.5rem;
 
   display: flex;
   align-items: center;
@@ -3701,8 +3706,8 @@ $sh-feed-filter-hidden: (
 // The home feed's status control, dropped into this list's leading
 // cell — one workflow reads and behaves the same on both surfaces.
 // Chrome + glyph come from the shared `sh-status-*` mixins; the rest /
-// action glyph maps are scheduled-local (below) because this surface's
-// "completed" rests on a check where the feed rests on a filled circle.
+// action glyph maps are scheduled-local (below) but now mirror the feed
+// exactly, including "completed" resting on the same green filled circle.
 //
 // Absolutely positioned instead of laid out in the row, because it's a
 // `<button>` and the row body is an `<a>` on linked rows — so the
@@ -3735,6 +3740,15 @@ $sh-feed-filter-hidden: (
   @include sh-status-glyph;
 }
 
+// The completed dot is sized on its own — the same treatment the feed's
+// `--circle` glyph gets — because `#circle` is a solid disc and would land
+// far heavier than the line glyphs at the shared 16px box. Must follow the
+// base glyph rule above so its size wins on source order.
+.seller-home__scheduled-status-glyph--circle {
+  inline-size: var(--sh-status-dot);
+  block-size: var(--sh-status-dot);
+}
+
 .seller-home__scheduled-status-glyph--spinner {
   @include sh-status-glyph-spinner;
 }
@@ -3751,11 +3765,11 @@ $sh-feed-filter-hidden: (
 }
 
 // Rest = what the row IS; action = what a click WILL DO. Scheduled-local
-// (not the feed's `$sh-feed-status-*`) so "completed" rests on the check
-// this template renders — the feed rests on a filled circle. Values
-// otherwise mirror the feed so the two surfaces read the same.
+// (not the feed's `$sh-feed-status-*`), but the values now mirror the feed
+// exactly — "completed" rests on the same green filled circle the feed
+// uses — so a workflow reads identically on both surfaces.
 $sh-scheduled-status-rest: (
-  completed: "check",
+  completed: "circle",
   running:   "spinner",
   scheduled: "clock",
   paused:    "pause",
@@ -3779,8 +3793,15 @@ $sh-scheduled-status-action: (
   }
 }
 
-// The one glyph that carries colour — the failed warning. Scoped to the
-// resting glyph so the hover swap to the retry arrow returns to grey.
+// Completed rows rest on a green "done" dot — the same filled circle the
+// home feed uses — scoped to the resting glyph so the hover swap to the
+// Run-now arrow (play) returns to grey.
+[data-sh-workflow-status="completed"] .seller-home__scheduled-status-glyph--circle {
+  fill: var(--slds-g-color-palette-green-70, #45c65a);
+}
+
+// The one line glyph that carries colour — the failed warning. Scoped to
+// the resting glyph so the hover swap to the retry arrow returns to grey.
 [data-sh-workflow-status="failed"] .seller-home__scheduled-status-glyph--warning {
   fill: var(--slds-g-color-palette-red-50, #ea001e);
 }
