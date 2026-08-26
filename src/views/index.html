@@ -32,6 +32,13 @@
 		box-shadow: 0 8px 30px rgba(13, 27, 42, 0.10);
 	}
 
+	/* Toggled from the global-header Setup (gear) icon — see the script at
+	   the foot of this file. Beats the base `display: block` on class
+	   specificity, so no !important is needed. */
+	#panel.is-hidden {
+		display: none;
+	}
+
 	#panel.closed {
 		/* Only bottom-anchor when collapsed so the box hugs its content
 		   (the "Controls" launcher) instead of being stretched full-height
@@ -295,12 +302,11 @@
 		{{ { "tools": shared.toolsModal.tools } | tojson | safe }}
 	</script>
 
-	{# God-rays tuner hidden for the demo — kept in the DOM (not deleted) so
-	   the shader controls can be brought back by removing this inline
-	   `display:none`. Inline style beats the base `#panel { display:block }`
-	   rule, and the toggle handler only flips the `.closed` class, so this
-	   stays hidden. #}
-	<div id="panel" class="closed" style="display: none;">
+	{# God-rays tuner. Its visibility is toggled from the global-header Setup
+	   (gear) icon — see the toggle script at the foot of this file. The
+	   `.is-hidden` class (not an inline style) drives show/hide so the gear
+	   can flip it, and the state persists in localStorage. Shown by default. #}
+	<div id="panel" class="closed">
 		<div class="head">
 			<button id="toggle">Controls</button>
 			<button id="copy" class="act" hidden>Copy</button>
@@ -748,6 +754,40 @@
 			el.style.display = 'block';
 			el.textContent = 'Shader failed to start:\n' + (e?.stack || e);
 		}
+	</script>
+
+	{# The global-header Setup (gear) icon shows/hides the god-rays Controls
+	   panel. Kept a plain (non-module) script so it runs at parse time,
+	   after the header + panel above are in the DOM. State persists in
+	   localStorage (a real preference, like the nav-collapse toggle), so a
+	   reload keeps whatever the seller last chose; default is shown. #}
+	<script>
+		(function () {
+			var panel = document.getElementById('panel');
+			var gear = document.querySelector('.slds-global-actions__setup');
+			if (!panel || !gear) return;
+			var KEY = 'sh:godRaysControls'; // 'shown' | 'hidden'
+
+			function apply(hidden) {
+				panel.classList.toggle('is-hidden', hidden);
+				// pressed = controls visible, so the gear reads as "on" when the
+				// panel is up.
+				gear.setAttribute('aria-pressed', hidden ? 'false' : 'true');
+				gear.setAttribute('title', hidden ? 'Show demo controls' : 'Hide demo controls');
+			}
+
+			var stored = null;
+			try { stored = window.localStorage.getItem(KEY); } catch (e) {}
+			apply(stored === 'hidden');
+
+			gear.addEventListener('click', function (e) {
+				e.preventDefault();
+				e.stopPropagation();
+				var hidden = !panel.classList.contains('is-hidden');
+				apply(hidden);
+				try { window.localStorage.setItem(KEY, hidden ? 'hidden' : 'shown'); } catch (e2) {}
+			});
+		})();
 	</script>
 
 {% endblock %}
