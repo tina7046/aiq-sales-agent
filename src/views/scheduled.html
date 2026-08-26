@@ -55,28 +55,62 @@
    The Scheduled tab shows the SAME workflows the home "Agents at Work"
    feed does, so the two can't drift: rather than keep a parallel list in
    scheduled.json, build the rows here from index.json's `feed.items`.
-   Each feed item maps to a scheduled row — its `state` becomes the
-   `status` the shared status button reads, and a `conversationId`
-   becomes the drill-in href (items without one render as unlinked
-   rows). `tabs`, `statusTypes`, `rowActions`, `banner` and `emptyState`
-   still come from scheduled.json; only `workflows` is sourced here, so
-   the tab counts below (which iterate `workflows` and read `.status`)
-   stay correct.
+   Each feed item maps to a scheduled row. Three values are derived so a
+   workflow reads the same on both surfaces AND drills into its skill:
+
+     • title   — the WORKFLOW NAME, resolved from the backing skill via
+                 `feed item → workflow.id → skills.json name` (e.g. the
+                 feed's output-phrased "Found new prospects" becomes
+                 "Find Prospects" here). Falls back to the feed title
+                 when a skill can't be resolved.
+     • cadence — the FULL home subline string ("<status> · <time>"),
+                 composed exactly like the feed's second line so
+                 "Completed · Next run in 3 days" reads identically on
+                 both surfaces. Scheduled rows lead with the cadence
+                 word instead of a status label, matching the feed.
+     • skillId — the backing skill id, surfaced on the row so the
+                 ⋮ → Edit action deep-links to /skill_detail.html.
+
+   A `conversationId` still becomes the drill-in href (items without one
+   render as unlinked rows). `tabs`, `statusTypes`, `rowActions`,
+   `banner` and `emptyState` still come from scheduled.json; only
+   `workflows` is sourced here, so the tab counts below (which iterate
+   `workflows` and read `.status`) stay correct.
 
    Rows are grouped by the feed's own `stateOrder` (completed before
    running) rather than the feed's raw array order, so the Active tab
    reads completed-on-top / running-below. Within a status the feed's
    authored order is preserved (the inner loop keeps array order). #}
-{% set statusSort = readData("index").feed.stateOrder or ["completed", "running", "scheduled", "paused", "failed", "archived"] %}
+{% set statusSort   = readData("index").feed.stateOrder or ["completed", "running", "scheduled", "paused", "failed", "archived"] %}
+{% set statusLabels = readData("index").feed.statusLabels or {} %}
+{% set skillCatalog = readData("skills").skills or [] %}
 {% set workflows = [] %}
 {% for _st in statusSort %}
   {% for _it in (readData("index").feed.items or []) %}
     {% if _it.state == _st %}
+      {# Resolve the workflow name from the backing skill (workflow.id).
+         Reset per item so a miss can't leak the prior row's name; the
+         outer-scope set propagates in this build (same pattern the tab
+         counts below rely on). #}
+      {% set _skillId = _it.workflow.id if _it.workflow else "" %}
+      {% set _skillName = "" %}
+      {% for _sk in skillCatalog %}
+        {% if _sk.id == _skillId %}{% set _skillName = _sk.name %}{% endif %}
+      {% endfor %}
+      {# Compose the subline exactly like the feed: scheduled rows lead
+         with the cadence, every other state with its status label; the
+         right slot is the time field that state uses. #}
+      {% set _left = _it.cadence if _it.state == "scheduled" else (statusLabels[_it.state] or _it.state) %}
+      {% if _it.state == "running" %}{% set _right = _it.startedAt %}
+      {% elif _it.state == "paused" or _it.state == "failed" %}{% set _right = _it.lastRun %}
+      {% else %}{% set _right = _it.nextRun %}{% endif %}
+      {% set _meta = (_left ~ " · " ~ _right) if _right else _left %}
       {% set _ = workflows.push({
         id:      _it.id,
-        title:   _it.title,
-        cadence: _it.cadence,
+        title:   _skillName or _it.title,
+        cadence: _meta,
         status:  _it.state,
+        skillId: _skillId,
         linked:  (true if _it.conversationId else false),
         href:    (("/home_conversation.html?id=" ~ _it.conversationId) if _it.conversationId else "")
       }) %}

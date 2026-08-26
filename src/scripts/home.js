@@ -2376,6 +2376,15 @@
         else if (actionId === 'pause' && row) changeFeedState(feedRoot, row, 'paused')
         else if (actionId === 'complete' && row) changeFeedState(feedRoot, row, 'completed')
         else if (actionId === 'schedule' && row) changeFeedState(feedRoot, row, 'scheduled')
+        // Edit opens the backing skill's detail page. The skill id rides
+        // on the row as `data-sh-feed-skill` (index.json → item.workflow.id);
+        // a row with no skill just falls through to the dispatch above.
+        else if (actionId === 'edit' && row) {
+          var feedSkillId = row.getAttribute('data-sh-feed-skill')
+          if (feedSkillId) {
+            window.location.href = '/skill_detail.html?id=' + encodeURIComponent(feedSkillId)
+          }
+        }
         return
       }
     })
@@ -3329,6 +3338,17 @@
       var actionId = actionBtn.getAttribute('data-sh-workflow-action')
       var row = closest(actionBtn, '[data-sh-workflow-item]')
       var workflowId = row ? row.getAttribute('data-sh-workflow-id') : ''
+
+      // Edit opens the backing skill's detail page — the same destination
+      // the home feed's Edit action uses. The skill id rides on the row as
+      // `data-sh-workflow-skill` (scheduled.json → workflow.skillId).
+      if (actionId === 'edit') {
+        var workflowSkillId = row ? row.getAttribute('data-sh-workflow-skill') : ''
+        if (workflowSkillId) {
+          window.location.href = '/skill_detail.html?id=' + encodeURIComponent(workflowSkillId)
+          return
+        }
+      }
 
       // Apply the state change (if any), then let the caller refresh the
       // tab counts + re-filter so the row moves between tabs.

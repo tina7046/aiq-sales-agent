@@ -153,73 +153,96 @@
   // `linked: false` and give it an `href`, and the row macro renders it
   // as an `<a>` instead of an inert `<div>`.
   //
-  // Daily Pipeline Snapshot is the one wired up so far. Its `href`
-  // points at the conversation carrying the matching `workflowContext`
-  // block (index.json → conversations), which is what puts the
-  // run-history side panel beside that thread. The remaining rows stay
-  // `linked: false` until they have a conversation of their own.
+  // ── One shared workflow set with the Home feed ────────────────────
+  // These eight rows mirror index.json → feed.items 1:1 — same workflow,
+  // same state, same subline — because Home and Scheduled represent the
+  // SAME data through two lenses (a flat filtered feed vs. tabs). The
+  // Home item's output-phrased title ("Found new prospects") becomes the
+  // workflow NAME here ("Find Prospects"); everything else agrees.
   //
-  // The states below are spread so every one the status button can
-  // paint is on screen at once — this is a prototype and the list is
-  // the only place to see them. Re-pointing a row at another state is
-  // a one-word edit; nothing in the template, CSS or JS is keyed to
-  // which row holds which.
+  //   • title    → the workflow name (Home's `workflow.label`).
+  //   • status   → the Home item's `state` verbatim.
+  //   • cadence  → the FULL Home subline string ("<status> · <time>"),
+  //                since the row template renders `cadence` as-is. This
+  //                is what makes "Completed · Next run in 3 days" read
+  //                identically on both surfaces.
+  //   • skillId  → the backing skill (skills.json). The ⋮ → Edit action
+  //                opens /skill_detail.html?id=<skillId>.
+  //   • linked+href → set only for the four workflows that have a
+  //                conversation in index.json (the others render inert,
+  //                mirroring Home rows that carry no `conversationId`).
+  //
+  // Order follows the feed's `stateOrder` (completed → running →
+  // scheduled); the Active tab's build-time sort groups completed above
+  // running regardless.
   "workflows": [
     {
-      "id":      "wf-daily-pipeline-snapshot",
-      "title":   "Daily Pipeline Snapshot",
-      "cadence": "Daily at 9:00 AM PST",
-      "status":  "failed",
+      "id":      "wf-find-prospects",
+      "title":   "Find Prospects",
+      "cadence": "Completed · Next run in 3 days",
+      "status":  "completed",
+      "skillId": "sk-find-prospects",
       "linked":  true,
-      "href":    "/home_conversation.html?id=conv-daily-pipeline-snapshot"
+      "href":    "/home_conversation.html?id=conv-001"
     },
-    // Weekly Top 3 Things is the run-history surface: five runs of the
-    // same workflow appended into one thread, navigated from the header's
-    // Run History dropdown rather than a side panel. Its conversation
-    // carries `runHistory` (not `workflowContext`), which is what keeps
-    // the panel off that thread — see index.json → conv-weekly-top-3.
+    {
+      "id":      "wf-draft-proposals",
+      "title":   "Draft Proposals",
+      "cadence": "Completed · Next run tomorrow at 6:00 AM",
+      "status":  "completed",
+      "skillId": "sk-draft-proposals",
+      "linked":  false
+    },
     {
       "id":      "wf-weekly-top-3",
       "title":   "Weekly Top 3 Things",
-      "cadence": "Weekly on Monday at 9:00 AM PST",
+      "cadence": "Completed · Next run Monday at 9:00 AM",
       "status":  "completed",
+      "skillId": "sk-weekly-top-3",
       "linked":  true,
       "href":    "/home_conversation.html?id=conv-weekly-top-3"
     },
     {
-      "id":      "wf-daily-deal-summary",
-      "title":   "Daily Deal Summary",
-      "cadence": "Daily at 9:30 AM PST",
+      "id":      "wf-daily-pipeline-snapshot",
+      "title":   "Daily Pipeline Snapshot",
+      "cadence": "Completed · Next run tomorrow at 9:00 AM",
+      "status":  "completed",
+      "skillId": "sk-daily-pipeline-snapshot",
+      "linked":  true,
+      "href":    "/home_conversation.html?id=conv-daily-pipeline-snapshot"
+    },
+    {
+      "id":      "wf-account-research",
+      "title":   "Account Research",
+      "cadence": "Running now · Started 12 min ago",
       "status":  "running",
+      "skillId": "sk-account-research",
       "linked":  false
     },
     {
-      "id":      "wf-buyer-engage",
-      "title":   "Buyer Engage",
-      "cadence": "Daily at 9:30 AM PST",
-      "status":  "completed",
+      "id":      "wf-write-sales-emails",
+      "title":   "Write Sales Emails",
+      "cadence": "Running now · Started 4 min ago",
+      "status":  "running",
+      "skillId": "sk-write-sales-emails",
+      "linked":  false
+    },
+    {
+      "id":      "wf-weekly-exec-brief",
+      "title":   "Weekly Executive Brief",
+      "cadence": "Weekly · Next run Friday at 5:00 AM",
+      "status":  "scheduled",
+      "skillId": "sk-weekly-exec-brief",
       "linked":  false
     },
     {
       "id":      "wf-prepare-for-meetings",
       "title":   "Prepare for Meetings",
-      "cadence": "Daily at 9:30 AM PST",
+      "cadence": "Daily · Next run Friday at 9:00 AM",
       "status":  "scheduled",
-      "linked":  false
-    },
-    {
-      "id":      "wf-cold-prospecting",
-      "title":   "Cold Prospecting",
-      "cadence": "Daily at 9:30 AM PST",
-      "status":  "scheduled",
-      "linked":  false
-    },
-    {
-      "id":      "wf-stay-in-touch-outreach",
-      "title":   "Stay in Touch Outreach",
-      "cadence": "Paused",
-      "status":  "paused",
-      "linked":  false
+      "skillId": "sk-prepare-for-meetings",
+      "linked":  true,
+      "href":    "/home_conversation.html?id=conv-003"
     }
   ],
   // Per-row overflow menu (⋮). Same per-state set the home feed uses,

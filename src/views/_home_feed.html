@@ -330,6 +330,9 @@
 <article
   class="seller-home__feed-item{% if hasThirdLine %} seller-home__feed-item--has-outputs{% endif %}"
   data-sh-feed-item="{{ item.id }}"
+  {%- if item.workflow and item.workflow.id %}
+  data-sh-feed-skill="{{ item.workflow.id }}"
+  {%- endif %}
   data-sh-feed-state="{{ item.state }}"
   data-sh-feed-state-default="{{ homeState }}"
   {%- if item.nextRun %}
