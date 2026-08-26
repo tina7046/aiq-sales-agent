@@ -15,17 +15,19 @@ $static-font-path: '/assets/fonts/webfonts';
 @import 'footer';
 
 // ══════════════════════════════════════════════════════════════════════
-// Reserve the scrollbar gutter globally
+// Scrollbar gutter
 // ----------------------------------------------------------------------
 // `stable` holds space for the scrollbar whether or not one is showing,
-// so a surface that grows past the viewport — or briefly locks scroll
-// while a modal or dropdown is open — doesn't shove the whole layout
-// sideways as the scrollbar appears and disappears. On the document
-// scroller here; inner scroll areas can opt in the same way where they
-// need it. In `index.scss` because _template.html links it on every page.
-html {
-  scrollbar-gutter: stable;
-}
+// so a surface that grows past the viewport doesn't shove its layout
+// sideways as the scrollbar appears and disappears.
+//
+// It lives on the app's inner scroll body (`.seller-home__main` in
+// home.scss), NOT the document. Reserving it on `html` put a permanent
+// gutter around the FIXED global header + context bar, leaving an empty
+// strip down the right edge of the whole app — and the document never
+// scrolls on the Seller Home surfaces anyway (the viewport is locked and
+// content scrolls internally), so the gutter belongs on the scroller that
+// actually moves.
 
 // ══════════════════════════════════════════════════════════════════════
 // transitions.dev — motion tokens + shared transitions
