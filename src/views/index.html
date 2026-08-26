@@ -306,7 +306,7 @@
 	   (gear) icon — see the toggle script at the foot of this file. The
 	   `.is-hidden` class (not an inline style) drives show/hide so the gear
 	   can flip it, and the state persists in localStorage. Shown by default. #}
-	<div id="panel" class="closed">
+	<div id="panel" class="closed is-hidden">
 		<div class="head">
 			<button id="toggle">Controls</button>
 			<button id="save" class="act" hidden>Save</button>
@@ -1151,7 +1151,9 @@
 			function lsSet(key, val) { try { window.localStorage.setItem(key, val); } catch (e) { } }
 
 			var activeShader = new URLSearchParams(location.search).get('shader') || lsGet(SHADER_KEY) || DEFAULT_SHADER;
-			var panelHidden = lsGet(PANEL_KEY) === 'hidden';
+			// Hidden by default — the panel only shows if the seller explicitly
+			// picked "Show control panel" (persisted as 'shown').
+			var panelHidden = lsGet(PANEL_KEY) !== 'shown';
 
 			// Reflect the saved panel state on load.
 			if (panel) panel.classList.toggle('is-hidden', panelHidden);
