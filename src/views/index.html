@@ -458,7 +458,7 @@
 		// dropdown (localStorage 'sh:shader'), then DEFAULT_SHADER. Whichever is
 		// active mounts and populates the one #panel; the other's setup sits
 		// dormant behind its guard. Nothing is deleted.
-		const DEFAULT_SHADER = 'mesh';
+		const DEFAULT_SHADER = 'radial';
 		let storedShader = null;
 		try { storedShader = window.localStorage.getItem('sh:shader'); } catch (e) { }
 		const ACTIVE_SHADER = new URLSearchParams(location.search).get('shader') || storedShader || DEFAULT_SHADER;
@@ -641,14 +641,15 @@
 			try {
 				const RADIAL_DEFAULTS = {
 					// Palette carries the shader max (10); colorsCount decides use.
-					colors: ['#c2efff', '#aefef5', '#dbeafe', '#bae6fd', '#a5f3fc', '#c7d2fe', '#e0e7ff', '#f0f9ff', '#ecfeff', '#f5f3ff'],
+					// Values baked from the tuned preset saved in the Cursor browser.
+					colors: ['#c2efff85', '#6ac8e7', '#dbeafe', '#bae6fd', '#a5f3fc', '#c7d2fe', '#e0e7ff', '#f0f9ff', '#ecfeff', '#f5f3ff'],
 					colorsCount: 2,
-					colorBack: '#ffffff',
-					radius: 1.85, focalDistance: 0.03, focalAngle: 0,
-					falloff: 0.24, mixing: 0.37,
+					colorBack: '#f0f9ffff',
+					radius: 0.75, focalDistance: 0.11, focalAngle: 0,
+					falloff: -0.1, mixing: 1,
 					distortion: 0, distortionShift: -1, distortionFreq: 9,
 					grainMixer: 0, grainOverlay: 0,
-					offsetX: -0.02, offsetY: -0.2,
+					offsetX: 0, offsetY: -0.24,
 				};
 				// key, min, max, step
 				const RADIAL_SLIDERS = [
@@ -1144,7 +1145,7 @@
 
 			var SHADER_KEY = 'sh:shader';        // 'godrays' | 'mesh'
 			var PANEL_KEY = 'sh:shaderControls'; // 'shown' | 'hidden'
-			var DEFAULT_SHADER = 'mesh';
+			var DEFAULT_SHADER = 'radial';
 
 			function lsGet(key) { try { return window.localStorage.getItem(key); } catch (e) { return null; } }
 			function lsSet(key, val) { try { window.localStorage.setItem(key, val); } catch (e) { } }
