@@ -879,6 +879,43 @@ main.app-wrapper {
   user-select: none;
 }
 
+// ── Recents row state indicator (New dot / Running spinner) ───────────
+// Trailing indicator on a workflow's Recents row. The status element is a
+// fixed square SLOT — the same 24px box the leading nav icons occupy — that
+// centres its glyph, so an 8px dot and a 14px spinner share one centre axis
+// row-to-row (rather than sitting flush-right at different widths). The
+// glyph itself is an inner element; each variant reuses a visual already on
+// the page rather than inventing a new one.
+.seller-home__nav-recent-status {
+  flex: 0 0 auto;
+  margin-inline-start: auto; // pin the slot to the trailing edge
+
+  inline-size: $sh-nav-icon-box;   // 24px — mirrors the leading icon column
+  block-size: $sh-nav-icon-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// "New" — a completed workflow has fresh results to review. The same green
+// filled dot the feed's completed status button rests on, at the same 8px
+// the feed's `--sh-status-dot` uses, centred in the slot above.
+.seller-home__nav-recent-status-glyph--dot {
+  inline-size: 0.5rem;  // 8px
+  block-size: 0.5rem;
+  border-radius: var(--slds-g-radius-border-circle, 50%);
+  background: var(--slds-g-color-palette-green-70, #45c65a);
+}
+
+// "Running" — the shared border-spinner (index.scss `.sh-spinner`), re-boxed
+// to 14px within the slot exactly the way the feed re-boxes the same spinner
+// into its glyph slot.
+.seller-home__nav-recent-status-glyph--spinner.sh-spinner {
+  width: 0.875rem;  // 14px
+  height: 0.875rem;
+  border-width: 2px;
+}
+
 // ──────────────────────────────────────────────────────────────────────
 // Collapsed nav (assumption — Figma frame is "Expanded Composed"; the
 // collapsed variant isn't attached to this request). Four visual
@@ -972,9 +1009,10 @@ main.app-wrapper {
     display: none;
   }
 
-  // A running row's progress ring is a second 20px object in a column
-  // with room for one, so it sits out the collapsed state. The monogram
-  // is the row's identity; run status is legible again on expand.
+  // A running/completed row's state indicator is a second object in a
+  // column with room for one, so it sits out the collapsed state. The
+  // monogram is the row's identity; run status is legible again on expand.
+  .seller-home__nav-recent-status,
   .seller-home__nav-recent-ring {
     display: none;
   }
@@ -2476,12 +2514,13 @@ main.app-wrapper {
   --sh-status-size: 1.25rem;
   --sh-status-glyph: 1rem;
 
-  // The completed dot, sized on its own. `#circle` is a solid disc
-  // filling 92% of its viewBox, where the rest of the set are line icons
-  // with margin built in, so at a shared box it lands far heavier than
-  // they do. 0.5rem puts the disc at ~8px against their 16px slot, so the
-  // green "done" dot reads lighter than the line glyphs around it.
-  --sh-status-dot: 0.5rem;
+  // The completed dot, sized on its own. `#circle` is a solid disc of
+  // radius 24 in a 52-unit viewBox, so it only fills 48/52 (~92%) of its
+  // box — a plain 0.5rem (8px) box renders the disc at ~7.4px. Inflate the
+  // box by 52/48 so the VISIBLE disc lands at a true 8px, matching the
+  // left-nav "New" dot (a plain 8px CSS circle). The box is transparent —
+  // only the disc paints — so the odd box size never shows.
+  --sh-status-dot: calc(8px * 52 / 48);  // 8px visible disc
 
   position: relative; // lifts it above the row's stretched-link overlay
   z-index: 2;
@@ -2587,10 +2626,10 @@ main.app-wrapper {
   --sh-status-size: 1.25rem;
   --sh-status-glyph: 1rem;
 
-  // The completed "done" dot, sized well below the 16px line glyphs: the
-  // `#circle` sprite is a solid disc, so at the shared box it would read
-  // far heavier than the line icons. Matches the feed's green dot.
-  --sh-status-dot: 0.5rem;
+  // The completed "done" dot. `#circle` fills only 48/52 of its box (see
+  // the feed's copy of this token), so the box is inflated by 52/48 to land
+  // a true 8px visible disc. Matches the feed's green dot exactly.
+  --sh-status-dot: calc(8px * 52 / 48);  // 8px visible disc
 
   display: flex;
   align-items: center;
@@ -3381,6 +3420,7 @@ $sh-feed-filter-hidden: (
     // do under the toggled collapse — a rail narrowed by the viewport
     // shouldn't be missing a group the same-width rail has.
     .seller-home__nav-recent-mono { display: inline-flex; }
+    .seller-home__nav-recent-status,
     .seller-home__nav-recent-ring { display: none; }
     // Same padding-not-justify-content centring as the toggled collapse
     // above, so a rail narrowed by the viewport and a rail narrowed by

@@ -295,7 +295,12 @@
 		{{ { "tools": shared.toolsModal.tools } | tojson | safe }}
 	</script>
 
-	<div id="panel" class="closed">
+	{# God-rays tuner hidden for the demo — kept in the DOM (not deleted) so
+	   the shader controls can be brought back by removing this inline
+	   `display:none`. Inline style beats the base `#panel { display:block }`
+	   rule, and the toggle handler only flips the `.closed` class, so this
+	   stays hidden. #}
+	<div id="panel" class="closed" style="display: none;">
 		<div class="head">
 			<button id="toggle">Controls</button>
 			<button id="copy" class="act" hidden>Copy</button>
