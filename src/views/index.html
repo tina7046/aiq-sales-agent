@@ -306,11 +306,12 @@
 	   (gear) icon — see the toggle script at the foot of this file. The
 	   `.is-hidden` class (not an inline style) drives show/hide so the gear
 	   can flip it, and the state persists in localStorage. Shown by default. #}
-	<div id="panel" class="closed is-hidden">
+	<div id="panel" class="is-hidden">
 		<div class="head">
-			<button id="toggle">Controls</button>
-			<button id="save" class="act" hidden>Save</button>
-			<button id="reset" class="act" hidden>Reset</button>
+			<button id="toggle">Close</button>
+			<button id="copy" class="act">Copy</button>
+			<button id="save" class="act">Save</button>
+			<button id="reset" class="act">Reset</button>
 		</div>
 		<div class="body">
 			<div class="sect">
@@ -363,6 +364,7 @@
 		godRaysFragmentShader,
 		meshGradientFragmentShader,
 		staticRadialGradientFragmentShader,
+		simplexNoiseFragmentShader,
 		getShaderColorFromString as toVec4,
 		getShaderNoiseTexture,
 		ShaderFitOptions,
@@ -605,7 +607,8 @@
 				const toggleBtn = document.getElementById('toggle');
 				if (toggleBtn) toggleBtn.addEventListener('click', () => {
 					const closed = panel.classList.toggle('closed');
-					for (const id of ['save', 'reset']) { const b = document.getElementById(id); if (b) b.hidden = closed; }
+					toggleBtn.textContent = closed ? 'Controls' : 'Close';
+					for (const id of ['copy', 'save', 'reset']) { const b = document.getElementById(id); if (b) b.hidden = closed; }
 				});
 				const resetBtn = document.getElementById('reset');
 				if (resetBtn) resetBtn.addEventListener('click', () => {
@@ -617,6 +620,16 @@
 				// Save — persist the current settings as the background. They're
 				// already applied live via push(); saving is what makes them stick
 				// across reloads (see the `loadSavedState('mesh')` seed above).
+				const copyBtn = document.getElementById('copy');
+				if (copyBtn) copyBtn.addEventListener('click', async (e) => {
+					const q = (v) => (typeof v === 'string' ? `'${v}'` : v);
+					const bodyTxt = Object.keys(MESH_DEFAULTS).map((k) => Array.isArray(mstate[k])
+						? `  ${k}: [${mstate[k].map(q).join(', ')}],`
+						: `  ${k}: ${q(mstate[k])},`).join('\n');
+					await navigator.clipboard.writeText(`const params = {\n${bodyTxt}\n};`);
+					e.target.textContent = 'Copied';
+					setTimeout(() => (e.target.textContent = 'Copy'), 1500);
+				});
 				const saveBtn = document.getElementById('save');
 				if (saveBtn) saveBtn.addEventListener('click', (e) => {
 					saveState('mesh', mstate);
@@ -772,7 +785,8 @@
 				const toggleBtn = document.getElementById('toggle');
 				if (toggleBtn) toggleBtn.addEventListener('click', () => {
 					const closed = panel.classList.toggle('closed');
-					for (const id of ['save', 'reset']) { const b = document.getElementById(id); if (b) b.hidden = closed; }
+					toggleBtn.textContent = closed ? 'Controls' : 'Close';
+					for (const id of ['copy', 'save', 'reset']) { const b = document.getElementById(id); if (b) b.hidden = closed; }
 				});
 				const resetBtn = document.getElementById('reset');
 				if (resetBtn) resetBtn.addEventListener('click', () => {
@@ -781,6 +795,16 @@
 					while (rstate.colors.length < 10) rstate.colors.push('#ffffffff');
 					rstate.colors.length = 10;
 					sync.forEach((f) => f()); dimUnused(); push();
+				});
+				const copyBtn = document.getElementById('copy');
+				if (copyBtn) copyBtn.addEventListener('click', async (e) => {
+					const q = (v) => (typeof v === 'string' ? `'${v}'` : v);
+					const bodyTxt = Object.keys(RADIAL_DEFAULTS).map((k) => Array.isArray(rstate[k])
+						? `  ${k}: [${rstate[k].map(q).join(', ')}],`
+						: `  ${k}: ${q(rstate[k])},`).join('\n');
+					await navigator.clipboard.writeText(`const params = {\n${bodyTxt}\n};`);
+					e.target.textContent = 'Copied';
+					setTimeout(() => (e.target.textContent = 'Copy'), 1500);
 				});
 				const saveBtn = document.getElementById('save');
 				if (saveBtn) saveBtn.addEventListener('click', (e) => {
@@ -798,10 +822,173 @@
 			}
 		}
 
+		if (ACTIVE_SHADER === 'simplex') {
+			// SimplexNoise — vanilla translation of the React
+			// `<SimplexNoise colors stepsPerColor softness speed scale />`
+			// (speed is the ShaderMount arg; the rest are uniforms). Same host
+			// + god-rays-style tuning panel.
+			try {
+				const SIMPLEX_DEFAULTS = {
+					colors: ['#ffffff', '#e0edff', '#ffffff', '#ffffff', '#ffffff', '#3399cc', '#3333cc', '#9933cc', '#cc3399', '#cc3333'],
+					colorsCount: 10,
+					stepsPerColor: 1, softness: 1,
+					speed: 2, scale: 1.4, rotation: 0,
+					offsetX: 0, offsetY: 0,
+				};
+				// key, min, max, step
+				const SIMPLEX_SLIDERS = [
+					['stepsPerColor', 1, 10, 1],
+					['softness', 0, 1, 0.01],
+					['speed', 0, 5, 0.01],
+					['scale', 0.1, 4, 0.01],
+					['rotation', 0, 360, 1],
+					['offsetX', -1, 1, 0.01],
+					['offsetY', -1, 1, 0.01],
+				];
+
+				const sstate = structuredClone(SIMPLEX_DEFAULTS);
+				Object.assign(sstate, loadSavedState('simplex') || {});
+				while (sstate.colors.length < 10) sstate.colors.push('#ffffffff');
+				sstate.colors.length = 10;
+				const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+
+				const simplexUniforms = () => ({
+					u_colors: sstate.colors.map(toVec4),
+					u_colorsCount: sstate.colorsCount,
+					u_stepsPerColor: sstate.stepsPerColor,
+					u_softness: sstate.softness,
+					u_scale: sstate.scale,
+					u_rotation: sstate.rotation,
+					u_offsetX: sstate.offsetX,
+					u_offsetY: sstate.offsetY,
+					u_fit: ShaderFitOptions.cover,
+					u_originX: 0.5, u_originY: 0.5,
+					u_worldWidth: 0, u_worldHeight: 0,
+				});
+
+				const simplexMount = new ShaderMount(
+					bg, simplexNoiseFragmentShader, simplexUniforms(), undefined,
+					reduce.matches ? 0 : sstate.speed, 0
+				);
+				window.simplexNoise = simplexMount;
+
+				const push = () => {
+					simplexMount.setUniforms(simplexUniforms());
+					simplexMount.setSpeed(reduce.matches ? 0 : sstate.speed);
+					if (sstate.speed === 0 || reduce.matches) { try { simplexMount.requestRender(); } catch { } }
+				};
+				reduce.addEventListener('change', push);
+
+				// ---- panel (mirrors the god-rays tuner) --------------------------
+				const panel = document.getElementById('panel');
+				const body = panel.querySelector('.body');
+				body.innerHTML = '';
+				const sync = [];
+
+				const sect = (title) => {
+					const s = document.createElement('div');
+					s.className = 'sect';
+					s.innerHTML = `<h2>${title}</h2>`;
+					body.appendChild(s);
+					return s;
+				};
+
+				const colorRow = (host, label, read, write) => {
+					const row = document.createElement('div');
+					row.className = 'crow';
+					row.innerHTML =
+						`<input type="color">` +
+						`<div class="stack">` +
+						`<span class="hex"><span>${label}</span><span class="v"></span></span>` +
+						`<input type="range" min="0" max="1" step="0.01">` +
+						`</div>`;
+					const [swatch, alpha] = row.querySelectorAll('input');
+					const out = row.querySelector('.v');
+					const refresh = () => {
+						const { rgb, a } = splitHex(read());
+						swatch.value = rgb; alpha.value = a; out.textContent = read();
+					};
+					const change = () => { write(joinHex(swatch.value, parseFloat(alpha.value))); refresh(); push(); };
+					swatch.addEventListener('input', change);
+					alpha.addEventListener('input', change);
+					refresh(); sync.push(refresh); host.appendChild(row);
+					return row;
+				};
+
+				const slider = (host, key, min, max, step, after) => {
+					const row = document.createElement('div');
+					row.className = 'row';
+					row.innerHTML =
+						`<span class="lbl"><span>${key}</span><span class="val"></span></span>` +
+						`<input type="range" min="${min}" max="${max}" step="${step}">`;
+					const input = row.querySelector('input');
+					const out = row.querySelector('.val');
+					const refresh = () => { input.value = sstate[key]; out.textContent = sstate[key]; };
+					input.addEventListener('input', () => {
+						sstate[key] = parseFloat(input.value);
+						refresh(); after?.(); push();
+					});
+					refresh(); sync.push(refresh); host.appendChild(row);
+				};
+
+				const colorsSect = sect('Colors');
+				const colorRows = [];
+				for (let i = 0; i < sstate.colors.length; i++) {
+					colorRows.push(colorRow(colorsSect, `color ${i + 1}`,
+						() => sstate.colors[i], (v) => (sstate.colors[i] = v)));
+				}
+				const dimUnused = () => colorRows.forEach((r, i) =>
+					r.classList.toggle('off', i >= sstate.colorsCount));
+				slider(colorsSect, 'colorsCount', 1, sstate.colors.length, 1, dimUnused);
+				dimUnused();
+
+				const motionSect = sect('Noise & motion');
+				for (const [k, min, max, step] of SIMPLEX_SLIDERS) slider(motionSect, k, min, max, step);
+
+				const toggleBtn = document.getElementById('toggle');
+				if (toggleBtn) toggleBtn.addEventListener('click', () => {
+					const closed = panel.classList.toggle('closed');
+					toggleBtn.textContent = closed ? 'Controls' : 'Close';
+					for (const id of ['copy', 'save', 'reset']) { const b = document.getElementById(id); if (b) b.hidden = closed; }
+				});
+				const resetBtn = document.getElementById('reset');
+				if (resetBtn) resetBtn.addEventListener('click', () => {
+					clearSavedState('simplex');
+					Object.assign(sstate, structuredClone(SIMPLEX_DEFAULTS));
+					while (sstate.colors.length < 10) sstate.colors.push('#ffffffff');
+					sstate.colors.length = 10;
+					sync.forEach((f) => f()); dimUnused(); push();
+				});
+				const copyBtn = document.getElementById('copy');
+				if (copyBtn) copyBtn.addEventListener('click', async (e) => {
+					const q = (v) => (typeof v === 'string' ? `'${v}'` : v);
+					const bodyTxt = Object.keys(SIMPLEX_DEFAULTS).map((k) => Array.isArray(sstate[k])
+						? `  ${k}: [${sstate[k].map(q).join(', ')}],`
+						: `  ${k}: ${q(sstate[k])},`).join('\n');
+					await navigator.clipboard.writeText(`const params = {\n${bodyTxt}\n};`);
+					e.target.textContent = 'Copied';
+					setTimeout(() => (e.target.textContent = 'Copy'), 1500);
+				});
+				const saveBtn = document.getElementById('save');
+				if (saveBtn) saveBtn.addEventListener('click', (e) => {
+					saveState('simplex', sstate);
+					push();
+					e.target.textContent = 'Saved';
+					setTimeout(() => (e.target.textContent = 'Save'), 1500);
+				});
+
+				push();
+			} catch (e) {
+				const el = document.getElementById('err');
+				el.style.display = 'block';
+				el.textContent = 'Shader failed to start:\n' + (e?.stack || e);
+			}
+		}
+
 		// Original god-rays — untouched, just gated so it doesn't mount while
-		// the mesh or radial shader is active. (God-rays is capped at 5 colors
-		// by the shader itself, unlike mesh/radial which go to 10.)
-		if (ACTIVE_SHADER !== 'mesh' && ACTIVE_SHADER !== 'radial') try {
+		// another shader (mesh / radial / simplex) is active. (God-rays is
+		// capped at 5 colors by the shader itself, unlike the others.)
+		if (ACTIVE_SHADER !== 'mesh' && ACTIVE_SHADER !== 'radial' && ACTIVE_SHADER !== 'simplex') try {
 			// ShaderMount rejects a texture that hasn't decoded, so wait for it.
 			let noise;
 			try { noise = getShaderNoiseTexture(document); } catch { noise = getShaderNoiseTexture(); }
@@ -1102,7 +1289,8 @@
 
 			document.getElementById('toggle').addEventListener('click', () => {
 				const closed = document.getElementById('panel').classList.toggle('closed');
-				for (const id of ['save', 'reset']) document.getElementById(id).hidden = closed;
+				document.getElementById('toggle').textContent = closed ? 'Controls' : 'Close';
+				for (const id of ['copy', 'save', 'reset']) document.getElementById(id).hidden = closed;
 			});
 
 			document.getElementById('reset').addEventListener('click', () => {
@@ -1115,6 +1303,15 @@
 			// Save — persist the current settings as the background (already
 			// applied live via push(); saving makes them stick across reloads,
 			// see the `loadSavedState('godrays')` seed above).
+			document.getElementById('copy').addEventListener('click', async (e) => {
+				const q = (v) => (typeof v === 'string' ? `'${v}'` : v);
+				const body = Object.keys(DEFAULTS).map((k) => Array.isArray(state[k])
+					? `  ${k}: [${state[k].map(q).join(', ')}],`
+					: `  ${k}: ${q(state[k])},`).join('\n');
+				await navigator.clipboard.writeText(`const params = {\n${body}\n};`);
+				e.target.textContent = 'Copied';
+				setTimeout(() => (e.target.textContent = 'Copy'), 1500);
+			});
 			document.getElementById('save').addEventListener('click', (e) => {
 				saveState('godrays', state);
 				push();
@@ -1178,6 +1375,7 @@
 				shaderItem('godrays', 'God Rays') +
 				shaderItem('mesh', 'Mesh') +
 				shaderItem('radial', 'Radial') +
+				shaderItem('simplex', 'Simplex') +
 				'<li class="slds-has-divider_top-space" role="separator"></li>' +
 				'<li class="slds-dropdown__item" role="presentation">' +
 				'<a href="#" role="menuitemcheckbox" aria-checked="' + (!panelHidden) + '" data-sh-panel-toggle tabindex="0">' +
