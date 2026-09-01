@@ -63,11 +63,12 @@
                  feed's output-phrased "Found new prospects" becomes
                  "Find Prospects" here). Falls back to the feed title
                  when a skill can't be resolved.
-     • cadence — the FULL home subline string ("<status> · <time>"),
-                 composed exactly like the feed's second line so
-                 "Completed · Next run in 3 days" reads identically on
-                 both surfaces. Scheduled rows lead with the cadence
-                 word instead of a status label, matching the feed.
+     • cadence — the FULL home subline string, composed exactly like
+                 the feed's second line so "Weekly · Next run in 3 days"
+                 reads identically on both surfaces. Ready and Scheduled
+                 rows lead with cadence; Running leads with step
+                 progress; Paused / Failed / Archived lead with a
+                 status word.
      • skillId — the backing skill id, surfaced on the row so the
                  ⋮ → Edit action deep-links to /skill_detail.html.
 
@@ -97,13 +98,13 @@
       {% for _sk in skillCatalog %}
         {% if _sk.id == _skillId %}{% set _skillName = _sk.name %}{% endif %}
       {% endfor %}
-      {# Compose the subline exactly like the feed: scheduled rows lead
-         with the cadence, every other state with its status label; the
-         right slot is the time field that state uses. #}
-      {% set _left = _it.cadence if _it.state == "scheduled" else (statusLabels[_it.state] or _it.state) %}
-      {% if _it.state == "running" %}{% set _right = _it.startedAt %}
-      {% elif _it.state == "paused" or _it.state == "failed" %}{% set _right = _it.lastRun %}
-      {% else %}{% set _right = _it.nextRun %}{% endif %}
+      {# Compose the subline exactly like the feed: Ready + Scheduled
+         lead with cadence, Running with step progress, everything else
+         with its status label; the right slot is the time field that
+         state uses. Single `set` expressions so the values aren't
+         trapped in Nunjucks' block scope. #}
+      {% set _left = _it.cadence if (_it.state == "completed" or _it.state == "scheduled") else ((_it.stepProgress or statusLabels.running or _it.state) if _it.state == "running" else (statusLabels[_it.state] or _it.state)) %}
+      {% set _right = _it.startedAt if _it.state == "running" else (_it.lastRun if (_it.state == "paused" or _it.state == "failed") else _it.nextRun) %}
       {% set _meta = (_left ~ " · " ~ _right) if _right else _left %}
       {% set _ = workflows.push({
         id:      _it.id,

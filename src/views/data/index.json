@@ -3666,19 +3666,21 @@
     // to freeze it — useful when a screenshot has to match a deck.
     "date": null,
     // ── The subline ───────────────────────────────────────────────────
-    // Every row's second line is two slots: "<status> · <time>".
+    // Every row's second line is two slots: "<left> · <right>".
     //
-    //   completed   Completed   · Next run in 3 days
-    //   running     Running now · Started 4 min ago
-    //   scheduled   Daily       · Next run in 15 hours
-    //   paused      Paused      · Last run Thursday
-    //   failed      Failed      · Last run today at 6:00 AM
+    //   completed   Weekly       · Next run in 3 days
+    //   running     2 of 5 steps · 4 min elapsed
+    //   scheduled   Daily        · Next run in 15 hours
+    //   paused      Paused       · Last run Thursday
+    //   failed      Failed       · Last run today at 6:00 AM
     //
-    // `scheduled` is the one state whose left slot isn't a status word.
-    // A row that's simply waiting has no status worth naming — what you
-    // want to know is how often it runs — and using the cadence there
-    // also stops `scheduled` and `completed` from reading identically,
-    // since both name a next run on the right.
+    // Ready (`completed`) and Scheduled both lead with cadence: the
+    // group header already names those states, so restating "Completed"
+    // is wasted, and cadence is the fact the header doesn't carry.
+    // Running leads with step progress — remaining time is unknown,
+    // completed-of-total steps is the honest signal — and elapsed on
+    // the right. Paused / Failed / Archived still use a status word;
+    // those aren't already labelled by a Ready/Running header.
     //
     // The labels live here rather than in the template so the wording is
     // editable without touching markup, and so the JS that rewrites the
@@ -3731,6 +3733,10 @@
       }
     },
 
+    // Left-slot words for states that still need one (Paused / Failed /
+    // Archived). Ready uses cadence and Running uses `stepProgress`;
+    // `completed` / `running` here are fallbacks if those fields are
+    // missing, so a parked row without them still has copy.
     "statusLabels": {
       "completed": "Completed",
       "running":   "Running now",
@@ -3750,8 +3756,8 @@
 
     // What the right slot says the moment a run is started off-schedule
     // (a failed row retried, or "Run now" from the kebab). There's no
-    // history to report yet, so it can't reuse `startedAt`.
-    "retryTime": "Started just now",
+    // elapsed time to report yet, so it can't reuse `startedAt`.
+    "retryTime": "Just started",
 
     // Row order. The template groups `items` by this sequence, so a new
     // row lands in the right place wherever it's added to the array
@@ -3838,8 +3844,8 @@
     // is no longer three potential rows (its last result, its current
     // run, its next run) — it's one row that carries its own state.
     //
-    // Row: { id, title, titles?, state, cadence, lastRun, nextRun?,
-    //        startedAt?, conversationId?, outputs?, error?,
+    // Row: { id, title, titles?, state, cadence, stepProgress?, lastRun,
+    //        nextRun?, startedAt?, conversationId?, outputs?, error?,
     //        retryOutput?, workflow? }
     //   • state   — one of `stateOrder`.
     //   • title   — what the row reads in the state it renders in. A
@@ -3860,11 +3866,15 @@
     //     mechanism the subline uses, so home.js swaps them with no
     //     extra logic.
     //   • cadence — how often the workflow runs ("Weekly", "Daily").
-    //     Shown as the left slot on `scheduled` rows only, but carried
-    //     by every row so one can be rescheduled into that state.
+    //     Left slot on Ready (`completed`) and Scheduled. Carried by
+    //     every row so a running one can finish into Ready with copy.
+    //   • stepProgress — "2 of 5 steps". Left slot while running.
+    //     Remaining time is unknown; completed-of-total steps is the
+    //     honest signal. Carry it on idle rows too so "Run now" has
+    //     the starting count ("1 of 3 steps") ready.
     //   • The time fields each serve one state's right slot:
     //       nextRun    completed, scheduled
-    //       startedAt  running
+    //       startedAt  running (elapsed: "4 min elapsed")
     //       lastRun    paused, failed
     //     Every row needs `lastRun` regardless of state, because any row
     //     can be paused from its status button and a paused row reports
@@ -3889,11 +3899,12 @@
           "neutral": "Find new prospects"
         },
         "cadence": "Weekly",
+        "stepProgress": "1 of 3 steps",
         "nextRun": "Next run in 3 days",
         "lastRun": "Last run Thursday",
         "state": "completed",
         "outputs": [
-          { "icon": "table",   "label": "7 accounts imported" },
+          { "icon": "table",   "label": "7 new accounts" },
           { "icon": "message", "label": "25 prospects" }
         ],
         "workflow": { "id": "sk-find-prospects", "label": "" }
@@ -3906,6 +3917,7 @@
           "neutral": "Draft proposals to send"
         },
         "cadence": "Daily",
+        "stepProgress": "1 of 3 steps",
         "nextRun": "Next run tomorrow at 6:00 AM",
         "lastRun": "Last run today",
         "state": "completed",
@@ -3922,6 +3934,7 @@
           "neutral": "Weekly exec brief"
         },
         "cadence": "Weekly",
+        "stepProgress": "1 of 3 steps",
         "nextRun": "Next run Friday at 5:00 AM",
         "lastRun": "Last run Friday",
         "state": "scheduled",
@@ -3943,6 +3956,7 @@
           "neutral": "Meeting next steps"
         },
         "cadence": "Daily",
+        "stepProgress": "1 of 3 steps",
         "nextRun": "Next run Friday at 9:00 AM",
         "lastRun": "Last run yesterday",
         "state": "scheduled",
@@ -3967,7 +3981,8 @@
           "neutral": "Research target accounts"
         },
         "cadence": "Weekly",
-        "startedAt": "Started 12 min ago",
+        "stepProgress": "4 of 5 steps",
+        "startedAt": "12 min elapsed",
         "lastRun": "Last run Monday",
         "state": "running",
         "outputs": [
@@ -3983,7 +3998,8 @@
           "neutral": "Draft outreach for warm leads"
         },
         "cadence": "Daily",
-        "startedAt": "Started 4 min ago",
+        "stepProgress": "2 of 4 steps",
+        "startedAt": "4 min elapsed",
         "lastRun": "Last run yesterday",
         "state": "running",
         "outputs": [
@@ -4006,6 +4022,7 @@
           "neutral": "Weekly Top 3 Things"
         },
         "cadence": "Weekly",
+        "stepProgress": "1 of 3 steps",
         "nextRun": "Next run Monday at 9:00 AM",
         "lastRun": "Last run today",
         "state": "completed",
@@ -4019,7 +4036,7 @@
       // snapshot thread, whose header Run History dropdown holds the
       // three daily snapshots. `completed` — its latest run finished, so
       // it carries an `outputs` pill like the other completed rows (and
-      // its Scheduled row reads Completed too, since both are sourced
+      // its Scheduled row reads the same subline, since both are sourced
       // from this entry).
       {
         "id": "ri-daily-pipeline-snapshot",
@@ -4030,6 +4047,7 @@
           "neutral": "Daily Pipeline Snapshot"
         },
         "cadence": "Daily",
+        "stepProgress": "1 of 3 steps",
         "nextRun": "Next run tomorrow at 9:00 AM",
         "lastRun": "Last run today at 9:00 AM",
         "state": "completed",
@@ -4058,6 +4076,7 @@
           "neutral": "Sync territory quota changes"
         },
         "cadence": "Daily",
+        "stepProgress": "1 of 3 steps",
         "lastRun": "Last run today at 6:00 AM",
         "state": "failed",
         "error": "Quota API returned 502 — 0 of 214 territories synced",
@@ -4075,6 +4094,7 @@
           "neutral": "Refresh account health scores"
         },
         "cadence": "Monthly",
+        "stepProgress": "1 of 4 steps",
         "nextRun": "Next run Monday at 6:00 AM",
         "lastRun": "Last run Jul 20",
         "state": "scheduled",
@@ -4093,6 +4113,7 @@
           "neutral": "Re-engage stalled opportunities"
         },
         "cadence": "Weekly",
+        "stepProgress": "1 of 3 steps",
         // A paused row DISPLAYS "Paused" (the template substitutes it),
         // while the schedule underneath is what resuming restores — so
         // `nextRun` stays a real time even here.

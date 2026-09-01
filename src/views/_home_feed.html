@@ -11,14 +11,16 @@
     │  Your agent at work   Tue Aug 18                           ⋮ │
     │  ┌────────────────────────────────────────────────────────┐  │
     │  │ ✓  Found new prospects                     [badge]  ⋮  │  │
-    │  │    Completed · Next run in 3 days                      │  │
-    │  │    ( ▨ 7 accounts imported ) ( ▨ 25 prospects )        │  │
+    │  │    Weekly · Next run in 3 days                         │  │
+    │  │    ( ▨ 7 new accounts ) ( ▨ 25 prospects )             │  │
     │  └────────────────────────────────────────────────────────┘  │
     └──────────────────────────────────────────────────────────────┘
 
-  Every row's second line is two slots — "<status> · <time>" — and the
+  Every row's second line is two slots — left · right — and the
   glyph on its left is a button: it shows what the row is doing and
-  pressing it pauses, resumes, or retries.
+  pressing it pauses, resumes, or retries. The left slot is cadence
+  on Ready/Scheduled, step progress on Running, and a status word
+  on Paused/Failed/Archived (those aren't already named by a header).
 
   Data: `feed.*` in data/index.json (see that file for the row
   contract). Behaviour: `bindFeed` in scripts/home.js, which boots off
@@ -118,18 +120,19 @@
 {#
   Subline halves, resolved from the row's state.
 
-  Left is the status word from `feed.statusLabels`, except on
-  `scheduled` rows, which show the cadence instead: a row that's merely
-  waiting has no status worth naming, and "Daily" also keeps it from
-  reading exactly like a `completed` row, since both name a next run on
-  the right.
+  Left is cadence on Ready (`completed`) and Scheduled — the group
+  header already names those states, so restating "Completed" /
+  "Running now" is wasted. Running shows step progress instead
+  (`2 of 5 steps`): elapsed time is knowable, remaining time is not.
+  Paused / Failed / Archived still use the status word; those states
+  aren't already labelled by a Ready/Running header.
 
   Right is whichever time field that state actually has. They're
   separate fields rather than one `time` string so a row can change
   state without a data rewrite — pausing a running row needs its
   `lastRun` to already be there.
 #}
-{% macro sublineStatus(item, statusLabels) %}{% if item.state == "scheduled" %}{{ item.cadence }}{% else %}{{ statusLabels[item.state] }}{% endif %}{% endmacro %}
+{% macro sublineStatus(item, statusLabels) %}{% if item.state == "completed" or item.state == "scheduled" %}{{ item.cadence }}{% elif item.state == "running" %}{{ item.stepProgress or statusLabels.running }}{% else %}{{ statusLabels[item.state] }}{% endif %}{% endmacro %}
 
 {% macro sublineTime(item) %}{% if item.state == "running" %}{{ item.startedAt }}{% elif item.state == "paused" or item.state == "failed" or item.state == "archived" %}{{ item.lastRun }}{% elif item.state == "completed" %}{{ item.nextRun or item.lastRun }}{% else %}{{ item.nextRun }}{% endif %}{% endmacro %}
 
@@ -388,9 +391,13 @@
         {% endif %}
       </h3>
 
-      {# Subline — "<status> · <time>". #}
+      {# Subline — left · right. Left is cadence (Ready/Scheduled),
+         step progress (Running), or a status word (Paused/Failed/
+         Archived). The running slot is `stepProgress` so Run now
+         has copy; the completed slot is cadence so a finish from
+         the kebab doesn't put "Completed" back. #}
       <p class="seller-home__feed-item-desc" id="{{ descId }}">
-        {{ sublineSlot("status", "seller-home__feed-item-desc-status", sublineStatus(item, statusLabels), statusLabels.paused, statusLabels.running, statusLabels.completed, item.cadence, statusLabels.archived) }}
+        {{ sublineSlot("status", "seller-home__feed-item-desc-status", sublineStatus(item, statusLabels), statusLabels.paused, item.stepProgress or statusLabels.running, item.cadence, item.cadence, statusLabels.archived) }}
         <span class="seller-home__feed-item-desc-sep" aria-hidden="true">·</span>
         {{ sublineSlot("time", "seller-home__feed-item-desc-time", sublineTime(item), item.lastRun, retryTime, item.nextRun or item.lastRun or item.startedAt, item.nextRun or item.lastRun or item.startedAt, item.lastRun or item.nextRun) }}
       </p>

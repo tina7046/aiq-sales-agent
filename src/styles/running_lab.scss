@@ -11,9 +11,10 @@
 // phase sections, and the revealed finished result.
 
 .rl-box {
-  border-radius: var(--slds-g-radius-border-3, .75rem);
-  padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
-  border: 1px solid var(--slds-g-color-palette-neutral-90, #e5e5e5);
+  // Not a card — reads as a regular chat element in the thread: no border,
+  // radius, or surface. Each row carries its own padding so the full-width
+  // hover still works and the content column aligns with the chat messages.
+  padding: 0;
 }
 
 // Icon-swap crossfade ends — the two states a stacked glyph swaps
@@ -60,41 +61,560 @@
     transform: rotate(0deg);
   }
 
-  // ── Combined run + chain-of-thought component ───────────────────
-  // One `.rl-box`: a header button (spinner/caret + label + timer)
-  // that toggles the phase sections in `.rl-run__body`. A collapsed
-  // card is the header, so the whole box is the hit target.
-  .rl-run__header {
+  // ── Run card ────────────────────────────────────────────────────
+  // One `.rl-box` holding just the three phase steps. The live run state
+  // (spinner, shimmer label, timer, cycling thought) rides on the ACTIVE
+  // phase row; on completion a `.rl-run__complete` title appears above the
+  // three finished steps.
+
+  // Lab-only playback controls sit above the run card, not in it.
+  .rl-lab-controls {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  // SLDS sets `.slds-button { display: inline-flex }`, an author rule that
+  // overrides the UA `[hidden]` stylesheet — so `hidden` alone won't hide
+  // these toggled controls (Pause shows only during the run, Restart only
+  // after). Restate the hide at class+attribute specificity so the JS
+  // `.hidden` flags actually take effect.
+  .rl-run__pause[hidden],
+  .rl-run__restart[hidden] {
+    display: none;
+  }
+
+  // ── Completed title ─────────────────────────────────────────────
+  // Hidden during the run; running_lab.js clears `hidden` on finish. Sits
+  // above the three done steps and carries the terminal summary + the
+  // final elapsed.
+  .rl-run__complete[hidden] {
+    display: none;
+  }
+
+  // Completed accordion header (a button): chevron + summary on the left,
+  // elapsed on the right. Full-width row with its own padding so the hover
+  // fill bleeds edge-to-edge; button chrome reset so it reads as the row.
+  .rl-run__complete {
     width: 100%;
-  }
-
-  .rl-run.is-collapsed {
-    cursor: pointer;
-  }
-
-  // Reset the button chrome so the header reads as the status row.
-  .rl-run__toggle {
-    padding: 0;
-    background: transparent;
+    padding: 0.75rem;
     border: 0;
-    cursor: pointer;
+    background: transparent;
     font: inherit;
     color: inherit;
     text-align: left;
+    cursor: pointer;
   }
 
-  // Icon slot: a swap slot holding the spinner + a disclosure chevron.
+  .rl-run__complete:hover {
+    background: #fafafa;
+    border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
+  }
+
+  .rl-run__heading {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  // Chevron sits in the shared 1.25rem icon column so it centers under the
+  // phase / source icons; the label then aligns with their labels.
   .rl-run__icon {
+    flex: 0 0 1.25rem;
     width: 1.25rem;
-    height: 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     color: var(--slds-g-color-on-surface-2, #2e2e2e);
   }
 
-  // Lab-only: keep the shared grey track, replace only the accent
-  // segment (`.sh-spinner`'s `border-bottom`) with the same blue →
-  // violet band as `.sh-typing__label`. A 90° overlay sits on the
-  // bottom quarter and rotates with the spinner.
-  .rl-run__icon .rl-swap__glyph--spinner.sh-spinner {
+  // Plain rotating chevron (not an icon-swap): points right when collapsed,
+  // down when expanded.
+  .rl-run__chevron {
+    width: 0.75rem;
+    height: 0.75rem;
+    fill: currentColor;
+    transform: rotate(0deg);
+    transition: transform var(--icon-swap-dur, 250ms) var(--icon-swap-ease, ease-in-out);
+  }
+
+  .rl-run:not(.is-collapsed) .rl-run__complete .rl-run__chevron {
+    transform: rotate(90deg);
+  }
+
+  .rl-run__label {
+    margin-left: 0.75rem;
+    font-weight: 400;
+    font-size: var(--slds-g-font-size-base, 0.8125rem);
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  }
+
+  .rl-run__meta {
+    flex: 0 0 auto;
+  }
+
+  // Success check on the Completed header (BB-AOP parity), sat to the right
+  // of the elapsed time.
+  .rl-run__check {
+    display: inline-flex;
+    margin-left: 0.5rem;
+  }
+
+  .rl-run__check svg {
+    fill: var(--slds-g-color-palette-electric-blue-50, #066afe);
+  }
+
+  // ── Flat variant (running_lab_flat.html) ────────────────────────
+  // The accordion is the top header: a chevron + a "Started X ago"
+  // timestamp (+ a success check on completion). The live spinner and the
+  // cycling "thinking" word live in a status row BELOW the task list.
+
+  // Header row (accordion toggle): full-width, own padding, full-row hover.
+  .rl-flat__head {
+    width: 100%;
+    padding: 0.75rem;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .rl-flat__head:hover {
+    background: #fafafa;
+    border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
+  }
+
+  .rl-flat__heading {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  // Chevron in the shared 1.25rem icon column; rotates with expand state.
+  .rl-flat__icon {
+    flex: 0 0 1.25rem;
+    width: 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  }
+
+  .rl-flat__chevron {
+    width: 0.75rem;
+    height: 0.75rem;
+    fill: currentColor;
+    transform: rotate(0deg);
+    transition: transform var(--icon-swap-dur, 250ms) var(--icon-swap-ease, ease-in-out);
+  }
+
+  .rl-run:not(.is-collapsed) .rl-flat__chevron {
+    transform: rotate(90deg);
+  }
+
+  // "Started X ago" timestamp label.
+  .rl-flat__started {
+    margin-left: 0.75rem;
+    min-width: 0;
+    font-size: var(--slds-g-font-size-base, 0.8125rem);
+    font-weight: 400;
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  }
+
+  .rl-flat__meta {
+    flex: 0 0 auto;
+  }
+
+  // Completed counts on the right of the header — the meta peer to the
+  // skill label on the left. Empty (so no gap) until the run finishes.
+  .rl-flat__summary {
+    font-size: var(--slds-g-font-size-base, 0.8125rem);
+    font-weight: 400;
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+    font-variant-numeric: tabular-nums;
+  }
+
+  // Streaming reasoning — the agent's current thought, between the header
+  // and the trail. Prose voice (matches the agent response), left-inset to
+  // the feed. No min-height: the paragraph is sized to the words actually
+  // revealed (unrevealed words are `display:none` from the engine), so the
+  // step list below rides up and down with the text as it streams in and
+  // out rather than sitting under reserved empty space. Words fade in via
+  // the shared `.t-stream-w` engine.
+  .rl-flat__narrative {
+    margin: 0;
+    padding: 0 0.75rem;
+    font-size: var(--slds-g-font-size-base, 0.8125rem);
+    line-height: 1.5;
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  }
+
+  // Nothing revealed yet (between one thought ending and the next starting):
+  // collapse the paragraph entirely so the list sits directly under the
+  // header, instead of leaving a blank prose row.
+  .rl-flat__narrative:empty {
+    display: none;
+  }
+
+  // Task list inset so the source icons line up under the chevron column.
+  // The 0.75rem bottom matches the inter-row gap (and the space above the
+  // status row / card bottom once complete).
+  .rl-flat__steps {
+    padding: 0 0.75rem 0.75rem;
+  }
+
+  // No gap between the collapsed step/check rows. Scoped under `.rl-run` so
+  // it out-specifies the shared `.rl-steps { gap }` rule (which still spaces
+  // the expanded sub-steps, since those live in `.rl-flatstep__substeps`).
+  .rl-run .rl-flat__steps {
+    gap: 0;
+  }
+
+  // Connector line linking the collapsed check rows, in the icon column.
+  // Sits in the gap between this check and the next (cleared past the 1rem
+  // circles) so it stays on top and always shows — no z-index games. Drawn
+  // only on collapsed sections; an expanded section's sub-steps carry their
+  // own connector.
+  .rl-flatstep {
+    position: relative;
+  }
+
+  .rl-flatstep:not(.is-expanded):not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: var(--rl-line-x);
+    top: calc(50% + 0.75rem);       // 0.25rem of white space below this check's circle
+    height: calc(100% - 1.5rem);    // ... and above the next check's circle
+    width: 1px;
+    background: var(--slds-g-color-palette-neutral-90, #e5e5e5);
+    pointer-events: none;
+  }
+
+  // Before the first trail row lands, the empty container shouldn't add its
+  // own bottom padding — keeps the spinner directly under the narrative.
+  .rl-flat__steps:empty {
+    padding: 0;
+  }
+
+  .rl-run.is-complete .rl-flat__narrative {
+    display: none;
+  }
+
+  // ── Accordion section (.rl-flatstep) ────────────────────────────
+  // Each step is a header row + a collapsible body of detail sub-steps.
+  // Header + sub-steps share ONE icon column (no extra indent) so the
+  // connector line threads them and every icon lines up.
+  // The header is not a `.rl-step`, so it never draws the connector line —
+  // only the sub-steps below it do (the line lives inside the opened body).
+  // Symmetric vertical padding gives each check row even top/bottom spacing
+  // (and room for the connector segment between them).
+  .rl-flatstep__head {
+    padding: 0.375rem 0;
+    cursor: default;
+  }
+
+  .rl-flatstep.is-done .rl-flatstep__head {
+    cursor: pointer;
+  }
+
+  // Icon-swap slot: spinner (active) → blue check (done) → chevron (done on
+  // hover / while expanded). Three glyphs stacked in one 1.25rem grid cell,
+  // crossfading on opacity.
+  .rl-flatstep__head .rl-step__icon--swap {
+    display: grid;
+    place-items: center;
+  }
+
+  .rl-flatstep__head .rl-step__icon--swap > .rl-step__spinner,
+  .rl-flatstep__head .rl-step__icon--swap > .rl-step__mark,
+  .rl-flatstep__head .rl-step__icon--swap > .rl-step__chevron {
+    grid-area: 1 / 1;
+    transition: opacity var(--icon-swap-dur, 250ms) var(--icon-swap-ease, ease-in-out);
+  }
+
+  // Spinner re-boxed to the 1rem visible size of the source marks.
+  .rl-flat__steps .rl-step__spinner {
+    box-sizing: border-box;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .rl-flatstep__head .rl-step__chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  }
+
+  // Center the check glyph the same way as the chevron. Without a flex (or
+  // block) context, the inline <svg> sits on a text baseline and the mark
+  // wrapper inherits the head's line-height (13px × 1.5 = 19.5px) instead of
+  // the glyph's 1rem — so the box is 16×19.5, not square, and the check
+  // drifts below the label's optical center. inline-flex collapses that line
+  // box back to the 1rem glyph and vertically centers it.
+  .rl-flatstep__head .rl-step__mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .rl-flatstep__head .rl-step__chevron svg {
+    width: 0.75rem;
+    height: 0.75rem;
+    fill: currentColor;
+    transform: rotate(0deg);
+    transition: transform var(--icon-swap-dur, 250ms) var(--icon-swap-ease, ease-in-out);
+  }
+
+  // Resting states: active → spinner; done → check; expanded → chevron
+  // (rotated down). The swap is driven purely by the expand state so it
+  // toggles cleanly both ways on click — check ⇄ chevron — instead of being
+  // pinned by the cursor still hovering the row after a collapse.
+  .rl-flatstep__head .rl-step__mark,
+  .rl-flatstep__head .rl-step__chevron {
+    opacity: 0;
+  }
+
+  .rl-flatstep.is-done .rl-step__mark {
+    opacity: 1;
+  }
+
+  .rl-flatstep.is-done .rl-step__spinner {
+    opacity: 0;
+    animation-play-state: paused;
+  }
+
+  // Done + hover/focus → the check swaps out for the chevron (the expand
+  // affordance), mirroring running_lab.html's phase icon. The reveal is
+  // purely hover-driven — the expand state only ROTATES the chevron, it
+  // never pins it visible — so leaving the row always crossfades back to
+  // the check. (Pinning it on `is-expanded` was what stopped the reverse
+  // swap after a collapse.)
+  .rl-flatstep.is-done .rl-flatstep__head:hover .rl-step__mark,
+  .rl-flatstep.is-done .rl-flatstep__head:focus-visible .rl-step__mark {
+    opacity: 0;
+  }
+
+  .rl-flatstep.is-done .rl-flatstep__head:hover .rl-step__chevron,
+  .rl-flatstep.is-done .rl-flatstep__head:focus-visible .rl-step__chevron {
+    opacity: 1;
+  }
+
+  // Expanded → point the (hover-revealed) chevron down instead of right.
+  .rl-flatstep.is-expanded .rl-step__chevron svg {
+    transform: rotate(90deg);
+  }
+
+  .rl-run.is-paused .rl-flat__steps .rl-step__spinner.sh-spinner {
+    animation-play-state: paused;
+  }
+
+  // Active header label — the transitions.dev t-think shimmer (grey base +
+  // dark highlight sweeping the glyphs on ::before so the base text stays
+  // readable). Scoped to the header so the detail sub-step labels stay plain.
+  .rl-flatstep.is-active .rl-flatstep__head .rl-step__label {
+    position: relative;
+    color: var(--think-base, #7c7c7c);
+    -webkit-text-fill-color: var(--think-base, #7c7c7c);
+  }
+
+  .rl-flatstep.is-active .rl-flatstep__head .rl-step__label::before {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      transparent 40%,
+      var(--think-highlight, #0d0d0d) 50%,
+      transparent 60%,
+      transparent 100%
+    );
+    background-size: 400% 100%;
+    background-repeat: no-repeat;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    animation: t-think-shimmer var(--think-shimmer, 2000ms) linear infinite;
+  }
+
+  .rl-run.is-paused .rl-flatstep.is-active .rl-flatstep__head .rl-step__label::before {
+    animation-play-state: paused;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rl-flatstep.is-active .rl-flatstep__head .rl-step__label::before {
+      display: none;
+    }
+  }
+
+  // Detail body — collapsed to 0 height, eased open on expand (grid-rows
+  // 0fr → 1fr). `position: relative` anchors the expanded spine (below),
+  // which is drawn on this element (not on the clipped inner wrapper) so it
+  // can reach past the body — up to the header chevron and down to the next
+  // step's check.
+  .rl-flatstep__body {
+    display: grid;
+    grid-template-rows: 0fr;
+    position: relative;
+    transition: grid-template-rows var(--icon-swap-dur, 250ms) var(--icon-swap-ease, ease-in-out);
+  }
+
+  .rl-flatstep.is-expanded .rl-flatstep__body {
+    grid-template-rows: 1fr;
+  }
+
+  .rl-flatstep__body > * {
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  // Indent the sub-steps so the block's left edge (the sub-step icons) lines
+  // up under the header label text — 1.25rem icon slot + 0.75rem label gap =
+  // 2rem, i.e. where "Connected 5 tools" starts. Left padding only; vertical
+  // spacing stays on the child margins so the grid-rows collapse still works.
+  .rl-flatstep__substeps {
+    padding-left: 2rem;
+  }
+
+  // With the sub-steps indented, the per-row connector (`.rl-step::before`,
+  // which threads the icon column) would run through the indented icons.
+  // Suppress it here — a single spine at the chevron column replaces it.
+  .rl-flatstep__substeps > .rl-step::before {
+    display: none;
+  }
+
+  // The expanded spine: one continuous 1px line at the chevron/check center
+  // (`--rl-line-x`), running down the left of the indented sub-steps. Drawn
+  // on the (unclipped) body so its negative top/bottom can bridge the small
+  // gaps up to the header chevron and down to the next step's check, so the
+  // thread reads as chevron → sub-steps → next step.
+  .rl-flatstep.is-expanded .rl-flatstep__body::before {
+    content: "";
+    position: absolute;
+    left: var(--rl-line-x);
+    top: -0.5rem;
+    bottom: -0.25rem;
+    width: 1px;
+    background: var(--slds-g-color-palette-neutral-90, #e5e5e5);
+    transform: translateX(-0.5px);
+    pointer-events: none;
+  }
+
+  // Breathing room above the first sub-step and below the last.
+  // Spacing lives on the sub-step children (margins), NOT as padding on the
+  // collapsible grid item — padding there leaves a min-height that stops
+  // `grid-template-rows: 0fr` from fully collapsing, leaking the first
+  // sub-step over the next check. Margins clip with the content instead:
+  // a top gap below the header check, a bottom gap above the next check.
+  .rl-flatstep__substeps > .rl-step:first-child {
+    margin-top: 0.25rem;
+  }
+
+  .rl-flatstep__substeps > .rl-step:last-child {
+    margin-bottom: 0.25rem;
+  }
+
+  // Collapsed accordion: fold the narrative + trail away, so only the
+  // "Started X ago" header remains.
+  .rl-run.is-collapsed .rl-flat__narrative,
+  .rl-run.is-collapsed .rl-flat__steps {
+    display: none;
+  }
+
+  // Live elapsed-time counter. Tabular figures so the width doesn't
+  // jitter as the digits tick over.
+  .rl-elapsed {
+    font-variant-numeric: tabular-nums;
+    font-size: var(--slds-g-font-scale-neg-1, .75rem); // 12px
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  }
+
+  // Collapsed card: fold down to just the active step's header line —
+  // hide the other steps, and the active step's live thought + body.
+  .rl-run.is-collapsed .rl-phase.is-pending,
+  .rl-run.is-collapsed .rl-phase.is-done {
+    display: none;
+  }
+
+  .rl-run.is-collapsed .rl-phase.is-active .rl-phase__body {
+    display: none;
+  }
+
+  // ── Phase sections ──────────────────────────────────────────────
+  // All three are always on screen. Active shows the live CoT body;
+  // done collapses to its summary count; pending sits dimmed. Rows sit
+  // flush (no phase padding); each toggle carries the vertical rhythm so
+  // its hover fill spans the whole row.
+  .rl-phase {
+    padding: 0;
+  }
+
+  // The phase header is a full-width toggle button with its own padding so
+  // the hover fill bleeds edge-to-edge. Inert (default cursor) while the
+  // phase is pending; a pointer once it's active (click folds the card) or
+  // done (click expands the finished step).
+  .rl-phase__toggle {
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    background: transparent;
+    border: 0;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: default;
+  }
+
+  .rl-phase.is-active .rl-phase__toggle,
+  .rl-phase.is-done .rl-phase__toggle {
+    cursor: pointer;
+  }
+
+  // Full-row hover highlight on the interactive rows (matches BB-AOP).
+  .rl-phase.is-active .rl-phase__toggle:hover,
+  .rl-phase.is-done .rl-phase__toggle:hover {
+    background: #fafafa;
+    border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
+  }
+
+  // Phase icon is a swap slot: a 20px check-circle at rest, crossfading
+  // to a chevron on hover once the phase is done. The circle matches
+  // the run-header spinner slot; the check is 10px, centered.
+  .rl-phase__icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex: 0 0 1.25rem;
+    color: var(--slds-s-icon-color-foreground);
+  }
+
+  .rl-phase__icon .rl-swap__glyph--chevron {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+
+  // Active row: the spinner is the resting glyph (the live cue) and the
+  // check hides. The spinner reuses the shared `.sh-spinner` ring but
+  // recolors the accent segment to the blue → violet band (matching the
+  // reasoning shimmer): the grey track stays, and a 90° conic overlay
+  // sits on the bottom quarter and rotates with the spinner.
+  .rl-phase__icon .rl-swap__glyph--spinner {
+    @include rl-glyph-hidden;
+  }
+
+  .rl-phase.is-active .rl-phase__icon .rl-swap__glyph--spinner {
+    @include rl-glyph-shown;
+  }
+
+  .rl-phase.is-active .rl-phase__check {
+    @include rl-glyph-hidden;
+  }
+
+  .rl-phase__icon .rl-swap__glyph--spinner.sh-spinner,
+  .rl-flat__steps .rl-step__spinner.sh-spinner {
     position: relative;
     border-bottom-color: var(--slds-g-color-neutral-base-90, #e5e5e5);
 
@@ -123,171 +643,27 @@
     }
   }
 
-  // Resting glyph while running is the spinner; the chevron reveals on
-  // hover/focus of the toggle (advertising that the CoT can collapse).
-  .rl-run__icon .rl-swap__glyph--spinner {
-    @include rl-glyph-shown;
-  }
-
-  .rl-run:not(.is-complete) .rl-run__toggle:hover .rl-run__icon .rl-swap__glyph--spinner,
-  .rl-run:not(.is-complete) .rl-run__toggle:focus-visible .rl-run__icon .rl-swap__glyph--spinner {
+  // Active + hover/focus → the spinner steps aside for the chevron,
+  // advertising that a click folds the card down to just this step.
+  .rl-phase.is-active .rl-phase__toggle:hover .rl-phase__icon .rl-swap__glyph--spinner,
+  .rl-phase.is-active .rl-phase__toggle:focus-visible .rl-phase__icon .rl-swap__glyph--spinner {
     @include rl-glyph-hidden;
   }
 
-  .rl-run:not(.is-complete) .rl-run__toggle:hover .rl-run__icon .rl-swap__glyph--chevron,
-  .rl-run:not(.is-complete) .rl-run__toggle:focus-visible .rl-run__icon .rl-swap__glyph--chevron {
+  .rl-phase.is-active .rl-phase__toggle:hover .rl-phase__icon .rl-swap__glyph--chevron,
+  .rl-phase.is-active .rl-phase__toggle:focus-visible .rl-phase__icon .rl-swap__glyph--chevron {
     @include rl-glyph-shown;
   }
 
-  // On completion the spinner retires and the chevron is the resting
-  // glyph — the run is now a plain expand/collapse accordion.
-  .rl-run.is-complete .rl-run__icon .rl-swap__glyph--spinner {
-    @include rl-glyph-hidden;
-    animation: none;
-  }
-
-  .rl-run.is-complete .rl-run__icon .rl-swap__glyph--chevron {
-    @include rl-glyph-shown;
-  }
-
-  // Chevron points down when the accordion body is open.
-  .rl-run:not(.is-collapsed) .rl-run__icon .rl-swap__glyph--chevron {
+  // Chevron points down while the card is expanded (click to fold),
+  // right when collapsed (click to reopen).
+  .rl-run:not(.is-collapsed) .rl-phase.is-active .rl-phase__icon .rl-swap__glyph--chevron {
     transform: rotate(90deg);
   }
 
-  // Paused: freeze the spinner in place as a visual cue.
-  .rl-run.is-paused .rl-run__icon .rl-swap__glyph--spinner {
+  // Paused: freeze the active spinner in place as a visual cue.
+  .rl-run.is-paused .rl-phase.is-active .rl-phase__icon .rl-swap__glyph--spinner {
     animation-play-state: paused;
-  }
-
-  // Title slot: holds the live reasoning shimmer (while running) and the
-  // terminal summary label (once complete). Only one shows at a time.
-  .rl-run__title {
-    display: inline-flex;
-    align-items: center;
-    min-width: 0;
-  }
-
-  // The reasoning indicator is the title while running. It owns the font
-  // (the .sh-typing__label shimmer only sets the paint), matching the
-  // weight/size the summary label uses so the swap doesn't jump.
-  .rl-run__reasoning {
-    font-weight: 400;
-    font-size: var(--slds-g-font-scale-1, 0.875rem);
-  }
-
-  .rl-run__label {
-    font-weight: 400;
-    font-size: var(--slds-g-font-scale-1, 0.875rem);
-    color: var(--slds-g-color-on-surface-3, #001e5b);
-    display: none; // hidden until the run completes
-  }
-
-  // On completion the reasoning shimmer retires and the summary shows.
-  .rl-run.is-complete .rl-run__reasoning {
-    display: none;
-  }
-
-  .rl-run.is-complete .rl-run__label {
-    display: inline;
-  }
-
-  // Lab-only playback controls sit above the run card, not in it.
-  .rl-lab-controls {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .rl-run__meta {
-    flex: 0 0 auto;
-  }
-
-  // SLDS sets `.slds-button { display: inline-flex }`, an author rule that
-  // overrides the UA `[hidden]` stylesheet — so `hidden` alone won't hide
-  // these toggled controls (Pause shows only during the run, Restart only
-  // after). Restate the hide at class+attribute specificity so the JS
-  // `.hidden` flags actually take effect.
-  .rl-run__pause[hidden],
-  .rl-run__restart[hidden] {
-    display: none;
-  }
-
-  // Live elapsed-time counter. Tabular figures so the width doesn't
-  // jitter as the digits tick over.
-  .rl-elapsed {
-    font-variant-numeric: tabular-nums;
-    font-size: var(--slds-g-font-scale-neg-1, .75rem); // 12px
-    color: var(--slds-g-color-on-surface-2, #2e2e2e);
-  }
-
-  // Hover affordance only once it's an expandable accordion.
-  .rl-run.is-complete .rl-run__toggle:hover .rl-run__label {
-    text-decoration: underline;
-  }
-
-  .rl-run.is-complete {
-    
-  }
-
-  // Phase sections live here; a divider separates them from the header.
-  .rl-run__body {
- 
-  
-  }
-
-  .rl-run.is-collapsed .rl-run__body {
-    display: none;
-  }
-
-  // ── Phase sections ──────────────────────────────────────────────
-  // All three are always on screen. Active shows the live CoT body;
-  // done collapses to its summary count; pending sits dimmed.
-  .rl-phase {
-    padding: 0.75rem 0;
-
-    &:first-child {
-      padding-top: 1rem;
-    }
-
-    &:last-child {
-      padding-bottom: 0;
-    }
-  }
-
-  // The phase header is a toggle button. Inert (default cursor) while the
-  // phase is pending/active; becomes a pointer once it's done and its body
-  // can be expanded.
-  .rl-phase__toggle {
-    width: 100%;
-    padding: 0;
-    background: transparent;
-    border: 0;
-    font: inherit;
-    color: inherit;
-    text-align: left;
-    cursor: default;
-  }
-
-  .rl-phase.is-done .rl-phase__toggle {
-    cursor: pointer;
-  }
-
-  // Phase icon is a swap slot: a 20px check-circle at rest, crossfading
-  // to a chevron on hover once the phase is done. The circle matches
-  // the run-header spinner slot; the check is 10px, centered.
-  .rl-phase__icon {
-    width: 1.25rem;
-    height: 1.25rem;
-    flex: 0 0 1.25rem;
-    color: var(--slds-s-icon-color-foreground);
-  }
-
-  .rl-phase__icon .rl-swap__glyph--chevron {
-    width: 1rem;
-    height: 1rem;
   }
 
   .rl-phase__check {
@@ -348,17 +724,38 @@
   }
 
   .rl-phase__name {
-    font-size: var(--slds-g-font-scale-1, 0.875rem);
+    font-size: var(--slds-g-font-size-base, 0.8125rem);
     color: var(--slds-s-icon-color-foreground);
     min-width: 0;
   }
 
-  // Name wraps when an active beat's thought is longer than the
-  // resting phase title. Icon + text stay vertically centered.
+  // Icon + label share one centered row so the spinner stays aligned with
+  // the running label; the source rows live in the body beneath.
+  .rl-phase__headline {
+    min-width: 0;
+  }
+
+  // Per-row elapsed — rides on the label row, pushed to the right edge, so
+  // it stays vertically aligned with the label and doesn't shift when the
+  // thought sub-line appears or the card collapses. Ticks while active,
+  // then stays as the step's total duration once done; pending rows hide it.
+  .rl-phase__meta {
+    display: none;
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
+  .rl-phase.is-active .rl-phase__meta,
+  .rl-phase.is-done .rl-phase__meta {
+    display: inline-block;
+  }
+
+  // The heading stacks the icon+label row over the live thought line.
   .rl-phase__heading {
+    display: flex;
+    flex-direction: column;
     min-width: 0;
     flex: 1 1 auto;
-    align-items: center;
   }
 
   // While a phase is live, its name slot carries the current thought
@@ -368,9 +765,23 @@
   .rl-phase.is-active {
     --slds-c-icon-color-foreground: var(--slds-s-icon-color-foreground);
 
+    // The label is the phase's `running` string, painted with the same
+    // blue → violet shimmer sweep as `.sh-typing__label` so the active
+    // step reads as live.
     .rl-phase__name {
       font-weight: 400;
       line-height: 1.5;
+      background: linear-gradient(
+        90deg,
+        var(--slds-g-color-brand-base-40, #0250d9) 0%,
+        var(--slds-g-color-palette-violet-40, #9602c7) 50%,
+        var(--slds-g-color-brand-base-40, #0250d9) 100%
+      );
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: sh-typing-sweep 1s cubic-bezier(0.61, 0.32, 0.41, 0.69) infinite;
     }
 
     .agent-reasoning__tool {
@@ -382,23 +793,21 @@
     }
   }
 
-  // Thought line is shown in the phase name while active; hide the
-  // duplicate in the body. The node is still filled so an expanded
-  // finished phase can reveal the last thought with the tools.
-  .rl-phase.is-active [data-rl-thought] {
-    display: none;
+  // Motion is the affordance, not the message — freeze the shimmer and
+  // keep the label legible (solid brand color) under reduced motion.
+  @media (prefers-reduced-motion: reduce) {
+    .rl-phase.is-active .rl-phase__name {
+      animation: none;
+      -webkit-text-fill-color: var(--slds-g-color-brand-base-40, #0250d9);
+    }
   }
 
-  // If the active phase hasn't produced a tool row yet, collapse the
-  // body so the thought-in-name isn't followed by an empty gap.
-  .rl-phase.is-active .rl-phase__body:not(:has(.rl-cot__tools > *)) {
-    display: none;
-  }
-
-  // Body (the CoT) shows only for the active phase.
+  // Body (the source-row list) shows only for the active phase. Indented
+  // 1rem to match the toggle's padding, so the source icons stay in the
+  // same column as the phase icon (the toggle's bottom padding supplies the
+  // gap above it, and 0.75rem below separates it from the next row).
   .rl-phase__body {
-    margin-top: 0.75rem;
-    padding-left: 2rem;
+    padding: 0 0.75rem 0.75rem;
   }
 
   .rl-phase.is-pending {
@@ -421,35 +830,114 @@
     display: block;
   }
 
-  // ── Chain-of-thought body (reasoning stream) ────────────────────
-  // Layout only — icons, muted text, truncation all come from SLDS
-  // utility classes. The `.agent-reasoning__*` wrapper rules are ported
-  // from feed_components.html, which keeps them page-local there.
-  .rl-cot {
+  // ── Source sub-step rows (reasoning stream) ─────────────────────
+  // The accumulating list of source rows created by running_lab.js. Layout
+  // only — icons, muted text, and truncation come from SLDS utility
+  // classes; the `.agent-reasoning__*` wrappers are ported from
+  // feed_components.html. Reveal/settle transitions are intentionally left
+  // to the design CSS via the state hooks below.
+  //
+  // Hooks the design CSS can target:
+  //   .rl-step            — a source row (append/reveal target)
+  //   .rl-step.is-active  — currently cycling micro-texts + counting up
+  //   .rl-step.is-done    — settled (final label + count = n)
+  //   .rl-step__label     — the swap-text label (carries `.t-text-swap`)
+  //   .rl-step__count     — the right-hand number climbing 0 → n
+  .rl-steps {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
     width: 100%;
   }
 
-  .rl-cot__tools {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+  // Each source row anchors its own segment of the connector line.
+  .rl-step {
+    position: relative;
   }
 
-  .agent-reasoning__text {
-    margin: 0;
+  // Icon slot: a 1.25rem column (matching the phase's progress-icon slot)
+  // so the colored source mark centers under the progress icon, and the
+  // label then starts at 2rem — aligned with the phase's running label.
+  .rl-step__icon {
+    flex: 0 0 1.25rem;
+    width: 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 
-    p {
-      margin: 0;
-      font-size: 0.875rem;
-      line-height: 1.5;
-    }
+  .rl-step__source-img {
+    display: block;
+    width: 1rem;
+    height: 1rem;
+    object-fit: contain;
+  }
+
+  // Lead-in rows use a utility glyph in the same 1rem visible slot as the
+  // source marks (Finding skills / Connecting tools).
+  .rl-step__glyph {
+    width: 1rem;
+    height: 1rem;
+    fill: var(--slds-g-color-on-surface-2, #2e2e2e);
+  }
+
+  // Settled flat-step mark: a blue check-in-circle (the spinner swaps to
+  // this once the step completes; on a done step it swaps to a chevron on
+  // hover / while expanded).
+  .rl-step__check {
+    width: 1rem;
+    height: 1rem;
+    fill: var(--slds-g-color-palette-electric-blue-50, #066afe);
+  }
+
+  .rl-step__label {
+    margin-left: 0.75rem;
+    min-width: 0; // let slds-truncate shrink the label, not the count
+    flex: 0 1 auto;
+  }
+
+  // The count sits inline right after the label, separated by a bullet —
+  // e.g. "Ideal Customer Profile • 8 dimensions". The bullet is skipped
+  // while the count is empty (non-numeric steps before they settle).
+  .rl-step__count {
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rl-step__count:not(:empty)::before {
+    content: "•";
+    margin: 0 0.375rem;
   }
 
   .agent-reasoning__tool {
     margin: 0;
+  }
+
+  // ── Connector line (chain-of-thought.html technique) ────────────
+  // A 1px line at the icon-center x links the source rows to each other —
+  // nothing above the first row or below the last. Robust to row height:
+  // each row (except the last) draws the segment to the NEXT icon center
+  // (50% of this row + the 0.75rem gap + 50% of the next), trimmed by
+  // `--rl-line-gap` at both ends so it clears the icons. `--rl-line-x` is
+  // the icon center (half the 1.25rem slot). Defined on `.rl-run` so both
+  // the phased steps and the flat-variant steps inherit it.
+  .rl-run {
+    --rl-line-x: 0.625rem;
+    // Clearance kept between each line end and the icon it points at, so the
+    // connector doesn't collide with the spinner / source marks.
+    --rl-line-gap: 0.75rem;
+  }
+
+  .rl-step:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: var(--rl-line-x);
+    top: calc(50% + var(--rl-line-gap));
+    height: calc(100% + 0.75rem - var(--rl-line-gap) * 2);
+    width: 1px;
+    background: var(--slds-g-color-palette-neutral-90, #e5e5e5);
+    transform: translateX(-0.5px);
+    pointer-events: none;
   }
 
   // ── Finished result ─────────────────────────────────────────────
@@ -475,5 +963,17 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+  }
+
+  // Normalize: the reveal's workflow-activity chip (skill name + counts)
+  // duplicates this run's own Completed header, so hide the chip text —
+  // but keep its expand-table button, re-anchored to the right of the row
+  // (the chip's `margin-inline-end:auto` went away with it).
+  .rl-result .seller-home__conv-msg--activity {
+    display: none;
+  }
+
+  .rl-result .seller-home__conv-msg-activity-expand {
+    margin-inline-start: auto;
   }
 }

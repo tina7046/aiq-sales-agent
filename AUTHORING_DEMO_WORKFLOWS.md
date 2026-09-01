@@ -44,8 +44,8 @@ flowchart LR
   file). For each item it derives:
   - **title** = the backing skill's `name` (resolved via `workflow.id` →
     `skills.json`), falling back to the item's `title` if the skill is missing.
-  - **subline** = the same "`<status> · <time>`" string the Home feed shows,
-    composed from `state` + the time fields (see §4).
+  - **subline** = the same left · right string the Home feed shows,
+    composed from `state` + cadence / step progress + the time fields (see §4).
   - **skillId** = `workflow.id`, surfaced as `data-sh-workflow-skill`.
 - **Edit** (the ⋮ overflow action) on **both** surfaces navigates to
   `/skill_detail.html?id=<workflow.id>` (wired in `src/scripts/home.js`).
@@ -108,13 +108,14 @@ Nothing errors at build time — the mismatch is silent. Always keep the ids in 
     "running": "Finding new prospects",
     "neutral": "Find new prospects"    // used while paused
   },
-  "cadence": "Weekly",                 // required; "Daily"/"Weekly"/etc. Left slot on scheduled rows.
+  "cadence": "Weekly",                 // required; "Daily"/"Weekly"/etc. Left slot on Ready + Scheduled.
+  "stepProgress": "1 of 3 steps",      // required; left slot while running. Idle rows still carry the starting count for Run now.
   "state": "completed",                // required; see states below
   "nextRun": "Next run in 3 days",     // right slot for completed + scheduled
-  "startedAt": "Started 4 min ago",    // right slot for running
+  "startedAt": "4 min elapsed",        // right slot for running (elapsed, not remaining)
   "lastRun": "Last run Thursday",      // right slot for paused + failed (always safe to include)
   "outputs": [                         // optional pills; icon ∈ table|doc|message|document|pdf
-    { "icon": "table", "label": "7 accounts imported" }
+    { "icon": "table", "label": "7 new accounts" }
   ],
   "error": "…",                        // failed rows only (replaces outputs)
   "conversationId": "conv-001",        // optional; makes the title a drill-in link (see §5c)
@@ -125,17 +126,24 @@ Nothing errors at build time — the mismatch is silent. Always keep the ids in 
 **States** (`feed.stateOrder`): `completed`, `failed`, `running`, `scheduled`,
 `paused`, `archived`. For most demos use `completed`, `running`, `scheduled`.
 
-**State → which time field to fill (the row's subline right slot):**
-- `completed` → `nextRun`
-- `scheduled` → `nextRun` (and the left slot shows `cadence`, not a status word)
-- `running` → `startedAt`
+**State → subline slots:**
+
+Left:
+- `completed` / `scheduled` → `cadence` (`Weekly`)
+- `running` → `stepProgress` (`2 of 5 steps`)
+- `paused` / `failed` / `archived` → `feed.statusLabels` (`Paused`, `Failed`, `Archived`)
+
+Right:
+- `completed` / `scheduled` → `nextRun`
+- `running` → `startedAt` (elapsed: `"4 min elapsed"`)
 - `paused` / `failed` → `lastRun`
 
 Always include `lastRun` regardless of state (a row can be paused at runtime and
-a paused row reports its last run).
+a paused row reports its last run). Always include `stepProgress` so "Run now"
+has a starting count (`"1 of 3 steps"`).
 
-`feed.statusLabels` supplies the left-slot word for non-scheduled states
-("Completed", "Running now", "Paused", "Failed", "Archived"). You normally do
+`feed.statusLabels` supplies the left-slot word for Paused / Failed / Archived.
+Ready and Running do not use it (cadence and step progress do). You normally do
 not touch it.
 
 ### 4b. Skill (`skills.json` → `skills[]`) — one per workflow

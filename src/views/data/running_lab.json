@@ -1,12 +1,30 @@
 {
-  // Facts + timed beat-script for the /running_lab.html workbench.
-  // This drives the ~1-minute simulation of the completed "Found new
-  // prospects" run (index.json → feed ri-01 → conversations["conv-001"]).
+  // Facts + timed step-script for the /running_lab.html workbench.
+  // This drives the ~3-minute simulation of the completed "Found new
+  // prospects" run (index.json → feed ri-01 → conversations["conv-001"]),
+  // pacing each phase to roughly one minute.
   //
   // gulp injects each top-level key here as a template variable in
   // running_lab.html. running_lab.html serialises `run` into a global
-  // (window.RUNNING_LAB_RUN) that running_lab.js walks beat by beat, so
+  // (window.RUNNING_LAB_RUN) that running_lab.js walks step by step, so
   // the reasoning steps live in data rather than hardcoded in JS.
+  //
+  // Model: each phase is an ordered list of `steps`. A step is a single
+  // source/tool activity that reveals on its own, cycles its `cycle`
+  // micro-texts on the row label (reusing the text-swap animation), and
+  // tweens its right-hand number 0 → n across the step's dwell. When it
+  // settles (final `label` + count = n) the next step reveals.
+  //   • `count`  — leading integer is the target n and the rest is the
+  //                kept suffix ("8 dimensions" → 0…8 + " dimensions").
+  //                Non-numeric ("verified", "loaded") just appears on
+  //                settle; omit entirely for no count.
+  //   • `cycle`  — micro-texts swapped on the active row label; omit to
+  //                simply show `label`.
+  //   • `source` — a data-provider brand name (Salesforce, ZoomInfo,
+  //                Gong, LinkedIn, Web, …). Every row shows that provider's
+  //                COLORED icon (src/assets/images/source_icons). Steps with
+  //                no clear source omit it and fall back to the Salesforce
+  //                mark. Registry lives in running_lab.js (SOURCE_ICONS).
   //
   // The chain-of-thought vocabulary (ICP dimensions, 🔴/🟡/🚫 tiers,
   // 🟣/🔵 fit, dedup, cadence quality-checklist, "drafts only") is drawn
@@ -22,16 +40,212 @@
   },
 
   "run": {
-    // Base dwell per beat (ms). ~24 beats ⇒ ≈ 1 minute wall-clock.
-    "beatMs": 2100,
+    // Target wall-clock per phase (ms). Each phase's per-step dwell is
+    // derived so the phase fills roughly this long regardless of how many
+    // steps it has — so the ~3-minute run splits into three ~1-minute
+    // sections.
+    "phaseMs": 60000,
+    // Pause between one row settling and the next revealing.
+    "stepGapMs": 200,
     // Pause between phases as one collapses and the next activates.
     "phaseGapMs": 700,
-    // Terminal summary shown in the status box + accordion header when the
-    // run completes. Mirrors conv-001's activity chip
-    // ("25 prospects · 7 accounts · 25 drafts").
+    // Terminal summary shown in the Completed title when the run finishes.
+    // Mirrors conv-001's activity chip.
     "summary": "7 accounts · 25 prospects · 25 cadences",
+    // Flat variant's completed header label (left side); the summary above
+    // moves to the right. Names the skill rather than a generic "Completed".
+    "completedLabel": "Prospecting skill completed",
     // The conversation whose finished result is revealed at the end.
     "revealConversationId": "conv-001",
+
+    // ── Flat variant (running_lab_flat.html) ────────────────────────
+    // The flat card drops the phase headers: one spinning header cycles
+    // these "thinking" synonyms while a single long list of tasks (all
+    // phases' steps, flattened) streams in. `flatMs` is the target
+    // wall-clock for the WHOLE chain (~5 min); running_lab_flat.js derives
+    // the per-task dwell from it and the task count. (Set `flatStepMs` to
+    // override with a fixed per-task dwell instead.)
+    "flatMs": 40000,
+    // How long each "thinking" word holds before the header swaps to the
+    // next one (ms). Higher = slower/calmer cycling.
+    "thinkingWordMs": 3000,
+    "thinkingWords": [
+      "Thinking",
+      "Reasoning",
+      "Analyzing",
+      "Considering",
+      "Pondering",
+      "Articulating",
+      "Evaluating",
+      "Deliberating",
+      "Contemplating",
+      "Processing",
+      "Synthesizing",
+      "Reflecting"
+    ],
+
+    // Flat variant (running_lab_flat.html): FIVE high-level steps. Each is a
+    // single row that spins while active, cycles its `cycle` sub-activities on
+    // the label, and counts its number up over the step's dwell; on settle the
+    // spinner swaps to the step `icon` and the label becomes the done `label`.
+    // `narrative` streams above the list, one line per step. (The introSteps /
+    // phases / trail below are consumed by the phased page + earlier variants;
+    // the flat engine now reads `flatSteps`.)
+    "flatSteps": [
+      {
+        "icon": "apps",
+        "label": "Used 4 skills",
+        "count": "4 skills",
+        "narrative": "First, I'll line up the skills this run needs end to end — account research to surface the right companies, prospecting to find the decision-makers inside them, and email and cadence writing to reach out. Assembling them up front means every later step already has the capability it depends on.",
+        "cycle": [
+          "Finding skills",
+          "Found account research",
+          "Found find prospects",
+          "Found write emails",
+          "Found create cadence"
+        ],
+        "substeps": [
+          { "img": "/assets/images/nav-icons/skills.png", "label": "Account research" },
+          { "img": "/assets/images/nav-icons/skills.png", "label": "Find prospects" },
+          { "img": "/assets/images/nav-icons/skills.png", "label": "Write emails" },
+          { "img": "/assets/images/nav-icons/skills.png", "label": "Create cadence" }
+        ]
+      },
+      {
+        "icon": "connected_apps",
+        "label": "Connected 5 tools",
+        "count": "5 tools",
+        "narrative": "Next, I'll connect the data sources I'll rely on so every decision is grounded in real signal rather than assumptions — Salesforce for your existing pipeline and contacts, ZoomInfo for firmographics and verified contact data, Gong for what's actually being said on calls, and the web and LinkedIn for current company and role context. With these wired in, nothing downstream is guesswork.",
+        "cycle": [
+          "Connecting tools",
+          "Connected to Gong",
+          "Connected to the web",
+          "Connected to LinkedIn",
+          "Connected to ZoomInfo",
+          "Connected to Salesforce"
+        ],
+        "substeps": [
+          { "source": "Gong",       "label": "Gong" },
+          { "source": "Web",        "label": "Web" },
+          { "source": "LinkedIn",   "label": "LinkedIn" },
+          { "source": "ZoomInfo",   "label": "ZoomInfo" },
+          { "source": "Salesforce", "label": "Salesforce" }
+        ]
+      },
+      {
+        "icon": "search",
+        "label": "Researched 7 accounts",
+        "count": "7 accounts",
+        "narrative": "Now for the research. I'll start from your Ideal Customer Profile, then pull the Bluebirds account report from Salesforce as my working set. From there I'll enrich each account's firmographics with ZoomInfo, scan the web and recent Gong calls for buying signals, and score every account against your ICP so the strongest-fit companies rise to the top.",
+        "cycle": [
+          "Reading your Ideal Customer Profile",
+          "Pulling the Bluebirds report from Salesforce",
+          "Enriching firmographics with ZoomInfo",
+          "Scanning the web for buying signals",
+          "Reviewing recent Gong calls",
+          "Scoring accounts against your ICP"
+        ],
+        "substeps": [
+          { "icon": "search",       "label": "Read your Ideal Customer Profile" },
+          { "source": "Salesforce", "label": "Bluebirds Account Report" },
+          { "source": "ZoomInfo",   "label": "Firmographic enrichment" },
+          { "source": "Web",        "label": "Buying-signal research" },
+          { "source": "Gong",       "label": "Call signals" },
+          { "icon": "search",       "label": "Scored 7 accounts against ICP" }
+        ]
+      },
+      {
+        "icon": "people",
+        "label": "Found 25 prospects",
+        "count": "25 prospects",
+        "narrative": "With the accounts set, I'll find the right people to reach at each one. I'll map the org charts in Salesforce, enrich every contact's email, mobile, and LinkedIn through ZoomInfo, and confirm titles and roles on LinkedIn so I'm targeting real decision-makers. I'll also dedupe against contacts you already own so no one shows up twice before I finalize the list.",
+        "cycle": [
+          "Mapping org charts in Salesforce",
+          "Enriching contacts with ZoomInfo",
+          "Verifying roles on the web"
+        ],
+        "substeps": [
+          { "source": "Salesforce", "label": "Mapped org charts" },
+          { "source": "ZoomInfo",   "label": "Email, mobile & LinkedIn" },
+          { "source": "LinkedIn",   "label": "Confirmed roles" },
+          { "source": "Salesforce", "label": "Deduped against contacts" },
+          { "source": "Salesforce", "label": "Created 25 contacts" }
+        ]
+      },
+      {
+        "icon": "email",
+        "label": "Drafted 25 cadences",
+        "count": "25 cadences",
+        "narrative": "Finally, I'll draft a personalized cadence for every prospect. I'll pull the pain themes each account actually raised on their Gong calls, layer in current context from the web, then write the emails and LinkedIn messages so each touch speaks to that person's role and priorities instead of reading like a generic template.",
+        "cycle": [
+          "Researching pain themes in Gong",
+          "Searching the web",
+          "Writing emails",
+          "Writing LinkedIn messages"
+        ],
+        "substeps": [
+          { "source": "Gong",     "label": "Pain themes from calls" },
+          { "source": "Web",      "label": "Web research" },
+          { "source": "Gmail",    "label": "Wrote 25 email cadences" },
+          { "source": "LinkedIn", "label": "LinkedIn messages" }
+        ]
+      }
+    ],
+
+    // Flat-only lead-in steps: before the flattened phase steps (reading
+    // ICP etc.), the agent first picks its skills and connects its tools.
+    // These render only in running_lab_flat.js (prepended to the task
+    // chain); the phased page is unaffected. `icon` = utility-sprite glyph
+    // (no external `source`); the number lives in the settled `label`, and
+    // `cycle` streams the individual items while it works.
+    "introSteps": [
+      {
+        "icon": "apps",
+        "label": "Found 4 skills",
+        "trailKey": "lead:skills",
+        "narrative": "First, let me line up the skills I'll need for this — account research, finding prospects, and drafting cadences.",
+        "cycle": [
+          "Finding skills",
+          "Account research",
+          "Find prospects",
+          "Write emails",
+          "Create cadence"
+        ]
+      },
+      {
+        "icon": "connected_apps",
+        "label": "Connected to 3 tools",
+        "trailKey": "lead:tools",
+        "narrative": "Now I'll connect my tools so I can pull real signal — Gong, the web, and LinkedIn.",
+        "cycle": [
+          "Connecting tools",
+          "Gong",
+          "Web",
+          "LinkedIn"
+        ]
+      }
+    ],
+
+    // Collapsed trail (flat variant): the deduped skills + tools shown
+    // beneath the streaming narrative, one row per key. Each beat's
+    // `trailKey` points here; the row is revealed the first time a beat
+    // uses it, and its number counts up. Tools carry a `source` (colored
+    // logo via SOURCE_ICONS); skills carry a utility-sprite `icon`.
+    // `count` is an authored representative total, since one row now
+    // stands in for several beats.
+    "trail": {
+      "lead:skills":            { "icon": "apps",          "name": "Finding skills",   "count": "4 skills" },
+      "lead:tools":             { "icon": "connected_apps", "name": "Connecting tools", "count": "3 tools" },
+      "skill:account-research": { "icon": "search",       "name": "Account Research", "count": "7 qualified" },
+      "tool:salesforce":        { "source": "Salesforce",  "name": "Salesforce",       "count": "25 contacts" },
+      "tool:zoominfo":          { "source": "ZoomInfo",    "name": "ZoomInfo",         "count": "47 enriched" },
+      "tool:web":               { "source": "Web",         "name": "Web research",     "count": "31 results" },
+      "tool:gong":              { "source": "Gong",        "name": "Gong",             "count": "6 calls" },
+      "skill:find-prospects":   { "icon": "people",        "name": "Find Prospects",   "count": "25 prospects" },
+      "tool:linkedin":          { "source": "LinkedIn",    "name": "LinkedIn",         "count": "25 matched" },
+      "skill:write-emails":     { "icon": "email",         "name": "Write Emails",     "count": "75 drafts" },
+      "skill:create-cadence":   { "icon": "steps",         "name": "Create Cadence",   "count": "25 cadences" }
+    },
 
     "phases": [
       {
@@ -42,21 +256,74 @@
         // once the phase completes.
         "running": "Researching accounts…",
         "summary": "47 scanned · 7 qualified",
-        "beats": [
-          { "thought": "Reading your Ideal Customer Profile",
-            "tools": [ { "icon": "knowledge_base", "label": "Ideal Customer Profile", "count": "8 dimensions" } ] },
-          { "thought": "Pulling your Bluebirds Account Report from Salesforce",
-            "tools": [ { "icon": "table", "label": "Salesforce report", "count": "47 accounts" } ] },
-          { "thought": "Enriching firmographics — industry, size, revenue, geography",
-            "tools": [ { "icon": "database", "label": "ZoomInfo enrichment", "count": "47 matched" },
-                       { "icon": "world",    "label": "Web research",        "count": "31 results" } ] },
-          { "thought": "Scoring Cirrus — B2B SaaS, 290+ SDRs across 4 regions → 🔴 Red Hot" },
-          { "thought": "Brightloop AI — Series C, scaling outbound → 🔴 Red Hot" },
-          { "thought": "Meridian Analytics — RevOps modernization signal → 🟡 Solid",
-            "tools": [ { "icon": "ai_search", "label": "Gong call signals", "count": "6 calls" } ] },
-          { "thought": "Halcyon Foods — CPG, not B2B SaaS · fails 7 of 8 ICP dimensions — discarding 🚫" },
-          { "thought": "Northbend Logistics — no outbound motion detected — discarding 🚫" },
-          { "thought": "Writing a one-line fit rationale for each qualified account" }
+        "steps": [
+          {
+            "label": "Ideal Customer Profile",
+            "trailKey": "skill:account-research",
+            "narrative": "I need to check your Ideal Customer Profile so I know what a good-fit account actually looks like.",
+            "count": "8 dimensions",
+            "cycle": [
+              "Reading your Ideal Customer Profile",
+              "Industry, size, revenue, geography",
+              "Buyer personas and disqualifiers"
+            ]
+          },
+          {
+            "source": "Salesforce",
+            "label": "Salesforce — Bluebirds Account Report",
+            "trailKey": "tool:salesforce",
+            "narrative": "Let me pull your Bluebirds Account Report from Salesforce to see which accounts are in play.",
+            "count": "47 accounts",
+            "cycle": [
+              "Pulling your Bluebirds Account Report",
+              "Loading account records"
+            ]
+          },
+          {
+            "source": "ZoomInfo",
+            "label": "ZoomInfo enrichment",
+            "trailKey": "tool:zoominfo",
+            "narrative": "I'll enrich each account with ZoomInfo to fill in the firmographics — industry, size, revenue, and geography.",
+            "count": "47 matched",
+            "cycle": [
+              "Enriching firmographics",
+              "Industry, size, revenue, geography"
+            ]
+          },
+          {
+            "source": "Web",
+            "label": "Web research",
+            "trailKey": "tool:web",
+            "narrative": "Now I'll scan the web for buying signals — recent news, funding, and hiring.",
+            "count": "31 results",
+            "cycle": [
+              "Scanning the web for buying signals",
+              "Recent news, funding, and hiring"
+            ]
+          },
+          {
+            "source": "Gong",
+            "label": "Gong call signals",
+            "trailKey": "tool:gong",
+            "narrative": "Let me review recent Gong calls to catch any RevOps intent we've already heard.",
+            "count": "6 calls",
+            "cycle": [
+              "Reviewing recent calls",
+              "Tagging RevOps intent"
+            ]
+          },
+          {
+            "label": "Scoring accounts against ICP",
+            "trailKey": "skill:account-research",
+            "narrative": "With all that in hand, I can score each account against your ICP and keep the ones worth pursuing.",
+            "count": "7 qualified",
+            "cycle": [
+              "Cirrus — 290+ SDRs across 4 regions → 🔴 Red Hot",
+              "Brightloop AI — scaling outbound → 🔴 Red Hot",
+              "Meridian Analytics — RevOps signal → 🟡 Solid",
+              "Halcyon Foods, Northbend — off-ICP → 🚫 discarded"
+            ]
+          }
         ]
       },
       {
@@ -65,21 +332,70 @@
         "name": "Find Prospects",
         "running": "Finding prospects…",
         "summary": "7 accounts · 25 prospects",
-        "beats": [
-          { "thought": "Finding up to 5 decision-makers at each qualified account" },
-          { "thought": "Matching titles to your buyer personas — CRO, VP Sales, RevOps, Demand Gen",
-            "tools": [ { "icon": "org_chart", "label": "Org charts", "count": "7 accounts" } ] },
-          { "thought": "Enriching Marcus Chen — VP Sales at Cirrus",
-            "tools": [ { "icon": "database",   "label": "ZoomInfo — email, mobile, LinkedIn", "count": "verified" },
-                       { "icon": "socialshare", "label": "LinkedIn",                          "count": "matched" } ] },
-          { "thought": "Scoring Marcus Chen → 🟣 Great fit · accuracy 94" },
-          { "thought": "Validating employment — still at Cirrus ✓",
-            "tools": [ { "icon": "identity", "label": "Employment check", "count": "current" } ] },
-          { "thought": "Deduping against existing CRM contacts — 3 already exist, excluded",
-            "tools": [ { "icon": "search", "label": "Salesforce contacts", "count": "3 matched" } ] },
-          { "thought": "Dropping opted-out and recently-engaged contacts" },
-          { "thought": "Creating new Contacts in Salesforce",
-            "tools": [ { "icon": "contact", "label": "Contacts created", "count": "25 new" } ] }
+        "steps": [
+          {
+            "label": "Org charts",
+            "trailKey": "skill:find-prospects",
+            "narrative": "For the accounts that qualified, I'll map the org charts to find the right decision-makers.",
+            "count": "7 accounts",
+            "cycle": [
+              "Finding up to 5 decision-makers per account",
+              "Matching titles to your buyer personas"
+            ]
+          },
+          {
+            "source": "ZoomInfo",
+            "label": "ZoomInfo — email, mobile, LinkedIn",
+            "trailKey": "tool:zoominfo",
+            "narrative": "Pulling verified contact details from ZoomInfo — email, mobile, and LinkedIn.",
+            "count": "verified",
+            "cycle": [
+              "Enriching Marcus Chen — VP Sales, Cirrus",
+              "Email, mobile, and LinkedIn"
+            ]
+          },
+          {
+            "source": "LinkedIn",
+            "label": "LinkedIn",
+            "trailKey": "tool:linkedin",
+            "narrative": "Let me confirm each person's current role on LinkedIn before I trust the match.",
+            "count": "matched",
+            "cycle": [
+              "Confirming profile and role",
+              "Scoring Marcus Chen → 🟣 Great fit"
+            ]
+          },
+          {
+            "label": "Employment check",
+            "trailKey": "skill:find-prospects",
+            "narrative": "Double-checking employment so I don't reach out to someone who's already moved on.",
+            "count": "current",
+            "cycle": [
+              "Validating employment — still at Cirrus ✓"
+            ]
+          },
+          {
+            "source": "Salesforce",
+            "label": "Salesforce contacts",
+            "trailKey": "tool:salesforce",
+            "narrative": "I'll dedupe against your existing Salesforce contacts and drop anyone opted-out or recently engaged.",
+            "count": "3 matched",
+            "cycle": [
+              "Deduping against existing contacts",
+              "Dropping opted-out and recently-engaged"
+            ]
+          },
+          {
+            "source": "Salesforce",
+            "label": "Contacts created",
+            "trailKey": "tool:salesforce",
+            "narrative": "Creating the new contacts in Salesforce and writing back the verified details.",
+            "count": "25 new",
+            "cycle": [
+              "Creating new Contacts in Salesforce",
+              "Writing back verified details"
+            ]
+          }
         ]
       },
       {
@@ -88,17 +404,59 @@
         "name": "Draft Cadences",
         "running": "Drafting cadences…",
         "summary": "25 cadences · 3 emails each",
-        "beats": [
-          { "thought": "Drafting a 3-email cadence per prospect",
-            "tools": [ { "icon": "knowledge_base", "label": "SDR playbook", "count": "loaded" } ] },
-          { "thought": "Email 1 for Marcus Chen — signal: 290+ SDRs across 4 regions" },
-          { "thought": "Personalizing on signals, pain themes, and persona",
-            "tools": [ { "icon": "ai_search", "label": "Gong pain themes", "count": "matched" } ] },
-          { "thought": "Adding follow-ups — Day 3 nudge, Day 7 breakup" },
-          { "thought": "Checking the quality checklist — POV → Pain → Solution → CTA, under 120 words ✓" },
-          { "thought": "Saving drafts as Salesforce Tasks",
-            "tools": [ { "icon": "email", "label": "Email drafts saved", "count": "75 tasks" } ] },
-          { "thought": "Drafts only — nothing sent without your approval" }
+        "steps": [
+          {
+            "label": "SDR playbook",
+            "trailKey": "skill:write-emails",
+            "narrative": "Time to write. I'll load your SDR playbook and draft a three-email cadence for each prospect.",
+            "count": "loaded",
+            "cycle": [
+              "Loading your SDR playbook",
+              "Drafting a 3-email cadence per prospect"
+            ]
+          },
+          {
+            "source": "Gong",
+            "label": "Gong pain themes",
+            "trailKey": "tool:gong",
+            "narrative": "I'll personalize each email on the pain themes I heard back in Gong.",
+            "count": "matched",
+            "cycle": [
+              "Email 1 for Marcus Chen — 290+ SDRs",
+              "Personalizing on signals and persona"
+            ]
+          },
+          {
+            "label": "Follow-ups",
+            "trailKey": "skill:create-cadence",
+            "narrative": "Adding the follow-ups to each cadence — a Day 3 nudge and a Day 7 breakup.",
+            "count": "2 steps",
+            "cycle": [
+              "Adding a Day 3 nudge",
+              "Adding a Day 7 breakup"
+            ]
+          },
+          {
+            "label": "Quality checklist",
+            "trailKey": "skill:write-emails",
+            "narrative": "Running every draft through the quality checklist — POV, pain, solution, CTA, all under 120 words.",
+            "count": "4 checks",
+            "cycle": [
+              "POV → Pain → Solution → CTA",
+              "Under 120 words ✓"
+            ]
+          },
+          {
+            "source": "Salesforce",
+            "label": "Email drafts saved",
+            "trailKey": "tool:salesforce",
+            "narrative": "Saving the drafts as Salesforce tasks — nothing goes out without your approval.",
+            "count": "75 tasks",
+            "cycle": [
+              "Saving drafts as Salesforce Tasks",
+              "Drafts only — nothing sent without approval"
+            ]
+          }
         ]
       }
     ]

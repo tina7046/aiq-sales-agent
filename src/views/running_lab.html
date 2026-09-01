@@ -140,52 +140,38 @@
               </button>
             </div>
 
-            <div class="rl-box rl-run slds-m-left_small" data-rl-status data-rl-cot-accordion>
-              {# The whole header row is the accordion toggle — icon, title,
-                 and elapsed — so a collapsed card is clickable end to end.
-                 Clicks on the box padding also toggle (running_lab.js);
-                 clicks inside `.rl-run__body` do not. #}
+            <div class="rl-box rl-run" data-rl-status>
+              {# Completed accordion header — hidden during the run, revealed
+                 by running_lab.js on finish. It's a toggle: clicking it
+                 collapses/expands the finished phases below (reusing the
+                 card's `is-collapsed`). The chevron on the left sits in the
+                 shared icon column and simply rotates with expand state (not
+                 an icon-swap); the label aligns with the phase labels. #}
               <button
                 type="button"
-                class="rl-run__header rl-run__toggle slds-grid slds-grid_vertical-align-center slds-grid_align-spread"
-                data-rl-cot-toggle
+                class="rl-run__complete slds-grid slds-grid_vertical-align-center slds-grid_align-spread"
+                data-rl-complete
                 aria-expanded="true"
+                hidden
               >
-                {# Icon slot holds two stacked glyphs that crossfade with
-                   the icon-swap recipe (index.scss `--icon-swap-*`): the
-                   spinner is the resting glyph while running and the
-                   chevron reveals on hover (you can collapse the CoT);
-                   on completion the spinner retires and the chevron
-                   becomes the resting glyph, rotating with expand state. #}
-                <span class="slds-grid slds-grid_vertical-align-center">
-                  <span class="rl-run__icon rl-swap" data-rl-status-icon aria-hidden="true">
-                    <span class="rl-swap__glyph rl-swap__glyph--spinner sh-spinner"></span>
-                    <svg class="rl-swap__glyph rl-swap__glyph--chevron" aria-hidden="true">
+                <span class="rl-run__heading slds-grid slds-grid_vertical-align-center">
+                  <span class="rl-run__icon" aria-hidden="true">
+                    <svg class="rl-run__chevron">
                       <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
                     </svg>
                   </span>
-                  <span class="rl-run__title slds-m-left_small">
-                    {# The live "reasoning" indicator IS the title while the
-                       run is in flight — it stays in the header even when the
-                       card is collapsed, so a folded run still reads as
-                       actively working. The label is the active phase's
-                       `running` string ("Researching accounts…"), swapped in
-                       running_lab.js as phases change. Hidden on completion,
-                       when the summary label takes over. #}
-                    <span class="sh-typing rl-run__reasoning">
-                      <span class="sh-typing__label" data-rl-cot-cycle aria-hidden="true">{{ run.phases[0].running if run.phases else "Thinking…" }}</span>
-                      <span class="slds-assistive-text" role="status">Agent is reasoning</span>
-                    </span>
-                    {# Terminal summary — shown once the run completes. #}
-                    <span class="rl-run__label" data-rl-status-label></span>
-                  </span>
+                  <span class="rl-run__label" data-rl-status-label></span>
                 </span>
-
                 <span class="rl-run__meta slds-grid slds-grid_vertical-align-center">
-                  {# Live elapsed-time counter — ticks in running_lab.js. #}
                   <span class="rl-elapsed">
                     <span class="slds-assistive-text">Time elapsed</span>
                     <span data-rl-elapsed>0 secs</span>
+                  </span>
+                  {# Success check on the far right (BB-AOP parity). #}
+                  <span class="rl-run__check slds-icon_container slds-icon-utility-success" title="Completed" aria-hidden="true">
+                    <svg class="slds-icon slds-icon_x-small">
+                      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#success"></use>
+                    </svg>
                   </span>
                 </span>
               </button>
@@ -196,53 +182,60 @@
                    running_lab.js activates phase 0 on boot. #}
                 {% for p in run.phases %}
                 <div class="rl-phase is-pending" data-rl-phase="{{ p.key }}">
-                  {# The header is the per-phase accordion toggle. It's inert
-                     while the phase is pending/active; once the phase is done
-                     it becomes clickable — the topic icon crossfades to a
-                     chevron on hover (same icon-swap recipe as the run header)
-                     and a click expands the finished phase's details. #}
+                  {# The header is the per-phase toggle. Pending is inert;
+                     the ACTIVE row's spinner doubles as an icon-swap that
+                     folds the whole card down to just this step; a DONE row
+                     expands its finished details (its check crossfades to a
+                     chevron on hover). #}
                   <button
                     type="button"
-                    class="rl-phase__toggle slds-grid slds-grid_vertical-align-center"
+                    class="rl-phase__toggle slds-grid slds-grid_vertical-align-center slds-grid_align-spread"
                     data-rl-phase-toggle
                     aria-expanded="false"
                   >
-                    <span class="rl-phase__heading slds-grid slds-grid_vertical-align-center">
-                      {# Status mark: a 20px circle with a 10px check. Grey
-                         check while the phase is pending/active; white check
-                         on a blue fill once the phase is done. The circle is
-                         the resting glyph in the icon-swap; the chevron still
-                         reveals on hover when the phase is expandable. #}
-                      <span class="rl-phase__icon rl-swap" title="{{ p.name }}">
-                        <span class="rl-swap__glyph rl-swap__glyph--topic rl-phase__check" aria-hidden="true">
-                          <svg class="rl-phase__check-mark" viewBox="0 0 9 7" fill="none" aria-hidden="true">
-                            <path fill-rule="evenodd" clip-rule="evenodd" d="M8.78334 1.65L3.68333 6.81667C3.48333 7.01667 3.15 7.01667 2.95 6.81667L0.15 3.98333C-0.05 3.78333 -0.05 3.45 0.15 3.25L0.883334 2.51667C1.08333 2.31667 1.41667 2.31667 1.61667 2.51667L3.08333 4.01667C3.21667 4.15 3.45 4.15 3.58333 4.01667L7.31667 0.15C7.51667 -0.05 7.85 -0.05 8.05 0.15L8.78334 0.883333C9.01667 1.08333 9.01667 1.41667 8.78334 1.65V1.65Z" fill="currentColor"></path>
+                    <span class="rl-phase__heading">
+                      {# Icon + label share one vertically-centered row so the
+                         spinner and the running label stay aligned; the live
+                         cycling thought drops to its own line beneath (it must
+                         not pull the icon off-center). #}
+                      <span class="rl-phase__headline slds-grid slds-grid_vertical-align-center">
+                        {# Status mark: a 20px slot. Pending = grey circle + grey
+                           check; active = blue→violet spinner (the live cue);
+                           done = white check on a blue fill. The chevron reveals
+                           on hover — folding the card (active) or expanding the
+                           step (done). #}
+                        <span class="rl-phase__icon rl-swap" title="{{ p.name }}">
+                          <span class="rl-swap__glyph rl-swap__glyph--spinner sh-spinner" aria-hidden="true"></span>
+                          <span class="rl-swap__glyph rl-swap__glyph--topic rl-phase__check" aria-hidden="true">
+                            <svg class="rl-phase__check-mark" viewBox="0 0 9 7" fill="none" aria-hidden="true">
+                              <path fill-rule="evenodd" clip-rule="evenodd" d="M8.78334 1.65L3.68333 6.81667C3.48333 7.01667 3.15 7.01667 2.95 6.81667L0.15 3.98333C-0.05 3.78333 -0.05 3.45 0.15 3.25L0.883334 2.51667C1.08333 2.31667 1.41667 2.31667 1.61667 2.51667L3.08333 4.01667C3.21667 4.15 3.45 4.15 3.58333 4.01667L7.31667 0.15C7.51667 -0.05 7.85 -0.05 8.05 0.15L8.78334 0.883333C9.01667 1.08333 9.01667 1.41667 8.78334 1.65V1.65Z" fill="currentColor"></path>
+                            </svg>
+                          </span>
+                          <svg class="rl-swap__glyph rl-swap__glyph--chevron" aria-hidden="true">
+                            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
                           </svg>
+                          <span class="slds-assistive-text">{{ p.name }}</span>
                         </span>
-                        <svg class="rl-swap__glyph rl-swap__glyph--chevron" aria-hidden="true">
-                          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
-                        </svg>
-                        <span class="slds-assistive-text">{{ p.name }}</span>
+                        {# Label: resting `p.name`, or the phase's `running`
+                           string with the shimmer paint while active. #}
+                        <span class="rl-phase__name t-text-swap slds-m-left_small" data-rl-phase-name>{{ p.name }}</span>
+                        {# Live elapsed — ticks in running_lab.js. It rides on
+                           the label row (pushed right) so it stays put when the
+                           thought sub-line appears or the card collapses. Shown
+                           only on the active row (CSS). #}
+                        <span class="rl-phase__meta rl-elapsed">
+                          <span class="slds-assistive-text">Time elapsed</span>
+                          <span data-rl-elapsed>0 secs</span>
+                        </span>
                       </span>
-                      {# Resting label is the phase name. While the phase is
-                         active, running_lab.js swaps this for the current
-                         beat's thought; completePhase restores `p.name`. #}
-                      <span class="rl-phase__name t-text-swap slds-m-left_small" data-rl-phase-name>{{ p.name }}</span>
                     </span>
                   </button>
 
                   <div class="rl-phase__body" data-rl-phase-body>
-                    <div class="rl-cot">
-                      {# Last thought, kept for the expanded-done view. While
-                         the phase is active the thought lives in the phase
-                         name instead, and this block is hidden. #}
-                      <div class="markdown-wrapper slds-rich-text-editor__output agent-reasoning__text" data-rl-thought>
-                        <p></p>
-                      </div>
-
-                      {# Tool / source calls (appended per beat). #}
-                      <div class="rl-cot__tools" data-rl-tools></div>
-                    </div>
+                    {# Source sub-steps — one row per `step`, created by
+                       running_lab.js as each reveals, counts in, and settles.
+                       They accumulate here and form the expanded-done view. #}
+                    <div class="rl-steps" data-rl-steps></div>
                   </div>
                 </div>
                 {% endfor %}
