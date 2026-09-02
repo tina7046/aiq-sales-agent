@@ -305,7 +305,7 @@
 	{# God-rays tuner. Its visibility is toggled from the global-header Setup
 	   (gear) icon — see the toggle script at the foot of this file. The
 	   `.is-hidden` class (not an inline style) drives show/hide so the gear
-	   can flip it, and the state persists in localStorage. Shown by default. #}
+	   can flip it, and the state persists in localStorage. Hidden by default. #}
 	<div id="panel" class="is-hidden">
 		<div class="head">
 			<button id="toggle">Close</button>
@@ -460,7 +460,7 @@
 		// dropdown (localStorage 'sh:shader'), then DEFAULT_SHADER. Whichever is
 		// active mounts and populates the one #panel; the other's setup sits
 		// dormant behind its guard. Nothing is deleted.
-		const DEFAULT_SHADER = 'radial';
+		const DEFAULT_SHADER = 'simplex';
 		let storedShader = null;
 		try { storedShader = window.localStorage.getItem('sh:shader'); } catch (e) { }
 		const ACTIVE_SHADER = new URLSearchParams(location.search).get('shader') || storedShader || DEFAULT_SHADER;
@@ -829,10 +829,10 @@
 			// + god-rays-style tuning panel.
 			try {
 				const SIMPLEX_DEFAULTS = {
-					colors: ['#ffffff', '#e0edff', '#ffffff', '#ffffff', '#ffffff', '#3399cc', '#3333cc', '#9933cc', '#cc3399', '#cc3333'],
-					colorsCount: 10,
+					colors: ['#ffffff', '#e5f0ff66', '#e3c7ff33', '#fdbffb1c', '#ffffff', '#3399cc', '#3333cc', '#9933cc', '#cc3399', '#cc3333'],
+					colorsCount: 5,
 					stepsPerColor: 1, softness: 1,
-					speed: 2, scale: 1.4, rotation: 0,
+					speed: 3.35, scale: 2.37, rotation: 0,
 					offsetX: 0, offsetY: 0,
 				};
 				// key, min, max, step
@@ -1342,7 +1342,7 @@
 
 			var SHADER_KEY = 'sh:shader';        // 'godrays' | 'mesh'
 			var PANEL_KEY = 'sh:shaderControls'; // 'shown' | 'hidden'
-			var DEFAULT_SHADER = 'radial';
+			var DEFAULT_SHADER = 'simplex';
 
 			function lsGet(key) { try { return window.localStorage.getItem(key); } catch (e) { return null; } }
 			function lsSet(key, val) { try { window.localStorage.setItem(key, val); } catch (e) { } }
