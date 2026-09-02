@@ -1335,6 +1335,23 @@
 	   choices persist in localStorage (real preferences, not demo state). #}
 	<script>
 		(function () {
+			// ── One-time forced default (all users) ──────────────────────────
+			// Bump SHADER_FORCE to push the current defaults onto EVERYONE,
+			// including sellers who previously picked another shader or opened
+			// the control panel (both persisted in localStorage). On the first
+			// load after a bump we drop those saved choices so DEFAULT_SHADER +
+			// the hidden panel win; they can still re-pick / re-open afterward.
+			// This classic script runs before the deferred shader module reads
+			// the same keys, so the forced pick also drives what mounts.
+			var SHADER_FORCE = 'simplex-2026-09-02';
+			try {
+				if (window.localStorage.getItem('sh:shaderForce') !== SHADER_FORCE) {
+					window.localStorage.removeItem('sh:shader');
+					window.localStorage.removeItem('sh:shaderControls');
+					window.localStorage.setItem('sh:shaderForce', SHADER_FORCE);
+				}
+			} catch (e) { }
+
 			var panel = document.getElementById('panel');
 			var gearBtn = document.querySelector('.slds-global-actions__setup');
 			if (!gearBtn) return;
