@@ -32,6 +32,15 @@
 <link rel="stylesheet" href="/styles/home.css" />
 <link rel="stylesheet" href="/styles/home_conversation.css" />
 <link rel="stylesheet" href="/styles/running_lab.css" />
+<style>
+  /* Reserve the scrollbar gutter on the page's scroll container
+     (`<main class="app-wrapper">`, just after the global nav) so the layout
+     doesn't shift sideways when its scrollbar appears/disappears. Page-scoped
+     here rather than in running_lab.css, which is shared with running_lab.html. */
+  main.app-wrapper {
+    scrollbar-gutter: stable;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -132,6 +141,12 @@
                   <span class="rl-flat__summary" data-rl-flat-summary></span>
                 </span>
               </button>
+
+              {# Persistent closing line — the agent's final "here's what I did"
+                 summary. Hidden during the run; filled + revealed by
+                 running_lab_flat.js when the card folds. Sits OUTSIDE the
+                 collapsible narrative/steps so it stays under the header. #}
+              <p class="rl-flat__final" data-rl-final hidden></p>
 
               {# Streaming reasoning — the agent's first-person thought for the
                  current beat, revealed word-by-word (ShStream) and replaced as

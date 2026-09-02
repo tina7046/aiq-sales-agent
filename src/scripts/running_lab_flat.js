@@ -28,6 +28,7 @@
   var narrativeEl = document.querySelector("[data-rl-narrative]"); // streaming reasoning
   var startedEl = document.querySelector("[data-rl-started]"); // "Started X ago" (header)
   var flatSummaryEl = document.querySelector("[data-rl-flat-summary]"); // completed counts (header, right)
+  var finalEl = document.querySelector("[data-rl-final]"); // persistent closing line (under header)
   var flatHead = document.querySelector("[data-rl-flat-head]");
   var pauseBtn = document.querySelector("[data-rl-pause]");
   var restartBtn = document.querySelector("[data-rl-restart]");
@@ -251,7 +252,7 @@
     Demandbase: "source_demandbase.svg",
     G2: "source_g2.svg",
     Gmail: "source_gmail.svg",
-    Gong: "source_gong.png",
+    Gong: "source_gong.svg",
     LinkedIn: "conn_linkedin.png",
     "Moody\u2019s": "source_moodys.svg",
     Salesforce: "source_salesforce.svg",
@@ -491,7 +492,7 @@
     if (box) box.classList.remove("is-paused", "is-collapsed");
     // Header → completed skill label + summary counts on the right; the
     // narrative retires (CSS off `is-complete`). Header stays the toggle.
-    if (startedEl) startedEl.textContent = run.completedLabel || "Prospecting skill completed";
+    if (startedEl) startedEl.textContent = run.completedLabel || "Worked for 2 hours";
     if (flatSummaryEl) flatSummaryEl.textContent = run.summary || "";
     if (box) box.classList.add("is-complete");
     if (flatHead) flatHead.setAttribute("aria-expanded", "true");
@@ -507,6 +508,19 @@
       finishCollapseTimer = null;
       if (box) box.classList.add("is-collapsed");
       if (flatHead) flatHead.setAttribute("aria-expanded", "false");
+      // Reveal the persistent closing line under the header as the card folds.
+      // It lives outside the collapsible content, so it stays put.
+      if (finalEl && run.finalSummary) {
+        finalEl.textContent = run.finalSummary;
+        finalEl.hidden = false;
+        if (!reduceMotion) {
+          finalEl.style.opacity = "0";
+          window.requestAnimationFrame(function () {
+            finalEl.style.transition = "opacity 300ms ease";
+            finalEl.style.opacity = "1";
+          });
+        }
+      }
       // Then, after a pause, let the thread continue: reveal the agent's
       // summary, the prospect table, and the follow-up suggestions
       // (pre-rendered, hidden until now), fading them in under the header.
@@ -605,6 +619,12 @@
     narrativeIdx = 0;
     if (startedEl) startedEl.textContent = "Started " + fmt(0) + " ago";
     if (flatSummaryEl) flatSummaryEl.textContent = "";
+    if (finalEl) {
+      finalEl.hidden = true;
+      finalEl.textContent = "";
+      finalEl.style.opacity = "";
+      finalEl.style.transition = "";
+    }
 
     if (box) box.classList.remove("is-complete", "is-paused", "is-collapsed");
     if (flatHead) flatHead.setAttribute("aria-expanded", "true");

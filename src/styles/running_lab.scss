@@ -109,7 +109,6 @@
   }
 
   .rl-run__complete:hover {
-    background: #fafafa;
     border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
   }
 
@@ -126,7 +125,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
   }
 
   // Plain rotating chevron (not an icon-swap): points right when collapsed,
@@ -177,13 +176,13 @@
     border: 0;
     background: transparent;
     font: inherit;
+    font-weight: 400;
     color: inherit;
     text-align: left;
     cursor: pointer;
   }
 
   .rl-flat__head:hover {
-    background: #fafafa;
     border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
   }
 
@@ -199,7 +198,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+    transition: color 150ms var(--icon-swap-ease, ease-in-out);
   }
 
   .rl-flat__chevron {
@@ -216,10 +216,19 @@
 
   // "Started X ago" timestamp label.
   .rl-flat__started {
-    margin-left: 0.75rem;
+    margin-left: 0.5rem;
     min-width: 0;
-    font-size: var(--slds-g-font-size-base, 0.8125rem);
+    // Match the rest of the card / main feed: 14px, on-surface-3.
+    font-size: var(--slds-g-font-scale-1, 0.875rem);
     font-weight: 400;
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+    transition: color 150ms var(--icon-swap-ease, ease-in-out);
+  }
+
+  // Darken the label + chevron when the header button is hovered, signalling
+  // it's the clickable accordion toggle. (The summary + narrative stay put.)
+  .rl-flat__head:hover .rl-flat__started,
+  .rl-flat__head:hover .rl-flat__icon {
     color: var(--slds-g-color-on-surface-2, #2e2e2e);
   }
 
@@ -230,9 +239,10 @@
   // Completed counts on the right of the header — the meta peer to the
   // skill label on the left. Empty (so no gap) until the run finishes.
   .rl-flat__summary {
-    font-size: var(--slds-g-font-size-base, 0.8125rem);
+    // Match the rest of the card / main feed: 14px, on-surface-3.
+    font-size: var(--slds-g-font-scale-1, 0.875rem);
     font-weight: 400;
-    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+    color: var(--slds-g-color-on-surface-3, #001e5b);
     font-variant-numeric: tabular-nums;
   }
 
@@ -246,9 +256,24 @@
   .rl-flat__narrative {
     margin: 0;
     padding: 0 0.75rem;
-    font-size: var(--slds-g-font-size-base, 0.8125rem);
+    // Match the main feed's agent message (`.seller-home__conv-msg-agent-text`):
+    // 14px, on-surface-3, so the thinking prose reads as the same voice.
+    font-size: var(--slds-g-font-scale-1, 0.875rem);
     line-height: 1.5;
-    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+  }
+
+  // Persistent closing line under the completed header. Same prose voice as
+  // the streaming narrative; lives outside the collapsible content, so it
+  // stays visible after the card folds. The header's own bottom padding
+  // supplies the gap above it; its own bottom padding closes the card.
+  .rl-flat__final {
+    margin: 0;
+    padding: 0 0.75rem 0.75rem;
+    // Match the main feed's agent message (14px, on-surface-3).
+    font-size: var(--slds-g-font-scale-1, 0.875rem);
+    line-height: 1.5;
+    color: var(--slds-g-color-on-surface-3, #001e5b);
   }
 
   // Nothing revealed yet (between one thought ending and the next starting):
@@ -313,6 +338,14 @@
   .rl-flatstep__head {
     padding: 0.375rem 0;
     cursor: default;
+  }
+
+  // Match the step labels to the main feed's agent message (14px, on-surface-3)
+  // so the thinking steps read consistently with the reply. (Detail sub-step
+  // labels stay smaller/weaker as a nested list.)
+  .rl-flatstep__head .rl-step__label {
+    font-size: var(--slds-g-font-scale-1, 0.875rem);
+    color: var(--slds-g-color-on-surface-3, #001e5b);
   }
 
   .rl-flatstep.is-done .rl-flatstep__head {
@@ -478,7 +511,7 @@
   // 2rem, i.e. where "Connected 5 tools" starts. Left padding only; vertical
   // spacing stays on the child margins so the grid-rows collapse still works.
   .rl-flatstep__substeps {
-    padding-left: 2rem;
+    padding-left: 1.75rem;
   }
 
   // With the sub-steps indented, the per-row connector (`.rl-step::before`,
@@ -891,7 +924,7 @@
   }
 
   .rl-step__label {
-    margin-left: 0.75rem;
+    margin-left: 0.5rem;
     min-width: 0; // let slds-truncate shrink the label, not the count
     flex: 0 1 auto;
   }
