@@ -164,6 +164,16 @@
 //                                        Count is baked into the string so
 //                                        the template stays a plain render
 //                                        with no singularization logic.
+//                    - `scheduledIcon`  (string, optional) outputTypes key
+//                                        used once the row is Stopped into
+//                                        Scheduled — grey, since a waiting
+//                                        run has no live result yet.
+//                    - `scheduledLabel` (string, optional) generic label for
+//                                        that state, dropping the progress
+//                                        count ("Target accounts", not "42 of
+//                                        50 accounts"). Both are swapped in by
+//                                        applyFeedState (home.js) on the state
+//                                        change and restored on any other.
 //                  Icon COLOR is deliberately not in data — the SLDS 2
 //                  standard-icon class (`slds-icon-standard-{sprite}`)
 //                  supplies the canonical Salesforce object color via
@@ -3847,13 +3857,13 @@
     // states (Run now and Archive show on completed and scheduled rows).
     //
     // Per state the menu reads:
-    //   completed  Run now · Edit · Archive
+    //   completed  Run now · Stop · Edit · Archive
     //   running    Stop · Edit
     //   scheduled  Run now · Edit · Archive
     //   archived   Restart · Edit
     "rowActions": [
       { "id": "run_now", "label": "Run now", "icon": "play",    "onlyForState": "completed scheduled" },
-      { "id": "stop",    "label": "Stop",    "icon": "stop",    "onlyForState": "running" },
+      { "id": "stop",    "label": "Stop",    "icon": "stop",    "onlyForState": "running completed" },
       { "id": "restart", "label": "Restart", "icon": "refresh", "onlyForState": "archived" },
       { "id": "edit",    "label": "Edit Skill", "icon": "edit" },
       { "id": "archive", "label": "Archive", "icon": "archive", "onlyForState": "completed scheduled" }
@@ -3897,7 +3907,8 @@
       "doc-red":    { "iconImage": "/assets/images/doctype-icons/Doc-red.svg" },
       "doc-blue":   { "iconImage": "/assets/images/doctype-icons/Doc-blue.svg" },
       "doc-purple": { "iconImage": "/assets/images/doctype-icons/Doc-purple.svg" },
-      "doc-orange": { "iconImage": "/assets/images/doctype-icons/Doc-orange.svg" }
+      "doc-orange": { "iconImage": "/assets/images/doctype-icons/Doc-orange.svg" },
+      "doc-grey":   { "iconImage": "/assets/images/doctype-icons/Doc-grey.svg" }
     },
     // ── One list, one row per recurring workflow ──────────────────────
     // SOURCE OF TRUTH for the workflow list. Home renders these rows, and
@@ -3970,8 +3981,8 @@
         "lastRun": "Last run Thursday",
         "state": "completed",
         "outputs": [
-          { "icon": "doc-green",  "label": "7 new accounts" },
-          { "icon": "doc-yellow", "label": "25 prospects" }
+          { "icon": "doc-green",  "label": "7 new accounts", "scheduledIcon": "doc-grey", "scheduledLabel": "New accounts" },
+          { "icon": "doc-yellow", "label": "25 prospects", "scheduledIcon": "doc-grey", "scheduledLabel": "Prospects" }
         ],
         "workflow": { "id": "sk-find-prospects", "label": "" }
       },
@@ -3988,7 +3999,7 @@
         "lastRun": "Last run today",
         "state": "completed",
         "outputs": [
-          { "icon": "doc-red", "label": "10 proposals" }
+          { "icon": "doc-red", "label": "10 proposals", "scheduledIcon": "doc-grey", "scheduledLabel": "Proposals" }
         ],
         "workflow": { "id": "sk-draft-proposals", "label": "" }
       },
@@ -4009,7 +4020,7 @@
         // named below is what Friday will produce, not something that
         // exists now.
         "outputs": [
-          { "icon": "doc-blue", "label": "Quarterly Deal Pulse" }
+          { "icon": "doc-grey", "label": "Quarterly Deal Pulse" }
         ],
         "workflow": { "id": "sk-weekly-exec-brief", "label": "" }
       },
@@ -4027,7 +4038,7 @@
         "lastRun": "Last run yesterday",
         "state": "scheduled",
         "outputs": [
-          { "icon": "doc-purple", "label": "Action items" }
+          { "icon": "doc-grey", "label": "Action items" }
         ],
         "workflow": { "id": "sk-prepare-for-meetings", "label": "" }
       },
@@ -4052,7 +4063,7 @@
         "lastRun": "Last run Monday",
         "state": "running",
         "outputs": [
-          { "icon": "doc-green", "label": "42 of 50 accounts" }
+          { "icon": "doc-green", "label": "42 of 50 accounts", "scheduledIcon": "doc-grey", "scheduledLabel": "Target accounts" }
         ],
         "workflow": { "id": "sk-account-research", "label": "" }
       },
@@ -4069,7 +4080,7 @@
         "lastRun": "Last run yesterday",
         "state": "running",
         "outputs": [
-          { "icon": "doc-blue", "label": "12 of 30 drafted" }
+          { "icon": "doc-blue", "label": "12 of 30 drafted", "scheduledIcon": "doc-grey", "scheduledLabel": "Outreach drafts" }
         ],
         "workflow": { "id": "sk-write-sales-emails", "label": "" }
       },
@@ -4092,7 +4103,7 @@
         "lastRun": "Last run today",
         "state": "scheduled",
         "outputs": [
-          { "icon": "doc-orange", "label": "3 things to know" }
+          { "icon": "doc-grey", "label": "3 things to know" }
         ],
         "workflow": { "id": "sk-weekly-top-3", "label": "" }
       },
@@ -4116,7 +4127,7 @@
         "lastRun": "Last run today at 9:00 AM",
         "state": "scheduled",
         "outputs": [
-          { "icon": "doc-orange", "label": "Pipeline snapshot" }
+          { "icon": "doc-grey", "label": "Pipeline snapshot" }
         ],
         "workflow": { "id": "sk-daily-pipeline-snapshot", "label": "" }
       }

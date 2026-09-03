@@ -33,10 +33,27 @@
   job, so a running row doesn't spend its file-type icons on a spinner.
   An unknown `output.icon` degrades to a text-only chip rather than
   failing.
+
+  Scheduled variant: an output may author `scheduledIcon` (an outputTypes
+  key, grey by convention) and `scheduledLabel` (a generic label with no
+  progress count). When present, both variants are emitted as data-attrs
+  and `applyFeedState` (home.js) swaps them in the moment a Stop moves the
+  row into Scheduled — so a waiting run doesn't keep a colored pill that
+  still claims "42 of 50". Restored to the authored default on any other
+  state. Pills without a variant carry no marker and are never touched.
 #}
 {% macro outputPill(output, outputTypes) %}
 {% set typeInfo = outputTypes[output.icon] %}
-<span class="slds-badge slds-badge_lightest seller-home__feed-item-output-pill">
+{% set schedInfo = outputTypes[output.scheduledIcon] if output.scheduledIcon else null %}
+{% set hasSchedVariant = output.scheduledLabel or (schedInfo and schedInfo.iconImage) %}
+<span class="slds-badge slds-badge_lightest seller-home__feed-item-output-pill"
+  {%- if hasSchedVariant %}
+  data-sh-feed-output
+  data-sh-feed-output-label-default="{{ output.label }}"
+  {%- if output.scheduledLabel %} data-sh-feed-output-label-scheduled="{{ output.scheduledLabel }}"{% endif %}
+  {%- if typeInfo and typeInfo.iconImage %} data-sh-feed-output-icon-default="{{ typeInfo.iconImage }}"{% endif %}
+  {%- if schedInfo and schedInfo.iconImage %} data-sh-feed-output-icon-scheduled="{{ schedInfo.iconImage }}"{% endif %}
+  {%- endif %}>
   {% if typeInfo %}
     {% if typeInfo.iconImage %}
       <img

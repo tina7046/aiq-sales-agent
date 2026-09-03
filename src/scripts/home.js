@@ -2186,6 +2186,26 @@
       if (state !== 'paused' && state !== 'archived') slot.setAttribute('data-sh-feed-slot-default', value)
     })
 
+    // Output pills with an authored scheduled variant: a Stop moves the
+    // row into Scheduled, where a colored pill still reading "42 of 50"
+    // would claim progress the waiting run no longer has. Swap the glyph
+    // to its grey scheduled art and the text to the generic label on
+    // `scheduled`; restore the authored default on any other state. Pills
+    // without a variant carry no marker and are left untouched.
+    toArray(row.querySelectorAll('[data-sh-feed-output]')).forEach(function (pill) {
+      var sched = state === 'scheduled'
+      var img = pill.querySelector('.seller-home__feed-item-output-pill-glyph--image')
+      var labelEl = pill.querySelector('.seller-home__feed-item-output-pill-label')
+      if (img) {
+        var nextIcon = pill.getAttribute('data-sh-feed-output-icon-' + (sched ? 'scheduled' : 'default'))
+        if (nextIcon) img.setAttribute('src', nextIcon)
+      }
+      if (labelEl) {
+        var nextLabel = pill.getAttribute('data-sh-feed-output-label-' + (sched ? 'scheduled' : 'default'))
+        if (nextLabel !== null) labelEl.textContent = nextLabel
+      }
+    })
+
     // The title is one of those slots, so it may have just changed
     // tense — and anything derived from it has to follow. The row only
     // carries an `aria-label` when a workflow name had to be appended;
