@@ -3888,7 +3888,16 @@
       "doc":      { "sprite": "gdoc",   "spriteFamily": "doctype" },
       "message":  { "sprite": "txt",    "spriteFamily": "doctype" },
       "document": { "iconImage": "/assets/images/output-icons/doc.png" },
-      "pdf":      { "sprite": "pdf",    "spriteFamily": "doctype" }
+      "pdf":      { "sprite": "pdf",    "spriteFamily": "doctype" },
+      // Per-color doc glyphs — full-color SVGs rendered as an <img>, so
+      // they paint themselves (no currentColor mask). Each feed output
+      // picks the color it should read as; see /assets/images/doctype-icons.
+      "doc-green":  { "iconImage": "/assets/images/doctype-icons/Doc-green.svg" },
+      "doc-yellow": { "iconImage": "/assets/images/doctype-icons/Doc-yellow.svg" },
+      "doc-red":    { "iconImage": "/assets/images/doctype-icons/Doc-red.svg" },
+      "doc-blue":   { "iconImage": "/assets/images/doctype-icons/Doc-blue.svg" },
+      "doc-purple": { "iconImage": "/assets/images/doctype-icons/Doc-purple.svg" },
+      "doc-orange": { "iconImage": "/assets/images/doctype-icons/Doc-orange.svg" }
     },
     // ── One list, one row per recurring workflow ──────────────────────
     // SOURCE OF TRUTH for the workflow list. Home renders these rows, and
@@ -3961,8 +3970,8 @@
         "lastRun": "Last run Thursday",
         "state": "completed",
         "outputs": [
-          { "icon": "table",   "label": "7 new accounts" },
-          { "icon": "message", "label": "25 prospects" }
+          { "icon": "doc-green",  "label": "7 new accounts" },
+          { "icon": "doc-yellow", "label": "25 prospects" }
         ],
         "workflow": { "id": "sk-find-prospects", "label": "" }
       },
@@ -3979,7 +3988,7 @@
         "lastRun": "Last run today",
         "state": "completed",
         "outputs": [
-          { "icon": "pdf", "label": "10 proposals" }
+          { "icon": "doc-red", "label": "10 proposals" }
         ],
         "workflow": { "id": "sk-draft-proposals", "label": "" }
       },
@@ -4000,7 +4009,7 @@
         // named below is what Friday will produce, not something that
         // exists now.
         "outputs": [
-          { "icon": "doc", "label": "Quarterly Deal Pulse" }
+          { "icon": "doc-blue", "label": "Quarterly Deal Pulse" }
         ],
         "workflow": { "id": "sk-weekly-exec-brief", "label": "" }
       },
@@ -4018,7 +4027,7 @@
         "lastRun": "Last run yesterday",
         "state": "scheduled",
         "outputs": [
-          { "icon": "doc", "label": "Action items" }
+          { "icon": "doc-purple", "label": "Action items" }
         ],
         "workflow": { "id": "sk-prepare-for-meetings", "label": "" }
       },
@@ -4043,7 +4052,7 @@
         "lastRun": "Last run Monday",
         "state": "running",
         "outputs": [
-          { "icon": "table", "label": "42 of 50 accounts" }
+          { "icon": "doc-green", "label": "42 of 50 accounts" }
         ],
         "workflow": { "id": "sk-account-research", "label": "" }
       },
@@ -4060,7 +4069,7 @@
         "lastRun": "Last run yesterday",
         "state": "running",
         "outputs": [
-          { "icon": "message", "label": "12 of 30 drafted" }
+          { "icon": "doc-blue", "label": "12 of 30 drafted" }
         ],
         "workflow": { "id": "sk-write-sales-emails", "label": "" }
       },
@@ -4083,7 +4092,7 @@
         "lastRun": "Last run today",
         "state": "scheduled",
         "outputs": [
-          { "icon": "doc", "label": "3 things to know" }
+          { "icon": "doc-orange", "label": "3 things to know" }
         ],
         "workflow": { "id": "sk-weekly-top-3", "label": "" }
       },
@@ -4107,7 +4116,7 @@
         "lastRun": "Last run today at 9:00 AM",
         "state": "scheduled",
         "outputs": [
-          { "icon": "doc", "label": "Pipeline snapshot" }
+          { "icon": "doc-orange", "label": "Pipeline snapshot" }
         ],
         "workflow": { "id": "sk-daily-pipeline-snapshot", "label": "" }
       }
