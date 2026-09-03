@@ -886,7 +886,7 @@
       renderRecents(nav, withWorkflowSessions(withDraftRecents(recents)), activeConvId)
 
       // Confirming a schedule renames its conversation — "Schedule
-      // Daily Pipeline Snapshot" becomes "Daily Pipeline Snapshot",
+      // Pipeline Snapshot" becomes "Pipeline Snapshot",
       // since the thread is no longer about setting one up. Re-record
       // under the new name (in place: `recordRecent` keeps a row's
       // position) and repaint, so the rail updates without a reload.

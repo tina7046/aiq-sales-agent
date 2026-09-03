@@ -87,11 +87,11 @@ Nothing errors at build time — the mismatch is silent. Always keep the ids in 
 |---|---|---|---|
 | `ri-01` | completed | `sk-find-prospects` | Find Prospects |
 | `ri-02` | completed | `sk-draft-proposals` | Draft Proposals |
-| `ri-weekly-top-3` | completed | `sk-weekly-top-3` | Weekly Top 3 Things |
-| `ri-daily-pipeline-snapshot` | completed | `sk-daily-pipeline-snapshot` | Daily Pipeline Snapshot |
+| `ri-weekly-top-3` | completed | `sk-weekly-top-3` | Quota Health Check |
+| `ri-daily-pipeline-snapshot` | completed | `sk-daily-pipeline-snapshot` | Pipeline Snapshot |
 | `run-01` | running | `sk-account-research` | Account Research |
 | `run-02` | running | `sk-write-sales-emails` | Write Sales Emails |
-| `ri-03` | scheduled | `sk-weekly-exec-brief` | Weekly Executive Brief |
+| `ri-03` | scheduled | `sk-weekly-exec-brief` | Executive Brief |
 | `ri-04` | scheduled | `sk-prepare-for-meetings` | Prepare for Meetings |
 
 ---

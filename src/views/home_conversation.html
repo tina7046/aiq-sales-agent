@@ -112,6 +112,9 @@
      background in home_conversation.css. #}
   <link rel="stylesheet" href="/styles/home.css" />
   <link rel="stylesheet" href="/styles/home_conversation.css" />
+  {# Reusable "agent at work" reasoning trace — used as the opening
+     thinking phase on conversations whose data carries `opening.trace`. #}
+  <link rel="stylesheet" href="/styles/thinking_trace.css" />
   {# Styles for the Tools modal opened by the composer's "View all". #}
   <link rel="stylesheet" href="/styles/tools.css" />
 {% endblock %}
@@ -798,6 +801,10 @@
      conversation uses. Loaded BEFORE home_conversation.js so the global
      exists at boot; without it every reply simply appears at once. #}
   <script src="/scripts/conversation_stream.js"></script>
+  {# Reusable ThinkingTrace component (window.ThinkingTrace) — mounted by
+     home_conversation.js as the opening thinking phase when a conversation's
+     `opening.trace` is present. Loaded before it so the global exists at boot. #}
+  <script src="/scripts/thinking_trace.js"></script>
   <script src="/scripts/home_conversation.js"></script>
 
   {# Tools modal for the composer's "View all". GSAP (vendored) loads

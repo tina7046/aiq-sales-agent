@@ -1026,14 +1026,54 @@
       }
 
       setBusy(true)
+
+      // A conversation whose opening carries a `trace` plays the reusable
+      // ThinkingTrace as its single thinking phase (connect tools, then load
+      // skills, then fold into a completed header). Once it collapses the
+      // answer streams in stage by stage, with no per-stage thinking rows.
+      var openingCfg = (convMap && convMap[convId] && convMap[convId].opening) || null
+      var traceCfg = openingCfg && openingCfg.trace
+      if (traceCfg && window.ThinkingTrace && typeof window.ThinkingTrace.mount === 'function') {
+        var traceLi = document.createElement('li')
+        traceLi.className = 'seller-home__conv-thread-item'
+        var traceHost = document.createElement('div')
+        traceLi.appendChild(traceHost)
+        threadInner.appendChild(traceLi)
+        scrollToLatest()
+        window.ThinkingTrace.mount(traceHost, {
+          completedLabel: traceCfg.completedLabel,
+          steps: traceCfg.steps,
+          timings: traceCfg.timings,
+          controls: false,
+          autoCollapse: true,
+          onComplete: function () { revealStages(0) }
+        })
+        return
+      }
+
       next(0)
 
+      // Normal path: each stage thinks, then drops its messages.
       function next (i) {
         if (i >= stages.length) {
           setBusy(false)
           return
         }
         playBeat(stages[i], function () { next(i + 1) })
+      }
+
+      // Trace path: the trace already was the thinking, so each stage's
+      // messages stream in back to back with no thinking row in front.
+      function revealStages (i) {
+        if (i >= stages.length) {
+          setBusy(false)
+          return
+        }
+        appendTemplate(stages[i], convMap, {
+          stream: true,
+          scroll: scrollToLatest,
+          onDone: function () { revealStages(i + 1) }
+        })
       }
     }
 

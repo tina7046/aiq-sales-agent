@@ -723,8 +723,8 @@
   }
 
   // Case-insensitive, whitespace-collapsed title compare so a
-  // rename like "Daily Pipeline Snapshot" vs "Daily  Pipeline
-  // Snapshot" (extra whitespace on paste) doesn't fire a false
+  // rename like "Pipeline Snapshot" vs "Pipeline  Snapshot"
+  // (extra whitespace on paste) doesn't fire a false
   // warning.
   function normalizeTitle(s) {
     return String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();

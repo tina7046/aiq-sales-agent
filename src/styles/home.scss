@@ -1,14 +1,15 @@
 // ──────────────────────────────────────────────────────────────────────
 // Seller Home page styles
 // ============================================================
-// Owned by /home.html (src/views/home.html). Compiled to
-// dist/styles/home.css by the top-level `styles` gulp task and loaded
-// on that page only via `{% block head_extra %}`.
+// Styles for the `.seller-home` surface — Seller Home on index.html plus
+// the other pages that render it (the conversation drill-in, scheduled,
+// skills, tools, knowledge, onboarding). Compiled to dist/styles/home.css
+// by the top-level `styles` gulp task and linked per page via
+// `{% block styles %}`.
 //
-// NOT imported into index.scss — same convention as
-// prospect_list.scss / agent_monitoring.scss / channel_settings.scss:
-// page-specific stylesheets compile to their own .css and load
-// standalone so no other page pays the parse cost.
+// NOT imported into index.scss: it compiles to its own .css and loads
+// standalone, so pages that don't render Seller Home don't pay the parse
+// cost.
 //
 // Everything below is scoped under `.seller-home` (BEM-ish naming). No
 // selectors bleed onto elements outside that root, so the Sales
@@ -105,8 +106,8 @@ $sh-god-rays-min-height: 50rem;   // 800px
 // shadow lands at x=300 (no inset) and the main region uses its own
 // interior padding for content spacing. Selector specificity (0,1,1)
 // beats `.slds-template_default` (0,1,0), no `!important` required.
-// Scoped by virtue of home.css only loading on /home.html — matches
-// the pattern used by hunter_builder.scss.
+// Scoped by virtue of home.css loading only on the Seller Home pages,
+// not the plain Sales chrome.
 // ──────────────────────────────────────────────────────────────────────
 main.app-wrapper {
   padding: 0;
@@ -142,7 +143,7 @@ main.app-wrapper {
   //     canvas is fully transparent there, so this color is what
   //     actually fills those areas.
   // Set to `#FFFFFF` so it matches the shader's own `colorBack`
-  // (see the DEFAULTS block in home.html) — same value on both
+  // (see the DEFAULTS block in index.html) — same value on both
   // means no visible seam between the ray field and the masked-out
   // regions.
   background-color: #f7fbff;;
@@ -161,10 +162,10 @@ main.app-wrapper {
 // (`.seller-home__god-rays`). Kept behind an opt-in modifier so a
 // revert is a two-line change:
 //
-//   1. Remove the `<div class="seller-home__god-rays">` in home.html
+//   1. Remove the `<div class="seller-home__god-rays">` in index.html
 //      (or set `display: none` on it),
 //   2. Add `seller-home--legacy-aurora` to the outer
-//      `.seller-home` element in home.html.
+//      `.seller-home` element in index.html.
 //
 // The layer stack, comments, and exact hex/alpha values below are
 // preserved verbatim from the pre-2026-07-30 build so the aurora
@@ -292,14 +293,14 @@ main.app-wrapper {
 }
 
 // ── God-rays shader canvas host ────────────────────────────────────
-// Owner: home.html's `<div class="seller-home__god-rays">` sibling
+// Owner: index.html's `<div class="seller-home__god-rays">` sibling
 // of the left nav + main. The `@paper-design/shaders` runtime mounts
 // a `<canvas>` inside this element and animates god-ray beams
 // against a masked silhouette: rays everywhere except a wide
 // cleared cone at 12 o'clock, its apex on the convergence point.
 // The animation loop is stopped when `prefers-reduced-motion:
 // reduce` matches (see the module script at the bottom of
-// home.html).
+// index.html).
 //
 // Overscan (`inset: -90px`) is per the shader author's guidance so
 // the blur halo falls off-screen instead of fading to transparent
@@ -354,7 +355,7 @@ main.app-wrapper {
   // clipped by `.seller-home`'s `overflow: hidden`.
   //
   // This used to double as the thing that kept the focal point from riding up
-  // the screen. That job now belongs to the focal-point solve in home.html,
+  // the screen. That job now belongs to the focal-point solve in index.html,
   // which anchors the convergence point to the composer and re-solves the
   // shader's offset on resize — a floor on the box could only ever influence
   // the focal point indirectly.
@@ -616,7 +617,7 @@ main.app-wrapper {
 
 // Every nav row that's clickable (primary items + footer items).
 // Kept as an `<a>` (not a `<button>`) because these route to different
-// surfaces in Phase 2+; `data-sh-nav-noroute` marks placeholder ones.
+// surfaces; `data-sh-nav-noroute` marks placeholder ones.
 .seller-home__nav-item {
   display: flex;
   align-items: center;
@@ -1022,10 +1023,10 @@ main.app-wrapper {
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Main content region — scroll container for the Daily Briefing
-// (Phase 2), and later the chat input + Ready to Review list. Owns
-// its own overflow so the nav stays fixed while long content scrolls
-// only inside `.seller-home__main`.
+// Main content region — scroll container for the Daily Briefing, the
+// chat input, and the Ready to Review list. Owns its own overflow so the
+// nav stays fixed while long content scrolls only inside
+// `.seller-home__main`.
 // ──────────────────────────────────────────────────────────────────────
 // Nav edge shadow — painted as a ::before on right columns so it
 // doesn't need to escape the nav's overflow boundary. Each right
@@ -1061,11 +1062,10 @@ main.app-wrapper {
 .seller-home__main-inner {
   // Matches the Figma "Agentic Response no feed" container width
   // (1000px) which sets the outer content grid for the main region.
-  // Phase-2/3 content (briefing + composer) caps itself to a narrower
-  // 800px column and is centered within this grid, mirroring the
-  // Welcome frame's 100px gutters in Figma. Phase 4 (Ready to Review)
-  // will use the full 62.5rem width, so no follow-up churn to this
-  // container is expected.
+  // The briefing + composer cap themselves to a narrower 800px column
+  // and center within this grid, mirroring the Welcome frame's 100px
+  // gutters in Figma; the Ready to Review list uses the full 62.5rem
+  // width.
   max-width: 62.5rem;
 
   // Centers the column horizontally inside `.seller-home__main`, and only
@@ -1085,8 +1085,8 @@ main.app-wrapper {
   // 62.5rem cap.
   width: 100%;
 
-  // Stack the child sections (briefing → composer → future Ready to
-  // Review) with a Figma-exact 24px gap. Figma's Welcome frame
+  // Stack the child sections (briefing → composer → Ready to Review)
+  // with a Figma-exact 24px gap. Figma's Welcome frame
   // shows title at y=0 h=96 and input at y=120 → gap = 24px. Doing
   // this on the container (not per-section margin) lets each section
   // stay margin-free and keeps the spacing single-sourced.
@@ -1096,7 +1096,7 @@ main.app-wrapper {
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Daily Briefing (Phase 2)
+// Daily Briefing
 // ============================================================
 // Figma: node 8574:374824 ("title"). Two stacked text rows with 0px
 // gap between them, capped to an 800px content column. Everything
@@ -1142,10 +1142,9 @@ main.app-wrapper {
 
   // Center within `.seller-home__main-inner` (62.5rem / 1000px) so
   // the briefing sits with equal gutters, matching Figma's Welcome
-  // frame at x=100 in a 1000px container (100px gutters). Phase 4
-  // Ready to Review will use main-inner's full width, so the two
-  // sections will intentionally have different left edges — same as
-  // in Figma.
+  // frame at x=100 in a 1000px container (100px gutters). The Ready to
+  // Review list uses main-inner's full width, so the two sections
+  // intentionally have different left edges — same as in Figma.
   margin-inline: auto;
 }
 
@@ -1165,7 +1164,7 @@ main.app-wrapper {
 }
 
 // Inline "link" that's semantically a button (see comment in
-// home.html for the rationale). Reset the button chrome so it flows
+// index.html for the rationale). Reset the button chrome so it flows
 // like text, then re-apply the Figma link treatment: accent-2 fill,
 // solid underline, `from-font` position so descenders don't bisect
 // the underline.
@@ -1475,7 +1474,7 @@ main.app-wrapper {
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Chat Composer (Phase 3)
+// Chat Composer
 // ============================================================
 // Figma: node 8574:374830 ("✨ Agentic Text Input Field"). A bordered
 // white card with a soft multi-layer drop shadow, a multiline
@@ -1847,8 +1846,8 @@ main.app-wrapper {
 // The dropdown behind a toolbar button that picks one of a set — the
 // agent chooser today. Positioning comes from SLDS
 // (`slds-dropdown-trigger`, `slds-dropdown`); the surface and the rows
-// are the BB - AOP slash menu's (`.slash-suggestion` in its aop.scss),
-// so the list and the detail panel beside it read as one component.
+// are styled so the list and the detail panel beside it read as one
+// component.
 //
 // Values from the source: `radius-border-3`, a 1px border, white, and
 // the same two-layer shadow the detail panel carries. Width is SLDS'
@@ -1985,10 +1984,9 @@ main.app-wrapper {
 }
 
 // ── Composer menu detail panel ─────────────────────────────────────
-// Ported from the BB - AOP slash menu (`.slash-suggestion-detail` in
-// its aop.scss): hovering a row opens a panel to the right of the list,
-// aligned to that row's top edge. Widths, the two-layer shadow and the
-// grey header are the source's values.
+// Hovering a row opens a panel to the right of the list, aligned to that
+// row's top edge. Widths, the two-layer shadow and the grey header match
+// the menu surface.
 //
 // `position: fixed` is the source's choice and worth keeping — it takes
 // the panel out of every ancestor's overflow, which is what clipped the
@@ -2265,7 +2263,7 @@ main.app-wrapper {
 
   // Height of the fade band. Raise it to push the wash further down the
   // list, lower it to tighten it to the header.
-  --sh-feed-fade-height: 24.5rem;
+  --sh-feed-fade-height: 44.5rem;
 }
 
 // Subtle top-to-bottom fade: rgba(255,255,255,0.8) at 7% → 0% at 48%.
@@ -2298,13 +2296,19 @@ main.app-wrapper {
   );
 }
 
-// The band is an absolutely-positioned child, which paints above static
-// in-flow content. Positioning the section's other children puts them
-// back on top of it by tree order — no stacking context or negative
-// z-index needed. The list is already positioned, for Flip.
+// The fade band is an absolutely-positioned child, which paints above
+// static in-flow content. Positioning the section's other children puts
+// them back on top of it.
+//
+// Header z-index has to beat the list: both are `position: relative`,
+// so without it tree order would paint the first row over the filter
+// dropdown that hangs out of the header. The list stays at 1 so Flip
+// still has a positioned frame; the header at 2 keeps the open menu
+// above row hover (the stretched-link overlay and the card surface).
 .seller-home__feed-header,
 .seller-home__feed-empty {
   position: relative;
+  z-index: 2;
 }
 
 // ── Header ────────────────────────────────────────────────────────────
@@ -2348,6 +2352,7 @@ main.app-wrapper {
 // ── List ──────────────────────────────────────────────────────────────
 .seller-home__feed-list {
   position: relative; // reference frame for GSAP Flip during a reshuffle
+  z-index: 1; // under the header so the filter menu isn't covered by row hover
   list-style: none;
   margin: 0;
   padding: 0;
@@ -2898,7 +2903,7 @@ $sh-feed-filter-hidden: (
   padding-inline: var(--slds-g-spacing-4, 1rem);
 
   background: #ffffffa1;
-  border: 1px solid var(--slds-g-color-neutral-base-90, #fff);
+  border: 1px solid #9d5bff1f;
   border-radius: var(--slds-g-radius-border-3, 0.75rem);
 
   cursor: pointer;
@@ -2916,6 +2921,7 @@ $sh-feed-filter-hidden: (
       0px 12.8px 11.5px -4px hsl(var(--shadow-color) / 0.18);
 
     box-shadow: var(--shadow-elevation-medium);
+    background: #ffffffe8;
   }
 }
 

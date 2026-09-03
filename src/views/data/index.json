@@ -1177,6 +1177,42 @@
       // content that shouldn't wait. Remove `opening` entirely and the
       // whole thread paints at once, as it did before.
       "opening": {
+        // ThinkingTrace as the single thinking phase — connect the tools, then
+        // use the skills — folding to a completed header before the answer
+        // streams in from msg-response. Content mirrors the retired running-lab
+        // flat prototype this "Found new prospects" flow was built in.
+        // Rendered by ThinkingTrace.mount in home_conversation.js.
+        "trace": {
+          // No completedLabel → the header shows the REAL elapsed time on
+          // finish (e.g. "Worked for 15s"). Narratives are brief; the detailed
+          // reasoning shows in each step's cycling `cycle` micro-texts.
+          "timings": { "totalMs": 14000, "stepGapMs": 200 },
+          "steps": [
+            {
+              "label": "Connected 5 tools",
+              "narrative": "First, let me connect the tools I'll pull real signal from.",
+              "cycle": ["Connecting tools", "Reading your Salesforce pipeline", "Pulling ZoomInfo firmographics", "Scanning recent Gong calls", "Checking the web for signals", "Reviewing LinkedIn profiles"],
+              "substeps": [
+                { "source": "Gong", "label": "Gong" },
+                { "source": "Web", "label": "Web" },
+                { "source": "LinkedIn", "label": "LinkedIn" },
+                { "source": "ZoomInfo", "label": "ZoomInfo" },
+                { "source": "Salesforce", "label": "Salesforce" }
+              ]
+            },
+            {
+              "label": "Used 4 skills",
+              "narrative": "Now I'll run the analysis with the right skills.",
+              "cycle": ["Loaded skills", "Starting account research", "Scoring accounts against ICP", "Finding prospects", "Scoring against persona", "Drafting outreach", "Building cadences"],
+              "substeps": [
+                { "img": "/assets/images/nav-icons/skills.png", "label": "Account research" },
+                { "img": "/assets/images/nav-icons/skills.png", "label": "Find prospects" },
+                { "img": "/assets/images/nav-icons/skills.png", "label": "Write emails" },
+                { "img": "/assets/images/nav-icons/skills.png", "label": "Create cadence" }
+              ]
+            }
+          ]
+        },
         "stages": [
           {
             "id": "open-01",
@@ -2122,11 +2158,6 @@
       },
       "messages": [
         {
-          "id":   "c2-intro",
-          "type": "agent",
-          "text": "I\u2019ll pull your current pipeline data right now to give you the three most critical things you need to know to hit your number. Let me grab your open opportunities and recent win/loss data."
-        },
-        {
           "id":   "c2-lead",
           "type": "agent",
           "text": "Here are the **3 things you need to know right now** to make your numbers. Today is the last day of July \u2014 this is your end-of-month reality check."
@@ -2252,13 +2283,39 @@
       // engagement, then compare wins and losses. The labels narrate
       // the same steps the answer describes itself taking.
       "opening": {
+        // A reusable ThinkingTrace plays as the single thinking phase —
+        // connect the tools, then load the skills — then folds to a completed
+        // header. Once it collapses the answer streams in from c2-lead down.
+        // Rendered by ThinkingTrace.mount in home_conversation.js; the intro
+        // reasoning that used to be `c2-intro` now lives in the tools step.
+        "trace": {
+          "completedLabel": "Worked for 12 seconds",
+          "timings": { "totalMs": 12000, "stepGapMs": 150 },
+          "steps": [
+            {
+              "label": "Connected 5 tools",
+              "narrative": "First, I'll pull your current pipeline data right now — grabbing your open opportunities and recent win/loss data — so the three things I surface are the ones that actually move your number. Let me connect the tools that hold the signal.",
+              "cycle": ["Connecting tools", "Connected to Salesforce", "Connected to Gong", "Connected to Outlook", "Connected to Slack", "Connected to Gmail"],
+              "substeps": [
+                { "source": "Salesforce", "label": "Salesforce" },
+                { "source": "Gong", "label": "Gong" },
+                { "icon": "email", "label": "Outlook" },
+                { "source": "Slack", "label": "Slack" },
+                { "source": "Gmail", "label": "Gmail" }
+              ]
+            },
+            {
+              "label": "Used 2 skills",
+              "narrative": "Now I'll load the skills to run the analysis — a Salesforce query over your open pipeline and a search across our past conversations for context.",
+              "cycle": ["Finding skills", "Ran Salesforce query", "Searched past conversations"],
+              "substeps": [
+                { "img": "/assets/images/nav-icons/skills.png", "label": "Salesforce query" },
+                { "img": "/assets/images/nav-icons/skills.png", "label": "Search Past Conversations" }
+              ]
+            }
+          ]
+        },
         "stages": [
-          {
-            "id": "c2-open-01",
-            "thinkingMs": 1600,
-            "thinkingLabel": "Pulling your open opportunities and win/loss data\u2026",
-            "messageIds": ["c2-intro"]
-          },
           {
             "id": "c2-open-02",
             "thinkingMs": 2400,
@@ -2326,11 +2383,11 @@
     // across running / completed / failed so all three icons show.
     "conv-weekly-top-3": {
       "id": "conv-weekly-top-3",
-      "title": "Weekly Top 3 Things",
-      "subtitle": "Weekly Top 3 Things",
-      "workflow": { "id": "wf-weekly-top-3", "label": "Weekly Top 3 Things" },
+      "title": "Quota Health Check",
+      "subtitle": "Quota Health Check",
+      "workflow": { "id": "wf-weekly-top-3", "label": "Quota Health Check" },
       "status": "scheduled",
-      "recentLabel": "Weekly Top 3 Things",
+      "recentLabel": "Quota Health Check",
       // Newest-first, 24 weekly runs — enough history for the dropdown to
       // show ~7 at a time and scroll (or search) for the rest.
       //
@@ -2352,7 +2409,7 @@
       "runHistory": {
         "label": "Run history",
         "cadence": "weekly",
-        "headerTitle": "Weekly Top 3",
+        "headerTitle": "Quota Health Check",
         // The one conversation built FROM templates: five authored runs
         // (below) cloned across the 24 entries here. Every other
         // conversation's runHistory omits this and keeps its own
@@ -2636,7 +2693,7 @@
         {
           "id":   "wt3-r1-activity",
           "type": "workflow_activity",
-          "workflowLabel": "Weekly Top 3 completed",
+          "workflowLabel": "Quota Health Check completed",
           "workflowIcon":  "apps",
           "statusText":    "1,840 open opportunities \u00b7 4 closing unscheduled \u00b7 2 accounts silent"
         },
@@ -2719,7 +2776,7 @@
         {
           "id":   "wt3-r2-activity",
           "type": "workflow_activity",
-          "workflowLabel": "Weekly Top 3 completed",
+          "workflowLabel": "Quota Health Check completed",
           "workflowIcon":  "apps",
           "statusText":    "1,871 open opportunities \u00b7 6 slipped from July \u00b7 2 accounts recovered"
         },
@@ -2815,7 +2872,7 @@
         {
           "id":   "wt3-r4-activity",
           "type": "workflow_activity",
-          "workflowLabel": "Weekly Top 3 completed",
+          "workflowLabel": "Quota Health Check completed",
           "workflowIcon":  "apps",
           "statusText":    "1,904 open opportunities \u00b7 3 awaiting legal \u00b7 3 champion changes"
         },
@@ -2903,7 +2960,7 @@
         {
           "id":   "wt3-r5-activity",
           "type": "workflow_activity",
-          "workflowLabel": "Weekly Top 3 completed",
+          "workflowLabel": "Quota Health Check completed",
           "workflowIcon":  "apps",
           "statusText":    "1,926 open opportunities \u00b7 1 stuck in legal \u00b7 2 slipped"
         }
@@ -2925,7 +2982,7 @@
       ]
     },
     // ── conv-daily-pipeline-snapshot ────────────────────────────────
-    // Drill-in target for the Daily Pipeline Snapshot row on
+    // Drill-in target for the Pipeline Snapshot row on
     // `/scheduled.html`, and the first conversation here to carry a
     // `workflowContext` block. That block is the whole switch: its
     // presence is what makes home_conversation.html render the
@@ -2955,13 +3012,13 @@
     // pre-formatted so the prototype needs no date formatter.
     "conv-daily-pipeline-snapshot": {
       "id": "conv-daily-pipeline-snapshot",
-      "title": "Daily Pipeline Snapshot",
-      "subtitle": "Daily Pipeline Snapshot",
-      "workflow": { "id": "wf-daily-pipeline-snapshot", "label": "Daily Pipeline Snapshot" },
+      "title": "Pipeline Snapshot",
+      "subtitle": "Pipeline Snapshot",
+      "workflow": { "id": "wf-daily-pipeline-snapshot", "label": "Pipeline Snapshot" },
       "status": "scheduled",
-      "recentLabel": "Daily Pipeline Snapshot",
+      "recentLabel": "Pipeline Snapshot",
       // Run History dropdown for the three daily snapshots this thread
-      // already holds. Unlike Weekly Top 3, this is NOT built from
+      // already holds. Unlike Quota Health Check, this is NOT built from
       // templates (no `expandFromTemplates`): the runs map to the
       // snapshot messages that are authored below, so `messageId` points
       // straight at each one and selecting a run scrolls to it. `daily`
@@ -2970,7 +3027,7 @@
       "runHistory": {
         "label": "Run history",
         "cadence": "daily",
-        "headerTitle": "Daily Pipeline",
+        "headerTitle": "Pipeline Snapshot",
         "runs": [
           {
             "runId": "run-2026-08-07-0804",
@@ -3004,7 +3061,7 @@
       //
       // Each completed run contributes ONE agent message carrying a
       // `snapshot` block, rendered by `_pipeline_snapshot.html`. The
-      // snapshot owns its own "Daily Pipeline | August 5, 2026" header,
+      // snapshot owns its own "Pipeline Snapshot | August 5, 2026" header,
       // so it separates the runs visually without a per-run activity
       // chip in between. Message ids match `runs[].messageId`, because
       // that is what the Activity list anchors to.
@@ -3018,7 +3075,7 @@
           "type": "agent",
           "runId": "run-2026-08-05-0804",
           "snapshot": {
-            "titleLabel": "Daily Pipeline",
+            "titleLabel": "Pipeline Snapshot",
             "dateLabel": "August 5, 2026",
             "date": "2026-08-05T08:04:00-07:00",
             "freshness": {
@@ -3152,7 +3209,7 @@
           "type": "agent",
           "runId": "run-2026-08-06-0804",
           "snapshot": {
-            "titleLabel": "Daily Pipeline",
+            "titleLabel": "Pipeline Snapshot",
             "dateLabel": "August 6, 2026",
             "date": "2026-08-06T08:04:00-07:00",
             "freshness": {
@@ -3286,7 +3343,7 @@
           "type": "agent",
           "runId": "run-2026-08-07-0804",
           "snapshot": {
-            "titleLabel": "Daily Pipeline",
+            "titleLabel": "Pipeline Snapshot",
             "dateLabel": "August 7, 2026",
             "date": "2026-08-07T08:04:00-07:00",
             "freshness": {
@@ -3435,7 +3492,7 @@
         {
           "id": "msg-run-activity",
           "type": "workflow_activity",
-          "workflowLabel": "Daily Pipeline Snapshot completed",
+          "workflowLabel": "Pipeline Snapshot completed",
           "workflowIcon": "apps",
           "statusText": "68 opportunities reviewed \u00b7 7 risks found \u00b7 3 actions recommended"
         }
@@ -3798,7 +3855,7 @@
       { "id": "run_now", "label": "Run now", "icon": "play",    "onlyForState": "completed scheduled" },
       { "id": "stop",    "label": "Stop",    "icon": "stop",    "onlyForState": "running" },
       { "id": "restart", "label": "Restart", "icon": "refresh", "onlyForState": "archived" },
-      { "id": "edit",    "label": "Edit",    "icon": "edit" },
+      { "id": "edit",    "label": "Edit Skill", "icon": "edit" },
       { "id": "archive", "label": "Archive", "icon": "archive", "onlyForState": "completed scheduled" }
     ],
     // Semantic-category → SLDS utility-sprite map (Figma node
@@ -3928,10 +3985,10 @@
       },
       {
         "id": "ri-03",
-        "title": "Weekly exec brief",
+        "title": "Executive Brief",
         "titles": {
-          "running": "Preparing your weekly exec brief",
-          "neutral": "Weekly exec brief"
+          "running": "Preparing your executive brief",
+          "neutral": "Executive Brief"
         },
         "cadence": "Weekly",
         "stepProgress": "1 of 3 steps",
@@ -4009,50 +4066,48 @@
       },
       // The run-history surface. `conversationId` opens the thread where
       // all five runs live — the header's Run History dropdown is how you
-      // move between them. `completed` because Run 5 has finished, which
-      // is what its Scheduled row and the dropdown's current run also
-      // report; the three have to agree or the prototype contradicts
-      // itself depending on which door you came through.
+      // move between them. `scheduled` matches its Scheduled-page row and
+      // the conversation's own status, so the three agree no matter which
+      // door you came through.
       {
         "id": "ri-weekly-top-3",
         "conversationId": "conv-weekly-top-3",
-        "title": "Found this week\u2019s top 3 things",
+        "title": "Quota Health Check",
         "titles": {
-          "running": "Finding this week\u2019s top 3 things",
-          "neutral": "Weekly Top 3 Things"
+          "running": "Preparing your quota health check",
+          "neutral": "Quota Health Check"
         },
         "cadence": "Weekly",
         "stepProgress": "1 of 3 steps",
         "nextRun": "Next run Monday at 9:00 AM",
         "lastRun": "Last run today",
-        "state": "completed",
+        "state": "scheduled",
         "outputs": [
           { "icon": "doc", "label": "3 things to know" }
         ],
         "workflow": { "id": "sk-weekly-top-3", "label": "" }
       },
-      // Daily Pipeline Snapshot. Surfaced here so the feed and the
+      // Pipeline Snapshot. Surfaced here so the feed and the
       // Scheduled tab list the same workflows; `conversationId` opens the
       // snapshot thread, whose header Run History dropdown holds the
-      // three daily snapshots. `completed` — its latest run finished, so
-      // it carries an `outputs` pill like the other completed rows (and
-      // its Scheduled row reads the same subline, since both are sourced
-      // from this entry).
+      // three daily snapshots. `scheduled` — it carries an `outputs` pill
+      // naming what the next run produces, and its Scheduled-page row
+      // reads the same subline, since both are sourced from this entry.
       {
         "id": "ri-daily-pipeline-snapshot",
         "conversationId": "conv-daily-pipeline-snapshot",
-        "title": "Daily Pipeline Snapshot",
+        "title": "Pipeline Snapshot",
         "titles": {
-          "running": "Preparing the daily pipeline snapshot",
-          "neutral": "Daily Pipeline Snapshot"
+          "running": "Preparing the pipeline snapshot",
+          "neutral": "Pipeline Snapshot"
         },
         "cadence": "Daily",
         "stepProgress": "1 of 3 steps",
         "nextRun": "Next run tomorrow at 9:00 AM",
         "lastRun": "Last run today at 9:00 AM",
-        "state": "completed",
+        "state": "scheduled",
         "outputs": [
-          { "icon": "doc", "label": "Daily pipeline snapshot" }
+          { "icon": "doc", "label": "Pipeline snapshot" }
         ],
         "workflow": { "id": "sk-daily-pipeline-snapshot", "label": "" }
       }

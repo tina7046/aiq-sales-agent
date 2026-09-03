@@ -1,0 +1,469 @@
+// Thinking Trace — reusable reasoning-trace component
+// =====================================================================
+// A self-contained, config-driven "agent at work" trace: a streaming
+// first-person narrative over an accordion of steps (each with a spinner
+// that settles to a check, a cycling label, and expandable sub-steps),
+// that folds into a completed header with a closing summary.
+//
+// Rendered entirely by scripts/thinking_trace.js (ThinkingTrace.mount).
+// NOT nested under any page root, so it can drop into any surface.
+//
+// Depends on these app-global utilities (index.css + conversation_stream.js):
+//   • .sh-spinner + the `sh-spin` / `sh-typing-sweep` keyframes
+//   • .t-stream-w (word reveal) and .t-text-swap (label crossfade)
+//   • ShStream (window.ShStream) for the narrative word streaming
+//   • the SLDS design tokens (var(--slds-g-*)) and utility sprite icons
+
+.thinking-trace {
+  // Connector geometry: the icon-center x (half the 1.25rem icon slot) and
+  // the clearance kept between a line end and the icon it points at.
+  --tt-line-x: 0.625rem;
+  --tt-line-gap: 0.75rem;
+
+  // Reads as a plain chat element, not a card — no border/radius/surface.
+  padding: 0;
+}
+
+// ── Lab playback controls (skip / pause / restart) ──────────────────
+// Sit above the trace, right-aligned. Pause shows only during the run,
+// Restart only after; restate the hide at class+attribute specificity so
+// the JS `hidden` flags win over SLDS's `.slds-button { display:inline-flex }`.
+.thinking-trace__controls {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.thinking-trace__pause[hidden],
+.thinking-trace__restart[hidden] {
+  display: none;
+}
+
+// ── Header (accordion toggle) ───────────────────────────────────────
+// A chevron + a "Started X ago" status that becomes the completed label.
+// Full-width button with its own padding so the hover fill spans the row.
+.thinking-trace__head {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0 0.75rem;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 400;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.thinking-trace__head:hover {
+  border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
+}
+
+.thinking-trace__heading {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+// Chevron in the shared 1.25rem icon column; rotates with expand state.
+.thinking-trace__toggle-icon {
+  flex: 0 0 1.25rem;
+  width: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  transition: color 150ms var(--icon-swap-ease, ease-in-out);
+}
+
+.thinking-trace__chevron {
+  width: 0.75rem;
+  height: 0.75rem;
+  fill: currentColor;
+  transform: rotate(0deg);
+  transition: transform var(--icon-swap-dur, 250ms) var(--icon-swap-ease, ease-in-out);
+}
+
+.thinking-trace:not(.is-collapsed) .thinking-trace__chevron {
+  transform: rotate(90deg);
+}
+
+// "Started X ago" / "Worked for 2 hours" — matches the main feed voice.
+.thinking-trace__status {
+  margin-left: 0.5rem;
+  min-width: 0;
+  font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
+  font-weight: 400;
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+  transition: color 150ms var(--icon-swap-ease, ease-in-out);
+}
+
+// Darken the label + chevron on hover, signalling the clickable toggle.
+.thinking-trace__head:hover .thinking-trace__status,
+.thinking-trace__head:hover .thinking-trace__toggle-icon {
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// ── Streaming reasoning narrative ───────────────────────────────────
+// Prose voice; sized to the words actually revealed (unrevealed words are
+// display:none from the engine) so the step list rides up/down with it.
+.thinking-trace__narrative {
+  margin: 0;
+  padding: 0.375rem 0.75rem;
+  font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
+  line-height: 1.5;
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+// Between one thought ending and the next starting, collapse entirely so
+// the list sits directly under the header.
+.thinking-trace__narrative:empty {
+  display: none;
+}
+
+.thinking-trace.is-complete .thinking-trace__narrative {
+  display: none;
+}
+
+// Persistent closing line under the completed header; lives outside the
+// collapsible content so it stays after the card folds.
+.thinking-trace__final {
+  margin: 0;
+  padding: 0 0.75rem 0.75rem;
+  font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
+  line-height: 1.5;
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+// ── Steps container ─────────────────────────────────────────────────
+// Tight stack (no gap) so the collapsed check rows read as one thread.
+.thinking-trace__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  padding: 0 0.75rem 0rem;
+}
+
+// Before the first step lands, no bottom padding — keeps it under the narrative.
+.thinking-trace__steps:empty {
+  padding: 0;
+}
+
+// Collapsed: fold the narrative + steps away, leaving just the header (+ final).
+.thinking-trace.is-collapsed .thinking-trace__narrative,
+.thinking-trace.is-collapsed .thinking-trace__steps {
+  display: none;
+}
+
+// ── Step (accordion section) ────────────────────────────────────────
+.thinking-trace__step {
+  position: relative;
+}
+
+// Connector between collapsed check rows, in the icon column. Sits in the
+// gap between this check and the next (cleared past the 1rem circles).
+.thinking-trace__step:not(.is-expanded):not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: var(--tt-line-x);
+  top: calc(50% + 0.75rem);    // 0.25rem clearance below this check's circle
+  height: calc(100% - 1.5rem); // ... and above the next check's circle
+  width: 1px;
+  background: var(--slds-g-color-palette-neutral-90, #e5e5e5);
+  pointer-events: none;
+}
+
+// Step header row: icon-swap slot + label. Symmetric vertical padding gives
+// each check row even spacing (and room for the connector between them).
+.thinking-trace__step-head {
+  display: flex;
+  align-items: center;
+  padding: 0.375rem 0;
+  cursor: default;
+}
+
+.thinking-trace__step.is-done .thinking-trace__step-head {
+  cursor: pointer;
+}
+
+// Settled step label matches the main feed (14px, on-surface-3).
+.thinking-trace__step-head .thinking-trace__label {
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+// Icon-swap slot: spinner (active) → blue check (done) → chevron (hover /
+// expanded). Three glyphs stacked in one 1.25rem grid cell.
+.thinking-trace__step-head .thinking-trace__icon--swap {
+  display: grid;
+  place-items: center;
+}
+
+.thinking-trace__step-head .thinking-trace__icon--swap > .thinking-trace__spinner,
+.thinking-trace__step-head .thinking-trace__icon--swap > .thinking-trace__mark,
+.thinking-trace__step-head .thinking-trace__icon--swap > .thinking-trace__step-chevron {
+  grid-area: 1 / 1;
+  transition: opacity var(--icon-swap-dur, 250ms) var(--icon-swap-ease, ease-in-out);
+}
+
+// Spinner re-boxed to the 1rem visible size of the source marks.
+.thinking-trace__steps .thinking-trace__spinner {
+  box-sizing: border-box;
+  width: 1rem;
+  height: 1rem;
+}
+
+.thinking-trace__step-head .thinking-trace__step-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// Center the check glyph so it doesn't inherit the head's text line-height
+// (which would make the box 16x19.5 and drift the check below the label).
+.thinking-trace__step-head .thinking-trace__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thinking-trace__step-head .thinking-trace__step-chevron svg {
+  width: 0.75rem;
+  height: 0.75rem;
+  fill: currentColor;
+  transform: rotate(0deg);
+  transition: transform var(--icon-swap-dur, 250ms) var(--icon-swap-ease, ease-in-out);
+}
+
+// Resting: active → spinner; done → check; hover(done) / expanded → chevron.
+.thinking-trace__step-head .thinking-trace__mark,
+.thinking-trace__step-head .thinking-trace__step-chevron {
+  opacity: 0;
+}
+
+.thinking-trace__step.is-done .thinking-trace__mark {
+  opacity: 1;
+}
+
+.thinking-trace__step.is-done .thinking-trace__spinner {
+  opacity: 0;
+  animation-play-state: paused;
+}
+
+// Done + hover/focus → check swaps out for the chevron (expand affordance).
+.thinking-trace__step.is-done .thinking-trace__step-head:hover .thinking-trace__mark,
+.thinking-trace__step.is-done .thinking-trace__step-head:focus-visible .thinking-trace__mark {
+  opacity: 0;
+}
+
+.thinking-trace__step.is-done .thinking-trace__step-head:hover .thinking-trace__step-chevron,
+.thinking-trace__step.is-done .thinking-trace__step-head:focus-visible .thinking-trace__step-chevron {
+  opacity: 1;
+}
+
+// Expanded → point the (hover-revealed) chevron down.
+.thinking-trace__step.is-expanded .thinking-trace__step-chevron svg {
+  transform: rotate(90deg);
+}
+
+.thinking-trace.is-paused .thinking-trace__steps .thinking-trace__spinner.sh-spinner {
+  animation-play-state: paused;
+}
+
+// Active step label — the blue → violet shimmer sweep (same as the app's
+// typing indicator), clipped to the glyphs. Reverts to solid on settle.
+.thinking-trace__step.is-active .thinking-trace__step-head .thinking-trace__label {
+  background: linear-gradient(
+    90deg,
+    var(--slds-g-color-brand-base-40, #0250d9) 0%,
+    var(--slds-g-color-palette-violet-40, #9602c7) 50%,
+    var(--slds-g-color-brand-base-40, #0250d9) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: sh-typing-sweep 1s cubic-bezier(0.61, 0.32, 0.41, 0.69) infinite;
+}
+
+.thinking-trace.is-paused .thinking-trace__step.is-active .thinking-trace__step-head .thinking-trace__label {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thinking-trace__step.is-active .thinking-trace__step-head .thinking-trace__label {
+    animation: none;
+    -webkit-text-fill-color: var(--slds-g-color-brand-base-40, #0250d9);
+  }
+}
+
+// ── Step body (collapsible sub-steps) ───────────────────────────────
+// grid-rows 0fr → 1fr collapse; `position: relative` anchors the spine.
+.thinking-trace__step-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  position: relative;
+  transition: grid-template-rows var(--icon-swap-dur, 250ms) var(--icon-swap-ease, ease-in-out);
+}
+
+.thinking-trace__step.is-expanded .thinking-trace__step-body {
+  grid-template-rows: 1fr;
+}
+
+.thinking-trace__step-body > * {
+  overflow: hidden;
+  min-height: 0;
+}
+
+// Sub-steps indented so their icons line up under the header label text
+// (1.25rem icon slot + 0.5rem label gap). Left padding only; vertical
+// spacing lives on child margins so the grid-rows collapse still works.
+.thinking-trace__substeps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  padding-left: 1.75rem;
+}
+
+.thinking-trace__substeps .thinking-trace__label {
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+// The expanded spine: one 1px line at the chevron/check column, down the
+// left of the indented sub-steps. Drawn on the (unclipped) body so its
+// negative top/bottom bridge up to the header chevron and down to the next.
+.thinking-trace__step.is-expanded .thinking-trace__step-body::before {
+  content: "";
+  position: absolute;
+  left: var(--tt-line-x);
+  top: -0.5rem;
+  bottom: -0.25rem;
+  width: 1px;
+  background: var(--slds-g-color-palette-neutral-90, #e5e5e5);
+  transform: translateX(-0.5px);
+  pointer-events: none;
+}
+
+.thinking-trace__substeps > .thinking-trace__row:first-child {
+  margin-top: 0.25rem;
+}
+
+.thinking-trace__substeps > .thinking-trace__row:last-child {
+  margin-bottom: 0.25rem;
+}
+
+// ── Row primitives (icon + label), shared by sub-steps ──────────────
+.thinking-trace__row {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+// Icon slot: a 1.25rem column so the mark centers under the step icon.
+.thinking-trace__icon {
+  flex: 0 0 1.25rem;
+  width: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thinking-trace__source-img {
+  display: block;
+  width: 1rem;
+  height: 1rem;
+  object-fit: contain;
+}
+
+// A raster glyph (e.g. the left-nav skills icon) tinted to the card text
+// color: the PNG is an alpha mask over an on-surface-3 fill.
+.thinking-trace__mask-img {
+  display: block;
+  width: 1rem;
+  height: 1rem;
+  background-color: var(--slds-g-color-on-surface-3, #001e5b);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+// Utility-sprite glyph in the same 1rem slot as the source marks.
+.thinking-trace__glyph {
+  width: 1rem;
+  height: 1rem;
+  fill: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// Settled step mark: a blue check-in-circle.
+.thinking-trace__check {
+  width: 1rem;
+  height: 1rem;
+  fill: var(--slds-g-color-palette-electric-blue-50, #066afe);
+}
+
+.thinking-trace__label {
+  margin: 0 0 0 0.5rem;
+  min-width: 0;
+  flex: 0 1 auto;
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px base; step head bumps to 14px
+  line-height: 1.5;
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Optional count-up cell (right of the label, bullet-separated). Kept for
+// configs that use `count`; empty by default so no bullet shows.
+.thinking-trace__count {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.thinking-trace__count:not(:empty)::before {
+  content: "•";
+  margin: 0 0.375rem;
+}
+
+// ── Spinner accent (blue → violet), 2px ring ────────────────────────
+// Reuses the shared `.sh-spinner` grey ring; overlays a rotating conic
+// segment for the accent and thins the whole ring to 2px.
+.thinking-trace__steps .thinking-trace__spinner.sh-spinner {
+  position: relative;
+  border-width: 2px;
+  border-bottom-color: var(--slds-g-color-neutral-base-90, #e5e5e5);
+}
+
+.thinking-trace__steps .thinking-trace__spinner.sh-spinner::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg 90deg,
+    var(--slds-g-color-brand-base-40, #0250d9) 90deg,
+    var(--slds-g-color-palette-violet-40, #9602c7) 180deg,
+    transparent 180deg
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2px),
+    #000 calc(100% - 2px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2px),
+    #000 calc(100% - 2px)
+  );
+}

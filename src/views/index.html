@@ -829,10 +829,10 @@
 			// + god-rays-style tuning panel.
 			try {
 				const SIMPLEX_DEFAULTS = {
-					colors: ['#ffffff', '#e5f0ff66', '#e3c7ff33', '#fdbffb1c', '#ffffff', '#3399cc', '#3333cc', '#9933cc', '#cc3399', '#cc3333'],
+					colors: ['#ffffffff', '#e0edff3d', '#fbe5ff3d', '#dcb8ff3d', '#3df2ff3d', '#3399cc', '#3333cc', '#9933cc', '#cc3399', '#cc3333'],
 					colorsCount: 5,
-					stepsPerColor: 1, softness: 1,
-					speed: 3.35, scale: 2.37, rotation: 0,
+					stepsPerColor: 4, softness: 1,
+					speed: 2.23, scale: 2.16, rotation: 0,
 					offsetX: 0, offsetY: 0,
 				};
 				// key, min, max, step
@@ -1343,11 +1343,13 @@
 			// the hidden panel win; they can still re-pick / re-open afterward.
 			// This classic script runs before the deferred shader module reads
 			// the same keys, so the forced pick also drives what mounts.
-			var SHADER_FORCE = 'simplex-2026-09-02';
+			var SHADER_FORCE = 'simplex-2026-09-03';
 			try {
 				if (window.localStorage.getItem('sh:shaderForce') !== SHADER_FORCE) {
 					window.localStorage.removeItem('sh:shader');
 					window.localStorage.removeItem('sh:shaderControls');
+					// Also drop any saved Simplex tuning so the new baked defaults win.
+					window.localStorage.removeItem('sh:shaderState:simplex');
 					window.localStorage.setItem('sh:shaderForce', SHADER_FORCE);
 				}
 			} catch (e) { }

@@ -394,7 +394,7 @@
       // The three seeded `ownership: "learned"` skills (Review
       // Deal Health, Identify Pipeline Changes, Recommend Next
       // Actions) stay reachable via direct URL and via the
-      // supporting-skill chips on Daily Pipeline Snapshot's detail
+      // supporting-skill chips on Pipeline Snapshot's detail
       // page — they just don't appear under any visible tab while
       // this flag is on. Flip `hidden` to `false` to re-expose the
       // tab, no JS change required.
@@ -483,7 +483,7 @@
   // and the badge tint is what tells them apart.
   //
   // The three `ownership: "learned"` entries below deliberately carry
-  // no `agent`: they are sub-skills of Daily Pipeline Snapshot rather
+  // no `agent`: they are sub-skills of Pipeline Snapshot rather
   // than agent-level capabilities, and their tab is parked behind
   // `hidden: true`. Give them one here if the Learned Skills tab is
   // ever re-exposed and the design calls for it — no template or CSS
@@ -534,7 +534,7 @@
     },
     {
       "id":                   "sk-daily-pipeline-snapshot",
-      "name":                 "Daily Pipeline Snapshot",
+      "name":                 "Pipeline Snapshot",
       "agent":                "sales",
       "status":               "published",
       "description":          "Get a prioritized daily view of pipeline changes, at-risk deals, and the actions most likely to move them forward.",
@@ -568,7 +568,7 @@
       "updatedBy":            "Zubin Keith",
       "updatedAt":            "yesterday at 4:00 PM",
       "version":              "V8",
-      "markdown":             "# Daily Pipeline Snapshot\n\nGet a concise daily view of your Salesforce pipeline\u2014what changed, what needs attention, and which actions will have the greatest impact.\n\n## What this skill does\n\nDaily Pipeline Snapshot analyzes your Salesforce opportunities and creates a prioritized briefing for the day. It highlights meaningful pipeline movement, emerging risks, stalled deals, and recommended next actions so you can focus on the opportunities that need you most.\n\n## How this skill works\n\nCoordinates three supporting Skills to build the snapshot:\n\n[Review Deal Health](/skill_detail.html?id=sk-review-deal-health) [Identify Pipeline Changes](/skill_detail.html?id=sk-identify-pipeline-changes) [Recommend Next Actions](/skill_detail.html?id=sk-recommend-next-actions)\n\n## Instructions\n\n1. Analyze the current user's open opportunities for the current quarter by default. If the user specifies a different time period, segment, territory, or pipeline view, use that scope instead.\n2. Retrieve the seller's open opportunities from Salesforce.\n3. Default to records owned by the current user and expected to close this quarter.\n4. Compare the current pipeline with the latest available snapshot.\n5. Identify material changes in stage, amount, probability, close date, and status.\n6. Evaluate momentum, engagement, risk, and next-step readiness.\n7. Prioritize high-impact opportunities that are immediately actionable.\n8. Recommend a specific next action for each priority opportunity.\n9. Explain risks and recommendations using available Salesforce evidence.\n10. Clearly separate confirmed facts from inferred risks.\n11. Never update records or contact customers without explicit approval.\n\n## Guardrails\n\n- Never invent customer activity, deal changes, or pipeline values.\n- Label recommendations and inferred risks clearly.\n- Show data source and freshness when relevant.\n- Exclude closed opportunities unless they changed during the comparison period.\n- Respect Salesforce permissions and sharing rules.\n- Ask for clarification when pipeline scope is ambiguous.\n\n## Example output\n\nA typical morning briefing surfaces the two or three opportunities where a specific next action is most likely to move the deal forward, each paired with the pipeline signal that raised it and a suggested draft the seller can accept or edit before sending.\n",
+      "markdown":             "# Pipeline Snapshot\n\nGet a concise daily view of your Salesforce pipeline\u2014what changed, what needs attention, and which actions will have the greatest impact.\n\n## What this skill does\n\nPipeline Snapshot analyzes your Salesforce opportunities and creates a prioritized briefing for the day. It highlights meaningful pipeline movement, emerging risks, stalled deals, and recommended next actions so you can focus on the opportunities that need you most.\n\n## How this skill works\n\nCoordinates three supporting Skills to build the snapshot:\n\n[Review Deal Health](/skill_detail.html?id=sk-review-deal-health) [Identify Pipeline Changes](/skill_detail.html?id=sk-identify-pipeline-changes) [Recommend Next Actions](/skill_detail.html?id=sk-recommend-next-actions)\n\n## Instructions\n\n1. Analyze the current user's open opportunities for the current quarter by default. If the user specifies a different time period, segment, territory, or pipeline view, use that scope instead.\n2. Retrieve the seller's open opportunities from Salesforce.\n3. Default to records owned by the current user and expected to close this quarter.\n4. Compare the current pipeline with the latest available snapshot.\n5. Identify material changes in stage, amount, probability, close date, and status.\n6. Evaluate momentum, engagement, risk, and next-step readiness.\n7. Prioritize high-impact opportunities that are immediately actionable.\n8. Recommend a specific next action for each priority opportunity.\n9. Explain risks and recommendations using available Salesforce evidence.\n10. Clearly separate confirmed facts from inferred risks.\n11. Never update records or contact customers without explicit approval.\n\n## Guardrails\n\n- Never invent customer activity, deal changes, or pipeline values.\n- Label recommendations and inferred risks clearly.\n- Show data source and freshness when relevant.\n- Exclude closed opportunities unless they changed during the comparison period.\n- Respect Salesforce permissions and sharing rules.\n- Ask for clarification when pipeline scope is ambiguous.\n\n## Example output\n\nA typical morning briefing surfaces the two or three opportunities where a specific next action is most likely to move the deal forward, each paired with the pipeline signal that raised it and a suggested draft the seller can accept or edit before sending.\n",
       "linked":               true
     },
     {
@@ -853,7 +853,7 @@
     },
     {
       "id":                   "sk-weekly-exec-brief",
-      "name":                 "Weekly Executive Brief",
+      "name":                 "Executive Brief",
       "agent":                "sales",
       "status":               "published",
       "description":          "Summarizes the week's pipeline movement, wins, and risks into a concise brief ready to share with leadership.",
@@ -871,7 +871,7 @@
       "updatedBy":            "Zubin Keith",
       "updatedAt":            "last week",
       "version":              "V4",
-      "markdown":             "# Weekly Executive Brief\n\nSummarizes the week's pipeline movement, wins, and risks into a concise brief the seller can share with leadership.\n\n## What this skill does\n\nWeekly Executive Brief reviews the seller's pipeline over the trailing week and produces a leadership-ready summary: what moved, what closed, what slipped, and where the seller needs help. It favors signal over detail so a manager can read it in under a minute.\n\n## Instructions\n\n1. Analyze the seller's opportunities for the trailing seven days.\n2. Summarize material stage, amount, and close-date changes.\n3. Call out closed-won and closed-lost outcomes with a one-line reason.\n4. Surface the two or three deals most at risk and why.\n5. End with the specific asks where the seller needs manager support.\n\n## Guardrails\n\n- Never invent pipeline values, outcomes, or activity.\n- Separate confirmed facts from inferred risks.\n- Respect Salesforce permissions and sharing rules.\n- Keep the brief scannable\u2014lead with the takeaway, not the data dump.\n\n## Example output\n\nA Friday brief opens with the week's headline\u2014two deals advanced, one slipped\u2014then lists the at-risk opportunities and a short ask for each, ready to paste into a leadership channel.\n",
+      "markdown":             "# Executive Brief\n\nSummarizes the week's pipeline movement, wins, and risks into a concise brief the seller can share with leadership.\n\n## What this skill does\n\nExecutive Brief reviews the seller's pipeline over the trailing week and produces a leadership-ready summary: what moved, what closed, what slipped, and where the seller needs help. It favors signal over detail so a manager can read it in under a minute.\n\n## Instructions\n\n1. Analyze the seller's opportunities for the trailing seven days.\n2. Summarize material stage, amount, and close-date changes.\n3. Call out closed-won and closed-lost outcomes with a one-line reason.\n4. Surface the two or three deals most at risk and why.\n5. End with the specific asks where the seller needs manager support.\n\n## Guardrails\n\n- Never invent pipeline values, outcomes, or activity.\n- Separate confirmed facts from inferred risks.\n- Respect Salesforce permissions and sharing rules.\n- Keep the brief scannable\u2014lead with the takeaway, not the data dump.\n\n## Example output\n\nA Friday brief opens with the week's headline\u2014two deals advanced, one slipped\u2014then lists the at-risk opportunities and a short ask for each, ready to paste into a leadership channel.\n",
       "linked":               true
     },
     {
@@ -899,7 +899,7 @@
     },
     {
       "id":                   "sk-weekly-top-3",
-      "name":                 "Weekly Top 3 Things",
+      "name":                 "Quota Health Check",
       "agent":                "sales",
       "status":               "published",
       "description":          "Distills everything happening across the seller's book into the three things that matter most this week.",
@@ -917,7 +917,7 @@
       "updatedBy":            "Zubin Keith",
       "updatedAt":            "yesterday at 8:00 AM",
       "version":              "V6",
-      "markdown":             "# Weekly Top 3 Things\n\nDistills everything happening across the seller's book into the three things that matter most this week\u2014with the reason each made the cut.\n\n## What this skill does\n\nWeekly Top 3 Things scans the seller's pipeline, activity, and signals and ranks them down to a short list of three: the highest-impact opportunity, the biggest emerging risk, and the single best net-new play. Each item names the signal that raised it and a concrete next step.\n\n## Instructions\n\n1. Review the seller's open opportunities, recent activity, and buying signals.\n2. Score candidates by expected impact and urgency.\n3. Select the top three, favoring variety\u2014one to advance, one to protect, one to open.\n4. For each, state the signal that raised it and one concrete next step.\n5. Keep the whole thing to three items\u2014resist expanding the list.\n\n## Guardrails\n\n- Never invent activity, signals, or pipeline values.\n- Separate confirmed facts from inferred priorities.\n- Respect Salesforce permissions and sharing rules.\n- Hold the list to exactly three\u2014the value is in the ruthless prioritization.\n\n## Example output\n\nMonday's list reads: advance the Globex renewal (champion re-engaged), protect the Initech deal (close date slipped twice), and open Northwind (new funding), each with a one-line next step.\n",
+      "markdown":             "# Quota Health Check\n\nDistills everything happening across the seller's book into the three things that matter most this week\u2014with the reason each made the cut.\n\n## What this skill does\n\nQuota Health Check scans the seller's pipeline, activity, and signals and ranks them down to a short list of three: the highest-impact opportunity, the biggest emerging risk, and the single best net-new play. Each item names the signal that raised it and a concrete next step.\n\n## Instructions\n\n1. Review the seller's open opportunities, recent activity, and buying signals.\n2. Score candidates by expected impact and urgency.\n3. Select the top three, favoring variety\u2014one to advance, one to protect, one to open.\n4. For each, state the signal that raised it and one concrete next step.\n5. Keep the whole thing to three items\u2014resist expanding the list.\n\n## Guardrails\n\n- Never invent activity, signals, or pipeline values.\n- Separate confirmed facts from inferred priorities.\n- Respect Salesforce permissions and sharing rules.\n- Hold the list to exactly three\u2014the value is in the ruthless prioritization.\n\n## Example output\n\nMonday's list reads: advance the Globex renewal (champion re-engaged), protect the Initech deal (close date slipped twice), and open Northwind (new funding), each with a one-line next step.\n",
       "linked":               true
     }
   ],

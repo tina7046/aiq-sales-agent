@@ -175,7 +175,7 @@ nunjucksEnv.addGlobal('expandRuns', (conv) => {
 
   // Only conversations that opt in with `expandFromTemplates` are built
   // from templates. A run-based thread whose messages ARE the runs
-  // already (e.g. the Daily Pipeline snapshots), or a conversation that
+  // already (e.g. the Pipeline Snapshot runs), or a conversation that
   // just wants the header dropdown over its own single run, keeps its
   // authored messages untouched — it returns here unchanged and only the
   // Run History dropdown (rendered separately) is added.
