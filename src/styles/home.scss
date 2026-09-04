@@ -3834,7 +3834,7 @@ $sh-feed-filter-hidden: (
 // exactly — "completed" rests on the same green filled circle the feed
 // uses — so a workflow reads identically on both surfaces.
 $sh-scheduled-status-rest: (
-  completed: "circle",
+  completed: "check",
   running:   "spinner",
   scheduled: "clock",
   paused:    "pause",
@@ -3842,10 +3842,17 @@ $sh-scheduled-status-rest: (
   archived:  "archive",
 );
 
+// Action glyphs must (a) exist in the row's glyph preload list in
+// _scheduled_workflow_list.html and (b) match the action verb in
+// scheduled.json `statusTypes` (Pause / Resume / Retry / Restore).
+// The preload set is [check, clock, pause, play, warning, refresh,
+// archive], so "stop"/"circle" (from the main-side merge) are not
+// rendered — hence pause for running (verb "Pause") and refresh for
+// failed/archived (verbs "Retry"/"Restore").
 $sh-scheduled-status-action: (
-  completed: "play",
-  running:   "stop",
-  scheduled: "play",
+  completed: "pause",
+  running:   "pause",
+  scheduled: "pause",
   paused:    "play",
   failed:    "refresh",
   archived:  "refresh",

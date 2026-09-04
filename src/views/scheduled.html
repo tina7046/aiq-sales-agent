@@ -121,12 +121,29 @@
          `composer` block stays in scheduled.json for later reuse.) #}
       <div class="seller-home__scheduled-workspace" data-sh-scheduled-workspace>
         <div class="seller-home__scheduled-main">
-          {# ── Header band (48 px) ───────────────────────────────── #}
+          {# ── Header band (48 px) ─────────────────────────────────
+             Title left, primary action right — the shared
+             `.seller-home__knowledge-header` already flexes with
+             `justify-content: space-between`, so the button anchors
+             to the trailing edge with no extra CSS (same contract the
+             Skills header's "Create Skill" button uses). No routing
+             yet: the button is a hook (`data-sh-scheduled-create`) a
+             future creation flow can bind to via event delegation. #}
           <header
             class="seller-home__knowledge-header"
             data-sh-scheduled-header
           >
             <h1 class="seller-home__knowledge-header-title">{{ header.heading }}</h1>
+            <button
+              type="button"
+              class="slds-button slds-button_neutral seller-home__scheduled-new"
+              data-sh-scheduled-create
+            >
+              <svg class="slds-button__icon slds-button__icon_left" aria-hidden="true">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
+              </svg>
+              {{ header.actionLabel }}
+            </button>
           </header>
 
           {# ── Body section (scrollable, 50 rem inner column) ────── #}
@@ -369,16 +386,8 @@
 
       {# Schedule-details panel — one shell that spans the full
          workspace height, populated by bindScheduled() from the config
-         scripts below.
-
-         TEMPORARILY DISABLED during the main→branch merge: the partial
-         `_schedule_side_panel.html` and its SCSS were never committed to
-         this branch, so the include broke the build. bindScheduled() in
-         home.js is written to no-op when the panel markup is absent, so
-         the page works without it. Restore this once the partial + styles
-         are added back (just uncomment the line below):
-         {% include "_schedule_side_panel.html" %}
-      #}
+         scripts below. #}
+      {% include "_schedule_side_panel.html" %}
       </div>{# /.seller-home__scheduled-workspace #}
 
       {# ── Config for the details panel ────────────────────────────
