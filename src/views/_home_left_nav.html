@@ -171,6 +171,46 @@
    is running, N percent complete.") — do not localize here without
    also updating the RecentChat model doc.
 #}
+{# ── renderRecentStatus(r) ────────────────────────────────────────
+   Trailing state indicator for a workflow's Recents row, pinned to the
+   row's trailing edge (the SLDS `slds-col_bump-left` pattern in the
+   reference markup). Two states carry an indicator; every other renders
+   nothing so scheduled/paused/failed/archived rows stay bare:
+
+     • running ("Running") → the shared `.sh-spinner` (index.scss), the
+                             same border-spinner the feed status button
+                             reuses, re-boxed to the row slot in home.scss.
+     • completed ("New")   → a green dot: a completed workflow has fresh
+                             results to review. The same green the feed's
+                             completed status dot rests on; sized/coloured
+                             via `.seller-home__nav-recent-status--completed`.
+
+   `data-sh-recent-indicator` tags every node this emits so the runtime
+   live-sync in home.js can swap the indicator out cleanly when a
+   workflow's state changes. The dot is aria-hidden with a sibling
+   assistive-text span so the row still announces "…, new results". #}
+{% macro renderRecentStatus(r) %}
+  {% if r.status == "running" %}
+    <span
+      class="seller-home__nav-recent-status seller-home__nav-recent-status--running slds-col_bump-left"
+      role="img"
+      aria-label="{{ r.label }} is running."
+      data-sh-recent-indicator
+    >
+      <span class="seller-home__nav-recent-status-glyph seller-home__nav-recent-status-glyph--spinner sh-spinner" aria-hidden="true"></span>
+    </span>
+  {% elif r.status == "completed" %}
+    <span
+      class="seller-home__nav-recent-status seller-home__nav-recent-status--completed slds-col_bump-left"
+      data-sh-recent-indicator
+      aria-hidden="true"
+    >
+      <span class="seller-home__nav-recent-status-glyph seller-home__nav-recent-status-glyph--dot" data-sh-recent-status-dot></span>
+    </span>
+    <span class="slds-assistive-text" data-sh-recent-indicator>, new results</span>
+  {% endif %}
+{% endmacro %}
+
 {% macro renderRunningRing(r) %}
   {% if r.runStatus == "running" %}
     {% set _hasProgress = (r.progress is defined) and (r.progress != null) %}
@@ -281,6 +321,36 @@
    disconnects them or moves between pages. #}
 {% set _connectionsCount = (shared.toolsModal.tools or []) | length %}
 
+{# ── Workflow chat sessions (Recents) ─────────────────────────────────
+   One Recents row per workflow, sourced from index.json → feed.items so
+   the rail can't drift from the feed. Built here (not from the page's own
+   `recents`) so every Seller Home page that includes this nav shows the
+   same set — same pattern scheduled.html uses to derive its rows.
+
+     • feedId         — index.json feed item id; the stable key home.js's
+                        live-sync matches on when a feed row changes state.
+     • conversationId — the drill-in target where the workflow has one;
+                        rows without one render inert (present, not linked).
+     • label          — the feed item's title verbatim, so a workflow's
+                        rail row reads exactly like its row in the "Your
+                        agent at work" feed.
+     • status         — the feed item's state; drives the trailing indicator
+                        (running → spinner, completed → dot).
+
+   The same list is inlined as JSON at the foot of the nav for home.js,
+   which re-renders the rail at runtime (and would otherwise wipe this
+   server-rendered seed). #}
+{% set _feedItems = readData("index").feed.items or [] %}
+{% set workflowSessions = [] %}
+{% for _it in _feedItems %}
+  {% set _ = workflowSessions.push({
+    "feedId":         _it.id,
+    "conversationId": _it.conversationId or "",
+    "label":          _it.title,
+    "status":         _it.state
+  }) %}
+{% endfor %}
+
 {# ── Pre-paint nav state ──────────────────────────────────────────────
    The collapsed preference is client state, so the static markup always
    ships the expanded 300px rail. home.js applies the real state, but it
@@ -390,57 +460,58 @@
         role="list"
         data-sh-recents-list
       >
-        {% for r in recents %}
-        {# Recents rows have no icon — Figma shows label-only, indented
-           under the "Recents" header. Different visual weight from the
-           primary nav items (regular vs. semibold, gray vs. dark blue).
-           The monogram ahead of the label is not a second icon: it only
-           renders in the collapsed rail, where the label doesn't. See
-           `recentMonogram` above.
+        {% for r in workflowSessions %}
+        {# One row per workflow (see the `workflowSessions` derivation
+           above). Recents rows have no icon — Figma shows label-only,
+           indented under the "Recents" header. The monogram ahead of the
+           label is not a second icon: it only renders in the collapsed
+           rail, where the label doesn't. See `recentMonogram` above.
 
            Two variants:
              • Linked   (`r.conversationId` set) — anchor points at the
                         conversation route; JS applies `.is-active` +
-                        `aria-current="page"` when `location.search.id`
-                        matches this recent's `conversationId`. The URL
-                        is the sole source of truth for selection —
-                        no separate "active recent" flag stored
-                        anywhere.
-             • Unlinked (no `conversationId`)    — legacy Phase-1 rows
-                        with `href="#"`, kept keyboard-reachable but
-                        not wired to a real route yet.
+                        `aria-current="page"` when the URL's `?id=`
+                        matches this row's `conversationId`.
+             • Unlinked (no `conversationId`)    — the workflow has no
+                        conversation yet, so the row is present but inert
+                        (`href="#"`), keyboard-reachable, and still shows
+                        its state indicator.
 
-           Selection is applied at RUN TIME by home_conversation.js
-           rather than in Nunjucks so a future navigation between
-           conversations (same page, different `?id=`) can move the
-           highlight without a full re-render. #}
+           `data-sh-recent-feed` carries the feed item id so home.js can
+           flip this row's indicator live when the matching feed row
+           changes state. `data-sh-recent-status` exposes the state to
+           the user's CSS. This whole pass is a first-paint seed —
+           `renderRecents` in home.js re-renders the same markup at
+           runtime and is the source of truth. #}
         {% if r.conversationId %}
         <a
           href="/home_conversation.html?id={{ r.conversationId }}"
-          class="seller-home__nav-recent seller-home__nav-recent--linked{% if r.runStatus == 'running' %} seller-home__nav-recent--running{% endif %}"
+          class="seller-home__nav-recent seller-home__nav-recent--linked{% if r.status == 'running' %} seller-home__nav-recent--running{% endif %}"
           role="listitem"
-          data-sh-recent="{{ r.id }}"
+          data-sh-recent="rec-{{ r.feedId }}"
+          data-sh-recent-feed="{{ r.feedId }}"
           data-sh-recent-conv="{{ r.conversationId }}"
-          {% if r.runStatus %}data-sh-recent-run-status="{{ r.runStatus }}"{% endif %}
+          data-sh-recent-status="{{ r.status }}"
           title="{{ r.label }}"
         >
           {{ recentMonogram(r.label) }}
           <span class="seller-home__nav-recent-label">{{ r.label }}</span>
-          {{ renderRunningRing(r) }}
+          {{ renderRecentStatus(r) }}
         </a>
         {% else %}
         <a
           href="#"
-          class="seller-home__nav-recent{% if r.runStatus == 'running' %} seller-home__nav-recent--running{% endif %}"
+          class="seller-home__nav-recent{% if r.status == 'running' %} seller-home__nav-recent--running{% endif %}"
           role="listitem"
-          data-sh-recent="{{ r.id }}"
+          data-sh-recent="rec-{{ r.feedId }}"
+          data-sh-recent-feed="{{ r.feedId }}"
           data-sh-nav-noroute
-          {% if r.runStatus %}data-sh-recent-run-status="{{ r.runStatus }}"{% endif %}
+          data-sh-recent-status="{{ r.status }}"
           title="{{ r.label }}"
         >
           {{ recentMonogram(r.label) }}
           <span class="seller-home__nav-recent-label">{{ r.label }}</span>
-          {{ renderRunningRing(r) }}
+          {{ renderRecentStatus(r) }}
         </a>
         {% endif %}
         {% endfor %}
@@ -466,4 +537,22 @@
       {% endfor %}
     </div>
   </div>
+
+  {# ── Runtime plumbing for the Recents rail ────────────────────────────
+     home.js re-renders the Recents list on load (it merges opened /
+     schedule-draft threads with these workflow rows), which wipes the
+     server seed above. It rebuilds from this inlined list rather than
+     re-deriving it, so the two paths can't disagree. The <template> holds
+     the running spinner so the runtime renderer can clone it rather than
+     reconstruct it. #}
+  <script type="application/json" data-sh-nav-workflow-sessions>{{ workflowSessions | dump | safe }}</script>
+  <template data-sh-recent-spinner-template>
+    <span
+      class="seller-home__nav-recent-status seller-home__nav-recent-status--running slds-col_bump-left"
+      role="img"
+      data-sh-recent-indicator
+    >
+      <span class="seller-home__nav-recent-status-glyph seller-home__nav-recent-status-glyph--spinner sh-spinner" aria-hidden="true"></span>
+    </span>
+  </template>
 </aside>

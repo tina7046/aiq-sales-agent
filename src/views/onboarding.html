@@ -41,22 +41,31 @@
 
 	<div class="seller-home__main">
 		<div class="seller-home__main-inner">
-			{# Onboarding landing card — the promo banner reused from
-			   /knowledge.html (`.knowledge-banner`, styled by knowledge.css).
-			   Copy is the onboarding CRM-discovery message; the CTA is an
-			   anchor into the conversation (no dismiss controller here).
-			   HIDDEN for now — the Tools-style modal below is the landing
-			   card again; remove `hidden` here (and add it to the modal) to
-			   bring the banner back. #}
-			<div class="knowledge-banner knowledge-banner_grid-right" hidden>
+			{# Onboarding landing card — the promo banner ported from
+			   /knowledge.html (`.knowledge-banner`, styled by knowledge.css):
+			   badge + title + description + run-summary stats, with an anchor
+			   CTA into the conversation (no dismiss controller here). This is
+			   the visible landing card; the Tools-style modal below is hidden.
+			   Move `hidden` onto this banner (and off the modal) to switch
+			   back to the modal. #}
+			<div class="knowledge-banner knowledge-banner_grid-right">
 				<div class="knowledge-banner__content">
 					<div>
 						<span class="knowledge-banner__badge">Get started</span>
-						<p class="knowledge-banner__title">Let's run CRM discovery</p>
-						<p class="knowledge-banner__description">I'll learn your team's sales motion by inspecting your Salesforce org first, then ask only the blocking scope question I can't safely infer.</p>
+						<p class="knowledge-banner__title">Turn on Auto-Learning</p>
+						<p class="knowledge-banner__description">Let your Sales Agent read your Salesforce data to tailor outreach, workflows, and emails to your sales process and customer needs.</p>
+
+						{# Run summary — label over value per fact. Placeholder
+						   copy; swap in real stats when ready. #}
+						<dl class="knowledge-banner__stats">
+							<div class="knowledge-banner__stat">
+								<dt class="knowledge-banner__stat-label">Est Time</dt>
+								<dd class="knowledge-banner__stat-value">2+ Hours</dd>
+							</div>
+						</dl>
 					</div>
 
-					<a href="/onboarding_conversation.html" class="slds-button slds-button_neutral knowledge-banner__button">start</a>
+					<a href="/onboarding_conversation.html" class="slds-button slds-button_neutral knowledge-banner__button">Let's Go</a>
 				</div>
 
 				<div class="knowledge-banner__illustration-col">
@@ -72,19 +81,20 @@
 
 			{# Static port of the Tools "Connect" dialog (Panel 2 of
 			   _tools_modal.html): the aurora-gradient header + reading
-			   column body. The landing card again (the knowledge banner
-			   above is hidden). Rendered open by default via
-			   `slds-fade-in-open` and with no `.slds-backdrop`, so the
-			   god-rays show through. The morph JS is not loaded here;
-			   onboarding.css renders the fixed SLDS modal statically
-			   (centred 640px card, pointer passthrough so the shader
-			   Controls stay usable). #}
+			   column body. HIDDEN for now — the knowledge banner above is
+			   the landing card. Remove `hidden` here (and add it to the
+			   banner) to bring the modal back. Rendered open via
+			   `slds-fade-in-open` with no `.slds-backdrop` so the god-rays
+			   show through; the morph JS is not loaded, so onboarding.css
+			   renders the fixed SLDS modal statically (centred 640px card,
+			   pointer passthrough so the shader Controls stay usable). #}
 			<section
 				class="slds-modal slds-fade-in-open onboarding-modal"
 				role="dialog"
 				tabindex="-1"
 				aria-modal="false"
 				aria-labelledby="onboarding-modal-heading"
+				hidden
 			>
 				<div class="slds-modal__container morph-modal-container">
 

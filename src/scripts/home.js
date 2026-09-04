@@ -60,8 +60,7 @@
   //     hash sync (deep-linkable + Back / Forward respect it),
   //     `aria-live="polite"` result-count announcements, and a
   //     per-row `⋮ → Edit / Pause / Resume / Duplicate / Delete`
-  //     overflow menu that mirrors Knowledge's semantics. The
-  //     filter icon-button emits `sh:scheduled-filter`; row menu
+  //     overflow menu that mirrors Knowledge's semantics. Row menu
   //     actions emit `sh:workflow-action` with `{ action,
   //     workflowId }`.
 //
@@ -139,6 +138,15 @@
   // uses localStorage — the two are deliberately different.)
   var RECENTS_KEY = 'sh:recents'
 
+  // Which workflow conversations the seller has OPENED (consumed). Opening
+  // a completed workflow's thread clears its "New" dot in the rail and
+  // drops it out of the feed's Completed group (it moves to Scheduled).
+  // sessionStorage, same lifecycle as the recents rail. Kept separate from
+  // `sh:convSeen` (home_conversation.js's replay-vs-instant record) on
+  // purpose: reusing that key would let the nav mark a thread "seen" before
+  // its first opening plays and suppress the reveal.
+  var FEED_CONSUMED_KEY = 'sh:feedConsumed'
+
   // Cap the rail so a long session can't scroll forever. Oldest fall
   // off the bottom.
   var RECENTS_MAX = 12
@@ -188,6 +196,87 @@
   // would only be bound on Seller Home surfaces.
   var RESET_PARAM = 'reset'
 
+  // Everything one run-through of the demo accumulates, in one list so
+  // every way of starting over clears exactly the same set.
+  //
+  // The schedule keys matter as much as Recents here. A confirmed
+  // schedule writes its conversation into `sh:convDrafts:list:v1`, which
+  // the rail renders on top of this session's history — and that store is
+  // localStorage. Left out of the reset (as it was), the row outlived the
+  // tab, the refresh, and the Home tab's own start-over button, so it
+  // read as a Recents item that could not be removed.
+  //
+  // Those keys are owned by schedule_conversation.js, which is not loaded
+  // on every surface this file is, so they are cleared by name and prefix
+  // here rather than through that module. Change a key there, change it
+  // here. The nav-collapse preference is deliberately NOT in this list —
+  // that one is a real preference, not demo state.
+  // `sh:convSeen` is home_conversation.js's record of which threads have
+  // already played their opening. It belongs in this list or a restart
+  // would clear the rail but still treat every conversation as read,
+  // painting them instantly instead of replaying them.
+  var DEMO_SESSION_KEYS = [RECENTS_KEY, KNOWLEDGE_BANNER_KEY, 'sh:convSeen', FEED_CONSUMED_KEY]
+  var DEMO_LOCAL_KEYS = [DRAFT_LIST_KEY, 'sh:scheduledWorkflows:v1']
+  var DEMO_LOCAL_PREFIXES = ['sh:convDraft:v1:', 'sh:convSched:v1:']
+
+  function clearDemoState () {
+    try {
+      for (var i = 0; i < DEMO_SESSION_KEYS.length; i++) {
+        window.sessionStorage.removeItem(DEMO_SESSION_KEYS[i])
+      }
+    } catch (e) {
+      // Storage unavailable — nothing accumulated, nothing to clear.
+    }
+
+    try {
+      for (var j = 0; j < DEMO_LOCAL_KEYS.length; j++) {
+        window.localStorage.removeItem(DEMO_LOCAL_KEYS[j])
+      }
+      // The per-conversation records behind those lists. Collected first
+      // and removed after: deleting while walking `key(i)` reindexes the
+      // store underneath the loop and silently skips entries.
+      var doomed = []
+      for (var k = 0; k < window.localStorage.length; k++) {
+        var key = window.localStorage.key(k)
+        if (!key) continue
+        for (var p = 0; p < DEMO_LOCAL_PREFIXES.length; p++) {
+          if (key.indexOf(DEMO_LOCAL_PREFIXES[p]) === 0) {
+            doomed.push(key)
+            break
+          }
+        }
+      }
+      for (var d = 0; d < doomed.length; d++) {
+        window.localStorage.removeItem(doomed[d])
+      }
+    } catch (e) {
+      // As above.
+    }
+  }
+
+  // Was this page load a refresh, rather than a link followed?
+  //
+  // Refreshing is the demo's other start-over button, and the one people
+  // reach for first. Navigation Timing tells the two apart, which is what
+  // makes this safe: opening a conversation from the rail is a
+  // `navigate`, so clicking through the demo never wipes it — only F5
+  // does.
+  function isReload () {
+    try {
+      var perf = window.performance
+      if (perf && typeof perf.getEntriesByType === 'function') {
+        var entries = perf.getEntriesByType('navigation')
+        if (entries && entries.length && entries[0].type) {
+          return entries[0].type === 'reload'
+        }
+      }
+      // Browsers without Navigation Timing Level 2.
+      return !!(perf && perf.navigation && perf.navigation.type === 1)
+    } catch (e) {
+      return false
+    }
+  }
+
   // Clear on arrival if the flag is set, then strip it from the
   // address bar: the reset is a one-shot action, and leaving it in
   // place would fire again on every refresh and read as part of the
@@ -201,8 +290,7 @@
     try {
       var url = new URL(window.location.href)
       if (url.searchParams.get(RESET_PARAM) !== '1') return false
-      window.sessionStorage.removeItem(RECENTS_KEY)
-      window.sessionStorage.removeItem(KNOWLEDGE_BANNER_KEY)
+      clearDemoState()
       url.searchParams.delete(RESET_PARAM)
       window.history.replaceState({}, '', url.pathname + url.search + url.hash)
       return true
@@ -321,6 +409,143 @@
     return out.concat(recents).slice(0, RECENTS_MAX)
   }
 
+  // The workflow chat sessions inlined by _home_left_nav.html — one per
+  // feed workflow, in feed order, each { feedId, conversationId, label,
+  // status }. Read once and cached; the base list is static for the page
+  // (its `status` values are patched in place by `updateNavSessionStatus`
+  // so a later full re-render keeps the live state).
+  var workflowSessionsCache = null
+  function readWorkflowSessions () {
+    if (workflowSessionsCache) return workflowSessionsCache
+    workflowSessionsCache = []
+    try {
+      var el = document.querySelector('[data-sh-nav-workflow-sessions]')
+      if (el) {
+        var parsed = JSON.parse(el.textContent || '[]')
+        if (Object.prototype.toString.call(parsed) === '[object Array]') {
+          workflowSessionsCache = parsed
+        }
+      }
+    } catch (e) {
+      workflowSessionsCache = []
+    }
+    return workflowSessionsCache
+  }
+
+  // Which workflow conversations have been opened (consumed), as a lookup
+  // keyed by conversation id. Drives the "clear the dot + drop from
+  // Completed" behaviour.
+  function readConsumedConversations () {
+    var out = {}
+    try {
+      var raw = window.sessionStorage.getItem(FEED_CONSUMED_KEY)
+      if (!raw) return out
+      var parsed = JSON.parse(raw)
+      if (Object.prototype.toString.call(parsed) !== '[object Array]') return out
+      for (var i = 0; i < parsed.length; i++) out[parsed[i]] = true
+    } catch (e) {
+      // Unreadable — treat as nothing consumed, which just leaves the
+      // dots and Completed rows in place.
+    }
+    return out
+  }
+
+  // Record that a workflow conversation has been opened. Called when the
+  // seller lands on a conversation page (see the nav block below), so it
+  // reflects on the feed + rail the next time either renders.
+  function markConversationConsumed (convId) {
+    if (!convId) return
+    try {
+      var raw = window.sessionStorage.getItem(FEED_CONSUMED_KEY)
+      var list = raw ? JSON.parse(raw) : []
+      if (Object.prototype.toString.call(list) !== '[object Array]') list = []
+      for (var i = 0; i < list.length; i++) {
+        if (list[i] === convId) return
+      }
+      list.push(convId)
+      window.sessionStorage.setItem(FEED_CONSUMED_KEY, JSON.stringify(list))
+    } catch (e) {
+      // Silent — worst case the dot lingers until the thread is reopened.
+    }
+  }
+
+  // Workflow rows first (always present, in feed order), then any opened
+  // or schedule-draft threads not already represented by a workflow's
+  // conversation. Keeps the rail a superset of the workflows without
+  // listing a thread twice when it IS a workflow. Each workflow entry is
+  // cloned into the recents shape so a live status patch never mutates
+  // the cached base.
+  function withWorkflowSessions (recents) {
+    var sessions = readWorkflowSessions()
+    var consumed = readConsumedConversations()
+    var out = []
+    var seen = {}
+    for (var i = 0; i < sessions.length; i++) {
+      var s = sessions[i]
+      if (!s || !s.feedId) continue
+      // A completed workflow whose thread has been opened has had its
+      // results consumed: drop it out of the "New" (completed) indicator
+      // the same way the feed drops it out of Completed. Down-ranking to
+      // `scheduled` clears the dot (the indicator only paints
+      // running/completed) and keeps the row in the rail.
+      var status = s.status
+      if (status === 'completed' && s.conversationId && consumed[s.conversationId]) {
+        status = 'scheduled'
+      }
+      out.push({
+        id: 'rec-' + s.feedId,
+        feedId: s.feedId,
+        conversationId: s.conversationId || '',
+        label: s.label,
+        status: status
+      })
+      if (s.conversationId) seen[s.conversationId] = true
+    }
+    for (var j = 0; j < recents.length; j++) {
+      var r = recents[j]
+      if (r && r.conversationId && !seen[r.conversationId]) {
+        out.push(r)
+        seen[r.conversationId] = true
+      }
+    }
+    return out.slice(0, RECENTS_MAX)
+  }
+
+  // Live-sync the Recents rail when a feed workflow changes state on the
+  // Home page: flip the matching row's trailing indicator (spinner while
+  // running, dot when completed, nothing otherwise) in place, without a
+  // full re-render. Matches on the feed item id carried as
+  // `data-sh-recent-feed`. A no-op on surfaces with no such row.
+  function updateNavSessionStatus (feedId, state) {
+    if (!feedId) return
+
+    // Patch the cached base too, so a later full re-render (e.g. after a
+    // schedule confirmation) reflects the live state rather than the
+    // authored one.
+    var sessions = readWorkflowSessions()
+    for (var i = 0; i < sessions.length; i++) {
+      if (sessions[i] && sessions[i].feedId === feedId) {
+        sessions[i].status = state
+        break
+      }
+    }
+
+    var navRoot = document.querySelector('[data-sh-nav-root]')
+    if (!navRoot) return
+    var rowEl = navRoot.querySelector('[data-sh-recent-feed="' + feedId + '"]')
+    if (!rowEl) return
+
+    if (state) rowEl.setAttribute('data-sh-recent-status', state)
+    rowEl.classList.toggle('seller-home__nav-recent--running', state === 'running')
+
+    // Strip the previous indicator, then rebuild from the new state.
+    var old = rowEl.querySelectorAll('[data-sh-recent-indicator]')
+    for (var k = 0; k < old.length; k++) {
+      if (old[k].parentNode) old[k].parentNode.removeChild(old[k])
+    }
+    appendRecentStatus(rowEl, { status: state, label: rowEl.getAttribute('title') || '' })
+  }
+
   // One or two letters standing in for a Recents label in the collapsed
   // rail, where the label is hidden and these rows have no icon to fall
   // back on. Word initials when there are two words to take them from,
@@ -350,6 +575,45 @@
   // _home_left_nav.html — keep the two in step. `activeId` gets
   // `.is-active` here rather than waiting for home_conversation.js so
   // the highlight doesn't depend on script order.
+  // Trailing state indicator for a Recents row — the runtime twin of the
+  // `renderRecentStatus` macro in _home_left_nav.html. `running` clones
+  // the shared-spinner <template> the nav ships (so the markup lives in
+  // one place); `completed` ("New") appends a green dot + an assistive-text
+  // sibling. Every node carries `data-sh-recent-indicator` so
+  // `updateNavSessionStatus` can strip the old indicator before swapping.
+  function appendRecentStatus (a, r) {
+    if (!r || !r.status) return
+    if (r.status === 'running') {
+      var tpl = document.querySelector('[data-sh-recent-spinner-template]')
+      var spinner = (tpl && tpl.content && tpl.content.firstElementChild)
+        ? tpl.content.firstElementChild.cloneNode(true)
+        : null
+      if (spinner) {
+        spinner.setAttribute('aria-label', (r.label || '') + ' is running.')
+        a.appendChild(spinner)
+      }
+    } else if (r.status === 'completed') {
+      // Slot wrapper (centres the glyph) + inner green dot — mirrors the
+      // macro so both render paths produce the same DOM.
+      var slot = document.createElement('span')
+      slot.className = 'seller-home__nav-recent-status seller-home__nav-recent-status--completed slds-col_bump-left'
+      slot.setAttribute('data-sh-recent-indicator', '')
+      slot.setAttribute('aria-hidden', 'true')
+
+      var dot = document.createElement('span')
+      dot.className = 'seller-home__nav-recent-status-glyph seller-home__nav-recent-status-glyph--dot'
+      dot.setAttribute('data-sh-recent-status-dot', '')
+      slot.appendChild(dot)
+      a.appendChild(slot)
+
+      var at = document.createElement('span')
+      at.className = 'slds-assistive-text'
+      at.setAttribute('data-sh-recent-indicator', '')
+      at.textContent = ', new results'
+      a.appendChild(at)
+    }
+  }
+
   function renderRecents (root, list, activeId) {
     var listEl = root.querySelector('[data-sh-recents-list]')
     if (!listEl) return
@@ -360,22 +624,40 @@
 
     for (var i = 0; i < list.length; i++) {
       var r = list[i]
-      if (!r || !r.conversationId) continue
+      if (!r) continue
+      // A workflow row can lack a conversation (no thread yet) but still
+      // needs to show — inert — with its state indicator. Only genuinely
+      // empty entries are skipped.
+      if (!r.conversationId && !r.feedId) continue
 
+      var hasConv = !!r.conversationId
       var a = document.createElement('a')
-      a.className = 'seller-home__nav-recent seller-home__nav-recent--linked'
-      // Carry the original query back. The thread only renders the
-      // seller's own bubble when `?q=` is present, so dropping it here
-      // would reopen a row labelled with what they typed onto a thread
-      // that starts on the agent.
-      a.href = '/home_conversation.html?id=' + encodeURIComponent(r.conversationId) +
-        (r.query ? '&q=' + encodeURIComponent(r.query) : '')
+      a.className = 'seller-home__nav-recent' +
+        (hasConv ? ' seller-home__nav-recent--linked' : '') +
+        (r.status === 'running' ? ' seller-home__nav-recent--running' : '')
+
+      if (hasConv) {
+        // Carry the original query back. The thread only renders the
+        // seller's own bubble when `?q=` is present, so dropping it here
+        // would reopen a row labelled with what they typed onto a thread
+        // that starts on the agent.
+        a.href = '/home_conversation.html?id=' + encodeURIComponent(r.conversationId) +
+          (r.query ? '&q=' + encodeURIComponent(r.query) : '')
+        a.setAttribute('data-sh-recent-conv', r.conversationId)
+      } else {
+        // Workflow with no conversation yet — present but inert, matching
+        // the template's unlinked branch.
+        a.href = '#'
+        a.setAttribute('data-sh-nav-noroute', '')
+      }
       a.setAttribute('role', 'listitem')
-      a.setAttribute('data-sh-recent', r.id || ('rec-' + r.conversationId))
-      a.setAttribute('data-sh-recent-conv', r.conversationId)
+      a.setAttribute('data-sh-recent', r.id || (r.feedId ? 'rec-' + r.feedId : 'rec-' + r.conversationId))
+      // Feed item id, so the Home feed's live-sync can find this row.
+      if (r.feedId) a.setAttribute('data-sh-recent-feed', r.feedId)
+      if (r.status) a.setAttribute('data-sh-recent-status', r.status)
       a.title = r.label || r.conversationId
 
-      if (activeId && r.conversationId === activeId) {
+      if (activeId && hasConv && r.conversationId === activeId) {
         a.classList.add('is-active')
         a.setAttribute('aria-current', 'page')
       }
@@ -398,6 +680,10 @@
       // this path would happily render a typed query tomorrow.
       label.textContent = r.label || r.conversationId
       a.appendChild(label)
+
+      // Trailing state indicator (spinner while running, dot when
+      // completed, nothing otherwise).
+      appendRecentStatus(a, r)
 
       listEl.appendChild(a)
     }
@@ -575,6 +861,12 @@
       })
     }
 
+    // A refresh starts the demo over. Outside the `nav` block below so it
+    // still fires on a surface with no Recents rail — the schedule state
+    // it clears is app-wide, and a reload on one page should not leave
+    // another page holding the last run-through.
+    if (isReload()) clearDemoState()
+
     var nav = root.querySelector('[data-sh-nav-root]')
 
     // Recents. Reset first (the Home tab's `?reset=1` wipes history),
@@ -584,12 +876,17 @@
     if (nav) {
       consumeResetFlag()
       var current = currentConversation(root)
+      // Landing on a conversation page means the seller opened it — record
+      // it consumed BEFORE painting the rail so this workflow's "New" dot
+      // is already gone on this very page, and stays gone on the feed when
+      // they navigate back.
+      if (current && current.conversationId) markConversationConsumed(current.conversationId)
       var recents = current ? recordRecent(current) : readRecents()
       var activeConvId = current ? current.conversationId : null
-      renderRecents(nav, withDraftRecents(recents), activeConvId)
+      renderRecents(nav, withWorkflowSessions(withDraftRecents(recents)), activeConvId)
 
       // Confirming a schedule renames its conversation — "Schedule
-      // Daily Pipeline Snapshot" becomes "Daily Pipeline Snapshot",
+      // Pipeline Snapshot" becomes "Pipeline Snapshot",
       // since the thread is no longer about setting one up. Re-record
       // under the new name (in place: `recordRecent` keeps a row's
       // position) and repaint, so the rail updates without a reload.
@@ -605,7 +902,7 @@
             query: null
           })
           : readRecents()
-        renderRecents(nav, withDraftRecents(next), activeConvId)
+        renderRecents(nav, withWorkflowSessions(withDraftRecents(next)), activeConvId)
       })
     }
 
@@ -632,6 +929,20 @@
     var composerRoot = root.querySelector('[data-sh-composer-root]')
     if (composerRoot) {
       bindComposer(composerRoot)
+    }
+
+    // The conversation page's composer carries the same agent switcher,
+    // so it needs the same menu controller — but ONLY that. It is
+    // deliberately not a `[data-sh-composer-root]`: `bindComposer` above
+    // would also give it Seller Home's submit, which navigates away to a
+    // new conversation, and this is a follow-up input that appends to the
+    // thread it is already in (`bindConvComposer` in
+    // home_conversation.js owns that). `bindComposerMenus` delegates on
+    // whatever root it is handed, so handing it this one wires the badge
+    // and nothing else.
+    var convComposer = document.querySelector('[data-sh-conv-composer]')
+    if (convComposer && convComposer.querySelector('[data-sh-composer-menu]')) {
+      bindComposerMenus(convComposer)
     }
 
     // Phase 4 — "Your agent at work" feed.
@@ -1831,7 +2142,7 @@
 
   // What the status button's accessible name says it will do. Anything
   // not listed pauses.
-  var FEED_VERBS = { paused: 'Resume ', failed: 'Retry ' }
+  var FEED_VERBS = { paused: 'Resume ', failed: 'Retry ', archived: 'Restart ' }
 
   // Which set of subline strings a state reads. Every slot carries all
   // three as attributes, so this picks a suffix rather than wording —
@@ -1844,6 +2155,7 @@
     // the subline and title tense follow the way pause and run already do.
     if (state === 'completed') return 'completed'
     if (state === 'scheduled') return 'scheduled'
+    if (state === 'archived') return 'archived'
     return 'default'
   }
 
@@ -1855,10 +2167,10 @@
 
     row.setAttribute('data-sh-feed-state', state)
 
-    // "Home" is the last state the row was in that wasn't paused, not
-    // the one it first rendered in — otherwise retrying a failed row and
-    // then pausing it would resume back into `failed`, undoing the retry.
-    if (state !== 'paused') row.setAttribute('data-sh-feed-state-default', state)
+    // "Home" is the last state the row was in that wasn't paused or
+    // archived — the "set aside" states — so resuming returns it to what
+    // it was actually doing rather than to that holding state.
+    if (state !== 'paused' && state !== 'archived') row.setAttribute('data-sh-feed-state-default', state)
 
     // Three slots: the row's title and both halves of its subline. Each
     // carries every string it may need as an attribute, so this picks
@@ -1871,7 +2183,27 @@
       slot.textContent = value
       // Same reason: the strings a resume returns to have to track the
       // row's current presentation, not the one the template rendered.
-      if (state !== 'paused') slot.setAttribute('data-sh-feed-slot-default', value)
+      if (state !== 'paused' && state !== 'archived') slot.setAttribute('data-sh-feed-slot-default', value)
+    })
+
+    // Output pills with an authored scheduled variant: a Stop moves the
+    // row into Scheduled, where a colored pill still reading "42 of 50"
+    // would claim progress the waiting run no longer has. Swap the glyph
+    // to its grey scheduled art and the text to the generic label on
+    // `scheduled`; restore the authored default on any other state. Pills
+    // without a variant carry no marker and are left untouched.
+    toArray(row.querySelectorAll('[data-sh-feed-output]')).forEach(function (pill) {
+      var sched = state === 'scheduled'
+      var img = pill.querySelector('.seller-home__feed-item-output-pill-glyph--image')
+      var labelEl = pill.querySelector('.seller-home__feed-item-output-pill-label')
+      if (img) {
+        var nextIcon = pill.getAttribute('data-sh-feed-output-icon-' + (sched ? 'scheduled' : 'default'))
+        if (nextIcon) img.setAttribute('src', nextIcon)
+      }
+      if (labelEl) {
+        var nextLabel = pill.getAttribute('data-sh-feed-output-label-' + (sched ? 'scheduled' : 'default'))
+        if (nextLabel !== null) labelEl.textContent = nextLabel
+      }
     })
 
     // The title is one of those slots, so it may have just changed
@@ -1885,19 +2217,52 @@
     }
 
     if (toggle) {
-      var label = (FEED_VERBS[state] || 'Pause ') +
-        (title ? title.textContent.trim() : '')
+      // Under the filter the status button drives the lab lifecycle: Run a
+      // scheduled row, Stop a running one, Clear a completed one. Off the
+      // filter (Seller Home) the live states pause. Resume/Retry come from
+      // FEED_VERBS either way.
+      var verb = FEED_VERBS[state]
+      if (!verb) {
+        if (closest(row, '[data-sh-feed-filter]')) {
+          verb = state === 'scheduled' ? 'Run '
+            : state === 'completed' ? 'Run '
+            : state === 'running' ? 'Stop '
+            : 'Pause '
+        } else {
+          verb = 'Pause '
+        }
+      }
+      var label = verb + (title ? title.textContent.trim() : '')
       toggle.setAttribute('aria-label', label)
       toggle.setAttribute('title', label)
     }
+
+    // Reflect the change on the Recents rail: this workflow's nav row
+    // flips its indicator (running spinner ↔ completed dot ↔ none). Keyed
+    // on the feed item id; a no-op where the workflow has no nav row.
+    updateNavSessionStatus(row.getAttribute('data-sh-feed-item'), state)
   }
 
   // What pressing the status button turns the row into.
   function nextFeedState (row) {
     var state = row.getAttribute('data-sh-feed-state')
-    if (state === 'paused') {
-      return row.getAttribute('data-sh-feed-state-default') || 'scheduled'
+    var filtered = !!closest(row, '[data-sh-feed-filter]')
+    if (filtered) {
+      // Lab lifecycle, all off the one status button:
+      //   scheduled → running   (Run now)
+      //   completed → running   (Run now — re-run the workflow)
+      //   running   → scheduled (Stop — back to its next run)
+      //   archived  → scheduled (Restart — back into the schedule)
+      //   failed    → running   (Retry)
+      if (state === 'scheduled') return 'running'
+      if (state === 'completed') return 'running'
+      if (state === 'running') return 'scheduled'
+      if (state === 'archived') return 'scheduled'
+      if (state === 'failed') return 'running'
     }
+    // Seller Home (no filter): pause the live ones, resume a paused one,
+    // retry a failed one.
+    if (state === 'paused') return row.getAttribute('data-sh-feed-state-default') || 'scheduled'
     if (state === 'failed') return 'running'
     return 'paused'
   }
@@ -2008,6 +2373,23 @@
       return
     }
 
+    // Under the filter, if the new state isn't shown in the current view
+    // the row is leaving it: fade it out here, then apply the change
+    // (now hidden by the view rules) and drop it into place. It stays in
+    // the DOM — one list, filtered by CSS — so it's already waiting under
+    // whatever view does show it (Run a scheduled row from Scheduled and
+    // it's under Active > Running; Stop or Clear a row in Active and it's
+    // waiting under Scheduled).
+    var filter = currentFeedFilter(feedRoot)
+    if (filter && !feedStateVisibleIn(filter, state)) {
+      feedFadeOutThen(li, function () {
+        applyFeedState(row, state)
+        placeFeedRow(feedRoot, li)
+        feedResetRowStyles(li)
+      })
+      return
+    }
+
     // Group labels are handled inside `feedReshuffle` — it can measure
     // which of them the move actually shifts, which is not something
     // this function could work out from the state change alone.
@@ -2055,6 +2437,64 @@
         marginBottom: 0,
         duration: FEED_MOTION.collapse
       }, '<+=0.1')
+  }
+
+  // ── Filter view (LAB) ───────────────────────────────────────────────
+  // These do something only when the feed carries `data-sh-feed-filter`
+  // (the `feed.filter` data flag). Without it, `currentFeedFilter`
+  // returns null and the feed behaves exactly as it always has.
+
+  // Which states each view SHOWS. Mirrors `$sh-feed-filter-hidden` in
+  // home.scss, kept here as the visible set for a direct membership test.
+  var FEED_FILTER_VISIBLE = {
+    active: ['completed', 'running', 'paused'],
+    scheduled: ['scheduled'],
+    archived: ['archived']
+  }
+
+  function currentFeedFilter (feedRoot) {
+    var list = feedRoot.querySelector('.seller-home__feed-list[data-sh-feed-filter]')
+    return list ? list.getAttribute('data-sh-feed-filter') : null
+  }
+
+  function feedStateVisibleIn (filter, state) {
+    var shown = FEED_FILTER_VISIBLE[filter]
+    return !shown || shown.indexOf(state) > -1
+  }
+
+  // Fade a row out of the current view WITHOUT removing it — the dismiss
+  // animation, but ending in a callback rather than a DOM delete.
+  // Reduced motion / no GSAP: skip straight to the callback.
+  function feedFadeOutThen (li, done) {
+    if (!li) { if (done) done(); return }
+    if (!feedCanAnimate()) { if (done) done(); return }
+
+    var row = li.querySelector('[data-sh-feed-item]') || li
+    gsap.set(li, { overflow: 'hidden' })
+    gsap.timeline({
+      defaults: { ease: FEED_MOTION.ease },
+      onComplete: function () { if (done) done() }
+    })
+      .to(row, { x: FEED_MOTION.offset, opacity: 0, duration: FEED_MOTION.slide })
+      .to(li, { height: 0, marginBottom: 0, duration: FEED_MOTION.collapse }, '<+=0.1')
+  }
+
+  // Clear the fade's inline styles so the row renders normally once the
+  // view that shows it is opened. Safe while it's display:none in the
+  // current view — nothing paints until then.
+  function feedResetRowStyles (li) {
+    if (!li) return
+    var row = li.querySelector('[data-sh-feed-item]') || li
+    if (typeof gsap !== 'undefined') {
+      gsap.set(li, { clearProps: 'height,marginBottom,overflow' })
+      gsap.set(row, { clearProps: 'x,opacity,transform' })
+    } else {
+      li.style.height = ''
+      li.style.marginBottom = ''
+      li.style.overflow = ''
+      row.style.opacity = ''
+      row.style.transform = ''
+    }
   }
 
   // ── Menus ─────────────────────────────────────────────────────────
@@ -2167,9 +2607,21 @@
         // go through `changeFeedState` rather than inventing a second path.
         if (actionId === 'dismiss') dismissListItem(closest(item, '[data-sh-feed-list-item]'))
         else if (actionId === 'run_now' && row) changeFeedState(feedRoot, row, 'running')
+        else if (actionId === 'stop' && row) changeFeedState(feedRoot, row, 'scheduled')
+        else if (actionId === 'archive' && row) changeFeedState(feedRoot, row, 'archived')
+        else if (actionId === 'restart' && row) changeFeedState(feedRoot, row, 'scheduled')
         else if (actionId === 'pause' && row) changeFeedState(feedRoot, row, 'paused')
         else if (actionId === 'complete' && row) changeFeedState(feedRoot, row, 'completed')
         else if (actionId === 'schedule' && row) changeFeedState(feedRoot, row, 'scheduled')
+        // Edit opens the backing skill's detail page. The skill id rides
+        // on the row as `data-sh-feed-skill` (index.json → item.workflow.id);
+        // a row with no skill just falls through to the dispatch above.
+        else if (actionId === 'edit' && row) {
+          var feedSkillId = row.getAttribute('data-sh-feed-skill')
+          if (feedSkillId) {
+            window.location.href = '/skill_detail.html?id=' + encodeURIComponent(feedSkillId)
+          }
+        }
         return
       }
     })
@@ -2310,13 +2762,138 @@
       })
   }
 
+  // ── Filter control (LAB) ────────────────────────────────────────────
+  // The section kebab becomes a Filter when the data defines `feed.filter`
+  // (see _home_feed.html). This wires it: open/close the listbox, and on
+  // choosing a view write `data-sh-feed-filter` onto the list so the view
+  // rules in home.scss switch. No-ops when the filter control isn't on the
+  // page, so Seller Home is unaffected.
+  function bindFeedFilter (feedRoot) {
+    var root = feedRoot.querySelector('[data-sh-feed-filter-root]')
+    if (!root) return
+
+    var trigger = root.querySelector('[data-sh-feed-filter-trigger]')
+    var menu = root.querySelector('[data-sh-feed-filter-menu]')
+    var list = feedRoot.querySelector('.seller-home__feed-list')
+    if (!trigger || !menu || !list) return
+
+    function options () {
+      return toArray(menu.querySelectorAll('[data-sh-feed-filter-option]'))
+    }
+
+    function openMenu () {
+      menu.hidden = false
+      menu.classList.add('is-open')
+      trigger.setAttribute('aria-expanded', 'true')
+      var sel = menu.querySelector('[data-sh-feed-filter-option][aria-selected="true"]') ||
+        options()[0]
+      if (sel) sel.focus()
+    }
+
+    function closeMenu (focusTrigger) {
+      menu.hidden = true
+      menu.classList.remove('is-open')
+      trigger.setAttribute('aria-expanded', 'false')
+      if (focusTrigger) trigger.focus()
+    }
+
+    function select (id) {
+      if (!id) return
+      list.setAttribute('data-sh-feed-filter', id)
+      var chosen = null
+      options().forEach(function (opt) {
+        var match = opt.getAttribute('data-sh-feed-filter-option') === id
+        opt.setAttribute('aria-selected', match ? 'true' : 'false')
+        if (match) chosen = opt
+      })
+      // Reflect the chosen view in the trigger's label + accessible name.
+      var labelSrc = chosen && chosen.querySelector('.seller-home__feed-filter-item-label')
+      var text = (labelSrc || chosen || {}).textContent
+      text = text ? text.trim() : id
+      var labelEl = trigger.querySelector('[data-sh-feed-filter-label]')
+      if (labelEl) labelEl.textContent = text
+      trigger.setAttribute('aria-label', 'Filter: ' + text)
+      trigger.setAttribute('title', 'Filter: ' + text)
+    }
+
+    trigger.addEventListener('click', function (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (menu.hidden) openMenu()
+      else closeMenu(true)
+    })
+
+    menu.addEventListener('click', function (event) {
+      var opt = closest(event.target, '[data-sh-feed-filter-option]')
+      if (!opt) return
+      event.preventDefault()
+      event.stopPropagation()
+      select(opt.getAttribute('data-sh-feed-filter-option'))
+      closeMenu(true)
+    })
+
+    root.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        if (!menu.hidden) { event.preventDefault(); closeMenu(true) }
+        return
+      }
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+      if (menu.hidden) return
+      var all = options()
+      if (!all.length) return
+      var at = all.indexOf(document.activeElement)
+      event.preventDefault()
+      if (event.key === 'ArrowDown') all[(at + 1) % all.length].focus()
+      else all[(at - 1 + all.length) % all.length].focus()
+    })
+
+    // Outside click closes it — scoped to the filter root so a click
+    // anywhere else (including on the list) dismisses the menu.
+    document.addEventListener('click', function (event) {
+      if (closest(event.target, '[data-sh-feed-filter-root]')) return
+      if (!menu.hidden) closeMenu(false)
+    })
+  }
+
+  // Drop already-opened completed workflows out of Completed on load. A
+  // completed row whose thread the seller has opened (recorded in
+  // `sh:feedConsumed`) has had its results consumed, so it belongs back on
+  // its schedule rather than in the Ready/Completed group. Runs before the
+  // menus/controls bind and uses `placeFeedRow` (a plain reorder, no Flip)
+  // so the row lands in the Scheduled group without a load-time animation.
+  // Maps feed rows to conversations through the inlined workflow sessions,
+  // so it no-ops on a feed with no nav (e.g. the lab surface).
+  function reconcileConsumedFeedRows (feedRoot) {
+    var consumed = readConsumedConversations()
+    var sessions = readWorkflowSessions()
+    if (!sessions.length) return
+
+    var convByFeed = {}
+    for (var j = 0; j < sessions.length; j++) {
+      if (sessions[j] && sessions[j].feedId) {
+        convByFeed[sessions[j].feedId] = sessions[j].conversationId || ''
+      }
+    }
+
+    toArray(feedRoot.querySelectorAll('[data-sh-feed-item]')).forEach(function (row) {
+      if (row.getAttribute('data-sh-feed-state') !== 'completed') return
+      var convId = convByFeed[row.getAttribute('data-sh-feed-item')]
+      if (!convId || !consumed[convId]) return
+      applyFeedState(row, 'scheduled')
+      var li = closest(row, '[data-sh-feed-list-item]')
+      if (li) placeFeedRow(feedRoot, li)
+    })
+  }
+
   function bindFeed (feedRoot) {
     if (typeof gsap !== 'undefined' && typeof Flip !== 'undefined') {
       gsap.registerPlugin(Flip)
     }
 
     stampFeedOrder(feedRoot)
+    reconcileConsumedFeedRows(feedRoot)
     bindFeedMenus(feedRoot)
+    bindFeedFilter(feedRoot)
     bindFeedRowControls(feedRoot)
     bindFeedRowClicks(feedRoot)
   }
@@ -2530,9 +3107,6 @@
   //   • [data-sh-scheduled-status]       → visually-hidden aria-live
   //                                        region (announces the new
   //                                        result count on switch)
-  //   • [data-sh-scheduled-filter]       → right-anchored icon button;
-  //                                        emits `sh:scheduled-filter`
-  //                                        for a future consumer.
   //
   // Contract:
   //   • Server-side paints the first-active tab from
@@ -2595,11 +3169,14 @@
   // resume back into the error.
   function nextWorkflowStatus (item) {
     var status = item.getAttribute('data-sh-workflow-status')
-    if (status === 'paused') {
-      return item.getAttribute('data-sh-workflow-status-default') || 'scheduled'
-    }
+    // Same lifecycle as the home feed: Run now a scheduled/completed row,
+    // Stop a running one, Restart an archived one; a paused row resumes to
+    // its last real state; a failed one retries.
+    if (status === 'scheduled' || status === 'completed') return 'running'
+    if (status === 'running' || status === 'archived') return 'scheduled'
     if (status === 'failed') return 'running'
-    return 'paused'
+    if (status === 'paused') return item.getAttribute('data-sh-workflow-status-default') || 'scheduled'
+    return 'scheduled'
   }
 
   // A schedule with an unresolved blocking issue — its last run failed,
@@ -2617,7 +3194,7 @@
     var name = titleNode ? (titleNode.textContent || '').trim() : ''
 
     item.setAttribute('data-sh-workflow-status', status)
-    if (status !== 'paused') {
+    if (status !== 'paused' && status !== 'archived') {
       item.setAttribute('data-sh-workflow-status-default', status)
     }
 
@@ -2690,7 +3267,6 @@
     var listRoot = root.querySelector('[data-sh-scheduled-workflow-list]')
     var emptyPanel = root.querySelector('[data-sh-scheduled-empty]')
     var statusRegion = root.querySelector('[data-sh-scheduled-status]')
-    var filterBtn = root.querySelector('[data-sh-scheduled-filter]')
 
     // Toolbar overflow (⋮) menu + the Archived view it opens, and the
     // schedule-details side panel. All no-op when their markup is
@@ -2718,22 +3294,11 @@
     // controller — bind them up front so per-row controls work even if
     // the tab wiring below early-returns due to malformed markup.
     if (listRoot) {
-      scheduledWorkflowOverflowController(listRoot)
-      scheduledStatusController(listRoot, function () {
+      scheduledWorkflowOverflowController(listRoot, function () {
         if (afterStatusChange) afterStatusChange()
       })
-    }
-
-    // Filter icon-button — just a dispatcher today. A future filter
-    // menu can bind on the event without changes here.
-    if (filterBtn) {
-      filterBtn.addEventListener('click', function (event) {
-        event.preventDefault()
-        document.dispatchEvent(new CustomEvent('sh:scheduled-filter', {
-          detail: { source: 'toolbar' }
-        }))
-        // eslint-disable-next-line no-console
-        console.info('[seller-home] scheduled filter dispatched')
+      scheduledStatusController(listRoot, function () {
+        if (afterStatusChange) afterStatusChange()
       })
     }
 
@@ -2808,7 +3373,13 @@
       })
     }
 
-    afterStatusChange = refreshTabCounts
+    afterStatusChange = function () {
+      refreshTabCounts()
+      // Re-run the active tab's filter so a row whose new state no longer
+      // matches (e.g. Archive while on Active) drops out of view — the way
+      // the feed moves a row between views.
+      activateTab(activeTabId, {})
+    }
 
     // Which tab is active right now. Track independently of the DOM
     // so tab-click handlers can early-return on a no-op reselect.
@@ -3815,9 +4386,19 @@
   // State: single-open menu enforced via the `openMenu` /
   // `openTrigger` pair — opening a second menu closes the first,
   // matching SLDS' one-menu-at-a-time convention.
-  function scheduledWorkflowOverflowController (listRoot) {
+  function scheduledWorkflowOverflowController (listRoot, onChange) {
     var openMenu = null
     var openTrigger = null
+
+    // Overflow actions that move the row to a new state — the same
+    // transitions the status button and the home feed make. `edit` isn't
+    // here, so it stays a dispatch-only placeholder.
+    var WORKFLOW_ACTION_STATES = {
+      run_now: 'running',
+      stop: 'scheduled',
+      restart: 'scheduled',
+      archive: 'archived'
+    }
 
     function setMenuState (trigger, menu, isOpen) {
       menu.hidden = !isOpen
@@ -3894,6 +4475,25 @@
       var actionId = actionBtn.getAttribute('data-sh-workflow-action')
       var row = closest(actionBtn, '[data-sh-workflow-item]')
       var workflowId = row ? row.getAttribute('data-sh-workflow-id') : ''
+
+      // Edit opens the backing skill's detail page — the same destination
+      // the home feed's Edit action uses. The skill id rides on the row as
+      // `data-sh-workflow-skill` (scheduled.json → workflow.skillId).
+      if (actionId === 'edit') {
+        var workflowSkillId = row ? row.getAttribute('data-sh-workflow-skill') : ''
+        if (workflowSkillId) {
+          window.location.href = '/skill_detail.html?id=' + encodeURIComponent(workflowSkillId)
+          return
+        }
+      }
+
+      // Apply the state change (if any), then let the caller refresh the
+      // tab counts + re-filter so the row moves between tabs.
+      var target = WORKFLOW_ACTION_STATES[actionId]
+      if (target && row) {
+        applyWorkflowStatus(row, target, readWorkflowStatusTypes(listRoot))
+        if (onChange) onChange(row, actionId, target)
+      }
 
       document.dispatchEvent(new CustomEvent('sh:workflow-action', {
         detail: { action: actionId, workflowId: workflowId }

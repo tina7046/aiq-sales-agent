@@ -32,6 +32,13 @@
 		box-shadow: 0 8px 30px rgba(13, 27, 42, 0.10);
 	}
 
+	/* Toggled from the global-header Setup (gear) icon — see the script at
+	   the foot of this file. Beats the base `display: block` on class
+	   specificity, so no !important is needed. */
+	#panel.is-hidden {
+		display: none;
+	}
+
 	#panel.closed {
 		/* Only bottom-anchor when collapsed so the box hugs its content
 		   (the "Controls" launcher) instead of being stretched full-height
@@ -295,11 +302,16 @@
 		{{ { "tools": shared.toolsModal.tools } | tojson | safe }}
 	</script>
 
-	<div id="panel" class="closed">
+	{# God-rays tuner. Its visibility is toggled from the global-header Setup
+	   (gear) icon — see the toggle script at the foot of this file. The
+	   `.is-hidden` class (not an inline style) drives show/hide so the gear
+	   can flip it, and the state persists in localStorage. Hidden by default. #}
+	<div id="panel" class="is-hidden">
 		<div class="head">
-			<button id="toggle">Controls</button>
-			<button id="copy" class="act" hidden>Copy</button>
-			<button id="reset" class="act" hidden>Reset</button>
+			<button id="toggle">Close</button>
+			<button id="copy" class="act">Copy</button>
+			<button id="save" class="act">Save</button>
+			<button id="reset" class="act">Reset</button>
 		</div>
 		<div class="body">
 			<div class="sect">
@@ -348,12 +360,15 @@
 
 	<script type="module">
 		import {
-			ShaderMount,
-			godRaysFragmentShader,
-			getShaderColorFromString as toVec4,
-			getShaderNoiseTexture,
-			ShaderFitOptions,
-		} from 'https://cdn.jsdelivr.net/npm/@paper-design/shaders@0.0.77/+esm';
+		ShaderMount,
+		godRaysFragmentShader,
+		meshGradientFragmentShader,
+		staticRadialGradientFragmentShader,
+		simplexNoiseFragmentShader,
+		getShaderColorFromString as toVec4,
+		getShaderNoiseTexture,
+		ShaderFitOptions,
+	} from 'https://cdn.jsdelivr.net/npm/@paper-design/shaders@0.0.77/+esm';
 
 		// ---- defaults -------------------------------------------------------------
 		const DEFAULTS = {
@@ -399,7 +414,27 @@
 			['holeFeather', null, 0, 45, 1],
 		];
 
+		// Per-shader saved presets. "Save" in the panel writes the current
+		// settings here so they become the background on the next load; "Reset"
+		// clears them and falls back to the built-in defaults. Keyed by shader
+		// so god-rays and mesh keep separate saves.
+		const loadSavedState = (shader) => {
+			try {
+				const raw = window.localStorage.getItem('sh:shaderState:' + shader);
+				const parsed = raw ? JSON.parse(raw) : null;
+				return (parsed && typeof parsed === 'object') ? parsed : null;
+			} catch (e) { return null; }
+		};
+		const saveState = (shader, obj) => {
+			try { window.localStorage.setItem('sh:shaderState:' + shader, JSON.stringify(obj)); } catch (e) { }
+		};
+		const clearSavedState = (shader) => {
+			try { window.localStorage.removeItem('sh:shaderState:' + shader); } catch (e) { }
+		};
+
+		// Seed god-rays from its saved preset (if any) over the defaults.
 		const state = structuredClone(DEFAULTS);
+		Object.assign(state, loadSavedState('godrays') || {});
 
 		// Same host as hunter-main-main: a child of `.seller-home`, sized and
 		// stacked by `.seller-home__god-rays` in home.scss.
@@ -418,7 +453,542 @@
 		const joinHex = (rgb, a) =>
 			rgb + Math.round(Math.min(1, Math.max(0, a)) * 255).toString(16).padStart(2, '0');
 
-		try {
+		// ── Shader selector ────────────────────────────────────────────────
+		// Two background shaders live here: the original god-rays and the mesh
+		// gradient. The active one is chosen (in priority order) by the
+		// `?shader=` URL override, the seller's saved pick from the header gear
+		// dropdown (localStorage 'sh:shader'), then DEFAULT_SHADER. Whichever is
+		// active mounts and populates the one #panel; the other's setup sits
+		// dormant behind its guard. Nothing is deleted.
+		const DEFAULT_SHADER = 'simplex';
+		let storedShader = null;
+		try { storedShader = window.localStorage.getItem('sh:shader'); } catch (e) { }
+		const ACTIVE_SHADER = new URLSearchParams(location.search).get('shader') || storedShader || DEFAULT_SHADER;
+
+		if (ACTIVE_SHADER === 'mesh') {
+			// MeshGradient — vanilla translation of the React
+			// `<MeshGradient colors distortion swirl grainMixer grainOverlay
+			// speed scale rotation offsetX offsetY />` (speed is the ShaderMount
+			// arg; the rest are uniforms). Mounted on the god-rays host, with a
+			// god-rays-style tuning panel built into the same #panel.
+			try {
+				const MESH_DEFAULTS = {
+					// The palette carries the shader's max (10) so the count
+					// slider can reach 10; only `colorsCount` are used by default.
+					colors: ['#e5edff', '#1f9eff', '#50c2f7', '#8097ff', '#ffc7eb', '#a28fff', '#5cecff', '#c7d2fe', '#e0e7ff', '#f0f9ff'],
+					colorsCount: 7,
+					distortion: 0.35, swirl: 0.32,
+					grainMixer: 0.03, grainOverlay: 0.07,
+					speed: 0.08, scale: 1.28, rotation: 32,
+					offsetX: -0.12, offsetY: 0.04,
+				};
+				// key, min, max, step
+				const MESH_SLIDERS = [
+					['distortion', 0, 1, 0.01],
+					['swirl', 0, 1, 0.01],
+					['grainMixer', 0, 1, 0.01],
+					['grainOverlay', 0, 1, 0.01],
+					['speed', 0, 3, 0.01],
+					['scale', 0.1, 4, 0.01],
+					['rotation', 0, 360, 1],
+					['offsetX', -1, 1, 0.01],
+					['offsetY', -1, 1, 0.01],
+				];
+
+				const mstate = structuredClone(MESH_DEFAULTS);
+				// Seed from a saved preset (Save button) over the defaults.
+				Object.assign(mstate, loadSavedState('mesh') || {});
+				// Keep the palette at the shader max (10) so the count slider and
+				// color rows always reach 10, even after loading an older save.
+				while (mstate.colors.length < 10) mstate.colors.push('#ffffffff');
+				mstate.colors.length = 10;
+				const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+
+				const meshUniforms = () => ({
+					// Send every authored color; u_colorsCount decides how many
+					// the shader actually uses (same pattern as the god-rays set).
+					u_colors: mstate.colors.map(toVec4),
+					u_colorsCount: mstate.colorsCount,
+					u_distortion: mstate.distortion,
+					u_swirl: mstate.swirl,
+					u_grainMixer: mstate.grainMixer,
+					u_grainOverlay: mstate.grainOverlay,
+					u_scale: mstate.scale,
+					u_rotation: mstate.rotation,
+					u_offsetX: mstate.offsetX,
+					u_offsetY: mstate.offsetY,
+					u_fit: ShaderFitOptions.cover,
+					u_originX: 0.5, u_originY: 0.5,
+					u_worldWidth: 0, u_worldHeight: 0,
+				});
+
+				const meshMount = new ShaderMount(
+					bg, meshGradientFragmentShader, meshUniforms(), undefined,
+					reduce.matches ? 0 : mstate.speed, 0
+				);
+				window.meshGradient = meshMount;
+
+				const push = () => {
+					meshMount.setUniforms(meshUniforms());
+					meshMount.setSpeed(reduce.matches ? 0 : mstate.speed);
+					// At speed 0 the loop is stopped, so a change needs a nudge.
+					if (mstate.speed === 0 || reduce.matches) { try { meshMount.requestRender(); } catch { } }
+				};
+				reduce.addEventListener('change', push);
+
+				// ---- panel (mirrors the god-rays tuner) --------------------------
+				// Only the #panel body is replaced; its .head (Controls / Copy /
+				// Reset buttons) is shared and rewired below for mesh.
+				const panel = document.getElementById('panel');
+				const body = panel.querySelector('.body');
+				body.innerHTML = '';
+				const sync = [];   // refreshers, replayed on reset
+
+				const sect = (title) => {
+					const s = document.createElement('div');
+					s.className = 'sect';
+					s.innerHTML = `<h2>${title}</h2>`;
+					body.appendChild(s);
+					return s;
+				};
+
+				const colorRow = (host, label, read, write) => {
+					const row = document.createElement('div');
+					row.className = 'crow';
+					row.innerHTML =
+						`<input type="color">` +
+						`<div class="stack">` +
+						`<span class="hex"><span>${label}</span><span class="v"></span></span>` +
+						`<input type="range" min="0" max="1" step="0.01">` +
+						`</div>`;
+					const [swatch, alpha] = row.querySelectorAll('input');
+					const out = row.querySelector('.v');
+					const refresh = () => {
+						const { rgb, a } = splitHex(read());
+						swatch.value = rgb; alpha.value = a; out.textContent = read();
+					};
+					const change = () => { write(joinHex(swatch.value, parseFloat(alpha.value))); refresh(); push(); };
+					swatch.addEventListener('input', change);
+					alpha.addEventListener('input', change);
+					refresh(); sync.push(refresh); host.appendChild(row);
+					return row;
+				};
+
+				const slider = (host, key, min, max, step, after) => {
+					const row = document.createElement('div');
+					row.className = 'row';
+					row.innerHTML =
+						`<span class="lbl"><span>${key}</span><span class="val"></span></span>` +
+						`<input type="range" min="${min}" max="${max}" step="${step}">`;
+					const input = row.querySelector('input');
+					const out = row.querySelector('.val');
+					const refresh = () => { input.value = mstate[key]; out.textContent = mstate[key]; };
+					input.addEventListener('input', () => {
+						mstate[key] = parseFloat(input.value);
+						refresh(); after?.(); push();
+					});
+					refresh(); sync.push(refresh); host.appendChild(row);
+				};
+
+				const colorsSect = sect('Colors');
+				const colorRows = [];
+				for (let i = 0; i < mstate.colors.length; i++) {
+					colorRows.push(colorRow(colorsSect, `color ${i + 1}`,
+						() => mstate.colors[i], (v) => (mstate.colors[i] = v)));
+				}
+				const dimUnused = () => colorRows.forEach((r, i) =>
+					r.classList.toggle('off', i >= mstate.colorsCount));
+				slider(colorsSect, 'colorsCount', 1, mstate.colors.length, 1, dimUnused);
+				dimUnused();
+
+				const motionSect = sect('Motion & shape');
+				for (const [k, min, max, step] of MESH_SLIDERS) slider(motionSect, k, min, max, step);
+
+				const toggleBtn = document.getElementById('toggle');
+				if (toggleBtn) toggleBtn.addEventListener('click', () => {
+					const closed = panel.classList.toggle('closed');
+					toggleBtn.textContent = closed ? 'Controls' : 'Close';
+					for (const id of ['copy', 'save', 'reset']) { const b = document.getElementById(id); if (b) b.hidden = closed; }
+				});
+				const resetBtn = document.getElementById('reset');
+				if (resetBtn) resetBtn.addEventListener('click', () => {
+					// Forget the saved preset and fall back to the built-in defaults.
+					clearSavedState('mesh');
+					Object.assign(mstate, structuredClone(MESH_DEFAULTS));
+					sync.forEach((f) => f()); dimUnused(); push();
+				});
+				// Save — persist the current settings as the background. They're
+				// already applied live via push(); saving is what makes them stick
+				// across reloads (see the `loadSavedState('mesh')` seed above).
+				const copyBtn = document.getElementById('copy');
+				if (copyBtn) copyBtn.addEventListener('click', async (e) => {
+					const q = (v) => (typeof v === 'string' ? `'${v}'` : v);
+					const bodyTxt = Object.keys(MESH_DEFAULTS).map((k) => Array.isArray(mstate[k])
+						? `  ${k}: [${mstate[k].map(q).join(', ')}],`
+						: `  ${k}: ${q(mstate[k])},`).join('\n');
+					await navigator.clipboard.writeText(`const params = {\n${bodyTxt}\n};`);
+					e.target.textContent = 'Copied';
+					setTimeout(() => (e.target.textContent = 'Copy'), 1500);
+				});
+				const saveBtn = document.getElementById('save');
+				if (saveBtn) saveBtn.addEventListener('click', (e) => {
+					saveState('mesh', mstate);
+					push();
+					e.target.textContent = 'Saved';
+					setTimeout(() => (e.target.textContent = 'Save'), 1500);
+				});
+
+				push();
+			} catch (e) {
+				const el = document.getElementById('err');
+				el.style.display = 'block';
+				el.textContent = 'Shader failed to start:\n' + (e?.stack || e);
+			}
+		}
+
+		if (ACTIVE_SHADER === 'radial') {
+			// StaticRadialGradient — vanilla translation of the React
+			// `<StaticRadialGradient colors colorBack radius focalDistance
+			// focalAngle falloff mixing distortion distortionShift distortionFreq
+			// grainMixer grainOverlay />`. Static (speed 0). Same host + panel.
+			try {
+				const RADIAL_DEFAULTS = {
+					// Palette carries the shader max (10); colorsCount decides use.
+					// Values baked from the tuned preset saved in the Cursor browser.
+					colors: ['#c2efff85', '#6ac8e7', '#dbeafe', '#bae6fd', '#a5f3fc', '#c7d2fe', '#e0e7ff', '#f0f9ff', '#ecfeff', '#f5f3ff'],
+					colorsCount: 2,
+					colorBack: '#f0f9ffff',
+					radius: 0.75, focalDistance: 0.11, focalAngle: 0,
+					falloff: -0.1, mixing: 1,
+					distortion: 0, distortionShift: -1, distortionFreq: 9,
+					grainMixer: 0, grainOverlay: 0,
+					offsetX: 0, offsetY: -0.24,
+				};
+				// key, min, max, step
+				const RADIAL_SLIDERS = [
+					['radius', 0, 3, 0.01],
+					['focalDistance', 0, 3, 0.01],
+					['focalAngle', 0, 360, 1],
+					['falloff', -1, 1, 0.01],
+					['mixing', 0, 1, 0.01],
+					['distortion', 0, 1, 0.01],
+					['distortionShift', -1, 1, 0.01],
+					['distortionFreq', 0, 20, 1],
+					['grainMixer', 0, 1, 0.01],
+					['grainOverlay', 0, 1, 0.01],
+					['offsetX', -1, 1, 0.01],
+					['offsetY', -1, 1, 0.01],
+				];
+
+				const rstate = structuredClone(RADIAL_DEFAULTS);
+				Object.assign(rstate, loadSavedState('radial') || {});
+				while (rstate.colors.length < 10) rstate.colors.push('#ffffffff');
+				rstate.colors.length = 10;
+
+				const radialUniforms = () => ({
+					u_colorBack: toVec4(rstate.colorBack),
+					u_colors: rstate.colors.map(toVec4),
+					u_colorsCount: rstate.colorsCount,
+					u_radius: rstate.radius,
+					u_focalDistance: rstate.focalDistance,
+					u_focalAngle: rstate.focalAngle,
+					u_falloff: rstate.falloff,
+					u_mixing: rstate.mixing,
+					u_distortion: rstate.distortion,
+					u_distortionShift: rstate.distortionShift,
+					u_distortionFreq: rstate.distortionFreq,
+					u_grainMixer: rstate.grainMixer,
+					u_grainOverlay: rstate.grainOverlay,
+					u_fit: ShaderFitOptions.cover,
+					u_scale: 1, u_rotation: 0,
+					u_offsetX: rstate.offsetX, u_offsetY: rstate.offsetY,
+					u_originX: 0.5, u_originY: 0.5,
+					u_worldWidth: 0, u_worldHeight: 0,
+				});
+
+				// Static gradient (speed 0) — nudge a render after each change.
+				const radialMount = new ShaderMount(bg, staticRadialGradientFragmentShader, radialUniforms(), undefined, 0, 0);
+				window.radialGradient = radialMount;
+
+				const push = () => {
+					radialMount.setUniforms(radialUniforms());
+					try { radialMount.requestRender(); } catch { }
+				};
+
+				// ---- panel (mirrors the god-rays tuner) --------------------------
+				const panel = document.getElementById('panel');
+				const body = panel.querySelector('.body');
+				body.innerHTML = '';
+				const sync = [];
+
+				const sect = (title) => {
+					const s = document.createElement('div');
+					s.className = 'sect';
+					s.innerHTML = `<h2>${title}</h2>`;
+					body.appendChild(s);
+					return s;
+				};
+
+				const colorRow = (host, label, read, write) => {
+					const row = document.createElement('div');
+					row.className = 'crow';
+					row.innerHTML =
+						`<input type="color">` +
+						`<div class="stack">` +
+						`<span class="hex"><span>${label}</span><span class="v"></span></span>` +
+						`<input type="range" min="0" max="1" step="0.01">` +
+						`</div>`;
+					const [swatch, alpha] = row.querySelectorAll('input');
+					const out = row.querySelector('.v');
+					const refresh = () => {
+						const { rgb, a } = splitHex(read());
+						swatch.value = rgb; alpha.value = a; out.textContent = read();
+					};
+					const change = () => { write(joinHex(swatch.value, parseFloat(alpha.value))); refresh(); push(); };
+					swatch.addEventListener('input', change);
+					alpha.addEventListener('input', change);
+					refresh(); sync.push(refresh); host.appendChild(row);
+					return row;
+				};
+
+				const slider = (host, key, min, max, step, after) => {
+					const row = document.createElement('div');
+					row.className = 'row';
+					row.innerHTML =
+						`<span class="lbl"><span>${key}</span><span class="val"></span></span>` +
+						`<input type="range" min="${min}" max="${max}" step="${step}">`;
+					const input = row.querySelector('input');
+					const out = row.querySelector('.val');
+					const refresh = () => { input.value = rstate[key]; out.textContent = rstate[key]; };
+					input.addEventListener('input', () => {
+						rstate[key] = parseFloat(input.value);
+						refresh(); after?.(); push();
+					});
+					refresh(); sync.push(refresh); host.appendChild(row);
+				};
+
+				const colorsSect = sect('Colors');
+				colorRow(colorsSect, 'colorBack', () => rstate.colorBack, (v) => (rstate.colorBack = v));
+				const colorRows = [];
+				for (let i = 0; i < rstate.colors.length; i++) {
+					colorRows.push(colorRow(colorsSect, `color ${i + 1}`,
+						() => rstate.colors[i], (v) => (rstate.colors[i] = v)));
+				}
+				const dimUnused = () => colorRows.forEach((r, i) =>
+					r.classList.toggle('off', i >= rstate.colorsCount));
+				slider(colorsSect, 'colorsCount', 1, rstate.colors.length, 1, dimUnused);
+				dimUnused();
+
+				const shapeSect = sect('Shape & focal');
+				for (const [k, min, max, step] of RADIAL_SLIDERS) slider(shapeSect, k, min, max, step);
+
+				const toggleBtn = document.getElementById('toggle');
+				if (toggleBtn) toggleBtn.addEventListener('click', () => {
+					const closed = panel.classList.toggle('closed');
+					toggleBtn.textContent = closed ? 'Controls' : 'Close';
+					for (const id of ['copy', 'save', 'reset']) { const b = document.getElementById(id); if (b) b.hidden = closed; }
+				});
+				const resetBtn = document.getElementById('reset');
+				if (resetBtn) resetBtn.addEventListener('click', () => {
+					clearSavedState('radial');
+					Object.assign(rstate, structuredClone(RADIAL_DEFAULTS));
+					while (rstate.colors.length < 10) rstate.colors.push('#ffffffff');
+					rstate.colors.length = 10;
+					sync.forEach((f) => f()); dimUnused(); push();
+				});
+				const copyBtn = document.getElementById('copy');
+				if (copyBtn) copyBtn.addEventListener('click', async (e) => {
+					const q = (v) => (typeof v === 'string' ? `'${v}'` : v);
+					const bodyTxt = Object.keys(RADIAL_DEFAULTS).map((k) => Array.isArray(rstate[k])
+						? `  ${k}: [${rstate[k].map(q).join(', ')}],`
+						: `  ${k}: ${q(rstate[k])},`).join('\n');
+					await navigator.clipboard.writeText(`const params = {\n${bodyTxt}\n};`);
+					e.target.textContent = 'Copied';
+					setTimeout(() => (e.target.textContent = 'Copy'), 1500);
+				});
+				const saveBtn = document.getElementById('save');
+				if (saveBtn) saveBtn.addEventListener('click', (e) => {
+					saveState('radial', rstate);
+					push();
+					e.target.textContent = 'Saved';
+					setTimeout(() => (e.target.textContent = 'Save'), 1500);
+				});
+
+				push();
+			} catch (e) {
+				const el = document.getElementById('err');
+				el.style.display = 'block';
+				el.textContent = 'Shader failed to start:\n' + (e?.stack || e);
+			}
+		}
+
+		if (ACTIVE_SHADER === 'simplex') {
+			// SimplexNoise — vanilla translation of the React
+			// `<SimplexNoise colors stepsPerColor softness speed scale />`
+			// (speed is the ShaderMount arg; the rest are uniforms). Same host
+			// + god-rays-style tuning panel.
+			try {
+				const SIMPLEX_DEFAULTS = {
+					colors: ['#ffffffff', '#e0edff0d', '#fbe5ff0d', '#dcb8ff0f', '#3df2ff0f', '#3399cc', '#3333cc', '#9933cc', '#cc3399', '#cc3333'],
+					colorsCount: 5,
+					stepsPerColor: 4, softness: 1,
+					speed: 2.23, scale: 2.16, rotation: 0,
+					offsetX: 0, offsetY: 0,
+				};
+				// key, min, max, step
+				const SIMPLEX_SLIDERS = [
+					['stepsPerColor', 1, 10, 1],
+					['softness', 0, 1, 0.01],
+					['speed', 0, 5, 0.01],
+					['scale', 0.1, 4, 0.01],
+					['rotation', 0, 360, 1],
+					['offsetX', -1, 1, 0.01],
+					['offsetY', -1, 1, 0.01],
+				];
+
+				const sstate = structuredClone(SIMPLEX_DEFAULTS);
+				Object.assign(sstate, loadSavedState('simplex') || {});
+				while (sstate.colors.length < 10) sstate.colors.push('#ffffffff');
+				sstate.colors.length = 10;
+				const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+
+				const simplexUniforms = () => ({
+					u_colors: sstate.colors.map(toVec4),
+					u_colorsCount: sstate.colorsCount,
+					u_stepsPerColor: sstate.stepsPerColor,
+					u_softness: sstate.softness,
+					u_scale: sstate.scale,
+					u_rotation: sstate.rotation,
+					u_offsetX: sstate.offsetX,
+					u_offsetY: sstate.offsetY,
+					u_fit: ShaderFitOptions.cover,
+					u_originX: 0.5, u_originY: 0.5,
+					u_worldWidth: 0, u_worldHeight: 0,
+				});
+
+				const simplexMount = new ShaderMount(
+					bg, simplexNoiseFragmentShader, simplexUniforms(), undefined,
+					reduce.matches ? 0 : sstate.speed, 0
+				);
+				window.simplexNoise = simplexMount;
+
+				const push = () => {
+					simplexMount.setUniforms(simplexUniforms());
+					simplexMount.setSpeed(reduce.matches ? 0 : sstate.speed);
+					if (sstate.speed === 0 || reduce.matches) { try { simplexMount.requestRender(); } catch { } }
+				};
+				reduce.addEventListener('change', push);
+
+				// ---- panel (mirrors the god-rays tuner) --------------------------
+				const panel = document.getElementById('panel');
+				const body = panel.querySelector('.body');
+				body.innerHTML = '';
+				const sync = [];
+
+				const sect = (title) => {
+					const s = document.createElement('div');
+					s.className = 'sect';
+					s.innerHTML = `<h2>${title}</h2>`;
+					body.appendChild(s);
+					return s;
+				};
+
+				const colorRow = (host, label, read, write) => {
+					const row = document.createElement('div');
+					row.className = 'crow';
+					row.innerHTML =
+						`<input type="color">` +
+						`<div class="stack">` +
+						`<span class="hex"><span>${label}</span><span class="v"></span></span>` +
+						`<input type="range" min="0" max="1" step="0.01">` +
+						`</div>`;
+					const [swatch, alpha] = row.querySelectorAll('input');
+					const out = row.querySelector('.v');
+					const refresh = () => {
+						const { rgb, a } = splitHex(read());
+						swatch.value = rgb; alpha.value = a; out.textContent = read();
+					};
+					const change = () => { write(joinHex(swatch.value, parseFloat(alpha.value))); refresh(); push(); };
+					swatch.addEventListener('input', change);
+					alpha.addEventListener('input', change);
+					refresh(); sync.push(refresh); host.appendChild(row);
+					return row;
+				};
+
+				const slider = (host, key, min, max, step, after) => {
+					const row = document.createElement('div');
+					row.className = 'row';
+					row.innerHTML =
+						`<span class="lbl"><span>${key}</span><span class="val"></span></span>` +
+						`<input type="range" min="${min}" max="${max}" step="${step}">`;
+					const input = row.querySelector('input');
+					const out = row.querySelector('.val');
+					const refresh = () => { input.value = sstate[key]; out.textContent = sstate[key]; };
+					input.addEventListener('input', () => {
+						sstate[key] = parseFloat(input.value);
+						refresh(); after?.(); push();
+					});
+					refresh(); sync.push(refresh); host.appendChild(row);
+				};
+
+				const colorsSect = sect('Colors');
+				const colorRows = [];
+				for (let i = 0; i < sstate.colors.length; i++) {
+					colorRows.push(colorRow(colorsSect, `color ${i + 1}`,
+						() => sstate.colors[i], (v) => (sstate.colors[i] = v)));
+				}
+				const dimUnused = () => colorRows.forEach((r, i) =>
+					r.classList.toggle('off', i >= sstate.colorsCount));
+				slider(colorsSect, 'colorsCount', 1, sstate.colors.length, 1, dimUnused);
+				dimUnused();
+
+				const motionSect = sect('Noise & motion');
+				for (const [k, min, max, step] of SIMPLEX_SLIDERS) slider(motionSect, k, min, max, step);
+
+				const toggleBtn = document.getElementById('toggle');
+				if (toggleBtn) toggleBtn.addEventListener('click', () => {
+					const closed = panel.classList.toggle('closed');
+					toggleBtn.textContent = closed ? 'Controls' : 'Close';
+					for (const id of ['copy', 'save', 'reset']) { const b = document.getElementById(id); if (b) b.hidden = closed; }
+				});
+				const resetBtn = document.getElementById('reset');
+				if (resetBtn) resetBtn.addEventListener('click', () => {
+					clearSavedState('simplex');
+					Object.assign(sstate, structuredClone(SIMPLEX_DEFAULTS));
+					while (sstate.colors.length < 10) sstate.colors.push('#ffffffff');
+					sstate.colors.length = 10;
+					sync.forEach((f) => f()); dimUnused(); push();
+				});
+				const copyBtn = document.getElementById('copy');
+				if (copyBtn) copyBtn.addEventListener('click', async (e) => {
+					const q = (v) => (typeof v === 'string' ? `'${v}'` : v);
+					const bodyTxt = Object.keys(SIMPLEX_DEFAULTS).map((k) => Array.isArray(sstate[k])
+						? `  ${k}: [${sstate[k].map(q).join(', ')}],`
+						: `  ${k}: ${q(sstate[k])},`).join('\n');
+					await navigator.clipboard.writeText(`const params = {\n${bodyTxt}\n};`);
+					e.target.textContent = 'Copied';
+					setTimeout(() => (e.target.textContent = 'Copy'), 1500);
+				});
+				const saveBtn = document.getElementById('save');
+				if (saveBtn) saveBtn.addEventListener('click', (e) => {
+					saveState('simplex', sstate);
+					push();
+					e.target.textContent = 'Saved';
+					setTimeout(() => (e.target.textContent = 'Save'), 1500);
+				});
+
+				push();
+			} catch (e) {
+				const el = document.getElementById('err');
+				el.style.display = 'block';
+				el.textContent = 'Shader failed to start:\n' + (e?.stack || e);
+			}
+		}
+
+		// Original god-rays — untouched, just gated so it doesn't mount while
+		// another shader (mesh / radial / simplex) is active. (God-rays is
+		// capped at 5 colors by the shader itself, unlike the others.)
+		if (ACTIVE_SHADER !== 'mesh' && ACTIVE_SHADER !== 'radial' && ACTIVE_SHADER !== 'simplex') try {
 			// ShaderMount rejects a texture that hasn't decoded, so wait for it.
 			let noise;
 			try { noise = getShaderNoiseTexture(document); } catch { noise = getShaderNoiseTexture(); }
@@ -719,14 +1289,20 @@
 
 			document.getElementById('toggle').addEventListener('click', () => {
 				const closed = document.getElementById('panel').classList.toggle('closed');
-				for (const id of ['copy', 'reset']) document.getElementById(id).hidden = closed;
+				document.getElementById('toggle').textContent = closed ? 'Controls' : 'Close';
+				for (const id of ['copy', 'save', 'reset']) document.getElementById(id).hidden = closed;
 			});
 
 			document.getElementById('reset').addEventListener('click', () => {
+				// Forget the saved preset and fall back to the built-in defaults.
+				clearSavedState('godrays');
 				Object.assign(state, structuredClone(DEFAULTS));
 				sync.forEach((f) => f()); dimUnused(); push();
 			});
 
+			// Save — persist the current settings as the background (already
+			// applied live via push(); saving makes them stick across reloads,
+			// see the `loadSavedState('godrays')` seed above).
 			document.getElementById('copy').addEventListener('click', async (e) => {
 				const q = (v) => (typeof v === 'string' ? `'${v}'` : v);
 				const body = Object.keys(DEFAULTS).map((k) => Array.isArray(state[k])
@@ -736,6 +1312,12 @@
 				e.target.textContent = 'Copied';
 				setTimeout(() => (e.target.textContent = 'Copy'), 1500);
 			});
+			document.getElementById('save').addEventListener('click', (e) => {
+				saveState('godrays', state);
+				push();
+				e.target.textContent = 'Saved';
+				setTimeout(() => (e.target.textContent = 'Save'), 1500);
+			});
 
 			push();
 		} catch (e) {
@@ -743,6 +1325,125 @@
 			el.style.display = 'block';
 			el.textContent = 'Shader failed to start:\n' + (e?.stack || e);
 		}
+	</script>
+
+	{# The global-header Setup (gear) icon opens a small demo-controls
+	   dropdown: pick the background shader (God Rays / Mesh — persisted and
+	   applied on reload) and show/hide the control panel. Plain (non-module)
+	   script so it runs at parse time, after the header + panel are in the
+	   DOM. Only wired here on Home, where the shaders + panel live; both
+	   choices persist in localStorage (real preferences, not demo state). #}
+	<script>
+		(function () {
+			// ── One-time forced default (all users) ──────────────────────────
+			// Bump SHADER_FORCE to push the current defaults onto EVERYONE,
+			// including sellers who previously picked another shader or opened
+			// the control panel (both persisted in localStorage). On the first
+			// load after a bump we drop those saved choices so DEFAULT_SHADER +
+			// the hidden panel win; they can still re-pick / re-open afterward.
+			// This classic script runs before the deferred shader module reads
+			// the same keys, so the forced pick also drives what mounts.
+			var SHADER_FORCE = 'simplex-2026-09-03-2';
+			try {
+				if (window.localStorage.getItem('sh:shaderForce') !== SHADER_FORCE) {
+					window.localStorage.removeItem('sh:shader');
+					window.localStorage.removeItem('sh:shaderControls');
+					// Also drop any saved Simplex tuning so the new baked defaults win.
+					window.localStorage.removeItem('sh:shaderState:simplex');
+					window.localStorage.setItem('sh:shaderForce', SHADER_FORCE);
+				}
+			} catch (e) { }
+
+			var panel = document.getElementById('panel');
+			var gearBtn = document.querySelector('.slds-global-actions__setup');
+			if (!gearBtn) return;
+			var trigger = gearBtn.closest('.slds-dropdown-trigger') || gearBtn.parentElement;
+
+			var SHADER_KEY = 'sh:shader';        // 'godrays' | 'mesh'
+			var PANEL_KEY = 'sh:shaderControls'; // 'shown' | 'hidden'
+			var DEFAULT_SHADER = 'simplex';
+
+			function lsGet(key) { try { return window.localStorage.getItem(key); } catch (e) { return null; } }
+			function lsSet(key, val) { try { window.localStorage.setItem(key, val); } catch (e) { } }
+
+			var activeShader = new URLSearchParams(location.search).get('shader') || lsGet(SHADER_KEY) || DEFAULT_SHADER;
+			// Hidden by default — the panel only shows if the seller explicitly
+			// picked "Show control panel" (persisted as 'shown').
+			var panelHidden = lsGet(PANEL_KEY) !== 'shown';
+
+			// Reflect the saved panel state on load.
+			if (panel) panel.classList.toggle('is-hidden', panelHidden);
+
+			// ── Dropdown markup (SLDS) ────────────────────────────────────
+			var check = '<svg class="slds-icon slds-icon_x-small slds-icon-text-default slds-m-right_x-small" aria-hidden="true"><use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use></svg>';
+			function shaderItem(id, label) {
+				var on = activeShader === id;
+				return '<li class="slds-dropdown__item" role="presentation">' +
+					'<a href="#" role="menuitemradio" aria-checked="' + on + '" data-sh-shader="' + id + '" tabindex="0">' +
+					'<span class="slds-truncate" title="' + label + '">' +
+					'<span data-sh-check style="visibility:' + (on ? 'visible' : 'hidden') + '">' + check + '</span>' + label +
+					'</span></a></li>';
+			}
+			var dd = document.createElement('div');
+			dd.className = 'slds-dropdown slds-dropdown_right slds-dropdown_small';
+			dd.setAttribute('role', 'menu');
+			dd.style.display = 'none';
+			dd.innerHTML =
+				'<ul class="slds-dropdown__list" role="presentation">' +
+				'<li class="slds-dropdown__header slds-truncate" role="separator"><span>Background shader</span></li>' +
+				shaderItem('godrays', 'God Rays') +
+				shaderItem('mesh', 'Mesh') +
+				shaderItem('radial', 'Radial') +
+				shaderItem('simplex', 'Simplex') +
+				'<li class="slds-has-divider_top-space" role="separator"></li>' +
+				'<li class="slds-dropdown__item" role="presentation">' +
+				'<a href="#" role="menuitemcheckbox" aria-checked="' + (!panelHidden) + '" data-sh-panel-toggle tabindex="0">' +
+				'<span class="slds-truncate" title="Show control panel">' +
+				'<span data-sh-panel-check style="visibility:' + (panelHidden ? 'hidden' : 'visible') + '">' + check + '</span>Show control panel' +
+				'</span></a></li>' +
+				'</ul>';
+			trigger.appendChild(dd);
+
+			// ── Open / close ──────────────────────────────────────────────
+			function open() { trigger.classList.add('slds-is-open'); dd.style.display = 'block'; gearBtn.setAttribute('aria-expanded', 'true'); }
+			function close() { trigger.classList.remove('slds-is-open'); dd.style.display = 'none'; gearBtn.setAttribute('aria-expanded', 'false'); }
+
+			gearBtn.setAttribute('aria-haspopup', 'true');
+			gearBtn.setAttribute('aria-expanded', 'false');
+			gearBtn.setAttribute('title', 'Demo controls');
+			gearBtn.addEventListener('click', function (e) {
+				e.preventDefault(); e.stopPropagation();
+				dd.style.display === 'none' ? open() : close();
+			});
+			document.addEventListener('click', function (e) { if (!trigger.contains(e.target)) close(); });
+			document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+
+			// ── Actions ───────────────────────────────────────────────────
+			dd.addEventListener('click', function (e) {
+				var shaderEl = e.target.closest('[data-sh-shader]');
+				if (shaderEl) {
+					e.preventDefault();
+					var choice = shaderEl.getAttribute('data-sh-shader');
+					if (choice === activeShader) { close(); return; }
+					lsSet(SHADER_KEY, choice);
+					// Clean URL so the saved pick (not a stale ?shader=) wins.
+					location.assign(location.pathname);
+					return;
+				}
+				var panelEl = e.target.closest('[data-sh-panel-toggle]');
+				if (panelEl) {
+					e.preventDefault();
+					if (!panel) return;
+					panelHidden = !panel.classList.contains('is-hidden');
+					panel.classList.toggle('is-hidden', panelHidden);
+					lsSet(PANEL_KEY, panelHidden ? 'hidden' : 'shown');
+					panelEl.setAttribute('aria-checked', String(!panelHidden));
+					var chk = dd.querySelector('[data-sh-panel-check]');
+					if (chk) chk.style.visibility = panelHidden ? 'hidden' : 'visible';
+					return;
+				}
+			});
+		})();
 	</script>
 
 {% endblock %}

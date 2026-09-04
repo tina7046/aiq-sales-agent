@@ -112,6 +112,9 @@
      background in home_conversation.css. #}
   <link rel="stylesheet" href="/styles/home.css" />
   <link rel="stylesheet" href="/styles/home_conversation.css" />
+  {# Reusable "agent at work" reasoning trace — used as the opening
+     thinking phase on conversations whose data carries `opening.trace`. #}
+  <link rel="stylesheet" href="/styles/thinking_trace.css" />
   {# Styles for the Tools modal opened by the composer's "View all". #}
   <link rel="stylesheet" href="/styles/tools.css" />
 {% endblock %}
@@ -209,6 +212,25 @@
            `aria-label` override, which would break voice control by
            name. See `bindReopenPanel` in home_conversation.js. #}
         <div class="seller-home__conv-header-actions">
+          {# ── Run history ────────────────────────────────────────
+             One dropdown per conversation carrying a `runHistory`
+             block, all rendered here as siblings; only the one
+             matching the SSR default starts visible, and
+             `switchRunHistory` swaps `hidden` at boot once `?id=` is
+             known — the same arrangement the workflow side panels
+             use further down.
+
+             A conversation without `runHistory` emits nothing, which
+             is what keeps this header unchanged everywhere else. #}
+          {% for _cid, conv in conversations %}
+            {% if conv.runHistory %}
+              {% set runHistory = conv.runHistory %}
+              {% set runConversationId = _cid %}
+              {% set runInitialHidden = _cid != defaultConversationId %}
+              {% include "_run_history_menu.html" %}
+            {% endif %}
+          {% endfor %}
+
           <button
             type="button"
             class="slds-button slds-button_neutral seller-home__conv-header-reopen"
@@ -326,7 +348,11 @@
          pair, which is what lets one beat player in the script drive
          both. Timing is data, not a constant in the script. #}
       {% for _cid, _conv in conversations %}
-        {%- set _messages = _conv.messages or [] -%}
+        {#- A run-based conversation (one with a `runHistory`) expands its
+            handful of authored run templates into one block per run here;
+            every other conversation returns its own `messages` unchanged.
+            See `expandRuns` in gulpfile.js. -#}
+        {%- set _messages = expandRuns(_conv) -%}
         {%- set _stages   = (_conv.opening and _conv.opening.stages) or [] -%}
 
         {#- Every message id the stages claim. Built by pushing into an
@@ -339,9 +365,20 @@
           {%- endfor -%}
         {%- endfor -%}
 
+      {#- A dashed seam at each run start, so a thread of scheduled runs
+          reads as distinct blocks. Only lead messages carry a `runId`
+          (the insights and activity chip between them do not), so this
+          keys off the run start itself rather than comparing neighbours.
+          `_runsSeen` suppresses the seam before the FIRST run: a thread
+          with no runs pushes nothing and gets no dividers. -#}
+      {%- set _runsSeen = [] -%}
       <template data-sh-conv-inline data-sh-conv-for="{{ _cid }}">
         {%- for msg in _messages -%}
           {%- if msg.id not in _stagedIds -%}
+            {%- if msg.runId and _runsSeen[0] -%}
+              {{ convo.runDivider() }}
+            {%- endif -%}
+            {%- if msg.runId -%}{%- set _ = _runsSeen.push(1) -%}{%- endif -%}
             {{ convo.messageItem(msg) }}
           {%- endif -%}
         {%- endfor -%}
@@ -481,17 +518,26 @@
                    component on purpose (see the note above the form).
                    Non-functional in Phase 1.
 
+                   They carry `seller-home__composer-btn` as well as the
+                   local class. That is deliberate and it is what makes
+                   the hover match: the circular pill, its hover and
+                   active fills, and the disabled treatment all live on
+                   that class in home.scss (linked here), so wearing it
+                   means the two toolbars cannot drift on state the way
+                   they had — these buttons previously had no pill at
+                   all. The local class keeps what is genuinely local.
+
                    The middle glyph is the Skills mark, an asset rather
                    than a sprite symbol, so it's painted as a mask over
                    the button's colour — see
                    `.seller-home__conv-composer-btn-image`. #}
-                <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__conv-composer-btn" title="Add" aria-label="Add">
+                <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn seller-home__conv-composer-btn" title="Add" aria-label="Add">
                   <svg class="slds-button__icon" aria-hidden="true">
                     <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
                   </svg>
                   <span class="slds-assistive-text">Add</span>
                 </button>
-                <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__conv-composer-btn" title="Skills" aria-label="Skills">
+                <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn seller-home__conv-composer-btn" title="Skills" aria-label="Skills">
                   <span
                     class="slds-button__icon seller-home__conv-composer-btn-image"
                     style="--sh-composer-icon-image: url('/assets/images/nav-icons/skills.png')"
@@ -499,12 +545,36 @@
                   ></span>
                   <span class="slds-assistive-text">Skills</span>
                 </button>
-                <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__conv-composer-btn" title="All tools" aria-label="All tools">
+                <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn seller-home__conv-composer-btn" title="All tools" aria-label="All tools">
                   <svg class="slds-button__icon" aria-hidden="true">
                     <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#all"></use>
                   </svg>
                   <span class="slds-assistive-text">All tools</span>
                 </button>
+
+                {# ── Agent switcher ──────────────────────────────────
+                   The same chooser Seller Home carries, so the agent you
+                   picked before sending is still switchable once you are
+                   in the thread. Rendered from the SAME data (index.json
+                   → `composer.actions.start`, the entry with a `menu`)
+                   through the SAME macro, so there is one definition of
+                   what the menu looks like and one list of agents.
+
+                   `bindComposerMenus` in home.js drives it. That binder
+                   delegates on whatever root it is handed, and this
+                   composer is not `[data-sh-composer-root]` — it must
+                   not be, or home.js would also wire Seller Home's
+                   submit-navigates-away behavior onto a follow-up input.
+                   So home.js binds it against `[data-sh-conv-composer]`
+                   instead; see the call there. #}
+                {% from "_home_composer.html" import composerActionMenu as convComposerActionMenu %}
+                {% set _agentAction = null %}
+                {% for _action in (_home.composer.actions.start or []) %}
+                  {% if _action.menu %}{% set _agentAction = _action %}{% endif %}
+                {% endfor %}
+                {% if _agentAction %}
+                  {{ convComposerActionMenu(_agentAction) }}
+                {% endif %}
               </div>
 
               <div
@@ -514,7 +584,7 @@
               >
                 <button
                   type="submit"
-                  class="slds-button slds-button_icon slds-button_icon-bare seller-home__conv-composer-btn seller-home__conv-composer-send"
+                  class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn seller-home__conv-composer-btn seller-home__conv-composer-send"
                   title="Send message"
                   aria-label="Send message"
                   data-sh-conv-composer-send
@@ -725,6 +795,16 @@
      global exists at boot; the page degrades to a normal conversation
      if it is absent. #}
   <script src="/scripts/schedule_conversation.js"></script>
+
+  {# Shared reveal engine (`window.ShStream`) — agent prose streams in
+     word by word and table rows cascade, the same motion the onboarding
+     conversation uses. Loaded BEFORE home_conversation.js so the global
+     exists at boot; without it every reply simply appears at once. #}
+  <script src="/scripts/conversation_stream.js"></script>
+  {# Reusable ThinkingTrace component (window.ThinkingTrace) — mounted by
+     home_conversation.js as the opening thinking phase when a conversation's
+     `opening.trace` is present. Loaded before it so the global exists at boot. #}
+  <script src="/scripts/thinking_trace.js"></script>
   <script src="/scripts/home_conversation.js"></script>
 
   {# Tools modal for the composer's "View all". GSAP (vendored) loads

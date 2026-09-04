@@ -369,8 +369,16 @@
 
       {# Schedule-details panel — one shell that spans the full
          workspace height, populated by bindScheduled() from the config
-         scripts below. #}
-      {% include "_schedule_side_panel.html" %}
+         scripts below.
+
+         TEMPORARILY DISABLED during the main→branch merge: the partial
+         `_schedule_side_panel.html` and its SCSS were never committed to
+         this branch, so the include broke the build. bindScheduled() in
+         home.js is written to no-op when the panel markup is absent, so
+         the page works without it. Restore this once the partial + styles
+         are added back (just uncomment the line below):
+         {% include "_schedule_side_panel.html" %}
+      #}
       </div>{# /.seller-home__scheduled-workspace #}
 
       {# ── Config for the details panel ────────────────────────────

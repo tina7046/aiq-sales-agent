@@ -145,6 +145,95 @@ nunjucksEnv.addGlobal('readData', (name) => {
     return null
   }
 })
+
+// `expandRuns(conv)` — expand a scheduled-workflow conversation whose
+// thread is one block per run into the full message list the feed
+// renders. Such a conversation authors only a few runs as content
+// templates (`conv.messages`, each run starting at a message that
+// carries a `runId`); this clones them across every entry in
+// `conv.runHistory.runs`, so the thread reflects the whole run history
+// without hand-writing dozens of near-identical blocks. (The user's
+// ask: "generate 5 and re-use the same 5 over and over, swapping the
+// dates.")
+//
+// Per run it prepends a `run_header` message ("{title} | {date}") that
+// doubles as the run's scroll anchor, then a template's messages with
+// their ids namespaced to the run (so nothing collides in the DOM) and
+// their own `runId` stripped — the header is the single run-start the
+// feed divider keys off. Failed runs take the short "didn't finish"
+// template; completed runs cycle the full ones. The lead's "week of …"
+// date is rewritten to the run's date; deeper figures stay the
+// template's (a reused block, dated at the top).
+//
+// Feed order is oldest-first (runHistory is newest-first), so the most
+// recent run sits at the bottom by the composer, like any chat thread.
+// A conversation without runHistory is returned unchanged.
+nunjucksEnv.addGlobal('expandRuns', (conv) => {
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+  const fmtLong = (iso) => { const p = String(iso).slice(0, 10).split('-').map(Number); return MONTHS[p[1] - 1] + ' ' + p[2] + ', ' + p[0] }
+  const fmtMonthDay = (iso) => { const p = String(iso).slice(0, 10).split('-').map(Number); return MONTHS[p[1] - 1] + ' ' + p[2] }
+
+  // Only conversations that opt in with `expandFromTemplates` are built
+  // from templates. A run-based thread whose messages ARE the runs
+  // already (e.g. the Pipeline Snapshot runs), or a conversation that
+  // just wants the header dropdown over its own single run, keeps its
+  // authored messages untouched — it returns here unchanged and only the
+  // Run History dropdown (rendered separately) is added.
+  const rh = conv && conv.runHistory
+  if (!rh || !rh.expandFromTemplates || !Array.isArray(rh.runs) || !rh.runs.length) {
+    return (conv && conv.messages) || []
+  }
+  const msgs = conv.messages || []
+  if (!msgs.length) return msgs
+
+  // Group the authored messages into run templates: a new template
+  // starts at each message carrying a `runId`, and runs until the next.
+  const templates = []
+  let cur = null
+  for (const m of msgs) {
+    if (m.runId) { cur = []; templates.push(cur) }
+    if (cur) cur.push(m)
+  }
+  if (!templates.length) return msgs
+
+  const shortTpl = templates.find((t) => t.length === 1) || null
+  const fullTpls = templates.filter((t) => t.length > 1)
+  const title = rh.headerTitle || 'Run'
+  const clone = (o) => JSON.parse(JSON.stringify(o))
+
+  const out = []
+  let fullIdx = 0
+  const runs = rh.runs.slice().reverse() // oldest-first for the feed
+  for (const run of runs) {
+    const tpl = (run.status === 'failed' && shortTpl)
+      ? shortTpl
+      : (fullTpls.length ? fullTpls[fullIdx++ % fullTpls.length] : templates[0])
+
+    out.push({
+      id: run.runId + '-header',
+      type: 'run_header',
+      runId: run.runId, // the ONE run-start per run — the divider keys off it
+      titleLabel: title,
+      dateLabel: fmtLong(run.startedAt)
+    })
+
+    for (let i = 0; i < tpl.length; i++) {
+      const c = clone(tpl[i])
+      delete c.runId // headers own the run boundary now
+      c.id = run.runId + '-' + c.id
+      if (c.table && c.table.id) c.table.id = run.runId + '-' + c.table.id
+      if (c.table && Array.isArray(c.table.rows)) {
+        for (const r of c.table.rows) { if (r && r.id) r.id = run.runId + '-' + r.id }
+      }
+      // The lead carries the only date worth reconciling with the run.
+      if (i === 0 && typeof c.text === 'string') {
+        c.text = c.text.replace(/for the week of \*\*[^*]+\*\*/, 'for the week of **' + fmtMonthDay(run.startedAt) + '**')
+      }
+      out.push(c)
+    }
+  }
+  return out
+})
 // `today()` — the current date as "Mon July 13", the shape the Seller Home
 // review header has always shown. A function rather than a value so a
 // dev watcher left running overnight re-renders it, and so a `dist` built

@@ -11,14 +11,16 @@
     │  Your agent at work   Tue Aug 18                           ⋮ │
     │  ┌────────────────────────────────────────────────────────┐  │
     │  │ ✓  Found new prospects                     [badge]  ⋮  │  │
-    │  │    Completed · Next run in 3 days                      │  │
-    │  │    ( ▨ 7 accounts imported ) ( ▨ 25 prospects )        │  │
+    │  │    Weekly · Next run in 3 days                         │  │
+    │  │    ( ▨ 7 new accounts ) ( ▨ 25 prospects )             │  │
     │  └────────────────────────────────────────────────────────┘  │
     └──────────────────────────────────────────────────────────────┘
 
-  Every row's second line is two slots — "<status> · <time>" — and the
+  Every row's second line is two slots — left · right — and the
   glyph on its left is a button: it shows what the row is doing and
-  pressing it pauses, resumes, or retries.
+  pressing it pauses, resumes, or retries. The left slot is cadence
+  on Ready/Scheduled, step progress on Running, and a status word
+  on Paused/Failed/Archived (those aren't already named by a header).
 
   Data: `feed.*` in data/index.json (see that file for the row
   contract). Behaviour: `bindFeed` in scripts/home.js, which boots off
@@ -31,10 +33,27 @@
   job, so a running row doesn't spend its file-type icons on a spinner.
   An unknown `output.icon` degrades to a text-only chip rather than
   failing.
+
+  Scheduled variant: an output may author `scheduledIcon` (an outputTypes
+  key, grey by convention) and `scheduledLabel` (a generic label with no
+  progress count). When present, both variants are emitted as data-attrs
+  and `applyFeedState` (home.js) swaps them in the moment a Stop moves the
+  row into Scheduled — so a waiting run doesn't keep a colored pill that
+  still claims "42 of 50". Restored to the authored default on any other
+  state. Pills without a variant carry no marker and are never touched.
 #}
 {% macro outputPill(output, outputTypes) %}
 {% set typeInfo = outputTypes[output.icon] %}
-<span class="slds-badge slds-badge_lightest seller-home__feed-item-output-pill">
+{% set schedInfo = outputTypes[output.scheduledIcon] if output.scheduledIcon else null %}
+{% set hasSchedVariant = output.scheduledLabel or (schedInfo and schedInfo.iconImage) %}
+<span class="slds-badge slds-badge_lightest seller-home__feed-item-output-pill"
+  {%- if hasSchedVariant %}
+  data-sh-feed-output
+  data-sh-feed-output-label-default="{{ output.label }}"
+  {%- if output.scheduledLabel %} data-sh-feed-output-label-scheduled="{{ output.scheduledLabel }}"{% endif %}
+  {%- if typeInfo and typeInfo.iconImage %} data-sh-feed-output-icon-default="{{ typeInfo.iconImage }}"{% endif %}
+  {%- if schedInfo and schedInfo.iconImage %} data-sh-feed-output-icon-scheduled="{{ schedInfo.iconImage }}"{% endif %}
+  {%- endif %}>
   {% if typeInfo %}
     {% if typeInfo.iconImage %}
       <img
@@ -85,9 +104,13 @@
   Only the accessible name is left for JS to keep in sync, since CSS
   can't write one.
 #}
-{% macro statusButton(item) %}
+{% macro statusButton(item, filtered) %}
 {% if item.state == "failed" %}{% set verb = "Retry " %}
 {% elif item.state == "paused" %}{% set verb = "Resume " %}
+{% elif filtered and item.state == "running" %}{% set verb = "Stop " %}
+{% elif filtered and item.state == "completed" %}{% set verb = "Run " %}
+{% elif filtered and item.state == "scheduled" %}{% set verb = "Run " %}
+{% elif filtered and item.state == "archived" %}{% set verb = "Restart " %}
 {% else %}{% set verb = "Pause " %}{% endif %}
 {% set label = verb ~ item.title %}
 <button
@@ -102,7 +125,7 @@
     class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--spinner sh-spinner"
     aria-hidden="true"
   ></span>
-  {% for glyph in ["circle", "clock", "pause", "play", "warning", "refresh"] %}
+  {% for glyph in ["circle", "clock", "pause", "play", "warning", "refresh", "stop", "ban"] %}
   <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--{{ glyph }}" aria-hidden="true">
     <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ glyph }}"></use>
   </svg>
@@ -114,20 +137,21 @@
 {#
   Subline halves, resolved from the row's state.
 
-  Left is the status word from `feed.statusLabels`, except on
-  `scheduled` rows, which show the cadence instead: a row that's merely
-  waiting has no status worth naming, and "Daily" also keeps it from
-  reading exactly like a `completed` row, since both name a next run on
-  the right.
+  Left is cadence on Ready (`completed`) and Scheduled — the group
+  header already names those states, so restating "Completed" /
+  "Running now" is wasted. Running shows step progress instead
+  (`2 of 5 steps`): elapsed time is knowable, remaining time is not.
+  Paused / Failed / Archived still use the status word; those states
+  aren't already labelled by a Ready/Running header.
 
   Right is whichever time field that state actually has. They're
   separate fields rather than one `time` string so a row can change
   state without a data rewrite — pausing a running row needs its
   `lastRun` to already be there.
 #}
-{% macro sublineStatus(item, statusLabels) %}{% if item.state == "scheduled" %}{{ item.cadence }}{% else %}{{ statusLabels[item.state] }}{% endif %}{% endmacro %}
+{% macro sublineStatus(item, statusLabels) %}{% if item.state == "completed" or item.state == "scheduled" %}{{ item.cadence }}{% elif item.state == "running" %}{{ item.stepProgress or statusLabels.running }}{% else %}{{ statusLabels[item.state] }}{% endif %}{% endmacro %}
 
-{% macro sublineTime(item) %}{% if item.state == "running" %}{{ item.startedAt }}{% elif item.state == "paused" or item.state == "failed" %}{{ item.lastRun }}{% else %}{{ item.nextRun }}{% endif %}{% endmacro %}
+{% macro sublineTime(item) %}{% if item.state == "running" %}{{ item.startedAt }}{% elif item.state == "paused" or item.state == "failed" or item.state == "archived" %}{{ item.lastRun }}{% elif item.state == "completed" %}{{ item.nextRun or item.lastRun }}{% else %}{{ item.nextRun }}{% endif %}{% endmacro %}
 
 
 {#
@@ -148,16 +172,24 @@
   `bindFeed` switches slots by key and never composes wording, which is
   what keeps all the copy in index.json.
 #}
-{% macro sublineSlot(name, klass, rest, paused, running, completed, scheduled) %}
+{#
+  Every slot value is coalesced to "" before `trim`, because a state a
+  given page doesn't define would otherwise arrive here undefined, and
+  `trim` calls `.replace` on it, which throws and drops the whole page
+  from the build. An empty slot is harmless: that state never renders on
+  that page.
+#}
+{% macro sublineSlot(name, klass, rest, paused, running, completed, scheduled, archived) %}
 <span
   class="{{ klass }}"
   data-sh-feed-slot="{{ name }}"
-  data-sh-feed-slot-default="{{ rest | trim }}"
-  data-sh-feed-slot-paused="{{ paused | trim }}"
-  data-sh-feed-slot-running="{{ running | trim }}"
-  data-sh-feed-slot-completed="{{ completed | trim }}"
-  data-sh-feed-slot-scheduled="{{ scheduled | trim }}"
->{{ rest | trim }}</span>
+  data-sh-feed-slot-default="{{ (rest or "") | trim }}"
+  data-sh-feed-slot-paused="{{ (paused or "") | trim }}"
+  data-sh-feed-slot-running="{{ (running or "") | trim }}"
+  data-sh-feed-slot-completed="{{ (completed or "") | trim }}"
+  data-sh-feed-slot-scheduled="{{ (scheduled or "") | trim }}"
+  data-sh-feed-slot-archived="{{ (archived or "") | trim }}"
+>{{ (rest or "") | trim }}</span>
 {% endmacro %}
 
 
@@ -294,15 +326,17 @@
   `<a href="#">`, which announced a link, sat in the tab order as a
   link, and then had its navigation cancelled in JS.
 #}
-{% macro feedItem(item, outputTypes, rowActions, statusLabels, retryTime) %}
+{% macro feedItem(item, outputTypes, rowActions, statusLabels, retryTime, filtered) %}
 {% set descId = "seller-home-feed-" ~ item.id ~ "-desc" %}
 {% set menuId = "seller-home-feed-" ~ item.id ~ "-menu" %}
 {% set isPaused = item.state == "paused" %}
 {% set hasWorkflow = item.workflow and item.workflow.label %}
 {% set linkName = item.title ~ (", workflow: " ~ item.workflow.label if hasWorkflow else "") %}
-{# Where a resumed row returns to. A row that ships paused resumes into
-   the schedule rather than back into "paused". #}
-{% set homeState = "scheduled" if isPaused else item.state %}
+{# Where a resumed row returns to. A row that ships paused goes back into
+   the schedule rather than back into "paused". (Under the filter, Resume
+   overrides this to `running` in home.js; this stays the fallback /
+   Seller Home behaviour.) #}
+{% set homeState = "scheduled" if (isPaused or item.state == "archived") else item.state %}
 {# A third line under the subline — pills or an error badge — is what
    turns the compact 56px card into the padded variant. Keyed on either,
    not just on outputs: a failed row has an error badge instead of pills
@@ -316,11 +350,17 @@
 <article
   class="seller-home__feed-item{% if hasThirdLine %} seller-home__feed-item--has-outputs{% endif %}"
   data-sh-feed-item="{{ item.id }}"
+  {%- if item.workflow and item.workflow.id %}
+  data-sh-feed-skill="{{ item.workflow.id }}"
+  {%- endif %}
   data-sh-feed-state="{{ item.state }}"
   data-sh-feed-state-default="{{ homeState }}"
+  {%- if item.nextRun %}
+  data-sh-feed-has-schedule
+  {%- endif %}
 >
   <div class="seller-home__feed-item-main">
-    {{ statusButton(item) }}
+    {{ statusButton(item, filtered) }}
 
     <div class="seller-home__feed-item-body">
       {# `aria-label` is only set when there's a workflow to append —
@@ -340,6 +380,7 @@
           data-sh-feed-slot-running="{{ runningTitle }}"
           data-sh-feed-slot-completed="{{ item.title }}"
           data-sh-feed-slot-scheduled="{{ neutralTitle }}"
+          data-sh-feed-slot-archived="{{ neutralTitle }}"
           {%- if hasWorkflow %}
           aria-label="{{ linkName }}"
           data-sh-feed-item-name-suffix="{{ ', workflow: ' ~ item.workflow.label }}"
@@ -357,6 +398,7 @@
           data-sh-feed-slot-running="{{ runningTitle }}"
           data-sh-feed-slot-completed="{{ item.title }}"
           data-sh-feed-slot-scheduled="{{ neutralTitle }}"
+          data-sh-feed-slot-archived="{{ neutralTitle }}"
           {%- if hasWorkflow %}
           aria-label="{{ linkName }}"
           data-sh-feed-item-name-suffix="{{ ', workflow: ' ~ item.workflow.label }}"
@@ -366,11 +408,15 @@
         {% endif %}
       </h3>
 
-      {# Subline — "<status> · <time>". #}
+      {# Subline — left · right. Left is cadence (Ready/Scheduled),
+         step progress (Running), or a status word (Paused/Failed/
+         Archived). The running slot is `stepProgress` so Run now
+         has copy; the completed slot is cadence so a finish from
+         the kebab doesn't put "Completed" back. #}
       <p class="seller-home__feed-item-desc" id="{{ descId }}">
-        {{ sublineSlot("status", "seller-home__feed-item-desc-status", sublineStatus(item, statusLabels), statusLabels.paused, statusLabels.running, statusLabels.completed, item.cadence) }}
+        {{ sublineSlot("status", "seller-home__feed-item-desc-status", sublineStatus(item, statusLabels), statusLabels.paused, item.stepProgress or statusLabels.running, item.cadence, item.cadence, statusLabels.archived) }}
         <span class="seller-home__feed-item-desc-sep" aria-hidden="true">·</span>
-        {{ sublineSlot("time", "seller-home__feed-item-desc-time", sublineTime(item), item.lastRun, retryTime, item.nextRun or item.lastRun or item.startedAt, item.nextRun or item.lastRun or item.startedAt) }}
+        {{ sublineSlot("time", "seller-home__feed-item-desc-time", sublineTime(item), item.lastRun, retryTime, item.nextRun or item.lastRun or item.startedAt, item.nextRun or item.lastRun or item.startedAt, item.lastRun or item.nextRun) }}
       </p>
 
       {# Readable, not aria-hidden. These counts are the row's payload
@@ -438,6 +484,64 @@
       >{{ feed.date or today() }}</span>
     </div>
 
+    {% if feed.filter %}
+    {#
+      Filter control (LAB-ONLY, gated on `feed.filter`). Replaces the
+      section kebab: a filter-icon button opening a listbox of the views
+      (Active / Scheduled / Archived). Selecting one writes
+      `data-sh-feed-filter` onto the list below (home.js), which the view
+      rules in home.scss switch on. `role="listbox"` + `option` +
+      `aria-selected` because exactly one view is active at a time.
+    #}
+    <div class="seller-home__feed-overflow seller-home__feed-filter" data-sh-feed-filter-root>
+      <button
+        type="button"
+        class="slds-button slds-button_icon slds-button_icon-bare seller-home__feed-overflow-trigger seller-home__feed-filter-trigger"
+        data-sh-feed-filter-trigger
+        aria-haspopup="listbox"
+        aria-expanded="false"
+        aria-controls="seller-home-feed-filter-menu"
+        title="Filter: {% for opt in feed.filter.options %}{% if opt.id == feed.filter.default %}{{ opt.label }}{% endif %}{% endfor %}"
+        aria-label="Filter: {% for opt in feed.filter.options %}{% if opt.id == feed.filter.default %}{{ opt.label }}{% endif %}{% endfor %}"
+      >
+        <svg class="slds-button__icon" aria-hidden="true">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#filterList"></use>
+        </svg>
+        {# The current view, shown beside the icon. aria-hidden because the
+           button's aria-label already carries it; home.js keeps both in
+           sync when the view changes. #}
+        <span class="seller-home__feed-filter-label" aria-hidden="true" data-sh-feed-filter-label>{% for opt in feed.filter.options %}{% if opt.id == feed.filter.default %}{{ opt.label }}{% endif %}{% endfor %}</span>
+      </button>
+
+      <div
+        class="seller-home__feed-overflow-menu seller-home__feed-filter-menu"
+        id="seller-home-feed-filter-menu"
+        role="listbox"
+        aria-label="Filter"
+        data-sh-feed-filter-menu
+        hidden
+      >
+        <ul class="seller-home__feed-overflow-list" role="none">
+          {% for opt in feed.filter.options %}
+            <li role="none">
+              <button
+                type="button"
+                class="seller-home__feed-overflow-item seller-home__feed-filter-item"
+                role="option"
+                aria-selected="{% if opt.id == feed.filter.default %}true{% else %}false{% endif %}"
+                data-sh-feed-filter-option="{{ opt.id }}"
+              >
+                <span class="seller-home__feed-filter-item-label">{{ opt.label }}</span>
+                <svg class="seller-home__feed-filter-item-check" aria-hidden="true" focusable="false">
+                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+                </svg>
+              </button>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% else %}
     {#
       Overflow menu. `hidden` attribute is the source of truth for
       open/close; `.is-open` mirror class is only there to give CSS
@@ -482,6 +586,7 @@
         </ul>
       </div>
     </div>
+    {% endif %}
   </div>
 
   {# One flat list — no tabs, no panels. `role="list"` survives the
@@ -498,14 +603,24 @@
 
      Group headers are opt-in: they render only where the data defines
      `feed.groups`, which today is the lab page and not Seller Home. #}
-  <ul class="seller-home__feed-list" role="list">
-    {% if feed.groups %}{{ groupHeader("active", feed.groups.active, feed.stateOrder[0]) }}{% endif %}
+  <ul
+    class="seller-home__feed-list"
+    role="list"
+    {% if feed.filter %}data-sh-feed-filter="{{ feed.filter.default }}"{% endif %}
+  >
+    {#- Filter mode groups the Active view into Ready/Running/Paused via a
+        header before each of those states (labels from
+        `feed.filter.sections`); the view rules in home.scss show them
+        only under `data-sh-feed-filter="active"`. Otherwise the original
+        Active/Paused headers (`feed.groups`) render. -#}
+    {% if not feed.filter and feed.groups %}{{ groupHeader("active", feed.groups.active, feed.stateOrder[0]) }}{% endif %}
     {% for state in feed.stateOrder %}
-      {% if feed.groups and state == "paused" %}{{ groupHeader("paused", feed.groups.paused, "paused") }}{% endif %}
+      {% if feed.filter and feed.filter.sections[state] %}{{ groupHeader(state, feed.filter.sections[state], state) }}
+      {% elif not feed.filter and feed.groups and state == "paused" %}{{ groupHeader("paused", feed.groups.paused, "paused") }}{% endif %}
       {% for item in feed.items %}
         {% if item.state == state %}
           <li class="seller-home__feed-list-item" data-sh-feed-list-item>
-            {{ feedItem(item, feed.outputTypes, feed.rowActions, feed.statusLabels, feed.retryTime) }}
+            {{ feedItem(item, feed.outputTypes, feed.rowActions, feed.statusLabels, feed.retryTime, feed.filter) }}
           </li>
         {% endif %}
       {% endfor %}
@@ -523,4 +638,22 @@
     <p class="seller-home__feed-empty-heading">{{ feed.empty.heading }}</p>
     <p class="seller-home__feed-empty-body">{{ feed.empty.body }}</p>
   </div>
+
+  {# Filter empty states (LAB) — one message per view, gated on
+     `feed.filter.empty`. The list keeps its rows in filter mode
+     (archiving retains them), so the "no list items" rule above never
+     fires here; home.scss shows the matching message when the current
+     view's own states are all absent. #}
+  {% if feed.filter and feed.filter.empty %}
+    {% for view, msg in feed.filter.empty %}
+    <div
+      class="seller-home__feed-empty seller-home__feed-empty--filter"
+      data-sh-feed-empty-view="{{ view }}"
+      role="status"
+    >
+      <p class="seller-home__feed-empty-heading">{{ msg.heading }}</p>
+      <p class="seller-home__feed-empty-body">{{ msg.body }}</p>
+    </div>
+    {% endfor %}
+  {% endif %}
 </section>

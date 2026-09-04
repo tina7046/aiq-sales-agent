@@ -164,6 +164,16 @@
 //                                        Count is baked into the string so
 //                                        the template stays a plain render
 //                                        with no singularization logic.
+//                    - `scheduledIcon`  (string, optional) outputTypes key
+//                                        used once the row is Stopped into
+//                                        Scheduled — grey, since a waiting
+//                                        run has no live result yet.
+//                    - `scheduledLabel` (string, optional) generic label for
+//                                        that state, dropping the progress
+//                                        count ("Target accounts", not "42 of
+//                                        50 accounts"). Both are swapped in by
+//                                        applyFeedState (home.js) on the state
+//                                        change and restored on any other.
 //                  Icon COLOR is deliberately not in data — the SLDS 2
 //                  standard-icon class (`slds-icon-standard-{sprite}`)
 //                  supplies the canonical Salesforce object color via
@@ -543,6 +553,26 @@
       "workflow": { "id": "buyer_engage", "label": "Buyer Engage" },
       "status":   "in_progress",
       "recentLabel": "Found new prospects",
+      // Run History dropdown, one run. No `expandFromTemplates`, so the
+      // thread below is untouched — this only adds the header control for
+      // consistency with the other workflow threads. With a single run
+      // there is nowhere to navigate, so `messageId` is null and
+      // selecting it is a no-op.
+      "runHistory": {
+        "label": "Run history",
+        "cadence": "weekly",
+        "headerTitle": "Found new prospects",
+        "runs": [
+          {
+            "runId": "conv-001-run-1",
+            "status": "completed",
+            "label": "August 20 at 9:00 AM",
+            "period": "Aug 17 - Aug 24",
+            "startedAt": "2026-08-20T09:00:00-07:00",
+            "messageId": null
+          }
+        ]
+      },
       // Thread content, in display order. Which of these paint
       // immediately and which arrive on a timer is decided by
       // `opening` below — a message named there is held back and
@@ -1157,6 +1187,42 @@
       // content that shouldn't wait. Remove `opening` entirely and the
       // whole thread paints at once, as it did before.
       "opening": {
+        // ThinkingTrace as the single thinking phase — connect the tools, then
+        // use the skills — folding to a completed header before the answer
+        // streams in from msg-response. Content mirrors the retired running-lab
+        // flat prototype this "Found new prospects" flow was built in.
+        // Rendered by ThinkingTrace.mount in home_conversation.js.
+        "trace": {
+          // No completedLabel → the header shows the REAL elapsed time on
+          // finish (e.g. "Worked for 15s"). Narratives are brief; the detailed
+          // reasoning shows in each step's cycling `cycle` micro-texts.
+          "timings": { "totalMs": 14000, "stepGapMs": 200 },
+          "steps": [
+            {
+              "label": "Connected 5 tools",
+              "narrative": "First, let me connect the tools I'll pull real signal from.",
+              "cycle": ["Connecting tools", "Reading your Salesforce pipeline", "Pulling ZoomInfo firmographics", "Scanning recent Gong calls", "Checking the web for signals", "Reviewing LinkedIn profiles"],
+              "substeps": [
+                { "source": "Gong", "label": "Gong" },
+                { "source": "Web", "label": "Web" },
+                { "source": "LinkedIn", "label": "LinkedIn" },
+                { "source": "ZoomInfo", "label": "ZoomInfo" },
+                { "source": "Salesforce", "label": "Salesforce" }
+              ]
+            },
+            {
+              "label": "Used 4 skills",
+              "narrative": "Now I'll run the analysis with the right skills.",
+              "cycle": ["Loaded skills", "Starting account research", "Scoring accounts against ICP", "Finding prospects", "Scoring against persona", "Drafting outreach", "Building cadences"],
+              "substeps": [
+                { "img": "/assets/images/nav-icons/skills.png", "label": "Account research" },
+                { "img": "/assets/images/nav-icons/skills.png", "label": "Find prospects" },
+                { "img": "/assets/images/nav-icons/skills.png", "label": "Write emails" },
+                { "img": "/assets/images/nav-icons/skills.png", "label": "Create cadence" }
+              ]
+            }
+          ]
+        },
         "stages": [
           {
             "id": "open-01",
@@ -2082,12 +2148,25 @@
       "workflow": { "id": "pipeline_review", "label": "Pipeline Review" },
       "status": "in_progress",
       "recentLabel": "Pipeline reality check",
+      // Run History dropdown, one run (header control only; no
+      // `expandFromTemplates`, so the thread is unchanged). Single run,
+      // so `messageId` is null and selecting it is a no-op.
+      "runHistory": {
+        "label": "Run history",
+        "cadence": "weekly",
+        "headerTitle": "Pipeline Review",
+        "runs": [
+          {
+            "runId": "conv-002-run-1",
+            "status": "completed",
+            "label": "August 24 at 9:00 AM",
+            "period": "Aug 17 - Aug 24",
+            "startedAt": "2026-08-24T09:00:00-07:00",
+            "messageId": null
+          }
+        ]
+      },
       "messages": [
-        {
-          "id":   "c2-intro",
-          "type": "agent",
-          "text": "I\u2019ll pull your current pipeline data right now to give you the three most critical things you need to know to hit your number. Let me grab your open opportunities and recent win/loss data."
-        },
         {
           "id":   "c2-lead",
           "type": "agent",
@@ -2214,13 +2293,39 @@
       // engagement, then compare wins and losses. The labels narrate
       // the same steps the answer describes itself taking.
       "opening": {
+        // A reusable ThinkingTrace plays as the single thinking phase —
+        // connect the tools, then load the skills — then folds to a completed
+        // header. Once it collapses the answer streams in from c2-lead down.
+        // Rendered by ThinkingTrace.mount in home_conversation.js; the intro
+        // reasoning that used to be `c2-intro` now lives in the tools step.
+        "trace": {
+          "completedLabel": "Worked for 12 seconds",
+          "timings": { "totalMs": 12000, "stepGapMs": 150 },
+          "steps": [
+            {
+              "label": "Connected 5 tools",
+              "narrative": "First, I'll pull your current pipeline data right now — grabbing your open opportunities and recent win/loss data — so the three things I surface are the ones that actually move your number. Let me connect the tools that hold the signal.",
+              "cycle": ["Connecting tools", "Connected to Salesforce", "Connected to Gong", "Connected to Outlook", "Connected to Slack", "Connected to Gmail"],
+              "substeps": [
+                { "source": "Salesforce", "label": "Salesforce" },
+                { "source": "Gong", "label": "Gong" },
+                { "icon": "email", "label": "Outlook" },
+                { "source": "Slack", "label": "Slack" },
+                { "source": "Gmail", "label": "Gmail" }
+              ]
+            },
+            {
+              "label": "Used 2 skills",
+              "narrative": "Now I'll load the skills to run the analysis — a Salesforce query over your open pipeline and a search across our past conversations for context.",
+              "cycle": ["Finding skills", "Ran Salesforce query", "Searched past conversations"],
+              "substeps": [
+                { "img": "/assets/images/nav-icons/skills.png", "label": "Salesforce query" },
+                { "img": "/assets/images/nav-icons/skills.png", "label": "Search Past Conversations" }
+              ]
+            }
+          ]
+        },
         "stages": [
-          {
-            "id": "c2-open-01",
-            "thinkingMs": 1600,
-            "thinkingLabel": "Pulling your open opportunities and win/loss data\u2026",
-            "messageIds": ["c2-intro"]
-          },
           {
             "id": "c2-open-02",
             "thinkingMs": 2400,
@@ -2259,8 +2364,635 @@
         }
       ]
     },
+    // ── conv-weekly-top-3 ───────────────────────────────────────────
+    // Run history. This thread is one scheduled workflow that has run
+    // five times, and every run appended into the same conversation
+    // rather than starting a new one — which is the point being
+    // prototyped: over weeks the feed gets long, so the header carries a
+    // Run History dropdown to jump between runs.
+    //
+    // Each run answers the same question conv-002 answers ("the 3 things
+    // you need to know right now") and reuses its `insight` shape: a
+    // ranked headline with a triage dot, the evidence under it, and the
+    // takeaway. Prose accepts `**bold**` / `_italic_` via the `emphasis`
+    // filter — see gulpfile.js.
+    //
+    // `runHistory` deliberately is NOT `workflowContext`: that key is
+    // what switches on the workflow side panel and the header's Activity
+    // button (see the include in home_conversation.html), and this
+    // surface navigates runs through the dropdown alone.
+    //
+    // No `opening` block, for the same reason the pipeline snapshot has
+    // none: accumulated history should be there when the thread opens,
+    // not re-thought a run at a time.
+    //
+    // Runs are newest-first here (the order the dropdown lists them);
+    // `messages` runs oldest-first (the order the feed reads). Each run's
+    // `messageId` points at its lead message, so selecting a run lands on
+    // the top of that run rather than the middle of it. States are spread
+    // across running / completed / failed so all three icons show.
+    "conv-weekly-top-3": {
+      "id": "conv-weekly-top-3",
+      "title": "Quota Health Check",
+      "subtitle": "Quota Health Check",
+      "workflow": { "id": "wf-weekly-top-3", "label": "Quota Health Check" },
+      "status": "scheduled",
+      "recentLabel": "Quota Health Check",
+      // Newest-first, 24 weekly runs — enough history for the dropdown to
+      // show ~7 at a time and scroll (or search) for the rest.
+      //
+      // Labels reflect the SCHEDULE, not a raw run number: `cadence`
+      // picks the unit word ("Week" for weekly, "Day" for daily) and the
+      // partial pairs it with the run's position — newest is #1 — and its
+      // `period`. So the top run reads "Week 1 - Aug 24-31". `period` is
+      // the pre-formatted date span (weekly) or weekday+date (daily);
+      // it's precomputed here because the templates don't do date math.
+      // `label` stays the exact timestamp (the workflow side panel still
+      // shows it).
+      //
+      // Only the five most recent carry real thread content (the
+      // `wt3-r5..r1-lead` messages below); everything older points at the
+      // oldest retained output, standing in for runs whose detail has
+      // aged out — realistic for a feed that keeps a rolling window.
+      // Statuses are mostly completed with a few failures sprinkled in so
+      // both glyphs show while scrolling and searching.
+      "runHistory": {
+        "label": "Run history",
+        "cadence": "weekly",
+        "headerTitle": "Quota Health Check",
+        // The one conversation built FROM templates: five authored runs
+        // (below) cloned across the 24 entries here. Every other
+        // conversation's runHistory omits this and keeps its own
+        // messages (see `expandRuns` in gulpfile.js).
+        "expandFromTemplates": true,
+        "runs": [
+          {
+            "runId": "wt3-run-5",
+            "status": "completed",
+            "label": "August 24 at 9:00 AM",
+            "period": "Aug 24 - Aug 31",
+            "startedAt": "2026-08-24T09:00:00-07:00",
+            "messageId": "wt3-r5-lead"
+          },
+          {
+            "runId": "wt3-run-4",
+            "status": "completed",
+            "label": "August 17 at 9:00 AM",
+            "period": "Aug 17 - Aug 24",
+            "startedAt": "2026-08-17T09:00:00-07:00",
+            "messageId": "wt3-r4-lead"
+          },
+          {
+            "runId": "wt3-run-3",
+            "status": "failed",
+            "label": "August 10 at 9:00 AM",
+            "period": "Aug 10 - Aug 17",
+            "startedAt": "2026-08-10T09:00:00-07:00",
+            "messageId": "wt3-r3-lead"
+          },
+          {
+            "runId": "wt3-run-2",
+            "status": "completed",
+            "label": "August 3 at 9:00 AM",
+            "period": "Aug 3 - Aug 10",
+            "startedAt": "2026-08-03T09:00:00-07:00",
+            "messageId": "wt3-r2-lead"
+          },
+          {
+            "runId": "wt3-run-1",
+            "status": "completed",
+            "label": "July 27 at 9:00 AM",
+            "period": "Jul 27 - Aug 3",
+            "startedAt": "2026-07-27T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h19",
+            "status": "completed",
+            "label": "July 20 at 9:00 AM",
+            "period": "Jul 20 - Jul 27",
+            "startedAt": "2026-07-20T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h18",
+            "status": "completed",
+            "label": "July 13 at 9:00 AM",
+            "period": "Jul 13 - Jul 20",
+            "startedAt": "2026-07-13T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h17",
+            "status": "failed",
+            "label": "July 6 at 9:00 AM",
+            "period": "Jul 6 - Jul 13",
+            "startedAt": "2026-07-06T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h16",
+            "status": "completed",
+            "label": "June 29 at 9:00 AM",
+            "period": "Jun 29 - Jul 6",
+            "startedAt": "2026-06-29T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h15",
+            "status": "completed",
+            "label": "June 22 at 9:00 AM",
+            "period": "Jun 22 - Jun 29",
+            "startedAt": "2026-06-22T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h14",
+            "status": "completed",
+            "label": "June 15 at 9:00 AM",
+            "period": "Jun 15 - Jun 22",
+            "startedAt": "2026-06-15T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h13",
+            "status": "completed",
+            "label": "June 8 at 9:00 AM",
+            "period": "Jun 8 - Jun 15",
+            "startedAt": "2026-06-08T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h12",
+            "status": "failed",
+            "label": "June 1 at 9:00 AM",
+            "period": "Jun 1 - Jun 8",
+            "startedAt": "2026-06-01T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h11",
+            "status": "completed",
+            "label": "May 25 at 9:00 AM",
+            "period": "May 25 - Jun 1",
+            "startedAt": "2026-05-25T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h10",
+            "status": "completed",
+            "label": "May 18 at 9:00 AM",
+            "period": "May 18 - May 25",
+            "startedAt": "2026-05-18T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h09",
+            "status": "completed",
+            "label": "May 11 at 9:00 AM",
+            "period": "May 11 - May 18",
+            "startedAt": "2026-05-11T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h08",
+            "status": "completed",
+            "label": "May 4 at 9:00 AM",
+            "period": "May 4 - May 11",
+            "startedAt": "2026-05-04T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h07",
+            "status": "completed",
+            "label": "April 27 at 9:00 AM",
+            "period": "Apr 27 - May 4",
+            "startedAt": "2026-04-27T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h06",
+            "status": "failed",
+            "label": "April 20 at 9:00 AM",
+            "period": "Apr 20 - Apr 27",
+            "startedAt": "2026-04-20T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h05",
+            "status": "completed",
+            "label": "April 13 at 9:00 AM",
+            "period": "Apr 13 - Apr 20",
+            "startedAt": "2026-04-13T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h04",
+            "status": "completed",
+            "label": "April 6 at 9:00 AM",
+            "period": "Apr 6 - Apr 13",
+            "startedAt": "2026-04-06T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h03",
+            "status": "completed",
+            "label": "March 30 at 9:00 AM",
+            "period": "Mar 30 - Apr 6",
+            "startedAt": "2026-03-30T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h02",
+            "status": "completed",
+            "label": "March 23 at 9:00 AM",
+            "period": "Mar 23 - Mar 30",
+            "startedAt": "2026-03-23T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          },
+          {
+            "runId": "wt3-run-h01",
+            "status": "completed",
+            "label": "March 16 at 9:00 AM",
+            "period": "Mar 16 - Mar 23",
+            "startedAt": "2026-03-16T09:00:00-07:00",
+            "messageId": "wt3-r1-lead"
+          }
+        ]
+      },
+      "messages": [
+        // ── Run 1 — July 27 ──
+        {
+          "id":   "wt3-r1-lead",
+          "type": "agent",
+          "runId": "wt3-run-1",
+          "text": "Here are the **3 things you need to know** for the week of **July 27**. Two need a decision from you today; the third is working and worth leaning on."
+        },
+        {
+          "id":       "wt3-r1-i1",
+          "type":     "insight",
+          "severity": "critical",
+          "rank":     1,
+          "heading":  "$48M closes inside 7 days with no meeting on the calendar",
+          "text":     "These four deals are dated to close this week and none of them has a next step booked:",
+          "tableTitle": "Closing This Week \u2014 No Meeting Scheduled",
+          "table": {
+            "id": "wt3-r1-closing",
+            "ariaLabel": "Deals closing within seven days with no meeting scheduled",
+            "columns": [
+              { "id": "deal",      "label": "Deal"       },
+              { "id": "amount",    "label": "Amount",     "align": "right" },
+              { "id": "closes",    "label": "Closes"     },
+              { "id": "nextStep",  "label": "Next Step"  }
+            ],
+            "rows": [
+              { "id": "r1c-01", "deal": "Datadog - Observability",  "amount": "$16.4M", "closes": "Jul 29", "nextStep": { "value": "None", "tone": "critical" } },
+              { "id": "r1c-02", "deal": "Snowflake - Data Cloud",   "amount": "$13.1M", "closes": "Jul 30", "nextStep": { "value": "None", "tone": "critical" } },
+              { "id": "r1c-03", "deal": "Okta - Identity",          "amount": "$10.2M", "closes": "Jul 31", "nextStep": "Email sent Jul 22" },
+              { "id": "r1c-04", "deal": "Twilio - Messaging",       "amount": "$8.6M",  "closes": "Jul 31", "nextStep": { "value": "None", "tone": "critical" } }
+            ]
+          },
+          "bottomLine": "**Bottom line:** A deal closing in four days without a meeting is not closing. Get a call on the calendar today or move the date."
+        },
+        {
+          "id":       "wt3-r1-i2",
+          "type":     "insight",
+          "severity": "warning",
+          "rank":     2,
+          "heading":  "Your two largest accounts have gone quiet for three weeks",
+          "text":     "No inbound or outbound activity on either since the first week of July:",
+          "tableTitle": "Largest Accounts \u2014 Days Since Last Touch",
+          "table": {
+            "id": "wt3-r1-quiet",
+            "ariaLabel": "Largest accounts by days since last touch",
+            "columns": [
+              { "id": "account",   "label": "Account"    },
+              { "id": "openPipe",  "label": "Open Pipe",  "align": "right" },
+              { "id": "lastTouch", "label": "Last Touch" },
+              { "id": "owner",     "label": "Champion"   }
+            ],
+            "rows": [
+              { "id": "r1q-01", "account": "Cirrus",      "openPipe": "$34.2M", "lastTouch": { "value": "22 days", "tone": "critical" }, "owner": "Robert Hayes" },
+              { "id": "r1q-02", "account": "Brightloop AI", "openPipe": "$21.8M", "lastTouch": { "value": "19 days", "tone": "warning" },  "owner": "Sofia Ramirez" }
+            ]
+          },
+          "bottomLine": "**Bottom line:** $56M of open pipeline is sitting behind two silent relationships. Re-open both this week."
+        },
+        {
+          "id":       "wt3-r1-i3",
+          "type":     "insight",
+          "severity": "positive",
+          "rank":     3,
+          "heading":  "Enterprise win rate climbed to 61% \u2014 lean on the pattern",
+          "stats": [
+            {
+              "label":  "Enterprise Win Rate",
+              "value":  "61%",
+              "trend":  "up",
+              "detail": "up from 48% last quarter"
+            },
+            {
+              "label":  "Avg Contacts Per Won Deal",
+              "value":  "4.2",
+              "trend":  "up",
+              "detail": "vs 1.9 on losses"
+            }
+          ],
+          "footnote": "The deals you win are the ones you **multi-thread**. Every loss last quarter averaged under two contacts. Apply that to the four deals above."
+        },
+        {
+          "id":   "wt3-r1-activity",
+          "type": "workflow_activity",
+          "workflowLabel": "Quota Health Check completed",
+          "workflowIcon":  "apps",
+          "statusText":    "1,840 open opportunities \u00b7 4 closing unscheduled \u00b7 2 accounts silent"
+        },
+        // ── Run 2 — August 3 ──
+        {
+          "id":   "wt3-r2-lead",
+          "type": "agent",
+          "runId": "wt3-run-2",
+          "text": "Here are the **3 things you need to know** for the week of **August 3**. Last week's silent accounts both re-opened \u2014 the new problem is where pipeline is coming from."
+        },
+        {
+          "id":       "wt3-r2-i1",
+          "type":     "insight",
+          "severity": "critical",
+          "rank":     1,
+          "heading":  "Six deals slipped out of July and landed in August untouched",
+          "text":     "They moved their close date but nothing else about them changed \u2014 same stage, same silence:",
+          "tableTitle": "Slipped From July \u2014 No Stage Movement",
+          "table": {
+            "id": "wt3-r2-slipped",
+            "ariaLabel": "Deals slipped from July with no stage movement",
+            "columns": [
+              { "id": "deal",     "label": "Deal"      },
+              { "id": "amount",   "label": "Amount",    "align": "right" },
+              { "id": "stage",    "label": "Stage"     },
+              { "id": "slips",    "label": "Times Slipped", "align": "right" }
+            ],
+            "rows": [
+              { "id": "r2s-01", "deal": "Datadog - Observability", "amount": "$16.4M", "stage": "Negotiation",    "slips": { "value": "3", "tone": "critical" } },
+              { "id": "r2s-02", "deal": "Twilio - Messaging",      "amount": "$8.6M",  "stage": "Value Prop",     "slips": { "value": "2", "tone": "warning" } },
+              { "id": "r2s-03", "deal": "Elastic - Search",        "amount": "$7.4M",  "stage": "Qualification",  "slips": "1" }
+            ]
+          },
+          "bottomLine": "**Bottom line:** A third slip is not a date problem, it is a qualification problem. Datadog needs a hard conversation this week."
+        },
+        {
+          "id":       "wt3-r2-i2",
+          "type":     "insight",
+          "severity": "warning",
+          "rank":     2,
+          "heading":  "New pipeline creation is down 22% week over week",
+          "stats": [
+            {
+              "label":  "New Pipeline Created",
+              "value":  "$12.4M",
+              "trend":  "down",
+              "detail": "down from $15.9M last week"
+            },
+            {
+              "label":  "New Opportunities",
+              "value":  "9",
+              "trend":  "down",
+              "detail": "vs 14 the week before"
+            }
+          ],
+          "footnote": "Two straight weeks of decline. At this rate you finish the quarter roughly **$9M short** of the coverage you need."
+        },
+        {
+          "id":       "wt3-r2-i3",
+          "type":     "insight",
+          "severity": "positive",
+          "rank":     3,
+          "heading":  "Both silent accounts re-opened after last week's outreach",
+          "stats": [
+            {
+              "label":  "Cirrus",
+              "value":  "Meeting booked",
+              "trend":  "up",
+              "detail": "Aug 6 with Robert Hayes"
+            },
+            {
+              "label":  "Brightloop AI",
+              "value":  "Replied Aug 1",
+              "trend":  "up",
+              "detail": "asked for pricing"
+            }
+          ],
+          "footnote": "That is **$56M** of pipeline back in motion from two emails. The same play is open on the three slipped deals above."
+        },
+        {
+          "id":   "wt3-r2-activity",
+          "type": "workflow_activity",
+          "workflowLabel": "Quota Health Check completed",
+          "workflowIcon":  "apps",
+          "statusText":    "1,871 open opportunities \u00b7 6 slipped from July \u00b7 2 accounts recovered"
+        },
+        // ── Run 3 — August 10 — failed ──
+        // The errored run. Its `messageId` points here, so selecting it
+        // from the dropdown still lands somewhere honest rather than
+        // doing nothing.
+        {
+          "id":   "wt3-r3-lead",
+          "type": "agent",
+          "runId": "wt3-run-3",
+          "text": "This run didn\u2019t finish. My Salesforce connection expired partway through reading your open opportunities, so I stopped rather than give you a partial answer built on half the pipeline. Reconnect and I\u2019ll re-run it for the week of **August 10**."
+        },
+        // ── Run 4 — August 17 ──
+        {
+          "id":   "wt3-r4-lead",
+          "type": "agent",
+          "runId": "wt3-run-4",
+          "text": "Here are the **3 things you need to know** for the week of **August 17**. Coverage recovered, but the risk moved downstream into legal."
+        },
+        {
+          "id":       "wt3-r4-i1",
+          "type":     "insight",
+          "severity": "critical",
+          "rank":     1,
+          "heading":  "$31M sits in Negotiation with no legal review started",
+          "text":     "Every one of these is dated to close this quarter, and none has been sent to legal. Redlines have averaged 18 days:",
+          "tableTitle": "In Negotiation \u2014 Legal Not Engaged",
+          "table": {
+            "id": "wt3-r4-legal",
+            "ariaLabel": "Deals in negotiation with no legal review started",
+            "columns": [
+              { "id": "deal",     "label": "Deal"      },
+              { "id": "amount",   "label": "Amount",    "align": "right" },
+              { "id": "closes",   "label": "Closes"    },
+              { "id": "legal",    "label": "Legal"     }
+            ],
+            "rows": [
+              { "id": "r4l-01", "deal": "Snowflake - Data Cloud", "amount": "$13.1M", "closes": "Sep 30", "legal": { "value": "Not sent", "tone": "critical" } },
+              { "id": "r4l-02", "deal": "Okta - Identity",        "amount": "$10.2M", "closes": "Sep 15", "legal": { "value": "Not sent", "tone": "critical" } },
+              { "id": "r4l-03", "deal": "Elastic - Search",       "amount": "$7.4M",  "closes": "Sep 30", "legal": "Verbal only" }
+            ]
+          },
+          "bottomLine": "**Bottom line:** An 18-day redline cycle means Okta is already late. Send all three to legal today."
+        },
+        {
+          "id":       "wt3-r4-i2",
+          "type":     "insight",
+          "severity": "warning",
+          "rank":     2,
+          "heading":  "Three champions changed roles at open accounts",
+          "text":     "Your primary contact moved on at each of these, and no second relationship exists to fall back on:",
+          "tableTitle": "Champion Changes \u2014 Single-Threaded Accounts",
+          "table": {
+            "id": "wt3-r4-champions",
+            "ariaLabel": "Accounts where the champion changed roles",
+            "columns": [
+              { "id": "account",  "label": "Account"   },
+              { "id": "openPipe", "label": "Open Pipe", "align": "right" },
+              { "id": "champion", "label": "Champion"  },
+              { "id": "contacts", "label": "Contacts",  "align": "right" }
+            ],
+            "rows": [
+              { "id": "r4c-01", "account": "Twilio",   "openPipe": "$8.6M", "champion": { "value": "Left company", "tone": "critical" }, "contacts": { "value": "1", "tone": "critical" } },
+              { "id": "r4c-02", "account": "Elastic",  "openPipe": "$7.4M", "champion": "Moved to Ops",                                 "contacts": { "value": "1", "tone": "warning" } },
+              { "id": "r4c-03", "account": "Confluent", "openPipe": "$5.2M", "champion": "New CRO",                                      "contacts": "2" }
+            ]
+          },
+          "bottomLine": "**Bottom line:** $21M behind one contact each. Twilio has nobody left \u2014 that deal needs a new entry point or it dies quietly."
+        },
+        {
+          "id":       "wt3-r4-i3",
+          "type":     "insight",
+          "severity": "positive",
+          "rank":     3,
+          "heading":  "Multi-threading is working \u2014 3.4 contacts per deal, up from 1.9",
+          "stats": [
+            {
+              "label":  "Avg Contacts Per Open Deal",
+              "value":  "3.4",
+              "trend":  "up",
+              "detail": "up from 1.9 in July"
+            },
+            {
+              "label":  "New Pipeline Created",
+              "value":  "$18.7M",
+              "trend":  "up",
+              "detail": "best week of the quarter"
+            }
+          ],
+          "footnote": "Coverage recovered and then some. The three single-threaded accounts above are now the **exception** rather than the pattern \u2014 close that gap and the quarter holds."
+        },
+        {
+          "id":   "wt3-r4-activity",
+          "type": "workflow_activity",
+          "workflowLabel": "Quota Health Check completed",
+          "workflowIcon":  "apps",
+          "statusText":    "1,904 open opportunities \u00b7 3 awaiting legal \u00b7 3 champion changes"
+        },
+        // ── Run 5 — August 24 — the current run ──
+        // Picks up where Run 4 left off: the legal queue it flagged and
+        // the champion it lost. Runs referring back to each other is what
+        // makes a run history worth scrolling.
+        {
+          "id":   "wt3-r5-lead",
+          "type": "agent",
+          "runId": "wt3-run-5",
+          "text": "Here are the **3 things you need to know** for the week of **August 24**. Legal moved on two of the three, and Twilio is no longer a dead end."
+        },
+        {
+          "id":       "wt3-r5-i1",
+          "type":     "insight",
+          "severity": "critical",
+          "rank":     1,
+          "heading":  "Okta is six days past its redline window and still unsigned",
+          "text":     "Legal cleared Snowflake and Elastic last week. Okta went out at the same time and has not come back:",
+          "tableTitle": "Legal Queue \u2014 Days In Review",
+          "table": {
+            "id": "wt3-r5-legal",
+            "ariaLabel": "Deals in legal review by days in review",
+            "columns": [
+              { "id": "deal",   "label": "Deal"    },
+              { "id": "amount", "label": "Amount",  "align": "right" },
+              { "id": "closes", "label": "Closes"  },
+              { "id": "status", "label": "Legal"   }
+            ],
+            "rows": [
+              { "id": "r5l-01", "deal": "Okta - Identity",        "amount": "$10.2M", "closes": "Sep 15", "status": { "value": "24 days", "tone": "critical" } },
+              { "id": "r5l-02", "deal": "Snowflake - Data Cloud", "amount": "$13.1M", "closes": "Sep 30", "status": { "value": "Cleared", "tone": "positive" } },
+              { "id": "r5l-03", "deal": "Elastic - Search",       "amount": "$7.4M",  "closes": "Sep 30", "status": { "value": "Cleared", "tone": "positive" } }
+            ]
+          },
+          "bottomLine": "**Bottom line:** Okta closes in three weeks and the redline is the only thing left. Escalate it today or move the date."
+        },
+        {
+          "id":       "wt3-r5-i2",
+          "type":     "insight",
+          "severity": "warning",
+          "rank":     2,
+          "heading":  "Two deals slipped past their close date over the weekend",
+          "text":     "Both were dated for August 21 and neither moved stage:",
+          "tableTitle": "Slipped Over The Weekend",
+          "table": {
+            "id": "wt3-r5-slipped",
+            "ariaLabel": "Deals that slipped past their close date over the weekend",
+            "columns": [
+              { "id": "deal",   "label": "Deal"   },
+              { "id": "amount", "label": "Amount", "align": "right" },
+              { "id": "stage",  "label": "Stage"  },
+              { "id": "silent", "label": "Days Silent", "align": "right" }
+            ],
+            "rows": [
+              { "id": "r5s-01", "deal": "Datadog - Observability", "amount": "$16.4M", "stage": "Negotiation", "silent": { "value": "11", "tone": "warning" } },
+              { "id": "r5s-02", "deal": "Confluent - Streaming",   "amount": "$5.2M",  "stage": "Value Prop",  "silent": "6" }
+            ]
+          },
+          "bottomLine": "**Bottom line:** Datadog has now slipped four times. It is time to either get a signature date in writing or take it out of the quarter."
+        },
+        {
+          "id":       "wt3-r5-i3",
+          "type":     "insight",
+          "severity": "positive",
+          "rank":     3,
+          "heading":  "Twilio has a new champion \u2014 the account is back to two contacts",
+          "stats": [
+            {
+              "label":  "Twilio",
+              "value":  "2 contacts",
+              "trend":  "up",
+              "detail": "new VP Eng engaged Aug 21"
+            },
+            {
+              "label":  "Avg Contacts Per Open Deal",
+              "value":  "3.6",
+              "trend":  "up",
+              "detail": "up from 3.4 last week"
+            }
+          ],
+          "footnote": "The single-threaded gap Run 4 flagged is closing. Elastic is the **last** account still resting on one relationship."
+        },
+        {
+          "id":   "wt3-r5-activity",
+          "type": "workflow_activity",
+          "workflowLabel": "Quota Health Check completed",
+          "workflowIcon":  "apps",
+          "statusText":    "1,926 open opportunities \u00b7 1 stuck in legal \u00b7 2 slipped"
+        }
+      ],
+      // One turn so a follow-up send doesn't dead-end, matching conv-002.
+      "scriptedTurns": [
+        {
+          "id": "wt3-turn-01",
+          "thinkingMs": 2200,
+          "thinkingLabel": "Pulling the legal status on all three\u2026",
+          "reply": [
+            {
+              "id":   "wt3-turn-01-reply",
+              "type": "agent",
+              "text": "On it. I\u2019ll package Snowflake, Okta, and Elastic for legal with the redline history attached, flag Okta as the one already past its normal cycle, and bring the confirmations back here before anything goes out."
+            }
+          ]
+        }
+      ]
+    },
     // ── conv-daily-pipeline-snapshot ────────────────────────────────
-    // Drill-in target for the Daily Pipeline Snapshot row on
+    // Drill-in target for the Pipeline Snapshot row on
     // `/scheduled.html`, and the first conversation here to carry a
     // `workflowContext` block. That block is the whole switch: its
     // presence is what makes home_conversation.html render the
@@ -2290,70 +3022,46 @@
     // pre-formatted so the prototype needs no date formatter.
     "conv-daily-pipeline-snapshot": {
       "id": "conv-daily-pipeline-snapshot",
-      "title": "Daily Pipeline Snapshot",
-      "subtitle": "Daily Pipeline Snapshot",
-      "workflow": { "id": "wf-daily-pipeline-snapshot", "label": "Daily Pipeline Snapshot" },
+      "title": "Pipeline Snapshot",
+      "subtitle": "Pipeline Snapshot",
+      "workflow": { "id": "wf-daily-pipeline-snapshot", "label": "Pipeline Snapshot" },
       "status": "scheduled",
-      "recentLabel": "Daily Pipeline Snapshot",
-      "workflowContext": {
-        "scheduledWorkflowId": "wf-daily-pipeline-snapshot",
-        "description": "Summarizes pipeline movement, emerging risks, and deals requiring attention.",
-        "filters": {
-          "status": "all",
-          "range":  "last_30_days"
-        },
-        "filterOptions": {
-          "status": [
-            { "value": "all",       "label": "All Statuses" },
-            { "value": "completed", "label": "Completed"    },
-            { "value": "failed",    "label": "Failed"       }
-          ],
-          "range": [
-            { "value": "today",        "label": "Today"        },
-            { "value": "last_7_days",  "label": "Last 7 days"  },
-            { "value": "last_30_days", "label": "Last 30 days" }
-          ]
-        },
+      "recentLabel": "Pipeline Snapshot",
+      // Run History dropdown for the three daily snapshots this thread
+      // already holds. Unlike Quota Health Check, this is NOT built from
+      // templates (no `expandFromTemplates`): the runs map to the
+      // snapshot messages that are authored below, so `messageId` points
+      // straight at each one and selecting a run scrolls to it. `daily`
+      // cadence renders the labels as "Day N: <weekday date>", newest
+      // first. This is the same run list the retired side panel showed.
+      "runHistory": {
+        "label": "Run history",
+        "cadence": "daily",
+        "headerTitle": "Pipeline Snapshot",
         "runs": [
           {
-            "runId":     "run-2026-08-07-0804",
-            "status":    "completed",
+            "runId": "run-2026-08-07-0804",
+            "status": "completed",
+            "label": "August 7 at 8:04 AM",
+            "period": "Fri Aug 7",
             "startedAt": "2026-08-07T08:04:00-07:00",
-            "label":     "August 7 at 8:04 AM",
-            "summary":   "68 opportunities reviewed \u00b7 7 risks found \u00b7 3 actions recommended",
             "messageId": "msg-run-2026-08-07-0804"
           },
           {
-            "runId":     "run-2026-08-06-0804",
-            "status":    "completed",
+            "runId": "run-2026-08-06-0804",
+            "status": "completed",
+            "label": "August 6 at 8:04 AM",
+            "period": "Thu Aug 6",
             "startedAt": "2026-08-06T08:04:00-07:00",
-            "label":     "August 6 at 8:04 AM",
-            "summary":   "71 opportunities reviewed \u00b7 5 risks found \u00b7 2 actions recommended",
             "messageId": "msg-run-2026-08-06-0804"
           },
           {
-            "runId":     "run-2026-08-05-0804",
-            "status":    "completed",
+            "runId": "run-2026-08-05-0804",
+            "status": "completed",
+            "label": "August 5 at 8:04 AM",
+            "period": "Wed Aug 5",
             "startedAt": "2026-08-05T08:04:00-07:00",
-            "label":     "August 5 at 8:04 AM",
-            "summary":   "66 opportunities reviewed \u00b7 4 risks found \u00b7 2 actions recommended",
             "messageId": "msg-run-2026-08-05-0804"
-          },
-          // No `messageId`: the run failed before it produced output,
-          // so there is nothing in the thread to scroll to. The panel
-          // renders this tile with a Retry button instead of a link.
-          {
-            "runId":     "run-2026-08-03-0900",
-            "status":    "failed",
-            "startedAt": "2026-08-03T09:00:00-07:00",
-            "label":     "August 3 at 9:00 AM",
-            "summary":   "Salesforce access expired before the snapshot was created",
-            "messageId": null,
-            "errorAction": {
-              "id":    "act-retry-run-2026-08-03",
-              "label": "Retry",
-              "kind":  "retry"
-            }
           }
         ]
       },
@@ -2363,7 +3071,7 @@
       //
       // Each completed run contributes ONE agent message carrying a
       // `snapshot` block, rendered by `_pipeline_snapshot.html`. The
-      // snapshot owns its own "Daily Pipeline | August 5, 2026" header,
+      // snapshot owns its own "Pipeline Snapshot | August 5, 2026" header,
       // so it separates the runs visually without a per-run activity
       // chip in between. Message ids match `runs[].messageId`, because
       // that is what the Activity list anchors to.
@@ -2377,7 +3085,7 @@
           "type": "agent",
           "runId": "run-2026-08-05-0804",
           "snapshot": {
-            "titleLabel": "Daily Pipeline",
+            "titleLabel": "Pipeline Snapshot",
             "dateLabel": "August 5, 2026",
             "date": "2026-08-05T08:04:00-07:00",
             "freshness": {
@@ -2511,7 +3219,7 @@
           "type": "agent",
           "runId": "run-2026-08-06-0804",
           "snapshot": {
-            "titleLabel": "Daily Pipeline",
+            "titleLabel": "Pipeline Snapshot",
             "dateLabel": "August 6, 2026",
             "date": "2026-08-06T08:04:00-07:00",
             "freshness": {
@@ -2645,7 +3353,7 @@
           "type": "agent",
           "runId": "run-2026-08-07-0804",
           "snapshot": {
-            "titleLabel": "Daily Pipeline",
+            "titleLabel": "Pipeline Snapshot",
             "dateLabel": "August 7, 2026",
             "date": "2026-08-07T08:04:00-07:00",
             "freshness": {
@@ -2794,7 +3502,7 @@
         {
           "id": "msg-run-activity",
           "type": "workflow_activity",
-          "workflowLabel": "Daily Pipeline Snapshot completed",
+          "workflowLabel": "Pipeline Snapshot completed",
           "workflowIcon": "apps",
           "statusText": "68 opportunities reviewed \u00b7 7 risks found \u00b7 3 actions recommended"
         }
@@ -2839,6 +3547,25 @@
       "workflow": { "id": "buyer_engage", "label": "Buyer Engage" },
       "status": "in_progress",
       "recentLabel": "Meeting Next Steps",
+      // Run History dropdown, one run (header control only; no
+      // `expandFromTemplates`, so the thread is unchanged). `daily`
+      // cadence renders the label as "Day 1: <weekday date>". Single
+      // run, so `messageId` is null and selecting it is a no-op.
+      "runHistory": {
+        "label": "Run history",
+        "cadence": "daily",
+        "headerTitle": "Meeting Next Steps",
+        "runs": [
+          {
+            "runId": "conv-003-run-1",
+            "status": "completed",
+            "label": "August 24 at 9:00 AM",
+            "period": "Mon Aug 24",
+            "startedAt": "2026-08-24T09:00:00-07:00",
+            "messageId": null
+          }
+        ]
+      },
       "messages": [
         {
           "id":   "c3-context",
@@ -3006,19 +3733,21 @@
     // to freeze it — useful when a screenshot has to match a deck.
     "date": null,
     // ── The subline ───────────────────────────────────────────────────
-    // Every row's second line is two slots: "<status> · <time>".
+    // Every row's second line is two slots: "<left> · <right>".
     //
-    //   completed   Completed   · Next run in 3 days
-    //   running     Running now · Started 4 min ago
-    //   scheduled   Daily       · Next run in 15 hours
-    //   paused      Paused      · Last run Thursday
-    //   failed      Failed      · Last run today at 6:00 AM
+    //   completed   Weekly       · Next run in 3 days
+    //   running     2 of 5 steps · 4 min elapsed
+    //   scheduled   Daily        · Next run in 15 hours
+    //   paused      Paused       · Last run Thursday
+    //   failed      Failed       · Last run today at 6:00 AM
     //
-    // `scheduled` is the one state whose left slot isn't a status word.
-    // A row that's simply waiting has no status worth naming — what you
-    // want to know is how often it runs — and using the cadence there
-    // also stops `scheduled` and `completed` from reading identically,
-    // since both name a next run on the right.
+    // Ready (`completed`) and Scheduled both lead with cadence: the
+    // group header already names those states, so restating "Completed"
+    // is wasted, and cadence is the fact the header doesn't carry.
+    // Running leads with step progress — remaining time is unknown,
+    // completed-of-total steps is the honest signal — and elapsed on
+    // the right. Paused / Failed / Archived still use a status word;
+    // those aren't already labelled by a Ready/Running header.
     //
     // The labels live here rather than in the template so the wording is
     // editable without touching markup, and so the JS that rewrites the
@@ -3041,11 +3770,46 @@
       "paused": "Paused"
     },
 
+    // ── Filter (Active / Scheduled / Archived) ────────────────────────
+    // Defining `filter` turns the whole feature on: the section kebab
+    // becomes a Filter control (with the current view labelled beside its
+    // icon), the list gets `data-sh-feed-filter`, and home.js/home.scss
+    // switch on that attribute. Prototyped on agent_at_work.html first.
+    //
+    //   options   the three views, in menu order. `default` is the one
+    //             the list opens on.
+    //   sections  Active-view sub-groups: state -> heading. Active shows
+    //             completed (Ready) and running (Running); Scheduled and
+    //             Archived are single-state and get no sections.
+    //   empty     a message per view for when it has no rows.
+    "filter": {
+      "default": "active",
+      "options": [
+        { "id": "active",    "label": "Active"    },
+        { "id": "scheduled", "label": "Scheduled" },
+        { "id": "archived",  "label": "Archived"  }
+      ],
+      "sections": {
+        "completed": "Ready",
+        "running":   "Running"
+      },
+      "empty": {
+        "active":    { "heading": "No active workflows",  "body": "Runs in progress and recent results show up here." },
+        "scheduled": { "heading": "Nothing scheduled",     "body": "Upcoming runs will appear here." },
+        "archived":  { "heading": "No archived workflows", "body": "Anything you archive lands here." }
+      }
+    },
+
+    // Left-slot words for states that still need one (Paused / Failed /
+    // Archived). Ready uses cadence and Running uses `stepProgress`;
+    // `completed` / `running` here are fallbacks if those fields are
+    // missing, so a parked row without them still has copy.
     "statusLabels": {
       "completed": "Completed",
       "running":   "Running now",
       "paused":    "Paused",
-      "failed":    "Failed"
+      "failed":    "Failed",
+      "archived":  "Archived"
     },
 
     // Shown in place of the list once every row has been dismissed, so
@@ -3059,8 +3823,8 @@
 
     // What the right slot says the moment a run is started off-schedule
     // (a failed row retried, or "Run now" from the kebab). There's no
-    // history to report yet, so it can't reuse `startedAt`.
-    "retryTime": "Started just now",
+    // elapsed time to report yet, so it can't reuse `startedAt`.
+    "retryTime": "Just started",
 
     // Row order. The template groups `items` by this sequence, so a new
     // row lands in the right place wherever it's added to the array
@@ -3071,7 +3835,7 @@
     // above everything: it's still a finished run, just one that didn't
     // work, so it belongs with the other outcomes instead of
     // interrupting them.
-    "stateOrder": ["completed", "failed", "running", "scheduled", "paused"],
+    "stateOrder": ["completed", "failed", "running", "scheduled", "paused", "archived"],
     "overflowActions": [
       { "id": "view_all",        "label": "View all" },
       { "id": "review_settings", "label": "Review settings" }
@@ -3086,22 +3850,23 @@
     // Additional actions (Snooze, Assign, etc.) drop in as new entries
     // here without any template or JS changes.
     //
-    // `onlyForState` / `hideForState` scope an action to the states it
-    // makes sense in, and they're enforced in CSS off the row's
-    // `data-sh-feed-state` rather than at render time — a row can change
-    // state while its menu already exists. Here that means the top item
-    // reads "Run now" on every row except a running one, which offers
-    // "Pause" in the same slot instead.
+    // `onlyForState` scopes an action to the states it makes sense in and
+    // is enforced in CSS off the row's `data-sh-feed-state`, not at render
+    // time — a row can change state while its menu already exists. It
+    // takes a space-separated list, so an action can scope to several
+    // states (Run now and Archive show on completed and scheduled rows).
     //
-    // Both reuse transitions the row's status button already makes, so
-    // neither is a second way of doing something that already had one.
-    // Dismiss stays last: it's the destructive one.
+    // Per state the menu reads:
+    //   completed  Run now · Stop · Edit · Archive
+    //   running    Stop · Edit
+    //   scheduled  Run now · Edit · Archive
+    //   archived   Restart · Edit
     "rowActions": [
-      { "id": "run_now",  "label": "Run now",  "icon": "play",  "hideForState": "running" },
-      { "id": "pause",    "label": "Pause",    "icon": "pause", "onlyForState": "running" },
-      { "id": "complete", "label": "Complete", "icon": "check", "hideForState": "completed" },
-      { "id": "schedule", "label": "Schedule", "icon": "clock", "hideForState": "scheduled" },
-      { "id": "dismiss",  "label": "Dismiss",  "icon": "close" }
+      { "id": "run_now", "label": "Run now", "icon": "play",    "onlyForState": "completed scheduled" },
+      { "id": "stop",    "label": "Stop",    "icon": "stop",    "onlyForState": "running completed" },
+      { "id": "restart", "label": "Restart", "icon": "refresh", "onlyForState": "archived" },
+      { "id": "edit",    "label": "Edit Skill", "icon": "edit" },
+      { "id": "archive", "label": "Archive", "icon": "archive", "onlyForState": "completed scheduled" }
     ],
     // Semantic-category → SLDS utility-sprite map (Figma node
     // 8797:228978). Row outputs pick an `icon` from this map's
@@ -3133,15 +3898,31 @@
       "doc":      { "sprite": "gdoc",   "spriteFamily": "doctype" },
       "message":  { "sprite": "txt",    "spriteFamily": "doctype" },
       "document": { "iconImage": "/assets/images/output-icons/doc.png" },
-      "pdf":      { "sprite": "pdf",    "spriteFamily": "doctype" }
+      "pdf":      { "sprite": "pdf",    "spriteFamily": "doctype" },
+      // Per-color doc glyphs — full-color SVGs rendered as an <img>, so
+      // they paint themselves (no currentColor mask). Each feed output
+      // picks the color it should read as; see /assets/images/doctype-icons.
+      "doc-green":  { "iconImage": "/assets/images/doctype-icons/Doc-green.svg" },
+      "doc-yellow": { "iconImage": "/assets/images/doctype-icons/Doc-yellow.svg" },
+      "doc-red":    { "iconImage": "/assets/images/doctype-icons/Doc-red.svg" },
+      "doc-blue":   { "iconImage": "/assets/images/doctype-icons/Doc-blue.svg" },
+      "doc-purple": { "iconImage": "/assets/images/doctype-icons/Doc-purple.svg" },
+      "doc-orange": { "iconImage": "/assets/images/doctype-icons/Doc-orange.svg" },
+      "doc-grey":   { "iconImage": "/assets/images/doctype-icons/Doc-grey.svg" }
     },
     // ── One list, one row per recurring workflow ──────────────────────
+    // SOURCE OF TRUTH for the workflow list. Home renders these rows, and
+    // scheduled.html derives the Scheduled page from them at build time.
+    // To add/edit a demo workflow, edit an item here + its matching skill
+    // in skills.json (keep `workflow.id` == a skills[].id). Full agent
+    // playbook: /AUTHORING_DEMO_WORKFLOWS.md.
+    //
     // The Completed / Running / Scheduled tabs are gone, so a workflow
     // is no longer three potential rows (its last result, its current
     // run, its next run) — it's one row that carries its own state.
     //
-    // Row: { id, title, titles?, state, cadence, lastRun, nextRun?,
-    //        startedAt?, conversationId?, outputs?, error?,
+    // Row: { id, title, titles?, state, cadence, stepProgress?, lastRun,
+    //        nextRun?, startedAt?, conversationId?, outputs?, error?,
     //        retryOutput?, workflow? }
     //   • state   — one of `stateOrder`.
     //   • title   — what the row reads in the state it renders in. A
@@ -3162,11 +3943,15 @@
     //     mechanism the subline uses, so home.js swaps them with no
     //     extra logic.
     //   • cadence — how often the workflow runs ("Weekly", "Daily").
-    //     Shown as the left slot on `scheduled` rows only, but carried
-    //     by every row so one can be rescheduled into that state.
+    //     Left slot on Ready (`completed`) and Scheduled. Carried by
+    //     every row so a running one can finish into Ready with copy.
+    //   • stepProgress — "2 of 5 steps". Left slot while running.
+    //     Remaining time is unknown; completed-of-total steps is the
+    //     honest signal. Carry it on idle rows too so "Run now" has
+    //     the starting count ("1 of 3 steps") ready.
     //   • The time fields each serve one state's right slot:
     //       nextRun    completed, scheduled
-    //       startedAt  running
+    //       startedAt  running (elapsed: "4 min elapsed")
     //       lastRun    paused, failed
     //     Every row needs `lastRun` regardless of state, because any row
     //     can be paused from its status button and a paused row reports
@@ -3191,14 +3976,15 @@
           "neutral": "Find new prospects"
         },
         "cadence": "Weekly",
+        "stepProgress": "1 of 3 steps",
         "nextRun": "Next run in 3 days",
         "lastRun": "Last run Thursday",
         "state": "completed",
         "outputs": [
-          { "icon": "table",   "label": "7 accounts imported" },
-          { "icon": "message", "label": "25 prospects" }
+          { "icon": "doc-green",  "label": "7 new accounts", "scheduledIcon": "doc-grey", "scheduledLabel": "New accounts" },
+          { "icon": "doc-yellow", "label": "25 prospects", "scheduledIcon": "doc-grey", "scheduledLabel": "Prospects" }
         ],
-        "workflow": { "id": "", "label": "" }
+        "workflow": { "id": "sk-find-prospects", "label": "" }
       },
       {
         "id": "ri-02",
@@ -3208,22 +3994,24 @@
           "neutral": "Draft proposals to send"
         },
         "cadence": "Daily",
+        "stepProgress": "1 of 3 steps",
         "nextRun": "Next run tomorrow at 6:00 AM",
         "lastRun": "Last run today",
         "state": "completed",
         "outputs": [
-          { "icon": "pdf", "label": "10 proposals" }
+          { "icon": "doc-red", "label": "10 proposals", "scheduledIcon": "doc-grey", "scheduledLabel": "Proposals" }
         ],
-        "workflow": { "id": "", "label": "" }
+        "workflow": { "id": "sk-draft-proposals", "label": "" }
       },
       {
         "id": "ri-03",
-        "title": "Weekly exec brief",
+        "title": "Executive Brief",
         "titles": {
-          "running": "Preparing your weekly exec brief",
-          "neutral": "Weekly exec brief"
+          "running": "Preparing your executive brief",
+          "neutral": "Executive Brief"
         },
         "cadence": "Weekly",
+        "stepProgress": "1 of 3 steps",
         "nextRun": "Next run Friday at 5:00 AM",
         "lastRun": "Last run Friday",
         "state": "scheduled",
@@ -3232,9 +4020,9 @@
         // named below is what Friday will produce, not something that
         // exists now.
         "outputs": [
-          { "icon": "doc", "label": "Quarterly Deal Pulse" }
+          { "icon": "doc-grey", "label": "Quarterly Deal Pulse" }
         ],
-        "workflow": { "id": "", "label": "" }
+        "workflow": { "id": "sk-weekly-exec-brief", "label": "" }
       },
       {
         "id": "ri-04",
@@ -3245,13 +4033,14 @@
           "neutral": "Meeting next steps"
         },
         "cadence": "Daily",
+        "stepProgress": "1 of 3 steps",
         "nextRun": "Next run Friday at 9:00 AM",
         "lastRun": "Last run yesterday",
         "state": "scheduled",
         "outputs": [
-          { "icon": "doc", "label": "Action items" }
+          { "icon": "doc-grey", "label": "Action items" }
         ],
-        "workflow": { "id": "", "label": "" }
+        "workflow": { "id": "sk-prepare-for-meetings", "label": "" }
       },
       // Two runs in flight. Where they sit in this array doesn't matter:
       // `stateOrder` puts them in the running group, between the
@@ -3269,13 +4058,14 @@
           "neutral": "Research target accounts"
         },
         "cadence": "Weekly",
-        "startedAt": "Started 12 min ago",
+        "stepProgress": "4 of 5 steps",
+        "startedAt": "12 min elapsed",
         "lastRun": "Last run Monday",
         "state": "running",
         "outputs": [
-          { "icon": "table", "label": "42 of 50 accounts" }
+          { "icon": "doc-green", "label": "42 of 50 accounts", "scheduledIcon": "doc-grey", "scheduledLabel": "Target accounts" }
         ],
-        "workflow": { "id": "", "label": "" }
+        "workflow": { "id": "sk-account-research", "label": "" }
       },
       {
         "id": "run-02",
@@ -3285,13 +4075,61 @@
           "neutral": "Draft outreach for warm leads"
         },
         "cadence": "Daily",
-        "startedAt": "Started 4 min ago",
+        "stepProgress": "2 of 4 steps",
+        "startedAt": "4 min elapsed",
         "lastRun": "Last run yesterday",
         "state": "running",
         "outputs": [
-          { "icon": "message", "label": "12 of 30 drafted" }
+          { "icon": "doc-blue", "label": "12 of 30 drafted", "scheduledIcon": "doc-grey", "scheduledLabel": "Outreach drafts" }
         ],
-        "workflow": { "id": "", "label": "" }
+        "workflow": { "id": "sk-write-sales-emails", "label": "" }
+      },
+      // The run-history surface. `conversationId` opens the thread where
+      // all five runs live — the header's Run History dropdown is how you
+      // move between them. `scheduled` matches its Scheduled-page row and
+      // the conversation's own status, so the three agree no matter which
+      // door you came through.
+      {
+        "id": "ri-weekly-top-3",
+        "conversationId": "conv-weekly-top-3",
+        "title": "Quota Health Check",
+        "titles": {
+          "running": "Preparing your quota health check",
+          "neutral": "Quota Health Check"
+        },
+        "cadence": "Weekly",
+        "stepProgress": "1 of 3 steps",
+        "nextRun": "Next run Monday at 9:00 AM",
+        "lastRun": "Last run today",
+        "state": "scheduled",
+        "outputs": [
+          { "icon": "doc-grey", "label": "3 things to know" }
+        ],
+        "workflow": { "id": "sk-weekly-top-3", "label": "" }
+      },
+      // Pipeline Snapshot. Surfaced here so the feed and the
+      // Scheduled tab list the same workflows; `conversationId` opens the
+      // snapshot thread, whose header Run History dropdown holds the
+      // three daily snapshots. `scheduled` — it carries an `outputs` pill
+      // naming what the next run produces, and its Scheduled-page row
+      // reads the same subline, since both are sourced from this entry.
+      {
+        "id": "ri-daily-pipeline-snapshot",
+        "conversationId": "conv-daily-pipeline-snapshot",
+        "title": "Pipeline Snapshot",
+        "titles": {
+          "running": "Preparing the pipeline snapshot",
+          "neutral": "Pipeline Snapshot"
+        },
+        "cadence": "Daily",
+        "stepProgress": "1 of 3 steps",
+        "nextRun": "Next run tomorrow at 9:00 AM",
+        "lastRun": "Last run today at 9:00 AM",
+        "state": "scheduled",
+        "outputs": [
+          { "icon": "doc-grey", "label": "Pipeline snapshot" }
+        ],
+        "workflow": { "id": "sk-daily-pipeline-snapshot", "label": "" }
       }
     ],
 
@@ -3313,6 +4151,7 @@
           "neutral": "Sync territory quota changes"
         },
         "cadence": "Daily",
+        "stepProgress": "1 of 3 steps",
         "lastRun": "Last run today at 6:00 AM",
         "state": "failed",
         "error": "Quota API returned 502 — 0 of 214 territories synced",
@@ -3330,6 +4169,7 @@
           "neutral": "Refresh account health scores"
         },
         "cadence": "Monthly",
+        "stepProgress": "1 of 4 steps",
         "nextRun": "Next run Monday at 6:00 AM",
         "lastRun": "Last run Jul 20",
         "state": "scheduled",
@@ -3348,6 +4188,7 @@
           "neutral": "Re-engage stalled opportunities"
         },
         "cadence": "Weekly",
+        "stepProgress": "1 of 3 steps",
         // A paused row DISPLAYS "Paused" (the template substitutes it),
         // while the schedule underneath is what resuming restores — so
         // `nextRun` stays a real time even here.

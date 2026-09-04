@@ -76,6 +76,8 @@
 <li class="seller-home__conv-thread-item" data-sh-conv-item="{{ msg.id }}">
   {% if msg.type == 'user' %}
     {{ userMessage(msg) }}
+  {% elif msg.type == 'run_header' %}
+    {{ runHeader(msg) }}
   {% elif msg.type == 'agent' %}
     {{ agentMessage(msg, rows) }}
   {% elif msg.type == 'insight' %}
@@ -88,6 +90,50 @@
     {{ emailDrafts(msg) }}
   {% endif %}
 </li>
+{% endmacro %}
+
+
+{# ── Run divider ──────────────────────────────────────────────────
+   A full-width dashed rule between one scheduled run's output and the
+   next. A thread that collects a weekly workflow's runs would otherwise
+   read as one endless scroll; this marks where each run begins.
+
+   Emitted by the thread loop at every `runId` change (see
+   home_conversation.html), NOT by a message type — it's a seam between
+   messages, not a message. Decorative, so `aria-hidden`: the run
+   boundary is already spoken by each run's lead message ("Here are the
+   3 things … for the week of …"), and an <hr> announced inside the
+   `role="log"` would just be a meaningless stop for AT. #}
+{% macro runDivider() %}
+<li class="seller-home__conv-thread-item seller-home__conv-run-divider" aria-hidden="true">
+  <hr class="seller-home__conv-run-divider-line" />
+</li>
+{% endmacro %}
+
+
+{# ── Run header ────────────────────────────────────────────────────
+   The "Title | Date" banner that opens each scheduled run's output —
+   the same treatment the Pipeline Snapshot uses (shares the
+   `seller-home__snapshot-title*` type scale so every workflow's runs
+   read alike). Emitted as the first message of each run (see
+   `expandRuns` in gulpfile.js), so it doubles as the run's scroll
+   anchor: `id` / `data-sh-conv-msg` carry the run's messageId, which is
+   what the Run history menu's `findMessage` resolves against.
+
+   Data contract:
+     { id, type: 'run_header', titleLabel: String, dateLabel: String } #}
+{% macro runHeader(msg) %}
+<header
+  class="seller-home__snapshot-header seller-home__conv-run-header"
+  id="{{ msg.id }}"
+  data-sh-conv-msg="{{ msg.id }}"
+>
+  <h2 class="seller-home__snapshot-title">
+    <span class="seller-home__snapshot-title-primary">{{ msg.titleLabel or "Run" }}</span>
+    <span class="seller-home__snapshot-title-sep" aria-hidden="true">|</span>
+    <span class="seller-home__snapshot-title-date">{{ msg.dateLabel }}</span>
+  </h2>
+</header>
 {% endmacro %}
 
 
@@ -287,8 +333,8 @@
 
    A `snapshot` turns the response into a structured run report —
    title, freshness line, metric tiles, a changes table, severity
-   cards, and recommended actions. It's what the Daily Pipeline
-   Snapshot workflow writes into the feed on every run, and it
+   cards, and recommended actions. It's what the Pipeline Snapshot
+   workflow writes into the feed on every run, and it
    replaces `text` rather than joining it (the snapshot owns its own
    summary paragraph, so rendering both would print the lead twice).
 

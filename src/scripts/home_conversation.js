@@ -149,6 +149,56 @@
     // Clickable bullet in a "suggested next steps" message:
     suggestion:       '[data-sh-conv-suggestion]'
   }
+  // Conversations whose opening has already played, this session.
+  //
+  // What separates a thread that should unfold from one that should
+  // simply be there is whether you have opened it before — not whether
+  // you arrived with a question. Opening "Found new prospects" for the
+  // first time is the agent doing the work, so it thinks and writes;
+  // coming back to it afterwards is reading your own history, so it is
+  // just there.
+  //
+  // sessionStorage, and cleared by home.js alongside Recents whenever the
+  // demo restarts (the Home tab's reset, or a refresh) — so a restart
+  // genuinely replays every conversation from scratch.
+  var CONV_SEEN_KEY = 'sh:convSeen'
+
+  function readSeenConversations () {
+    try {
+      var raw = window.sessionStorage.getItem(CONV_SEEN_KEY)
+      if (!raw) return []
+      var parsed = JSON.parse(raw)
+      return Object.prototype.toString.call(parsed) === '[object Array]' ? parsed : []
+    } catch (e) {
+      // Unreadable — treat as never seen, which replays rather than
+      // silently skipping the reveal.
+      return []
+    }
+  }
+
+  function hasPlayedOpening (convId) {
+    if (!convId) return false
+    var seen = readSeenConversations()
+    for (var i = 0; i < seen.length; i++) {
+      if (seen[i] === convId) return true
+    }
+    return false
+  }
+
+  function markOpeningPlayed (convId) {
+    if (!convId) return
+    try {
+      var seen = readSeenConversations()
+      for (var i = 0; i < seen.length; i++) {
+        if (seen[i] === convId) return
+      }
+      seen.push(convId)
+      window.sessionStorage.setItem(CONV_SEEN_KEY, JSON.stringify(seen))
+    } catch (e) {
+      // Silent — worst case the thread replays its opening next time.
+    }
+  }
+
   // Class the review section toggles when the confirmation dialog
   // opens (mirrors SLDS `slds-fade-in-open` semantically).
   var DIALOG_OPEN_CLASS = 'is-open'
@@ -386,6 +436,15 @@
     var panels = document.querySelectorAll('[data-sh-workflow-panel]')
     for (var p = 0; p < panels.length; p++) bindWorkflowSidePanel(panels[p])
     bindReopenPanel()
+
+    // Run History dropdown, on the same terms as the panels above:
+    // reveal the one belonging to this conversation, then bind every
+    // menu including the hidden ones so a later reveal needs no
+    // re-wiring.
+    switchRunHistory(openId)
+    var runMenuEls = document.querySelectorAll('[data-sh-run-menu]')
+    for (var r = 0; r < runMenuEls.length; r++) bindRunHistoryMenu(runMenuEls[r])
+    bindRunHistoryGlobals()
 
     // Composer: autosize, Enter-to-send, and the scripted reply queue.
     // It owns the thread mutations and the busy state, so the opening
@@ -751,17 +810,27 @@
       if (!isFinite(delay) || delay < 0) delay = DEFAULT_THINKING_MS
 
       var indicator = appendThinking(label)
-      if (anchor) scrollAnchorToTop(anchor)
-      else        scrollToLatest()
+      var settle = anchor
+        ? function () { scrollAnchorToTop(anchor) }
+        : scrollToLatest
+
+      settle()
 
       window.setTimeout(function () {
         if (indicator && indicator.parentNode) {
           indicator.parentNode.removeChild(indicator)
         }
-        appendTemplate(tpl, convMap)
-        if (anchor) scrollAnchorToTop(anchor)
-        else        scrollToLatest()
-        if (done) done()
+        // `done` runs after the stream, not after the append — it is what
+        // unlocks the composer, and handing the caret back mid-sentence
+        // invites a send into the middle of the agent's reply.
+        appendTemplate(tpl, convMap, {
+          stream: true,
+          scroll: settle,
+          onDone: function () {
+            settle()
+            if (done) done()
+          }
+        })
       }, delay)
     }
 
@@ -789,8 +858,11 @@
       // wording for this beat too, and one working row for every kind
       // of turn is the point of that template.
       var indicator = appendThinking('')
-      if (anchor) scrollAnchorToTop(anchor)
-      else        scrollToLatest()
+      var settle = anchor
+        ? function () { scrollAnchorToTop(anchor) }
+        : scrollToLatest
+
+      settle()
 
       window.setTimeout(function () {
         if (indicator && indicator.parentNode) {
@@ -806,11 +878,12 @@
           // message with nothing under it.
           reply = { text: 'Something went wrong setting up the schedule.' }
         }
-        appendScheduleReply(reply)
-        if (anchor) scrollAnchorToTop(anchor)
-        else        scrollToLatest()
-        setBusy(false)
-        if (typeof input.focus === 'function') input.focus()
+        var item = appendScheduleReply(reply)
+        streamNode(item, settle, function () {
+          settle()
+          setBusy(false)
+          if (typeof input.focus === 'function') input.focus()
+        })
       }, SCHEDULE_THINKING_MS)
     }
 
@@ -927,20 +1000,80 @@
       }
 
       if (!stages.length) {
-        scrollToLatest()
+        jumpToLatest()
         return
       }
 
       removeEmptyPlaceholder()
+
+      // First time in — or arriving with a question — is the agent doing
+      // the work: it thinks, then writes the reply out. Coming back to a
+      // thread already opened this session is reading history, so it
+      // paints at once with no thinking row and no streaming, because an
+      // agent does not sit and re-think what it already answered.
+      //
+      // Marked before playing, not after: navigating away mid-reveal and
+      // returning should land on the finished thread, not restart it.
+      var live = !!query || !hasPlayedOpening(convId)
+      markOpeningPlayed(convId)
+
+      if (!live) {
+        for (var i = 0; i < stages.length; i++) {
+          appendTemplate(stages[i], convMap)
+        }
+        jumpToLatest()
+        return
+      }
+
       setBusy(true)
+
+      // A conversation whose opening carries a `trace` plays the reusable
+      // ThinkingTrace as its single thinking phase (connect tools, then load
+      // skills, then fold into a completed header). Once it collapses the
+      // answer streams in stage by stage, with no per-stage thinking rows.
+      var openingCfg = (convMap && convMap[convId] && convMap[convId].opening) || null
+      var traceCfg = openingCfg && openingCfg.trace
+      if (traceCfg && window.ThinkingTrace && typeof window.ThinkingTrace.mount === 'function') {
+        var traceLi = document.createElement('li')
+        traceLi.className = 'seller-home__conv-thread-item'
+        var traceHost = document.createElement('div')
+        traceLi.appendChild(traceHost)
+        threadInner.appendChild(traceLi)
+        scrollToLatest()
+        window.ThinkingTrace.mount(traceHost, {
+          completedLabel: traceCfg.completedLabel,
+          steps: traceCfg.steps,
+          timings: traceCfg.timings,
+          controls: false,
+          autoCollapse: true,
+          onComplete: function () { revealStages(0) }
+        })
+        return
+      }
+
       next(0)
 
+      // Normal path: each stage thinks, then drops its messages.
       function next (i) {
         if (i >= stages.length) {
           setBusy(false)
           return
         }
         playBeat(stages[i], function () { next(i + 1) })
+      }
+
+      // Trace path: the trace already was the thinking, so each stage's
+      // messages stream in back to back with no thinking row in front.
+      function revealStages (i) {
+        if (i >= stages.length) {
+          setBusy(false)
+          return
+        }
+        appendTemplate(stages[i], convMap, {
+          stream: true,
+          scroll: scrollToLatest,
+          onDone: function () { revealStages(i + 1) }
+        })
       }
     }
 
@@ -996,16 +1129,50 @@
     // Collect the top-level elements BEFORE inserting: an appended
     // fragment is left empty, so this is the only chance to hold
     // references for binding.
-    function appendTemplate (tpl, map) {
+    // `opts.stream` reveals the reply the way the agent would write it —
+    // prose word by word, table rows cascading — via ShStream. History
+    // never passes it: a thread you are re-opening should already be
+    // there, not type itself out again.
+    //
+    // Binding waits for the stream to finish. Units rest at
+    // `display:none` until reached, and anything that measures itself on
+    // bind (a sparkline, ShCadence.mount) reads zero inside a hidden box.
+    function appendTemplate (tpl, map, opts) {
+      opts = opts || {}
       var frag = cloneTemplate(tpl)
-      if (!frag) return
+      if (!frag) { if (opts.onDone) opts.onDone(); return }
       var added = []
       for (var n = 0; n < frag.childNodes.length; n++) {
         var node = frag.childNodes[n]
         if (node.nodeType === 1) added.push(node)
       }
       threadInner.appendChild(frag)
-      for (var a = 0; a < added.length; a++) bindMessageContent(added[a], map)
+
+      function finish () {
+        for (var a = 0; a < added.length; a++) bindMessageContent(added[a], map)
+        if (opts.onDone) opts.onDone()
+      }
+
+      if (opts.stream && window.ShStream) {
+        window.ShStream.reveal(added, {
+          scroll: opts.scroll || scrollToLatest,
+          onDone: finish
+        })
+        return
+      }
+
+      finish()
+    }
+
+    // Reveal an already-appended node the same way, for the replies that
+    // are built rather than cloned (the Schedule flow). Falls through to
+    // `done` when the module isn't on the page.
+    function streamNode (node, scroll, done) {
+      if (node && window.ShStream) {
+        window.ShStream.reveal(node, { scroll: scroll, onDone: done })
+        return
+      }
+      if (done) done()
     }
 
     // Drop the "Messages will appear here." row the first time real
@@ -1283,11 +1450,11 @@
       } catch (e) { /* best-effort caret restore */ }
     }
 
-    function scrollThreadTo (top) {
+    function scrollThreadTo (top, instant) {
       try {
         thread.scrollTo({
           top: top,
-          behavior: prefersReducedMotion() ? 'auto' : 'smooth'
+          behavior: (instant || prefersReducedMotion()) ? 'auto' : 'smooth'
         })
       } catch (e) {
         // Older browsers: scrollTo doesn't accept options.
@@ -1297,6 +1464,14 @@
 
     function scrollToLatest () {
       scrollThreadTo(thread.scrollHeight)
+    }
+
+    // Instant jump to the newest message, for the first paint of a thread
+    // opened as history. A run-based feed can be dozens of runs tall, and
+    // a smooth scroll from the top would animate down through every one on
+    // open; reading history should just land at the latest at once.
+    function jumpToLatest () {
+      scrollThreadTo(thread.scrollHeight, true)
     }
 
     // Bring `anchor`'s top edge up to the top of the thread's viewport.
@@ -1559,22 +1734,23 @@
   // table out of the thread and into the dialog at the bottom of
   // home_conversation.html; closing moves it back.
   //
-  // Moving rather than cloning is the whole design. The table is a live
-  // surface — every row has an X that drops a prospect from the batch,
-  // and the cadence card is listening — so a copy would be a second
-  // list with the same row ids, and a prospect dropped in one would
-  // still be in the other. One node means one truth, and every handler,
-  // attribute, and subscription travels with it for free.
+  // The dialog gets a CLONE, not the table itself. Moving the real node
+  // out and back was the old design (one node, one source of truth), but
+  // re-inserting a node on close made the thread re-lay-out its copy —
+  // it read as the prospect list "reloading" every time the dialog shut.
+  // Leaving the thread's own table untouched is the fix: nothing about it
+  // changes when the dialog opens or closes, so there is nothing to
+  // reload.
   //
-  // A comment node holds the table's place in the thread, so it returns
-  // exactly where it was even if messages have been appended in the
-  // meantime. What doesn't survive the round trip is the table's scroll
-  // offset: moving a node resets it. Reading the expanded table top-down
-  // is the point, so that's the right way for it to arrive, and coming
-  // back to the top of a 5.5-row window costs nothing.
+  // The clone stays live: its reject Xs are wired, so a drop still fires
+  // the `sh:conv-row-decision` the cadence card listens for. It starts
+  // from the thread table's current state (cloneNode copies each row's
+  // `data-sh-review-status`), and on close any drops made in the dialog
+  // are written back to the thread table by row id — so the two copies
+  // never disagree even though they're two nodes.
   //
-  // Only one table can be expanded at a time, which is what makes a
-  // single dialog (and a single placeholder) sufficient.
+  // Only one table can be expanded at a time, so a single dialog and a
+  // single clone are sufficient.
   function bindTableExpand () {
     var modal    = document.querySelector(SELECTORS.tableModal)
     var backdrop = document.querySelector(SELECTORS.tableModalBack)
@@ -1598,11 +1774,11 @@
       getComputedStyle(document.documentElement).getPropertyValue('--modal-close-dur')
     ) || 150
 
-    // Per-open state: the table currently in the dialog, the marker
-    // holding its spot in the thread, the trigger to hand focus back
-    // to, and the trap handler to unbind.
+    // Per-open state: the CLONE currently in the dialog, the thread
+    // table it was cloned from (drops are written back to it on close),
+    // the trigger to hand focus back to, and the trap handler to unbind.
     var expanded    = null
-    var placeholder = null
+    var source      = null
     var lastFocused = null
     var trapHandler = null
     // Non-null only while the close animation is playing. It's both the
@@ -1610,8 +1786,8 @@
     var closeTimer  = null
 
     function open (button) {
-      // Already open — a second trigger would orphan the first table's
-      // placeholder, so it's ignored rather than swapped.
+      // Already open — ignore a second trigger rather than stacking a
+      // second clone in the dialog.
       if (expanded) return
 
       var tableId = button.getAttribute('data-sh-conv-expand')
@@ -1630,17 +1806,45 @@
       if (title && label) title.textContent = label
       if (meta) meta.textContent = button.getAttribute('data-sh-conv-expand-meta') || ''
 
-      placeholder = document.createComment(' expanded: ' + tableId + ' ')
-      table.parentNode.insertBefore(placeholder, table)
-      host.appendChild(table)
-      expanded = table
+      // Clone into the dialog; the thread's table stays exactly where it
+      // is. `cloneNode(true)` copies each row's current
+      // `data-sh-review-status`, so a prospect already dropped in the
+      // thread shows dropped here too.
+      source = table
+      var clone = table.cloneNode(true)
+
+      // A clone re-entering the document restarts any CSS animation it
+      // still carries — drop the streaming-reveal class so the rows
+      // don't re-deal themselves as the dialog opens.
+      if (clone.classList) clone.classList.remove('sh-stream-rows')
+      var streamNodes = clone.querySelectorAll('.sh-stream-rows')
+      for (var sn = 0; sn < streamNodes.length; sn++) {
+        streamNodes[sn].classList.remove('sh-stream-rows')
+      }
+      var streamRows = clone.querySelectorAll('tbody tr')
+      for (var srx = 0; srx < streamRows.length; srx++) {
+        streamRows[srx].style.animationDelay = ''
+      }
+
+      host.innerHTML = ''
+      host.appendChild(clone)
+      expanded = clone
+
+      // Wire the clone's reject Xs — just the click, not the full
+      // `bindProspectTable`, whose document-level review listener would
+      // leak one per open on a node discarded at close. A drop still
+      // fires `sh:conv-row-decision`, so the cadence card reacts, and the
+      // thread table catches up from `finishClose`.
+      clone.addEventListener('click', function (event) {
+        var t = event.target
+        if (t && t.closest) handleDecisionClick(t, clone)
+      })
 
       // The Signal column is a fixed 18rem in both places, so the fit
-      // that was computed in the thread still holds here. Re-run anyway:
-      // it's one pass over 37 cells, and it means the dialog can't be
-      // the place where a future width change shows up as a clipped
-      // badge.
-      fitSignalBadges(table)
+      // the clone copied from the thread still holds. Re-run anyway: one
+      // pass over 37 cells, and the dialog can't then be where a future
+      // width change first clips a badge.
+      fitSignalBadges(clone)
 
       lastFocused = button
 
@@ -1703,22 +1907,24 @@
       }
       backdrop.classList.remove(BACKDROP_OPEN_CLASS)
 
-      closeTimer = window.setTimeout(finishClose, closeMs)
+      // With the close animation disabled (`--modal-close-dur: 0`) there
+      // is nothing to wait for: finish in the same task so the table is
+      // back in the thread the instant the dialog goes — no fade, and no
+      // frame where neither the dialog nor the thread shows it. A real
+      // duration still defers cleanup until the fade has played.
+      if (closeMs > 0) {
+        closeTimer = window.setTimeout(finishClose, closeMs)
+      } else {
+        finishClose()
+      }
     }
 
-    // The other half — everything that would cut the animation short if
-    // it ran at the click instead.
-    //
-    // `hidden` is the obvious one: it resolves to `display: none`, so
-    // setting it up front means there's nothing left to animate. The
-    // table's trip home is the subtler one. Moving it back into the
-    // thread empties the dialog, and the dialog is still visible, so
-    // doing it early would play a 150 ms fade-out of an empty box while
-    // the table reappeared behind it.
-    //
-    // `expanded` deliberately stays set until this runs. It's what
-    // `open` tests to refuse a second trigger, which keeps the table
-    // from being pulled out of a dialog that's mid-close.
+    // The other half — cleanup deferred until the dialog's fade (if any)
+    // has played. `hidden` resolves to `display: none`, so setting it up
+    // front would leave nothing to animate; writing the clone's drops
+    // back and discarding it waits here for the same reason. `expanded`
+    // stays set until this runs — it's the flag `open` tests to refuse a
+    // second trigger mid-close.
     function finishClose () {
       closeTimer = null
 
@@ -1729,16 +1935,22 @@
       // the closing state and skip its own animation.
       if (container) container.classList.remove('is-closing')
 
-      // Home again. If the marker is gone — the thread was rebuilt
-      // under an open dialog — the table stays in the host rather than
-      // being appended somewhere arbitrary, and the next open is still
-      // clean because `expanded` is cleared either way.
-      if (expanded && placeholder && placeholder.parentNode) {
-        placeholder.parentNode.insertBefore(expanded, placeholder)
-        placeholder.parentNode.removeChild(placeholder)
+      // Write any drops made in the dialog back to the thread's table by
+      // row id so the two copies agree, then discard the clone. The
+      // thread table was never touched, so there is nothing to move home
+      // and nothing for it to re-lay-out — which is the whole point.
+      if (expanded && source) {
+        var rows = expanded.querySelectorAll(SELECTORS.convRow)
+        for (var i = 0; i < rows.length; i++) {
+          var id = rows[i].getAttribute('data-sh-conv-row-id')
+          if (!id) continue
+          var srcRow = source.querySelector('[data-sh-conv-row][data-sh-conv-row-id="' + id + '"]')
+          if (srcRow) paintRowStatus(srcRow, rows[i].getAttribute('data-sh-review-status') || null)
+        }
       }
+      if (expanded && expanded.parentNode) expanded.parentNode.removeChild(expanded)
       expanded = null
-      placeholder = null
+      source = null
     }
 
     document.addEventListener('click', function (event) {
@@ -2405,13 +2617,298 @@
   //
   // What it does NOT own: the messages themselves. The thread renders
   // its own content; the panel only anchors into it.
+  // ── Run History dropdown ──────────────────────────────────────────
+  // The header control for a thread that is one scheduled workflow, run
+  // many times, every run appended below the last. It wears the
+  // composer's agent-switcher classes and borrows the cadence Prospect
+  // lookup's search behavior — see _run_history_menu.html for why the
+  // roles are combobox/listbox rather than menu.
+  //
+  // One registry for every menu on the page so opening one closes the
+  // others, and so an outside click has a single place to ask.
+  var runMenus = []
+  var runGlobalsBound = false
+
+  function closeRunMenus (except) {
+    for (var i = 0; i < runMenus.length; i++) {
+      if (runMenus[i].el !== except) runMenus[i].close()
+    }
+  }
+
+  function bindRunHistoryGlobals () {
+    if (runGlobalsBound) return
+    runGlobalsBound = true
+    document.addEventListener('click', function (event) {
+      var inside = (event.target && event.target.closest)
+        ? event.target.closest('[data-sh-run-menu]')
+        : null
+      if (!inside) closeRunMenus(null)
+    })
+  }
+
+  // Show the dropdown belonging to the active conversation and hide the
+  // rest. Same arrangement as `switchPanel`: every conversation with a
+  // `runHistory` block renders its own, and changing conversations is a
+  // visibility toggle rather than a re-render.
+  function switchRunHistory (activeConvId) {
+    var menus = document.querySelectorAll('[data-sh-run-menu]')
+    for (var i = 0; i < menus.length; i++) {
+      if (menus[i].getAttribute('data-sh-run-menu-conversation') === activeConvId) {
+        menus[i].removeAttribute('hidden')
+      } else {
+        menus[i].setAttribute('hidden', '')
+      }
+    }
+  }
+
+  function bindRunHistoryMenu (menu) {
+    if (!menu || menu.getAttribute('data-sh-run-bound') === 'true') return
+    menu.setAttribute('data-sh-run-bound', 'true')
+
+    var trigger = menu.querySelector('[data-sh-run-menu-trigger]')
+    var panel = menu.querySelector('[data-sh-run-menu-panel]')
+    var search = menu.querySelector('[data-sh-run-menu-search]')
+    var list = menu.querySelector('[data-sh-run-menu-list]')
+    var emptyEl = menu.querySelector('[data-sh-run-menu-empty]')
+    var labelEl = menu.querySelector('[data-sh-run-menu-trigger-label]')
+    var iconEl = menu.querySelector('[data-sh-run-menu-trigger-icon]')
+    if (!trigger || !panel || !list) return
+
+    var items = []
+    var found = list.querySelectorAll('[data-sh-run-menu-item]')
+    for (var f = 0; f < found.length; f++) items.push(found[f])
+
+    var activeIndex = -1
+
+    function isOpen () { return !panel.hasAttribute('hidden') }
+
+    function shown () {
+      var out = []
+      for (var i = 0; i < items.length; i++) {
+        if (!items[i].hasAttribute('hidden')) out.push(items[i])
+      }
+      return out
+    }
+
+    // The active row is a class plus `aria-activedescendant`, not real
+    // focus: focus stays in the search box so the arrows can walk the
+    // list while typing still goes to the query. Same arrangement as
+    // `highlightOption` in home_conversation_lookups.js.
+    function setActive (index) {
+      var options = shown()
+      for (var i = 0; i < items.length; i++) items[i].classList.remove('is-active')
+      if (index >= 0 && index < options.length) {
+        activeIndex = index
+        options[index].classList.add('is-active')
+        if (search) search.setAttribute('aria-activedescendant', options[index].id)
+        try { options[index].scrollIntoView({ block: 'nearest' }) } catch (e) { /* no-op */ }
+      } else {
+        activeIndex = -1
+        if (search) search.removeAttribute('aria-activedescendant')
+      }
+    }
+
+    // Case-insensitive substring across the run's number, date and
+    // status, copying `matchesQuery` in the lookups module: the whole
+    // query as one string rather than per word, so "aug 10" matches and
+    // "10 aug" doesn't — the same trade the Prospect search makes.
+    // Rows are hidden in place rather than rebuilt. At rest every run is
+    // shown; the list is height-capped to ~7 rows (home_conversation.scss)
+    // and scrolls for the rest, with search to jump straight to one.
+    function filter (query) {
+      var q = String(query || '').toLowerCase().trim()
+      var visible = 0
+      for (var i = 0; i < items.length; i++) {
+        var hay = (items[i].getAttribute('data-sh-run-search') || '').toLowerCase()
+        if (!q || hay.indexOf(q) > -1) {
+          items[i].removeAttribute('hidden')
+          visible++
+        } else {
+          items[i].setAttribute('hidden', '')
+        }
+      }
+      if (emptyEl) {
+        if (visible) emptyEl.setAttribute('hidden', '')
+        else emptyEl.removeAttribute('hidden')
+      }
+      setActive(-1)
+    }
+
+    function open () {
+      if (isOpen()) return
+      closeRunMenus(menu)
+      panel.removeAttribute('hidden')
+      trigger.setAttribute('aria-expanded', 'true')
+      // Every open starts from the full list: a query left over from
+      // last time would hide runs the seller never filtered out.
+      if (search) {
+        search.value = ''
+        filter('')
+        try { search.focus() } catch (e) { /* no-op */ }
+      }
+    }
+
+    function close (returnFocus) {
+      if (!isOpen()) return
+      panel.setAttribute('hidden', '')
+      trigger.setAttribute('aria-expanded', 'false')
+      setActive(-1)
+      if (returnFocus) {
+        try { trigger.focus() } catch (e) { /* no-op */ }
+      }
+    }
+
+    function select (item) {
+      if (!item) return
+
+      for (var i = 0; i < items.length; i++) items[i].setAttribute('aria-selected', 'false')
+      item.setAttribute('aria-selected', 'true')
+
+      // The trigger's job is to say which run you are looking at, so it
+      // takes the row's label and a copy of its glyph.
+      if (labelEl) {
+        labelEl.textContent = item.getAttribute('data-sh-run-label') || labelEl.textContent
+      }
+      if (iconEl) {
+        var glyph = item.querySelector('.seller-home__run-history-icon, .sh-spinner')
+        if (glyph) {
+          var copy = glyph.cloneNode(true)
+          copy.classList.remove('seller-home__run-history-icon--row')
+          copy.classList.add('seller-home__run-history-icon--trigger')
+          iconEl.innerHTML = ''
+          iconEl.appendChild(copy)
+        }
+      }
+
+      close(true)
+
+      // Scroll only — deliberately no `highlightTarget` here. The jump
+      // itself is the feedback, and tinting the message on arrival read
+      // as the run being selected rather than merely shown. The side
+      // panel's Activity tiles still highlight; that surface has no
+      // header label saying which run you are on, so it needs the cue.
+      var target = findMessage(item.getAttribute('data-sh-run-target'))
+      if (!target) return
+      scrollToTarget(target)
+    }
+
+    trigger.addEventListener('click', function (event) {
+      event.preventDefault()
+      if (isOpen()) close(true)
+      else open()
+    })
+
+    trigger.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      close(true)
+    })
+
+    list.addEventListener('click', function (event) {
+      var item = (event.target && event.target.closest)
+        ? event.target.closest('[data-sh-run-menu-item]')
+        : null
+      if (!item || !list.contains(item)) return
+      event.preventDefault()
+      select(item)
+    })
+
+    if (search) {
+      search.addEventListener('input', function () { filter(search.value) })
+      search.addEventListener('keydown', function (event) {
+        var options = shown()
+        switch (event.key) {
+          case 'ArrowDown':
+            event.preventDefault()
+            setActive(activeIndex < options.length - 1 ? activeIndex + 1 : 0)
+            break
+          case 'ArrowUp':
+            event.preventDefault()
+            setActive(activeIndex > 0 ? activeIndex - 1 : options.length - 1)
+            break
+          case 'Enter':
+            event.preventDefault()
+            if (activeIndex >= 0 && activeIndex < options.length) select(options[activeIndex])
+            break
+          case 'Escape':
+            event.preventDefault()
+            close(true)
+            break
+        }
+      })
+    }
+
+    runMenus.push({ el: menu, close: function () { close(false) } })
+  }
+
+  // ── Jumping to a run's output in the thread ───────────────────────
+  // Shared by the workflow side panel and the header's Run History
+  // dropdown: both answer "show me that run" the same way, and a second
+  // copy of this would be a second place for the highlight timing to
+  // drift. Module scope also means one highlight at a time across the
+  // page, which is what you want — two glowing messages would be a lie
+  // about which one you asked for.
+  var HIGHLIGHT_MS = 1800
+  var highlightTimeoutId = 0
+  var highlightTargetEl = null
+
+  // A run's output is a message in the thread. The message macros key
+  // messages on `data-sh-conv-msg` rather than a DOM id, so resolve by
+  // id first (that's what a tile's `href` names, and what works with JS
+  // off) and fall back to the data attribute.
+  function findMessage (messageId) {
+    if (!messageId) return null
+    return document.getElementById(messageId) ||
+      document.querySelector('[data-sh-conv-msg="' + messageId + '"]')
+  }
+
+  function scrollToTarget (el) {
+    try {
+      el.scrollIntoView({
+        behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+        block: 'start'
+      })
+    } catch (e) {
+      el.scrollIntoView()
+    }
+    // Focus gives keyboard and screen-reader users the same anchor the
+    // scroll just gave everyone else. The message isn't a natural tab
+    // stop, so make it focusable for this one purpose, and don't let the
+    // focus move re-scroll on top of the smooth scroll.
+    if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1')
+    setTimeout(function () {
+      try { el.focus({ preventScroll: true }) } catch (e) { el.focus() }
+    }, 0)
+  }
+
+  function highlightTarget (el) {
+    if (highlightTimeoutId) {
+      window.clearTimeout(highlightTimeoutId)
+      highlightTimeoutId = 0
+    }
+    if (highlightTargetEl && highlightTargetEl !== el) {
+      highlightTargetEl.classList.remove('is-highlighted')
+    }
+    // Remove, flush, re-add — otherwise picking the same run twice
+    // doesn't replay the transition.
+    el.classList.remove('is-highlighted')
+    /* eslint-disable-next-line no-unused-expressions */
+    el.offsetWidth
+    el.classList.add('is-highlighted')
+    highlightTargetEl = el
+    highlightTimeoutId = window.setTimeout(function () {
+      el.classList.remove('is-highlighted')
+      highlightTimeoutId = 0
+      highlightTargetEl = null
+    }, HIGHLIGHT_MS)
+  }
+
   function bindWorkflowSidePanel (panel) {
     if (!panel) return
 
     var workflowId = panel.getAttribute('data-sh-workflow-panel-id') || ''
     var layout = panel.closest ? panel.closest('[data-sh-conv-layout]') : null
     var storageKey = 'sh:convPanel:' + workflowId
-    var HIGHLIGHT_MS = 1800
     var ERROR_TIMEOUT_MS = 6000
     var RETRY_MOCK_MS = 2000
 
@@ -2494,8 +2991,6 @@
     var errorTextEl = panel.querySelector('[data-sh-workflow-panel-error-text]')
     var errorDismissEl = panel.querySelector('[data-sh-workflow-panel-error-dismiss]')
     var errorTimeoutId = 0
-    var highlightTimeoutId = 0
-    var highlightTargetEl = null
 
     function announce (text) {
       if (!announceEl) return
@@ -2524,15 +3019,6 @@
     if (errorDismissEl) errorDismissEl.addEventListener('click', hideError)
 
     // ── Run selection → scroll the thread ──────────────────────
-    // A run's output is a message in the thread. The message macros
-    // key messages on `data-sh-conv-msg` rather than a DOM id, so
-    // resolve by id first (that's what the tile's `href` names, and
-    // what works with JS off) and fall back to the data attribute.
-    function findMessage (messageId) {
-      if (!messageId) return null
-      return document.getElementById(messageId) ||
-        document.querySelector('[data-sh-conv-msg="' + messageId + '"]')
-    }
 
     var runAnchors = panel.querySelectorAll('a[data-sh-workflow-panel-run-target]')
     for (var a = 0; a < runAnchors.length; a++) {
@@ -2597,47 +3083,6 @@
       scrollToTarget(targetEl)
       highlightTarget(targetEl)
       announce('Loaded ' + labelText + ' output.')
-    }
-
-    function scrollToTarget (el) {
-      try {
-        el.scrollIntoView({
-          behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-          block: 'start'
-        })
-      } catch (e) {
-        el.scrollIntoView()
-      }
-      // Focus gives keyboard and screen-reader users the same anchor
-      // the scroll just gave everyone else. The message isn't a natural
-      // tab stop, so make it focusable for this one purpose, and don't
-      // let the focus move re-scroll on top of the smooth scroll.
-      if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1')
-      setTimeout(function () {
-        try { el.focus({ preventScroll: true }) } catch (e) { el.focus() }
-      }, 0)
-    }
-
-    function highlightTarget (el) {
-      if (highlightTimeoutId) {
-        window.clearTimeout(highlightTimeoutId)
-        highlightTimeoutId = 0
-      }
-      if (highlightTargetEl && highlightTargetEl !== el) {
-        highlightTargetEl.classList.remove('is-highlighted')
-      }
-      // Remove, flush, re-add — otherwise clicking the same tile twice
-      // doesn't replay the transition.
-      el.classList.remove('is-highlighted')
-      /* eslint-disable-next-line no-unused-expressions */
-      el.offsetWidth
-      el.classList.add('is-highlighted')
-      highlightTargetEl = el
-      highlightTimeoutId = window.setTimeout(function () {
-        el.classList.remove('is-highlighted')
-        highlightTimeoutId = 0
-        highlightTargetEl = null
-      }, HIGHLIGHT_MS)
     }
 
     function selectAnchor (anchor) {

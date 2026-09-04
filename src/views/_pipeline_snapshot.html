@@ -1,7 +1,7 @@
 {#
   Pipeline Snapshot — structured agent output
   =====================================================================
-  Renders the Daily Pipeline Snapshot workflow's per-run output as an
+  Renders the Pipeline Snapshot workflow's per-run output as an
   in-feed agent response, following the "open document" treatment the
   `agentMessage` macro already uses (no chat bubble around long-form
   content — the response IS the document).
@@ -17,7 +17,7 @@
     {
       dateLabel:  String,       // "August 11, 2026"
       date:       ISO String,   // machine-readable
-      titleLabel: String,       // "Daily Pipeline"
+      titleLabel: String,       // "Pipeline Snapshot"
       freshness?: { text, source },
 
       summary:    String,       // 1–2 sentence outcome-oriented lead
@@ -99,13 +99,13 @@
   aria-labelledby="{{ messageId }}-title"
 >
   {# ── Header: title + freshness ─────────────────────────────────
-     "Daily Pipeline | August 11, 2026" per the design. One <h2>
+     "Pipeline Snapshot | August 11, 2026" per the design. One <h2>
      with a visual pipe separator; the accessible name reads the two
      parts naturally. The freshness note sits beneath as compact
      metadata in the same gray as the workflow-activity chip. #}
   <header class="seller-home__snapshot-header">
     <h2 id="{{ messageId }}-title" class="seller-home__snapshot-title">
-      <span class="seller-home__snapshot-title-primary">{{ snapshot.titleLabel or "Daily Pipeline" }}</span>
+      <span class="seller-home__snapshot-title-primary">{{ snapshot.titleLabel or "Pipeline Snapshot" }}</span>
       <span class="seller-home__snapshot-title-sep" aria-hidden="true">|</span>
       <span class="seller-home__snapshot-title-date">{{ snapshot.dateLabel }}</span>
     </h2>

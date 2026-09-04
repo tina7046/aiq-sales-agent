@@ -28,7 +28,14 @@
       <div class="slds-global-header slds-grid slds-grid_align-spread">
         <div class="slds-global-header__item">
           <div class="slds-global-header__logo">
-            <img src="/assets/images/logo-noname.svg" style="width: 12.5rem;height: 1.75rem;background-size: contain;background-repeat: no-repeat;background-position: left center;"alt="Salesforce Logo" />
+            {# The Salesforce cloud logo doubles as the demo's start-over
+               button: `?reset=1` clears the Recents rail + demo state on
+               the way in (home.js `consumeResetFlag` acts on the flag and
+               strips it from the address bar). Moved here from the Home
+               context-bar tab, which is now a plain link. #}
+            <a href="/index.html?reset=1" title="Salesforce — restart demo">
+              <img src="/assets/images/logo-noname.svg" style="width: 12.5rem;height: 1.75rem;background-size: contain;background-repeat: no-repeat;background-position: left center;"alt="Salesforce Logo" />
+            </a>
           </div>
         </div>
         <div class="slds-global-header__item slds-global-header__item_search">
@@ -365,32 +372,16 @@
         </div>
         <nav class="slds-context-bar__secondary" role="navigation">
           <ul class="slds-grid">
-            {# `?reset=1` clears the Recents rail on the way in, so the
-               Home tab is the demo's start-over button. home.js acts on
-               the flag and strips it from the address bar; see
-               `consumeResetFlag` there. The left nav's "New chat" points
-               at the same page WITHOUT the flag — starting a new chat
-               shouldn't erase the ones before it. #}
+            {# Home is a plain link to the feed. The demo's start-over
+               button now lives on the Salesforce cloud logo in the global
+               header above (it carries `?reset=1`; see `consumeResetFlag`
+               in home.js). The left nav's "New chat" also points here
+               WITHOUT the flag — starting a new chat shouldn't erase the
+               ones before it. #}
             <li class="slds-context-bar__item slds-is-active">
-              <a href="/index.html?reset=1" class="slds-context-bar__label-action" title="Home">
+              <a href="/index.html" class="slds-context-bar__label-action" title="Home">
                 <span class="slds-assistive-text">Current Page:</span>
                 <span class="slds-truncate" title="Home">Home</span>
-              </a>
-            </li>
-
-            <li class="slds-context-bar__item">
-              <a href="javascript:void(0);" class="slds-context-bar__label-action" title="Menu Item">
-                <span class="slds-truncate" title="Menu Item">Prospecting</span>
-              </a>
-            </li>
-            <li class="slds-context-bar__item">
-              <a href="javascript:void(0);" class="slds-context-bar__label-action" title="Menu Item">
-                <span class="slds-truncate" title="Menu Item">Leads</span>
-              </a>
-            </li>
-            <li class="slds-context-bar__item">
-              <a href="javascript:void(0);" class="slds-context-bar__label-action" title="Menu Item">
-                <span class="slds-truncate" title="Menu Item">Accounts</span>
               </a>
             </li>
           </ul>

@@ -13,6 +13,11 @@
 // onboarding copy needs. Here the beats are inert <template>s authored
 // in the page (data-ob-tpl="…") and cloned in order.
 //
+// The REVEAL is shared, though: the word-by-word prose stream and the
+// staggered table cascade this page introduced now live in
+// scripts/conversation_stream.js (`window.ShStream`) and drive the home
+// conversation too. Only the script and the run card are local.
+//
 // Flow (from onboarding_conversation.md):
 //   on load  -> greeting -> user "Start now" -> thinking -> discovery
 //   on send  -> echo the typed text -> thinking (STOP; no reply yet)
@@ -127,151 +132,22 @@
     }, ms)
   }
 
-  // ── Streaming text (transitions.dev) ────────────────────────────────
-  // Agent prose reveals word-by-word: wrap each word in a `.t-stream-w`
-  // span (resting invisible + blurred via onboarding_conversation.css),
-  // then add `.is-in` one word at a time every `--stream-gap`.
-  var STREAM_REDUCE = (typeof matchMedia === 'function') &&
-    matchMedia('(prefers-reduced-motion: reduce)').matches
-
-  function streamGapMs () {
-    try {
-      var raw = getComputedStyle(document.documentElement).getPropertyValue('--stream-gap')
-      var n = parseFloat(raw)
-      if (!isFinite(n) || n <= 0) return 60
-      // Seconds vs milliseconds.
-      return (String(raw).indexOf('ms') === -1 && String(raw).indexOf('s') !== -1) ? n * 1000 : n
-    } catch (e) { return 60 }
-  }
-
-  // Turn `el`'s inline content into reveal units: each word of a text node
-  // becomes a `.t-stream-w` span, and each inline element (<strong>,
-  // <code>) is tagged as ONE `.t-stream-w` unit so it — background and all
-  // — stays fully hidden until revealed (no grey-pill skeletons). Collects
-  // the units, in document order, into `out`.
-  function wrapWords (el, out) {
-    out = out || []
-    var kids = Array.prototype.slice.call(el.childNodes)
-    for (var i = 0; i < kids.length; i++) {
-      var child = kids[i]
-      if (child.nodeType === 3) {
-        var text = child.nodeValue
-        if (!text) continue
-        var frag = document.createDocumentFragment()
-        var parts = text.split(/(\s+)/)
-        for (var j = 0; j < parts.length; j++) {
-          var part = parts[j]
-          if (part === '') continue
-          if (/^\s+$/.test(part)) {
-            frag.appendChild(document.createTextNode(part))
-          } else {
-            var span = document.createElement('span')
-            span.className = 't-stream-w'
-            span.textContent = part
-            frag.appendChild(span)
-            out.push(span)
-          }
-        }
-        el.replaceChild(frag, child)
-      } else if (child.nodeType === 1) {
-        child.classList.add('t-stream-w')
-        out.push(child)
-      }
-    }
-    return out
-  }
-
-  // Reveal a sequence of units STRICTLY top-to-bottom. Everything not yet
-  // reached is `display:none`, so nothing shows below the cursor — no
-  // premature tables, empty bullets, or skeleton chips. Prose units type in
-  // word-by-word; a table reveals as a whole and its rows cascade in with a
-  // staggered fade; the stream then continues below.
-  //   units: [{ el, kind: 'prose'|'table', showParent? }]
-  function streamUnits (units, done) {
-    // Pre-wrap prose so its words rest hidden before the unit is shown.
-    units.forEach(function (u) {
-      if (u.kind === 'prose') u.spans = wrapWords(u.el, [])
+  // ── Reveal ──────────────────────────────────────────────────────────
+  // The word-by-word prose stream and the staggered table cascade are in
+  // scripts/conversation_stream.js now (`window.ShStream`), shared with
+  // the home conversation. This page only supplies what is its own: the
+  // thread's scroller and the row cadence from TIMING.
+  //
+  // `reveal` walks the appended message itself, so the discovery report's
+  // headings, paragraphs, bullets and tables come back in document order
+  // without this file describing that structure a second time.
+  function stream (node, done) {
+    if (!node || !window.ShStream) { if (done) done(); return }
+    window.ShStream.reveal(node, {
+      scroll: scrollToLatest,
+      rowStagger: TIMING.rowStagger,
+      onDone: done
     })
-
-    if (STREAM_REDUCE || typeof window.setTimeout !== 'function') {
-      units.forEach(function (u) {
-        if (u.showParent) u.showParent.style.display = ''
-        u.el.style.display = ''
-        ;(u.spans || []).forEach(function (s) { s.classList.add('is-in') })
-      })
-      scrollToLatest()
-      if (done) done()
-      return
-    }
-
-    // Hide every unit (and any parent container) until it is reached.
-    units.forEach(function (u) {
-      u.el.style.display = 'none'
-      if (u.showParent) u.showParent.style.display = 'none'
-    })
-
-    var gap = streamGapMs()
-    var ui = 0
-    function nextUnit () {
-      if (ui >= units.length) { if (done) done(); return }
-      var u = units[ui]; ui++
-      if (u.showParent) u.showParent.style.display = ''
-      u.el.style.display = ''
-      scrollToLatest()
-
-      if (u.kind === 'table') {
-        // Rows cascade in via a CSS stagger (per-row animation-delay set in
-        // discoveryUnits). Hold until the cascade lands, then continue.
-        var trs = u.el.querySelectorAll('tbody tr')
-        var FADE = 350 // matches --stream-fade
-        var hold = (trs.length ? (trs.length - 1) * TIMING.rowStagger : 0) + FADE + 120
-        window.setTimeout(nextUnit, hold)
-        return
-      }
-
-      var spans = u.spans || []
-      if (!spans.length) { window.setTimeout(nextUnit, gap); return }
-      var wi = 0
-      function stepWord () {
-        if (wi >= spans.length) { nextUnit(); return }
-        spans[wi].classList.add('is-in')
-        wi++
-        if (wi % 6 === 0) scrollToLatest()
-        window.setTimeout(stepWord, gap)
-      }
-      stepWord()
-    }
-    nextUnit()
-  }
-
-  // Ordered reveal units for the discovery report: headings/paragraphs as
-  // prose, each bullet as its own prose unit, and each table as a whole
-  // unit whose rows cascade in with a staggered fade (per-row
-  // animation-delay set here; the table is tagged `ob-streaming`). The
-  // first bullet of a list carries its <ul> so it stays hidden until reached.
-  function discoveryUnits (li) {
-    var rich = li ? li.querySelector('.onboarding-conv__rich') : null
-    if (!rich) return []
-    var units = []
-    Array.prototype.slice.call(rich.children).forEach(function (child) {
-      var tag = child.tagName ? child.tagName.toLowerCase() : ''
-      if (tag === 'table') {
-        child.classList.add('ob-streaming')
-        var trs = child.querySelectorAll('tbody tr')
-        for (var r = 0; r < trs.length; r++) {
-          trs[r].style.animationDelay = (r * TIMING.rowStagger) + 'ms'
-        }
-        units.push({ el: child, kind: 'table' })
-      } else if (tag === 'ul') {
-        var lis = child.querySelectorAll('li')
-        for (var i = 0; i < lis.length; i++) {
-          units.push({ el: lis[i], kind: 'prose', showParent: i === 0 ? child : null })
-        }
-      } else {
-        units.push({ el: child, kind: 'prose' })
-      }
-    })
-    return units
   }
 
   // ── Opening sequence ────────────────────────────────────────────────
@@ -280,16 +156,11 @@
   function playOpening () {
     setBusy(true)
     window.setTimeout(function () {
-      var greeting = appendTpl('greeting')
-      var paras = greeting
-        ? Array.prototype.slice.call(greeting.querySelectorAll('.seller-home__conv-msg-agent-text'))
-        : []
-      var greetUnits = paras.map(function (p) { return { el: p, kind: 'prose' } })
-      streamUnits(greetUnits, function () {
+      stream(appendTpl('greeting'), function () {
         window.setTimeout(function () {
           appendTpl('user-start')
           playBeat('discovery', TIMING.discoveryThinking, LABELS.discovery, function (discoveryLi) {
-            streamUnits(discoveryUnits(discoveryLi), function () {
+            stream(discoveryLi, function () {
               setBusy(false)
               if (input && typeof input.focus === 'function') input.focus()
             })
@@ -541,82 +412,14 @@
     if (t.count) {
       var count = document.createElement('p')
       count.className = 'slds-col_bump-left slds-text-body_small'
-      renderCountUp(count, String(t.count))
+      // Rolls up from 0 with the motion-blurred digit pop-in; falls back
+      // to the plain string when the shared module is absent.
+      if (window.ShStream) window.ShStream.countUp.render(count, String(t.count))
+      else count.textContent = String(t.count)
       row.appendChild(count)
     }
 
     sec.tools.appendChild(row)
-  }
-
-  // ── Result counter (transitions.dev "Number pop-in") ────────────────
-  // Roll a numeric result up from 0, rebuilding its `.t-digit` spans on
-  // each change so the pop-in replays per tick — a motion-blurred count-up
-  // that settles on the target. Non-numeric results ("loaded") pop in as
-  // one unit.
-  function renderCountUp (pEl, text) {
-    var m = text.match(/^\s*(\d[\d,]*)(.*)$/)
-
-    if (!m) {
-      var solo = document.createElement('span')
-      solo.className = 't-digit-group is-animating'
-      var word = document.createElement('span')
-      word.className = 't-digit'
-      word.textContent = text
-      solo.appendChild(word)
-      pEl.appendChild(solo)
-      return
-    }
-
-    var suffix = m[2] || ''
-    var group = document.createElement('span')
-    group.className = 't-digit-group is-animating'
-    pEl.appendChild(group)
-    if (suffix) {
-      var suf = document.createElement('span')
-      suf.textContent = suffix
-      pEl.appendChild(suf)
-    }
-    rollNumber(group, parseInt(m[1].replace(/,/g, ''), 10))
-  }
-
-  // Roll a single `.t-digit-group` from 0 up to `target`. Shared by the
-  // run-card counters and the table cell numbers.
-  function rollNumber (group, target) {
-    var reduce = (typeof matchMedia === 'function') && matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reduce || !isFinite(target) || target <= 0 || typeof window.requestAnimationFrame !== 'function') {
-      setDigits(group, formatInt(isFinite(target) ? target : 0))
-      return
-    }
-    var DURATION = 700
-    var startTs = null
-    var lastVal = -1
-    function frame (ts) {
-      if (startTs === null) startTs = ts
-      var t = Math.min(1, (ts - startTs) / DURATION)
-      var eased = 1 - Math.pow(1 - t, 3) // ease-out cubic
-      var val = Math.round(eased * target)
-      if (val !== lastVal) { setDigits(group, formatInt(val)); lastVal = val }
-      if (t < 1) window.requestAnimationFrame(frame)
-      else if (lastVal !== target) setDigits(group, formatInt(target))
-    }
-    window.requestAnimationFrame(frame)
-  }
-
-  // Rebuild a group's digits. New elements inheriting `.is-animating`
-  // start the pop-in from its 0% keyframe, so a rebuild = a replay.
-  function setDigits (group, str) {
-    while (group.firstChild) group.removeChild(group.firstChild)
-    for (var i = 0; i < str.length; i++) {
-      var d = document.createElement('span')
-      d.className = 't-digit'
-      if (i > 0) d.setAttribute('data-stagger', String(Math.min(i, 2)))
-      d.textContent = str.charAt(i)
-      group.appendChild(d)
-    }
-  }
-
-  function formatInt (n) {
-    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
   }
 
   if (input) {
