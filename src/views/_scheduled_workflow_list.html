@@ -116,7 +116,7 @@
       class="seller-home__scheduled-status-glyph seller-home__scheduled-status-glyph--spinner sh-spinner"
       aria-hidden="true"
     ></span>
-    {% for glyph in ["check", "clock", "pause", "play", "warning", "refresh"] %}
+    {% for glyph in ["check", "clock", "pause", "play", "warning", "refresh", "archive"] %}
       <svg
         class="seller-home__scheduled-status-glyph seller-home__scheduled-status-glyph--{{ glyph }}"
         aria-hidden="true"
@@ -145,20 +145,12 @@
 #}
 {% macro renderScheduledWorkflowRow(workflow, statusTypes, actions) %}
   {% set statusMeta = statusTypes[workflow.status] %}
-  {# `linked` defaults to true — only an explicit `linked: false`
-     opts a row out of drill-in. Every row in scheduled.json ships
-     with `linked: false` in this increment because the detail
-     view is a future increment; the branch below stays in place
-     so a single row can flip on once the detail page exists. #}
-  {% set isLinked = not (workflow.linked == false) %}
-  {% set workflowHref = workflow.href or "#" %}
   {% set statusLabel = statusMeta.label if statusMeta else workflow.status %}
   {# Prefixes for the two places the status reaches AT as words. Stamped
-     as attributes so the toggle in home.js can re-compose either name
-     from `prefix + statusTypes[state].label` without holding any copy
-     of its own. #}
-  {% set rowLabelPrefix = "Open workflow, " ~ workflow.title ~ ", " %}
-  {% set rowTextPrefix = "Status: " %}
+     as attributes so the status toggle in home.js can re-compose either
+     name from `prefix + statusTypes[state].label` without holding any
+     copy of its own. #}
+  {% set rowLabelPrefix = "Open details, " ~ workflow.title ~ ", " %}
   <li
     class="seller-home__scheduled-workflow-item"
     data-sh-workflow-item
@@ -171,56 +163,75 @@
   >
     {{ renderStatusButton(workflow, statusMeta) }}
 
-    {% if isLinked %}
-      <a
-        class="seller-home__scheduled-workflow-row"
-        href="{{ workflowHref }}"
-        title="{{ workflow.title }}"
+    {# Full-row open target — a stretched, transparent `<button>` layered
+       over the card (`.seller-home__scheduled-workflow-open`, absolute,
+       inset 0) that discloses the schedule-details side panel. A
+       `<button>` rather than an `<a>` because it reveals an in-page
+       panel, not a new document; `aria-haspopup="dialog"` +
+       `aria-expanded` (kept in sync by bindScheduled) tell AT the card
+       discloses the panel.
+
+       It's a SIBLING of the visible card body — not a wrapper around it —
+       so the body's own text can host inline controls (the failed row's
+       Reconnect action below) without nesting a control inside a control.
+       The status button, Reconnect, and ⋮ menu all sit ABOVE this overlay
+       (z-index) so their hit targets win over the row-open surface. #}
+      <button
+        type="button"
+        class="seller-home__scheduled-workflow-open"
+        aria-haspopup="dialog"
+        aria-expanded="false"
         aria-label="{{ rowLabelPrefix }}{{ statusLabel }}"
-        data-sh-workflow-open
+        data-sh-schedule-open="{{ workflow.id }}"
         data-sh-workflow-status-label
         data-sh-workflow-status-prefix="{{ rowLabelPrefix }}"
-      >
-    {% else %}
-      {# Inert branch — `<div>` instead of `<a>`. Same class list;
-         no `data-sh-workflow-open` hook so the tab controller and
-         any future router can distinguish drill-in-eligible rows
-         from placeholders. Status is embedded in the visually-
-         hidden span below so AT users still hear "Daily Pipeline
-         Snapshot, Needs approval" even without an aria-label on
-         a link. #}
-      <div
-        class="seller-home__scheduled-workflow-row seller-home__scheduled-workflow-row--unlinked"
-        title="{{ workflow.title }}"
-      >
-    {% endif %}
+      ></button>
+
+    {# Visible card surface. Inert `<div>` — the stretched button above
+       owns click / keyboard / focus; this only paints the title + meta. #}
+      <div class="seller-home__scheduled-workflow-row" title="{{ workflow.title }}">
       <span class="seller-home__scheduled-workflow-body">
         <span class="seller-home__scheduled-workflow-title">{{ workflow.title }}</span>
-        <span class="seller-home__scheduled-workflow-meta">{{ workflow.cadence }}</span>
-        {# Visually-hidden status label. On linked rows this is
-           redundant with the aria-label so we suppress it there;
-           on unlinked rows there's no aria-label (no `<a>`), so
-           this is the only place the status reaches AT users. #}
-        {% if not isLinked %}
-          <span
-            class="slds-assistive-text"
-            data-sh-workflow-status-text
-            data-sh-workflow-status-prefix="{{ rowTextPrefix }}"
-          >{{ rowTextPrefix }}{{ statusLabel }}</span>
-        {% endif %}
+        <span class="seller-home__scheduled-workflow-meta">
+          {%- if workflow.reconnect -%}
+            {{ workflow.reconnect.message }}
+          {%- else -%}
+            {{ workflow.cadence }}
+          {%- endif -%}
+        </span>
       </span>
-    {% if isLinked %}</a>{% else %}</div>{% endif %}
 
-    {# Overflow menu (⋮ → Edit / Pause / Resume / Duplicate / Delete).
-       SIBLING of the row body, absolutely positioned so it sits
-       inside the row's reserved right gutter without violating the
-       "no nested interactives" rule. `data-sh-workflow-stop` marks
-       clicks inside as "inside the menu" so the outside-click
-       dismisser in home.js (built in Step 6) doesn't fire on them.
-
-       Menu id is namespaced with the workflow id so multiple rows
-       never share aria-controls / aria-labelledby targets. #}
+    {# Right-side action area — the recovery action (only when a
+       Needs-Attention item ships an actionable resolution) followed by
+       the overflow menu, in that order. A flow child of the row lifted
+       above the row-open overlay (z-index) so its controls are
+       clickable; the text body flexes to fill the rest and this area
+       neither shrinks nor overlaps the title / error message. #}
     {% set menuId = "workflow-" ~ workflow.id ~ "-menu" %}
+      <div class="seller-home__scheduled-workflow-actions" data-sh-workflow-actions>
+        {% if workflow.reconnect %}
+        {# Primary recovery action. Stays visible at all times (it's what
+           clears the block), stops its click from opening the side panel,
+           and carries a full accessible name. A design-system text button
+           tinted with the error token — visible + actionable without a
+           destructive fill, and the schedule name stays neutral. The
+           label ↔ spinner swap is driven by `aria-busy` in home.js. #}
+        <button
+          type="button"
+          class="slds-button seller-home__scheduled-workflow-reconnect"
+          data-sh-workflow-reconnect="{{ workflow.id }}"
+          data-sh-workflow-stop
+          aria-label="{{ workflow.reconnect.ariaLabel if workflow.reconnect.ariaLabel else (workflow.reconnect.label ~ ' Slack for ' ~ workflow.title) }}"
+        >
+          <span class="seller-home__scheduled-workflow-reconnect-label">{{ workflow.reconnect.label }}</span>
+          <span class="seller-home__scheduled-workflow-reconnect-spinner sh-spinner" aria-hidden="true"></span>
+        </button>
+        {% endif %}
+
+    {# Overflow menu (⋮). Revealed on hover / focus-within / when open.
+       `data-sh-workflow-stop` marks clicks inside as "inside the menu" so
+       the outside-click dismisser doesn't fire on them. Menu id is
+       namespaced with the workflow id so rows never share aria targets. #}
     <div
       class="seller-home__scheduled-workflow-menu"
       data-sh-workflow-menu
@@ -271,6 +282,8 @@
         </ul>
       </div>
     </div>
+      </div>{# .seller-home__scheduled-workflow-actions #}
+      </div>{# .seller-home__scheduled-workflow-row #}
   </li>
 {% endmacro %}
 

@@ -2602,6 +2602,15 @@
     return 'paused'
   }
 
+  // A schedule with an unresolved blocking issue — its last run failed,
+  // e.g. a delivery connection expired — can't be run on demand until
+  // the issue is cleared. "Run now" is still offered (so the path is
+  // discoverable) but disabled in both the row overflow menu and the
+  // panel header menu while the block remains.
+  function scheduleRunBlocked (status) {
+    return status === 'failed'
+  }
+
   function applyWorkflowStatus (item, status, types) {
     var meta = types[status] || {}
     var titleNode = item.querySelector('.seller-home__scheduled-workflow-title')
@@ -2683,6 +2692,22 @@
     var statusRegion = root.querySelector('[data-sh-scheduled-status]')
     var filterBtn = root.querySelector('[data-sh-scheduled-filter]')
 
+    // Toolbar overflow (⋮) menu + the Archived view it opens, and the
+    // schedule-details side panel. All no-op when their markup is
+    // absent, so this stays safe on a half-hydrated shell.
+    var overflowTrigger = root.querySelector('[data-sh-scheduled-overflow-trigger]')
+    var overflowMenu = root.querySelector('[data-sh-scheduled-overflow-menu]')
+    var archivedBar = root.querySelector('[data-sh-scheduled-archived-bar]')
+    var archivedBack = root.querySelector('[data-sh-scheduled-archived-back]')
+
+    // Detail panel — bound up front, independent of the tab wiring.
+    // Hooks are filled in once the tab filter / status registry exist
+    // (below); the panel reads them lazily so a status change made from
+    // its overflow menu can recategorise the card + refresh counts
+    // without the panel closing itself.
+    var scheduleHooks = { reflow: null, statusTypes: null }
+    var detailPanel = scheduledDetailPanelController(root, scheduleHooks)
+
     // Set once the tab wiring below is known good. The status button is
     // bound before that point, so it reaches the recount through this
     // rather than by being bound after it — a page with malformed tab
@@ -2731,6 +2756,25 @@
       var id = tab.getAttribute('data-sh-scheduled-tab')
       tabStatusesById[id] = list
     })
+
+    // Overflow views (Archived) filter the same list but live in the ⋮
+    // menu, not the tab row. Register their status sets alongside the
+    // tabs so `activateTab` can drive them, and remember their ids so it
+    // knows to show the archived bar / mark the ⋮ trigger active.
+    var overflowViewIds = []
+    if (overflowMenu) {
+      toArray(overflowMenu.querySelectorAll('[data-sh-scheduled-view]')).forEach(function (item) {
+        var vid = item.getAttribute('data-sh-scheduled-view')
+        if (!vid) return
+        var vraw = item.getAttribute('data-sh-scheduled-view-statuses') || ''
+        tabStatusesById[vid] = vraw.split(',').map(function (s) { return s.trim() }).filter(function (s) { return s })
+        overflowViewIds.push(vid)
+      })
+    }
+    function isOverflowView (id) { return overflowViewIds.indexOf(id) >= 0 }
+
+    // The last real tab, so "Back" from the Archived view returns there.
+    var lastMainTabId = null
 
     // Cache the row NodeList once. A hypothetical future incremental
     // list-render can call `refreshRows()` (exposed via the returned
@@ -2794,6 +2838,26 @@
     // spec asks for update-driven announcements only.
     activateTab(activeTabId, { announce: false, writeHash: false })
 
+    // Now that the filter set + status registry exist, wire the detail
+    // panel's hooks. `reflow` re-applies the CURRENT tab filter and
+    // recounts after a panel-driven status change — same logic as
+    // `activateTab`'s row pass, minus the tab-visual / focus / close
+    // side-effects, so the open panel survives a Pause / Resume.
+    scheduleHooks.statusTypes = readWorkflowStatusTypes(listRoot)
+    scheduleHooks.reflow = function () {
+      var statuses = tabStatusesById[activeTabId] || []
+      var visibleCount = 0
+      rows.forEach(function (row) {
+        var status = row.getAttribute('data-sh-workflow-status') || ''
+        var visible = statuses.length === 0 || statuses.indexOf(status) >= 0
+        row.hidden = !visible
+        if (visible) visibleCount++
+      })
+      if (emptyPanel) emptyPanel.hidden = visibleCount > 0
+      if (listRoot) listRoot.hidden = visibleCount === 0
+      refreshTabCounts()
+    }
+
     tabsRoot.addEventListener('click', function (event) {
       var tab = closest(event.target, '[data-sh-scheduled-tab]')
       if (!tab || !tabsRoot.contains(tab)) return
@@ -2856,6 +2920,65 @@
       }
     })
 
+    // ── Toolbar overflow (⋮) menu → Archived view ──────────────────
+    // A tiny menu controller (open / select / Escape / outside-click)
+    // whose one item today activates the Archived view through the same
+    // `activateTab` choke-point the tabs use.
+    if (overflowTrigger && overflowMenu) {
+      var closeOverflow = function (returnFocus) {
+        overflowMenu.hidden = true
+        overflowTrigger.setAttribute('aria-expanded', 'false')
+        if (returnFocus) overflowTrigger.focus()
+      }
+
+      overflowTrigger.addEventListener('click', function (event) {
+        event.preventDefault()
+        event.stopPropagation()
+        var willOpen = overflowMenu.hidden
+        overflowMenu.hidden = !willOpen
+        overflowTrigger.setAttribute('aria-expanded', willOpen ? 'true' : 'false')
+        if (willOpen) {
+          var first = overflowMenu.querySelector('[data-sh-scheduled-view]')
+          if (first) first.focus()
+        }
+      })
+
+      overflowMenu.addEventListener('click', function (event) {
+        var item = closest(event.target, '[data-sh-scheduled-view]')
+        if (!item) return
+        event.preventDefault()
+        event.stopPropagation()
+        var viewId = item.getAttribute('data-sh-scheduled-view')
+        closeOverflow(false)
+        activateTab(viewId, { announce: true, writeHash: true, focusTab: false })
+        // Land focus on the archived bar's Back control so keyboard
+        // users have an obvious way out of the view.
+        if (archivedBack) archivedBack.focus()
+      })
+
+      overflowMenu.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          closeOverflow(true)
+        }
+      })
+
+      document.addEventListener('click', function (event) {
+        if (overflowMenu.hidden) return
+        if (closest(event.target, '[data-sh-scheduled-overflow]')) return
+        closeOverflow(false)
+      })
+    }
+
+    // "Back" from the Archived view returns to the last main tab.
+    if (archivedBack) {
+      archivedBack.addEventListener('click', function (event) {
+        event.preventDefault()
+        activateTab(lastMainTabId || activeTabId,
+          { announce: true, writeHash: true, focusTab: true })
+      })
+    }
+
     // ── Core activation routine ────────────────────────────────
     // Single choke-point. Applying every state change here (rather
     // than sprinkling `aria-checked` / `hidden` writes across the
@@ -2867,6 +2990,18 @@
       if (statuses === undefined) return
 
       activeTabId = tabId
+
+      // Archived (and any future ⋮ view) toggles the archived bar and
+      // the ⋮ trigger's selected look; a real tab clears both and is
+      // remembered so "Back" from Archived can return here.
+      var overflowView = isOverflowView(tabId)
+      if (!overflowView) lastMainTabId = tabId
+      if (archivedBar) archivedBar.hidden = !overflowView
+      if (overflowTrigger) overflowTrigger.classList.toggle('is-active', overflowView)
+
+      // Switching tab/view can hide the selected card, so close the
+      // details panel to keep the selection and the panel in sync.
+      if (detailPanel) detailPanel.close()
 
       // Update tab visual + ARIA state. Roving tabindex per WAI-
       // ARIA — only the active tab is in the natural tab order.
@@ -2941,6 +3076,722 @@
     }
   }
 
+  // ── Schedule-details side panel (/scheduled.html) ──────────────
+  // One shell (`_schedule_side_panel.html`), populated on card
+  // activation from two config scripts scheduled.html emits:
+  //   • #sh-scheduled-details      id → full schedule record
+  //       { id, title, status, cadence, frequency, time, timezone,
+  //         nextRun, delivery, skillId, skillName, instructions,
+  //         createdAt, createdBy, lastRunId, lastRunStatus, lastRunAt,
+  //         chatId }
+  //   • #sh-scheduled-panel-config { menuActions:[{id,label,icon}],
+  //                                skillRoute, chatRoute }
+  // The panel mirrors the Figma frame (Frequency / Delivery / Uses Skill
+  // / Instructions / Created / Last run) with the actions in a header
+  // overflow (⋮) menu. Instructions is editable in place. Pause / Resume
+  // / Run now / Archive repaint the card + reflow the active tab via the
+  // hooks bindScheduled passes in.
+  // The card body is a `<button data-sh-schedule-open="<id>">`; clicking
+  // it opens the panel (or closes it on a second click of the same
+  // card). The card keeps `aria-expanded="true"` + an is-selected
+  // outline while open; Escape / × close and return focus to the card.
+  // Returns null when the panel markup is absent so callers can guard.
+  function scheduledDetailPanelController (root, hooks) {
+    var panel = root.querySelector('[data-sh-schedule-panel]')
+    if (!panel) return null
+    hooks = hooks || {}
+
+    var titleEl = panel.querySelector('[data-sh-schedule-panel-title]')
+    var announceEl = panel.querySelector('[data-sh-schedule-panel-announce]')
+    var closeBtn = panel.querySelector('[data-sh-schedule-panel-close]')
+    var listRoot = root.querySelector('[data-sh-scheduled-workflow-list]')
+
+    // Header overflow (⋮) menu.
+    var menuWrap = panel.querySelector('[data-sh-schedule-menu]')
+    var menuTrigger = panel.querySelector('[data-sh-schedule-menu-trigger]')
+    var menuList = panel.querySelector('[data-sh-schedule-menu-list]')
+
+    // Body value slots (filled per schedule).
+    var freqSelectEl = panel.querySelector('[data-sh-sched-frequency]')
+    var timeSelectEl = panel.querySelector('[data-sh-sched-time]')
+    var deliveryEl = panel.querySelector('[data-sh-sched-delivery]')
+    var skillLinkEl = panel.querySelector('[data-sh-sched-skill-link]')
+    var skillNameEl = panel.querySelector('[data-sh-sched-skill-name]')
+    var instrDisplayEl = panel.querySelector('[data-sh-sched-instr-display]')
+    var instrEditEl = panel.querySelector('[data-sh-sched-instr-edit]')
+    var createdEl = panel.querySelector('[data-sh-sched-created]')
+    var lastRunEl = panel.querySelector('[data-sh-sched-lastrun]')
+
+    // Error alert (Needs-Attention only).
+    var alertEl = panel.querySelector('[data-sh-schedule-alert]')
+    var alertTitleEl = panel.querySelector('[data-sh-schedule-alert-title]')
+    var alertDescEl = panel.querySelector('[data-sh-schedule-alert-desc]')
+    var alertLinkEl = panel.querySelector('[data-sh-schedule-alert-reconnect]')
+    var alertLinkLabelEl = panel.querySelector('[data-sh-schedule-alert-link-label]')
+
+    var detailsById = {}
+    var config = {}
+
+    var detailsScript = document.getElementById('sh-scheduled-details')
+    if (detailsScript) {
+      try {
+        var arr = JSON.parse(detailsScript.textContent || '[]')
+        for (var i = 0; i < arr.length; i++) {
+          if (arr[i] && arr[i].id) detailsById[arr[i].id] = arr[i]
+        }
+      } catch (err) { /* leave the map empty on malformed config */ }
+    }
+    var configScript = document.getElementById('sh-scheduled-panel-config')
+    if (configScript) {
+      try { config = JSON.parse(configScript.textContent || '{}') || config } catch (err) { /* keep defaults */ }
+    }
+
+    var CHAT_ROUTE = config.chatRoute || '/home_conversation.html'
+    var SKILL_ROUTE = config.skillRoute || '/skill_detail.html'
+    var activeTrigger = null
+    var editing = false
+
+    // Frequency picklist + time picklist (15-minute increments). Built
+    // once; `fillSelect` keeps whatever value a schedule already carries
+    // even if it's off-list (e.g. "Fridays") by prepending it.
+    var FREQ_OPTIONS = ['Hourly', 'Daily', 'Weekdays', 'Monthly']
+    var TIME_OPTIONS = (function buildTimeOptions () {
+      var out = []
+      for (var mins = 0; mins < 24 * 60; mins += 15) {
+        var h = Math.floor(mins / 60)
+        var m = mins % 60
+        var period = h < 12 ? 'AM' : 'PM'
+        var h12 = h % 12
+        if (h12 === 0) h12 = 12
+        out.push(h12 + ':' + (m < 10 ? '0' + m : m) + ' ' + period)
+      }
+      return out
+    })()
+
+    function fillSelect (sel, options, value) {
+      if (!sel) return
+      var opts = options.slice()
+      if (value && opts.indexOf(value) < 0) opts.unshift(value)
+      sel.innerHTML = ''
+      opts.forEach(function (label) {
+        var op = document.createElement('option')
+        op.value = label
+        op.textContent = label
+        sel.appendChild(op)
+      })
+      if (value) sel.value = value
+    }
+
+    // The status-glyph / aria registry lives on the list root; the tab
+    // controller hands it in so both share one parse, but fall back to
+    // reading it here so the panel still works if bound standalone.
+    function statusTypes () {
+      return hooks.statusTypes || (listRoot ? readWorkflowStatusTypes(listRoot) : {})
+    }
+
+    function rowFor (id) {
+      if (!listRoot || !id) return null
+      return listRoot.querySelector('[data-sh-workflow-item][data-sh-workflow-id="' + id + '"]')
+    }
+
+    function clearSelected () {
+      if (!listRoot) return
+      toArray(listRoot.querySelectorAll('.seller-home__scheduled-workflow-item.is-selected'))
+        .forEach(function (it) { it.classList.remove('is-selected') })
+      toArray(listRoot.querySelectorAll('[data-sh-schedule-open][aria-expanded="true"]'))
+        .forEach(function (b) { b.setAttribute('aria-expanded', 'false') })
+    }
+
+    // ── Error alert ────────────────────────────────────────────────
+    // Shown whenever the schedule carries a `reconnect` block. Text is
+    // set from the record (falling back to the shipped copy) and the
+    // link label mirrors it. Not a live region — see the template note;
+    // the open() announce carries the sentence once.
+    function renderAlert (record) {
+      if (!alertEl) return
+      var rc = record && record.reconnect
+      if (!rc) { hideAlert(); return }
+      if (alertTitleEl) alertTitleEl.textContent = rc.message || 'Connection expired'
+      if (alertDescEl) {
+        alertDescEl.textContent = rc.description ||
+          'This schedule couldn’t deliver today’s update and won’t run again until it’s reconnected.'
+      }
+      if (alertLinkLabelEl) alertLinkLabelEl.textContent = rc.linkLabel || 'Reconnect'
+      if (alertLinkEl) {
+        alertLinkEl.removeAttribute('aria-busy')
+        alertLinkEl.disabled = false
+        alertLinkEl.setAttribute('aria-label',
+          rc.ariaLabel || ((rc.linkLabel || 'Reconnect') + ' for ' + (record.title || 'this schedule')))
+      }
+      alertEl.hidden = false
+    }
+
+    function hideAlert () {
+      if (!alertEl) return
+      alertEl.hidden = true
+      if (alertLinkEl) {
+        alertLinkEl.removeAttribute('aria-busy')
+        alertLinkEl.disabled = false
+      }
+    }
+
+    // ── Populate the panel from a schedule record ──────────────────
+    function populate (record) {
+      if (titleEl) titleEl.textContent = record.title || 'Schedule'
+      renderAlert(record)
+      fillSelect(freqSelectEl, FREQ_OPTIONS, record.frequency)
+      fillSelect(timeSelectEl, TIME_OPTIONS, record.time)
+      if (deliveryEl) deliveryEl.textContent = record.delivery || '—'
+
+      if (skillNameEl) skillNameEl.textContent = record.skillName || ''
+      if (skillLinkEl) {
+        if (record.skillName) {
+          skillLinkEl.hidden = false
+          skillLinkEl.setAttribute('href',
+            record.skillId ? (SKILL_ROUTE + '?id=' + encodeURIComponent(record.skillId)) : SKILL_ROUTE)
+          skillLinkEl.setAttribute('aria-label', 'Uses Skill: ' + record.skillName + '. Open Skill details.')
+        } else {
+          skillLinkEl.hidden = true
+        }
+      }
+
+      // Instructions — always land in display (read) mode on open.
+      exitEdit(false)
+      if (instrDisplayEl) instrDisplayEl.textContent = record.instructions || ''
+      if (instrEditEl) instrEditEl.value = record.instructions || ''
+
+      if (createdEl) {
+        var created = record.createdAt || ''
+        if (record.createdBy) created = created ? (created + ' by ' + record.createdBy) : ('by ' + record.createdBy)
+        createdEl.textContent = created || '—'
+      }
+
+      renderLastRun(record)
+      renderMenu(record)
+    }
+
+    // Last run reads "<status> <when>", plain. When the run is viewable
+    // (a run id + a chat exist) a trailing "· View run" link opens the
+    // chat and jumps to that run — so a failed run reads
+    // "Failed today at 8:30 AM · View run" and lands the seller on the
+    // technical details / partial output, not just a dead status line.
+    function renderLastRun (record) {
+      if (!lastRunEl) return
+      lastRunEl.innerHTML = ''
+      var text
+      if (record.lastRunStatus && record.lastRunAt) text = record.lastRunStatus + ' ' + record.lastRunAt
+      else text = record.lastRunAt || record.lastRunStatus || '—'
+
+      // A failed run's status words carry the error color (only the
+      // "View run" link below stays interactive — the line isn't a link).
+      var failed = /^fail/i.test(record.lastRunStatus || '')
+      if (failed) {
+        var errSpan = document.createElement('span')
+        errSpan.className = 'seller-home__schedule-side-meta-error'
+        errSpan.textContent = text
+        lastRunEl.appendChild(errSpan)
+      } else {
+        lastRunEl.appendChild(document.createTextNode(text))
+      }
+
+      if (record.lastRunId && record.chatId) {
+        lastRunEl.appendChild(document.createTextNode(' · '))
+        var a = document.createElement('a')
+        a.className = 'seller-home__schedule-side-meta-link'
+        a.href = CHAT_ROUTE + '?id=' + encodeURIComponent(record.chatId) +
+          '#' + encodeURIComponent(record.lastRunId)
+        a.textContent = 'View run'
+        a.setAttribute('aria-label', 'View run: ' + text + '. Opens the chat at this run.')
+        lastRunEl.appendChild(a)
+      }
+    }
+
+    // ── Header overflow menu ───────────────────────────────────────
+    // Run now / Pause↔Resume / Open Chat / Archive. Pause and Resume are
+    // mutually exclusive; Open Chat needs a chat; run/pause/archive are
+    // hidden once archived.
+    function menuItemVisible (id, record) {
+      var status = record.status || ''
+      switch (id) {
+        case 'run_now': return status !== 'archived'
+        case 'pause': return status !== 'paused' && status !== 'archived'
+        case 'resume': return status === 'paused'
+        case 'open_chat': return !!record.chatId
+        case 'archive': return status !== 'archived'
+        default: return true
+      }
+    }
+
+    function renderMenu (record) {
+      if (!menuList) return
+      var shown = 0
+      toArray(menuList.querySelectorAll('[data-sh-schedule-menu-action]')).forEach(function (btn) {
+        var actionId = btn.getAttribute('data-sh-schedule-menu-action')
+        var vis = menuItemVisible(actionId, record)
+        if (vis) shown++
+        var li = btn.parentNode
+        if (li && li.tagName === 'LI') li.hidden = !vis
+        else btn.hidden = !vis
+
+        // Run now stays visible but goes disabled while a blocking issue
+        // remains (see scheduleRunBlocked).
+        var dis = vis && actionId === 'run_now' && scheduleRunBlocked(record.status || '')
+        btn.disabled = dis
+        if (dis) {
+          btn.setAttribute('aria-disabled', 'true')
+          // Accessible explanation for why Run now is unavailable.
+          btn.title = 'Reconnect Slack before running this schedule.'
+          btn.setAttribute('aria-label', (btn.querySelector('.seller-home__schedule-side-menu-item-label')
+            ? btn.querySelector('.seller-home__schedule-side-menu-item-label').textContent : 'Run now') +
+            '. Reconnect Slack before running this schedule.')
+        } else {
+          btn.removeAttribute('aria-label')
+          btn.removeAttribute('aria-disabled')
+          btn.removeAttribute('title')
+        }
+      })
+      // Nothing applies (e.g. an archived schedule) → hide the ⋮ trigger
+      // rather than offer an empty menu.
+      if (menuWrap) menuWrap.hidden = shown === 0
+    }
+
+    function visibleMenuItems () {
+      if (!menuList) return []
+      return toArray(menuList.querySelectorAll('[data-sh-schedule-menu-action]'))
+        .filter(function (b) { return b.offsetParent !== null && !b.disabled })
+    }
+
+    function menuIsOpen () { return !!(menuList && !menuList.hidden) }
+
+    function setMenuOpen (isOpen) {
+      if (!menuList || !menuTrigger) return
+      menuList.hidden = !isOpen
+      menuTrigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false')
+    }
+
+    // ── State transitions ──────────────────────────────────────────
+    // Recategorise a schedule: repaint the card glyph + accessible name
+    // (shared `applyWorkflowStatus`), update its meta line, keep the
+    // in-memory record in sync, refresh the overflow menu (Pause↔Resume)
+    // and re-run the active tab filter + counts (without closing us).
+    // Active cadence rebuilt from the (editable) frequency + time, with
+    // the original "· Next run …" tail preserved so editing the picklists
+    // updates the card without losing its schedule-relative suffix.
+    function scheduledCadence (record) {
+      var tail = ''
+      var c = record.cadence || ''
+      var idx = c.indexOf(' · ')
+      if (idx >= 0) tail = c.slice(idx)
+      return (record.frequency || '') + ' at ' + (record.time || '') + tail
+    }
+
+    // Repaint a failed row's meta as just the error message. The
+    // recovery action now lives in a dedicated Reconnect button in the
+    // row's right-side action area, not inline in the message.
+    function renderReconnectMeta (meta, record) {
+      var rc = record.reconnect || {}
+      meta.textContent = rc.message || 'Connection issue'
+    }
+
+    function updateCadence (row, record, status) {
+      var meta = row && row.querySelector('.seller-home__scheduled-workflow-meta')
+      if (!meta) return
+      var freq = (record.frequency || '').toLowerCase()
+      var time = record.time || ''
+      if (status === 'running') meta.textContent = 'Running now · Started at ' + time
+      else if (status === 'paused') meta.textContent = 'Paused · Previously ran ' + freq + ' at ' + time
+      else if (status === 'archived') meta.textContent = 'Archived'
+      else if (status === 'failed' && record.reconnect) renderReconnectMeta(meta, record)
+      else meta.textContent = scheduledCadence(record)
+    }
+
+    function changeStatus (id, record, newStatus) {
+      record.status = newStatus
+      var row = rowFor(id)
+      if (row) {
+        applyWorkflowStatus(row, newStatus, statusTypes())
+        updateCadence(row, record, newStatus)
+      }
+      renderMenu(record)
+      if (typeof hooks.reflow === 'function') hooks.reflow()
+    }
+
+    // ── Reconnect (Needs-Attention recovery action) ────────────────
+    // Kicks off the (simulated) Slack reconnection for a failed
+    // schedule. Guards against double-submits via `aria-busy`, shows the
+    // button's loading state, and on success returns the schedule to
+    // Active — clearing the error, restoring its cadence/next-run, and
+    // letting `hooks.reflow()` move it out of Needs Attention and
+    // recount the tabs.
+    function setReconnectLoading (btn, loading) {
+      if (!btn) return
+      if (loading) {
+        btn.setAttribute('aria-busy', 'true')
+        btn.disabled = true
+      } else {
+        btn.removeAttribute('aria-busy')
+        btn.disabled = false
+      }
+    }
+
+    function reconnectSchedule (id, btn) {
+      var record = id ? detailsById[id] : null
+      if (!record) return
+      // Already in flight — ignore repeat presses (Enter/Space/click).
+      if (btn && btn.getAttribute('aria-busy') === 'true') return
+
+      setReconnectLoading(btn, true)
+
+      var name = record.title || 'Schedule'
+      // A prototype stand-in for the async Slack OAuth round-trip. A
+      // truthy `data-sh-reconnect-fail` on the button forces the failure
+      // path for demoing the error state; otherwise it succeeds.
+      var willFail = !!(btn && btn.getAttribute('data-sh-reconnect-fail'))
+
+      window.setTimeout(function () {
+        if (willFail) {
+          // Keep the schedule under Needs Attention with its error state
+          // intact; just release the button and surface an actionable
+          // message.
+          setReconnectLoading(btn, false)
+          showScheduledToast(
+            'Couldn\u2019t reconnect Slack for ' + name +
+              '. Check your Slack workspace connection and try again.',
+            'error'
+          )
+          return
+        }
+
+        // Success — clear the block and restore normal scheduling copy.
+        record.reconnect = null
+        record.cadence =
+          (record.frequency || 'Weekdays') + ' at ' + (record.time || '8:30 AM') +
+          ' \u00b7 Next run tomorrow'
+
+        // Move Failed → Active. This repaints the status glyph + meta
+        // (dropping the error color), rebuilds the header menu (Run now
+        // re-enabled), and reflows the tabs so the card leaves Needs
+        // Attention and the counts update.
+        changeStatus(id, record, 'scheduled')
+
+        // The recovery action no longer applies once the block is
+        // cleared: retire the row's Reconnect button and hide the panel
+        // alert, whichever surface triggered this.
+        var row = rowFor(id)
+        var rowBtn = row && row.querySelector('[data-sh-workflow-reconnect]')
+        if (rowBtn && rowBtn.parentNode) rowBtn.parentNode.removeChild(rowBtn)
+        if (panel.getAttribute('data-sh-schedule-current') === id) hideAlert()
+
+        showScheduledToast('Slack reconnected. ' + name + ' is active again.', 'success')
+      }, 1100)
+    }
+
+    function doAction (actionId, record, id) {
+      if (!record || !id) return
+      // Defensive: a blocked Run now is disabled in the menu, but never
+      // act on it even if a stray dispatch slips through.
+      if (actionId === 'run_now' && scheduleRunBlocked(record.status || '')) return
+      switch (actionId) {
+        case 'open_chat':
+          if (record.chatId) {
+            window.location.href = CHAT_ROUTE + '?id=' + encodeURIComponent(record.chatId)
+          }
+          break
+        case 'run_now':
+          changeStatus(id, record, 'running')
+          break
+        case 'pause':
+          changeStatus(id, record, 'paused')
+          break
+        case 'resume': {
+          var row = rowFor(id)
+          var back = (row && row.getAttribute('data-sh-workflow-status-default')) || 'scheduled'
+          changeStatus(id, record, back)
+          break
+        }
+        case 'archive':
+          changeStatus(id, record, 'archived')
+          // Archived schedules leave the operational tabs, so the card
+          // it opened from is gone — close and hand focus back sensibly.
+          close()
+          break
+      }
+
+      // Broadcast for any future listener (drafts, analytics). No
+      // in-tree listener mutates status off this, so it can't double up.
+      document.dispatchEvent(new CustomEvent('sh:workflow-action', {
+        detail: { action: actionId, workflowId: id, source: 'schedule-panel' }
+      }))
+      // eslint-disable-next-line no-console
+      console.info('[seller-home] schedule action:', actionId, '(' + id + ')')
+    }
+
+    // ── Editable Instructions ──────────────────────────────────────
+    function autosize (el) {
+      if (!el) return
+      el.style.height = 'auto'
+      el.style.height = el.scrollHeight + 'px'
+    }
+
+    function enterEdit () {
+      if (!instrDisplayEl || !instrEditEl || editing) return
+      editing = true
+      instrEditEl.value = instrDisplayEl.textContent
+      instrDisplayEl.hidden = true
+      instrEditEl.hidden = false
+      autosize(instrEditEl)
+      instrEditEl.focus()
+      var len = instrEditEl.value.length
+      try { instrEditEl.setSelectionRange(len, len) } catch (e) { /* older engines */ }
+    }
+
+    function exitEdit (save) {
+      if (!instrDisplayEl || !instrEditEl) return
+      if (editing && save) {
+        var id = panel.getAttribute('data-sh-schedule-current')
+        var record = id ? detailsById[id] : null
+        if (record) record.instructions = instrEditEl.value
+        instrDisplayEl.textContent = instrEditEl.value
+      }
+      editing = false
+      instrEditEl.hidden = true
+      instrDisplayEl.hidden = false
+    }
+
+    // ── Open / close ───────────────────────────────────────────────
+    function open (id, trigger) {
+      var record = detailsById[id]
+      if (!record) return
+      exitEdit(false)
+      setMenuOpen(false)
+      clearSelected()
+      activeTrigger = trigger || null
+      populate(record)
+      panel.hidden = false
+      panel.setAttribute('aria-hidden', 'false')
+      panel.setAttribute('data-sh-schedule-current', id)
+      var item = trigger && closest(trigger, '[data-sh-workflow-item]')
+      if (item) item.classList.add('is-selected')
+      if (trigger) trigger.setAttribute('aria-expanded', 'true')
+      // Single polite announcement on open. When the schedule is in
+      // error, fold the alert copy into it (associated with the schedule
+      // name) so the alert conveys itself once without being its own
+      // live region that would re-announce on every re-render.
+      if (announceEl) {
+        var msg = 'Showing details for ' + (record.title || 'schedule') + '.'
+        if (record.reconnect) {
+          msg += ' ' + (record.reconnect.message || 'Connection expired') + '. ' +
+            (record.reconnect.description || '')
+        }
+        announceEl.textContent = msg
+      }
+      if (titleEl && typeof titleEl.focus === 'function') {
+        // Defer so focus lands after the panel has laid out.
+        setTimeout(function () { titleEl.focus() }, 0)
+      }
+    }
+
+    function close () {
+      if (panel.hidden) return
+      exitEdit(false)
+      setMenuOpen(false)
+      panel.hidden = true
+      panel.setAttribute('aria-hidden', 'true')
+      panel.removeAttribute('data-sh-schedule-current')
+      clearSelected()
+      var back = activeTrigger
+      activeTrigger = null
+      // If the card the panel opened from was filtered out (paused /
+      // archived → gone from the current tab), returning focus to it
+      // would be a focus-into-nothing; fall back to the active tab.
+      var target = back
+      if (!target || target.offsetParent === null) {
+        target = root.querySelector('[data-sh-scheduled-tab][aria-checked="true"]') || null
+      }
+      if (target && typeof target.focus === 'function') {
+        setTimeout(function () { target.focus() }, 0)
+      }
+    }
+
+    // ── Wiring ─────────────────────────────────────────────────────
+    if (listRoot) {
+      listRoot.addEventListener('click', function (event) {
+        // Reconnect is a nested action layered above the row-open
+        // overlay: handle it first and stop the event so it never falls
+        // through to opening the details panel.
+        var reconnectBtn = closest(event.target, '[data-sh-workflow-reconnect]')
+        if (reconnectBtn && listRoot.contains(reconnectBtn)) {
+          event.preventDefault()
+          event.stopPropagation()
+          reconnectSchedule(reconnectBtn.getAttribute('data-sh-workflow-reconnect'), reconnectBtn)
+          return
+        }
+
+        var card = closest(event.target, '[data-sh-schedule-open]')
+        if (!card || !listRoot.contains(card)) return
+        event.preventDefault()
+        var id = card.getAttribute('data-sh-schedule-open')
+        if (!panel.hidden && panel.getAttribute('data-sh-schedule-current') === id) {
+          close()
+        } else {
+          open(id, card)
+        }
+      })
+    }
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function (event) {
+        event.preventDefault()
+        close()
+      })
+    }
+
+    // "Reconnect Slack" in the error alert — starts the same reconnection
+    // flow the row's Reconnect button uses, on the panel's current
+    // schedule. Duplicate presses are guarded inside reconnectSchedule
+    // via aria-busy.
+    if (alertLinkEl) {
+      alertLinkEl.addEventListener('click', function (event) {
+        event.preventDefault()
+        event.stopPropagation()
+        var id = panel.getAttribute('data-sh-schedule-current')
+        if (id) reconnectSchedule(id, alertLinkEl)
+      })
+    }
+
+    // Editable Frequency / Time picklists — persist the choice to the
+    // record and repaint the card's cadence line so the change shows
+    // both in the panel and the list.
+    function onScheduleFieldChange (field, sel) {
+      var id = panel.getAttribute('data-sh-schedule-current')
+      var record = id ? detailsById[id] : null
+      if (!record) return
+      record[field] = sel.value
+      updateCadence(rowFor(id), record, record.status)
+    }
+    if (freqSelectEl) {
+      freqSelectEl.addEventListener('change', function () {
+        onScheduleFieldChange('frequency', freqSelectEl)
+      })
+    }
+    if (timeSelectEl) {
+      timeSelectEl.addEventListener('change', function () {
+        onScheduleFieldChange('time', timeSelectEl)
+      })
+    }
+
+    // Header overflow menu: open/close + action dispatch + roving keys.
+    if (menuTrigger && menuList) {
+      menuTrigger.addEventListener('click', function (event) {
+        event.preventDefault()
+        event.stopPropagation()
+        var willOpen = menuList.hidden
+        setMenuOpen(willOpen)
+        if (willOpen) {
+          var first = visibleMenuItems()[0]
+          if (first) first.focus()
+        }
+      })
+
+      menuList.addEventListener('click', function (event) {
+        var btn = closest(event.target, '[data-sh-schedule-menu-action]')
+        if (!btn) return
+        event.preventDefault()
+        event.stopPropagation()
+        var actionId = btn.getAttribute('data-sh-schedule-menu-action')
+        var id = panel.getAttribute('data-sh-schedule-current')
+        var record = detailsById[id] || {}
+        setMenuOpen(false)
+        doAction(actionId, record, id)
+      })
+
+      menuList.addEventListener('keydown', function (event) {
+        var items = visibleMenuItems()
+        var idx = items.indexOf(document.activeElement)
+        switch (event.key) {
+          case 'Escape':
+            event.preventDefault()
+            event.stopPropagation()
+            setMenuOpen(false)
+            menuTrigger.focus()
+            break
+          case 'ArrowDown':
+            event.preventDefault()
+            if (items.length) items[(idx + 1) % items.length].focus()
+            break
+          case 'ArrowUp':
+            event.preventDefault()
+            if (items.length) items[(idx - 1 + items.length) % items.length].focus()
+            break
+          case 'Home':
+            event.preventDefault()
+            if (items.length) items[0].focus()
+            break
+          case 'End':
+            event.preventDefault()
+            if (items.length) items[items.length - 1].focus()
+            break
+        }
+      })
+
+      // Outside click closes the menu (but not the panel).
+      document.addEventListener('click', function (event) {
+        if (!menuIsOpen()) return
+        if (closest(event.target, '[data-sh-schedule-menu]')) return
+        setMenuOpen(false)
+      })
+    }
+
+    // Instructions: click / Enter / Space to edit; blur saves; Escape
+    // cancels; Cmd/Ctrl+Enter commits. Escape + typing are kept from
+    // bubbling so they don't trip the panel's Escape-to-close.
+    if (instrDisplayEl) {
+      instrDisplayEl.addEventListener('click', function () { enterEdit() })
+      instrDisplayEl.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+          event.preventDefault()
+          enterEdit()
+        }
+      })
+    }
+    if (instrEditEl) {
+      instrEditEl.addEventListener('input', function () { autosize(instrEditEl) })
+      instrEditEl.addEventListener('blur', function () { exitEdit(true) })
+      instrEditEl.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          event.stopPropagation()
+          var id = panel.getAttribute('data-sh-schedule-current')
+          var record = id ? detailsById[id] : null
+          instrEditEl.value = (record && record.instructions) || ''
+          exitEdit(false)
+          if (instrDisplayEl && typeof instrDisplayEl.focus === 'function') instrDisplayEl.focus()
+        } else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+          event.preventDefault()
+          instrEditEl.blur() // commit via the blur handler
+        }
+      })
+    }
+
+    // Panel-level Escape: close the menu first, otherwise close the
+    // panel. (Instructions edit + menu stop their own Escape from
+    // bubbling here, so this only fires for the plain-panel case.)
+    panel.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape') return
+      if (menuIsOpen()) {
+        event.preventDefault()
+        setMenuOpen(false)
+        if (menuTrigger) menuTrigger.focus()
+        return
+      }
+      if (editing) return
+      event.preventDefault()
+      close()
+    })
+
+    return { open: open, close: close }
+  }
+
   // aria-live phrasing for the Scheduled tab controller. Pure
   // helper so a future i18n phase can swap the string with an ICU
   // / MessageFormat runner. Picks up the active tab's visible label
@@ -3006,7 +3857,23 @@
         if (openMenu && openMenu !== menu) closeOpenMenu(false)
         setMenuState(trigger, menu, willOpen)
         if (willOpen) {
-          var first = menu.querySelector('[data-sh-workflow-action]')
+          // Run now goes disabled while a blocking issue remains (its
+          // last run failed — see scheduleRunBlocked). Recomputed each
+          // open so it re-enables once the row is reconnected.
+          var item = closest(trigger, '[data-sh-workflow-item]')
+          var blocked = !!(item && scheduleRunBlocked(item.getAttribute('data-sh-workflow-status')))
+          var runNow = menu.querySelector('[data-sh-workflow-action="run_now"]')
+          if (runNow) {
+            runNow.disabled = blocked
+            if (blocked) {
+              runNow.setAttribute('aria-disabled', 'true')
+              runNow.title = 'Reconnect to run this schedule'
+            } else {
+              runNow.removeAttribute('aria-disabled')
+              runNow.removeAttribute('title')
+            }
+          }
+          var first = menu.querySelector('[data-sh-workflow-action]:not([disabled])')
           if (first) first.focus()
         }
         return
@@ -3018,6 +3885,8 @@
       // still emit the correct id.
       var actionBtn = closest(event.target, '[data-sh-workflow-action]')
       if (!actionBtn) return
+      // Disabled items (e.g. Run now on a blocked row) never dispatch.
+      if (actionBtn.disabled) return
 
       event.stopPropagation()
       event.preventDefault()
@@ -3051,7 +3920,7 @@
       if (!openMenu.contains(document.activeElement) &&
           openTrigger !== document.activeElement) return
 
-      var items = toArray(openMenu.querySelectorAll('[data-sh-workflow-action]'))
+      var items = toArray(openMenu.querySelectorAll('[data-sh-workflow-action]:not([disabled])'))
       if (!items.length) return
       event.preventDefault()
       var idx = items.indexOf(document.activeElement)
@@ -3557,6 +4426,65 @@
   function toArray (nodeList) { return Array.prototype.slice.call(nodeList) }
   function closest (node, selector) {
     return node && node.closest ? node.closest(selector) : null
+  }
+
+  // ── Toast ──────────────────────────────────────────────────────────
+  // A single docked SLDS notification (success | error), mirroring the
+  // conversation page's `showToast` so the design-system chrome is
+  // identical. `role="status"` (success) / `role="alert"` (error) make
+  // it announce to AT; success auto-dismisses, errors linger longer so
+  // the recovery message isn't missed. Reuses `window._shShowToast` if
+  // the conversation bundle already exposed one.
+  function showScheduledToast (message, kind) {
+    kind = kind === 'error' ? 'error' : 'success'
+    var duration = kind === 'error' ? 6000 : 4000
+
+    var existing = document.querySelector('.sh-toast-container')
+    if (existing) existing.remove()
+
+    var container = document.createElement('div')
+    container.className = 'slds-notify_container sh-toast-container'
+    container.style.cssText =
+      'position:fixed;top:1rem;left:50%;transform:translateX(-50%);z-index:9999;'
+
+    var theme = kind === 'error' ? 'slds-theme_error' : 'slds-theme_success'
+    var role = kind === 'error' ? 'alert' : 'status'
+    var icon = kind === 'error' ? 'warning' : 'success'
+    var iconClass = kind === 'error'
+      ? 'slds-icon-utility-warning' : 'slds-icon-utility-success'
+
+    container.innerHTML =
+      '<div class="slds-notify slds-notify_toast ' + theme + '" role="' + role + '">' +
+        '<span class="slds-assistive-text">' + kind + '</span>' +
+        '<span class="slds-icon_container ' + iconClass +
+          ' slds-m-right_small slds-no-flex slds-align-top">' +
+          '<svg class="slds-icon slds-icon_small" aria-hidden="true">' +
+            '<use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#' + icon + '"></use>' +
+          '</svg>' +
+        '</span>' +
+        '<div class="slds-notify__content">' +
+          '<h2 class="slds-text-heading_small"></h2>' +
+        '</div>' +
+        '<div class="slds-notify__close">' +
+          '<button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close">' +
+            '<svg class="slds-button__icon" aria-hidden="true">' +
+              '<use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>' +
+            '</svg>' +
+          '</button>' +
+        '</div>' +
+      '</div>'
+
+    // Set copy via textContent so a schedule name can never inject markup.
+    container.querySelector('.slds-notify__content h2').textContent = String(message || '')
+
+    document.body.appendChild(container)
+
+    var closeBtn = container.querySelector('.slds-notify__close button')
+    if (closeBtn) closeBtn.addEventListener('click', function () { container.remove() })
+
+    window.setTimeout(function () {
+      if (container.parentNode) container.remove()
+    }, duration)
   }
 
   if (document.readyState === 'loading') {

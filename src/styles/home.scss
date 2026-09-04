@@ -3412,7 +3412,6 @@ $sh-feed-status-preview: ".seller-home__feed-item-status:not([data-sh-feed-hover
 // tap target, focus ring, and disabled state come from the base
 // stylesheet. Only the icon color + resting opacity are tuned here.
 .seller-home__scheduled-filter {
-  // The base SLDS button sits at 32×32; we don't override those.
   // Paint the icon in the SLDS brand-blue (accent-2 → #0250D9) so
   // the filter affordance visually couples with the active-tab's
   // brand-blue text + underline, forming one "primary interaction"
@@ -3423,14 +3422,10 @@ $sh-feed-status-preview: ".seller-home__feed-item-status:not([data-sh-feed-hover
     fill: var(--slds-g-color-accent-2, #0250d9);
   }
 
-  // Circular hover surface — small brand-agnostic wash so the
-  // filter button doesn't feel disconnected from the tab row's
-  // brand-blue active state. Uses the same neutral shade the
-  // workflow row uses on hover.
-  &:hover {
-    background: var(--slds-g-color-surface-container-2, #f3f3f3);
-    border-radius: 50%;
-  }
+  // Hover/active surface shares the exact treatment the per-row ⋮
+  // trigger uses (see `.seller-home__scheduled-workflow-menu-trigger`)
+  // so the toolbar and row controls read as one family — see the
+  // shared box rule below.
 }
 
 // ── Workflow list ─────────────────────────────────────────────────
@@ -3462,6 +3457,10 @@ $sh-feed-status-preview: ".seller-home__feed-item-status:not([data-sh-feed-hover
 .seller-home__scheduled-workflow-row {
   display: flex;
   align-items: center;
+  // Gap between the flexing text body and the fixed right-side actions
+  // (the leading status cell is reserved with padding-inline-start, not
+  // this gap — it's a sibling, not a flex child).
+  column-gap: var(--slds-g-spacing-3, 0.75rem); // 12px
   min-height: 3.5rem; // 56px — Figma-fixed row height
 
   // The status button is a SIBLING of this element rather than a flex
@@ -3566,11 +3565,16 @@ $sh-feed-status-preview: ".seller-home__feed-item-status:not([data-sh-feed-hover
   z-index: 2; // above the row body's full-row click surface
 }
 
-// Moving the button out of the row body took its hover out of the row's
-// scope with it. Put it back so hovering the status still lifts the row,
-// matching the feed. Unlinked rows opt out of the hover surface, so
-// they're excluded here too.
-.seller-home__scheduled-workflow-item:has(.seller-home__scheduled-status:hover)
+// Card surface hover / focus. Keyed on the ITEM (not the row-open
+// overlay) so the treatment is identical whether the pointer is over the
+// row surface, the status glyph, the Reconnect button, or the overflow —
+// and `:focus-within` gives keyboard users the same cue without relying
+// on hover. Higher specificity than the is-selected outline below, so a
+// selected card also yields to this neutral surface on hover/focus.
+// Unlinked rows (inert draft rows) opt out via `:not(--unlinked)`.
+.seller-home__scheduled-workflow-item:hover
+  .seller-home__scheduled-workflow-row:not(.seller-home__scheduled-workflow-row--unlinked),
+.seller-home__scheduled-workflow-item:focus-within
   .seller-home__scheduled-workflow-row:not(.seller-home__scheduled-workflow-row--unlinked) {
   background: var(--slds-g-color-surface-container-2, #f3f3f3);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
@@ -3605,6 +3609,7 @@ $sh-scheduled-status-rest: (
   scheduled: "clock",
   paused:    "pause",
   failed:    "warning",
+  archived:  "archive",
 );
 
 $sh-scheduled-status-action: (
@@ -3651,15 +3656,15 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 // ── Text stack (center) ──
 // Title (14 px Semibold) stacked over the cadence line (12 px).
 // `min-width: 0` unlocks child ellipsis (see the block comment on
-// the Knowledge doc body — same reasoning). `margin-inline-end`
-// reserves the 44-px right gutter so an ellipsized title never
-// crashes into the absolute-positioned overflow menu.
+// the Knowledge doc body — same reasoning). It flexes into the space
+// the fixed-width `.actions` cluster leaves, and the row `gap` (below)
+// keeps a breathing gutter between the text and the actions, so an
+// ellipsized title never crashes into Reconnect / the overflow.
 .seller-home__scheduled-workflow-body {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  margin-inline-end: 2.75rem; // 44px (32 overflow button + 12 gap)
 }
 
 .seller-home__scheduled-workflow-title {
@@ -3697,15 +3702,36 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 // aria conventions are otherwise identical.
 // ══════════════════════════════════════════════════════════════════════
 .seller-home__scheduled-workflow-menu {
+  display: inline-flex;
+  align-items: center;
+}
+
+// Authored rows: the menu rides inside the flex `.actions` cluster.
+// `position: relative` makes it the anchor for the dropdown
+// (`.menu-list`, absolute below).
+.seller-home__scheduled-workflow-actions .seller-home__scheduled-workflow-menu {
+  position: relative;
+}
+
+// Draft rows (scheduled_drafts.js) append the menu straight onto the
+// <li> — a linked draft's row is an `<a>`, so the trigger button can't
+// nest inside it — so there it stays an absolutely-centred overlay on
+// the row's right edge, tracking the 12px row padding.
+.seller-home__scheduled-workflow-item > .seller-home__scheduled-workflow-menu {
   position: absolute;
   top: 50%;
-  // Tracks the row's `padding-inline`: centering the 32-px trigger
-  // at `right: 0.75rem` (12 px) puts its center on the row's
-  // right-side padding line. If the row padding changes, this
-  // changes with it or the trigger drifts off that line.
   right: 0.75rem;
   transform: translateY(-50%);
   z-index: 2;
+}
+
+// …and because that menu is out of flow, a draft row's text body has to
+// reserve the right gutter itself so an ellipsized title never crashes
+// into it. Authored rows don't need this — their in-flow `.actions`
+// cluster already reserves the space.
+.seller-home__scheduled-workflow-item:has(> .seller-home__scheduled-workflow-menu)
+  .seller-home__scheduled-workflow-body {
+  margin-inline-end: 2.75rem; // 44px (32 overflow + 12 gap)
 }
 
 .seller-home__scheduled-workflow-menu-trigger {
@@ -3731,15 +3757,20 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
     fill: var(--slds-g-color-on-surface-1, #5c5c5c);
   }
 
+  // Match the Skills-list kebab: the card wash is #f3f3f3, so the
+  // trigger's own hover circle is one step darker (#e5e5e5,
+  // surface-container-3) to read as a distinct target on the lit card
+  // instead of dissolving into it. The card stays lit while the
+  // pointer is on the trigger via `.item:hover .row`.
   &:hover,
   &:focus-visible,
   &[aria-expanded="true"] {
-    background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+    background-color: var(--slds-g-color-surface-container-3, #e5e5e5);
     border-radius: var(--slds-g-radius-border-circle, 100%);
   }
 
   &:active {
-    background-color: var(--slds-g-color-surface-container-3, #e5e5e5);
+    background-color: #dbdbdb;
   }
 }
 
@@ -3748,6 +3779,16 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 .seller-home__scheduled-workflow-menu-trigger[aria-expanded="true"] {
   opacity: 1;
   pointer-events: auto;
+}
+
+// Touch devices have no hover to reveal the overflow, so keep it
+// permanently visible there — matching how the always-on Reconnect
+// button stays reachable without a pointer.
+@media (hover: none) {
+  .seller-home__scheduled-workflow-menu-trigger {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .seller-home__scheduled-workflow-menu-list {
@@ -3807,6 +3848,20 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   &:focus-visible {
     box-shadow: inset 3px 0 0 var(--slds-g-color-accent-2, #0250d9);
   }
+
+  // Disabled — e.g. Run now while a blocking issue remains. Muted, no
+  // hover/press affordance, but still shown so the path stays visible.
+  &:disabled,
+  &[aria-disabled="true"] {
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+    cursor: default;
+    opacity: 0.5;
+  }
+  &:disabled:hover,
+  &[aria-disabled="true"]:hover {
+    background: transparent;
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  }
 }
 
 .seller-home__scheduled-workflow-menu-item-icon {
@@ -3862,24 +3917,959 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   }
 }
 
-// Narrow-viewport tuning — tighten the indicator-to-text gap and the
-// reserved menu gutter so the row breathes without eating into the
-// overflow trigger's tap target. Mirrors the equivalent Knowledge
-// doc-row rule.
-//
-// The row's `padding-inline` and the menu's `right` are NOT overridden
-// here: both are already 12 px at every width since the row padding
-// came down from 16, so the former overrides were no-ops.
+// Narrow-viewport tuning — tighten the gap between the text body and
+// the right-side actions so the row breathes at small widths. The
+// fixed `.actions` cluster still reserves its own width, so the body
+// just ellipsizes sooner. Mirrors the equivalent Knowledge doc-row rule.
 @media (max-width: 40rem) {
   .seller-home__scheduled-workflow-row {
-    gap: var(--slds-g-spacing-2, 0.5rem); // 8px, tightens indicator-to-text
+    column-gap: var(--slds-g-spacing-2, 0.5rem); // 8px
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Clickable-card resets, toolbar overflow, archived bar, detail panel
+// ------------------------------------------------------------------
+// Draft rows (scheduled_drafts.js) still render `.row` as the
+// interactive `<a>`/`<div>`, so keep these resets on it. Authored rows
+// render `.row` as an inert `<div>` with a stretched-button overlay
+// (`.seller-home__scheduled-workflow-open`, below) as the click target;
+// the resets are harmless there and `text-align`/`font` still apply to
+// the card text.
+.seller-home__scheduled-workflow-row {
+  width: 100%;
+  appearance: none;
+  border: 0;
+  margin: 0;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+// ── Full-row open target (stretched-button overlay) ───────────────
+// Authored rows layer a transparent `<button>` over the card so the
+// whole row opens the details panel while the card's own text can host
+// inline controls (the failed-row Reconnect). It fills the item's
+// coordinate space (the item is position:relative) and sits BELOW the
+// status button / Reconnect / ⋮ menu (all z-index 2) so their hit
+// targets win over the row-open surface.
+.seller-home__scheduled-workflow-open {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px, matches the card
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 0, 0, 0.16),
+      0 0 0 2px var(--slds-g-color-accent-2, #0250d9);
+  }
+}
+
+// Pressed surface — only while the row-open area itself is active, so
+// pressing the Reconnect button or overflow (which own their own press
+// states) doesn't darken the whole card.
+.seller-home__scheduled-workflow-item:has(.seller-home__scheduled-workflow-open:active)
+  .seller-home__scheduled-workflow-row {
+  background: var(--slds-g-color-surface-container-3, #ebebeb);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16);
+}
+
+// ── Right-side action area (Reconnect + overflow) ─────────────────
+// A flow child of the row, lifted above the row-open overlay so its
+// controls are clickable. Never shrinks (flex 0 0 auto) so it can't be
+// squeezed by a long title / error message; the text body flexes into
+// the remaining width and ellipsizes instead.
+.seller-home__scheduled-workflow-actions {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem); // 8px between Reconnect and ⋮
+}
+
+// ── Reconnect — primary recovery action (Needs-Attention rows) ────
+// A design-system text button tinted with the error token: visible and
+// actionable, but no destructive fill, so the whole card never reads as
+// destructive. Always visible (unlike the hover-revealed overflow), and
+// swaps its label for a spinner while the reconnect flow runs.
+//
+// Hover/active follow the SLDS 2 stateful-button treatment
+// (`.slds-button_neutral.slds-is-selected` in slds2_agentic.scss): a
+// `surface-container-2` fill AND a `border-1` hairline on hover/focus
+// (surface-container-3 on active). The border is transparent at rest so
+// it reveals on hover without shifting layout (box-sizing: border-box).
+.seller-home__scheduled-workflow-reconnect {
+  --slds-c-button-text-color: var(--slds-g-color-error-1, #b60554);
+
+  box-sizing: border-box;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: var(--slds-g-sizing-8, 1.75rem); // 28px hit target
+  padding-inline: var(--slds-g-spacing-2, 0.5rem); // 8px
+  border: 1px solid transparent; // no hairline — matches the Skills action-button hover
+  border-radius: var(--slds-g-radius-border-2, 0.5rem); // 8px
+  background: transparent;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
+  font-weight: 600; // Semibold — matches the Figma emphasis
+  line-height: 1;
+  color: var(--slds-g-color-error-1, #b60554);
+  white-space: nowrap;
+  cursor: pointer;
+
+  transition: background-color 120ms ease;
+
+  // Match the Skills-list action button: the card wash is #f3f3f3, so
+  // the button's own hover fill is one step darker (#e5e5e5,
+  // surface-container-3) and reads as a distinct target on the lit
+  // card — no hairline. The card stays lit while the pointer is on the
+  // button via `.item:hover .row`. Error tint is preserved on the label.
+  &:hover,
+  &:focus-visible {
+    background: var(--slds-g-color-surface-container-3, #e5e5e5);
+    color: var(--slds-g-color-error-1, #b60554);
+  }
+  &:active {
+    background: #dbdbdb;
+  }
+  &:focus {
+    outline: none;
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--slds-g-color-error-1, #b60554);
   }
 
-  // Reserved right gutter for the overflow menu shrinks to keep an
-  // 8-px clearance from the ellipsized title (12 padding + 40 gutter
-  // − 12 menu offset − 32 button = 8).
-  .seller-home__scheduled-workflow-body {
-    margin-inline-end: 2.5rem; // 40px (32 overflow + 8 gap)
+  // Loading — swap label for the shared spinner, freeze interaction.
+  &[aria-busy="true"] {
+    cursor: default;
+    pointer-events: none;
+  }
+}
+
+// Spinner sizing/visibility scoped under the button so it beats the
+// shared `.sh-spinner` defaults (20px, always inline-block) on
+// specificity regardless of stylesheet order. Hidden until busy; a
+// 14px ring with a 2px stroke sits neatly on the 12px label baseline.
+.seller-home__scheduled-workflow-reconnect .seller-home__scheduled-workflow-reconnect-spinner {
+  display: none;
+  width: 0.875rem; // 14px
+  height: 0.875rem;
+  border-width: 2px;
+}
+
+.seller-home__scheduled-workflow-reconnect[aria-busy="true"]
+  .seller-home__scheduled-workflow-reconnect-label {
+  display: none;
+}
+
+.seller-home__scheduled-workflow-reconnect[aria-busy="true"]
+  .seller-home__scheduled-workflow-reconnect-spinner {
+  display: inline-block;
+}
+
+// Error message (second line) on a Needs-Attention row picks up the
+// error token; the schedule name above stays neutral.
+.seller-home__scheduled-workflow-item[data-sh-workflow-status="failed"]
+  .seller-home__scheduled-workflow-meta {
+  color: var(--slds-g-color-error-1, #b60554);
+}
+
+// Selected state — the card whose panel is open keeps a neutral
+// surface + hairline (no brand-blue outline) so it stays gently
+// distinct beside the docked panel without a heavy border. The open
+// panel is the primary "this one" cue.
+.seller-home__scheduled-workflow-item.is-selected .seller-home__scheduled-workflow-row {
+  background: var(--slds-g-color-surface-container-2, #f3f3f3);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+// ── Toolbar right cluster (filter + overflow) ─────────────────────
+.seller-home__scheduled-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+  flex: 0 0 auto;
+}
+
+// Overflow (⋮) menu container — positioned coordinate space for the
+// dropdown, matching the per-row menu convention.
+.seller-home__scheduled-overflow {
+  position: relative;
+  display: inline-flex;
+}
+
+.seller-home__scheduled-overflow-trigger {
+  .slds-button__icon {
+    fill: var(--slds-g-color-accent-2, #0250d9);
+  }
+}
+
+// ── Shared box + hover/active for the two toolbar icon-buttons ────
+// The bare SLDS button collapses to its 16-px glyph, which left the
+// hover wash as a tight 16-px circle. Give both toolbar buttons the
+// same 32×32 centered box + hover/active surface the per-row ⋮ trigger
+// uses so their hover reads identically and the icons sit on an even
+// circle.
+.seller-home__scheduled-filter,
+.seller-home__scheduled-overflow-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--slds-g-sizing-9, 2rem);  // 32px
+  block-size: var(--slds-g-sizing-9, 2rem);   // 32px
+  border-radius: var(--slds-g-radius-border-circle, 100%);
+
+  transition: background-color 120ms ease;
+
+  &:hover,
+  &:focus-visible {
+    background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+    border-radius: var(--slds-g-radius-border-circle, 100%);
+  }
+
+  &:active {
+    background-color: var(--slds-g-color-surface-container-3, #e5e5e5);
+  }
+}
+
+// The ⋮ trigger's expanded (menu open) + is-active (Archived view)
+// states reuse the same neutral surface so its hover/pressed feel
+// matches the per-row ⋮ trigger rather than introducing a second
+// vocabulary.
+.seller-home__scheduled-overflow-trigger.is-active,
+.seller-home__scheduled-overflow-trigger[aria-expanded="true"] {
+  background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+  border-radius: var(--slds-g-radius-border-circle, 100%);
+}
+
+.seller-home__scheduled-overflow-menu {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(100% + 0.25rem);
+  z-index: 20;
+
+  min-width: 11rem;
+  padding: var(--slds-g-spacing-1, 0.25rem);
+  background: var(--slds-g-color-surface-1, #ffffff);
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.seller-home__scheduled-overflow-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.seller-home__scheduled-overflow-item {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  margin: 0;
+  cursor: pointer;
+  text-align: start;
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+
+  padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
+  border-radius: var(--slds-g-radius-border-1, 0.25rem);
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.1875rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  transition: background-color 120ms ease, color 120ms ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--slds-g-color-surface-container-2, #f3f3f3);
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+    outline: none;
+  }
+}
+
+.seller-home__scheduled-overflow-item-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  fill: currentColor;
+  flex: 0 0 auto;
+}
+
+// ── Archived-view bar ─────────────────────────────────────────────
+.seller-home__scheduled-archived-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  margin-block-end: var(--slds-g-spacing-3, 0.75rem);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.seller-home__scheduled-archived-back {
+  .slds-button__icon {
+    fill: var(--slds-g-color-on-surface-2, #2e2e2e);
+  }
+}
+
+.seller-home__scheduled-archived-title {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-2, 1rem); // 16px
+  font-weight: 590;
+  line-height: 1.5rem;
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Workspace + schedule-details side panel
+// ------------------------------------------------------------------
+// The workspace is a flex row: the list section flexes and the panel
+// docks to the right. The list reflows to make room — no overlay, no
+// horizontal scroll. `.seller-home__knowledge` above is
+// `position: relative`, so the narrow-viewport overlay below anchors
+// to it.
+.seller-home__scheduled-workspace {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+
+  // Let the list section own the vertical scroll and flex freely.
+  .seller-home__knowledge-body {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+// Left column — the page header + scrollable body stacked. Flexes to
+// fill the width left of the panel, so with the panel open the
+// "Scheduled" header shrinks to the same width as the body list. Owns
+// the header↔body rhythm the `.seller-home__knowledge` column used to
+// provide (that column now holds only this row).
+.seller-home__scheduled-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem; // 4px — matches the knowledge header/body joint
+}
+
+// Panel shell. Figma node 13068:330830 — soft left drop-shadow
+// (shadow-3-left), no hard border, so it reads as a floating rail over
+// the list. Reuses the Run-History panel's docked-aside framework.
+.seller-home__schedule-side {
+  flex: 0 0 22.5rem; // 360px docked width
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  background: var(--slds-g-color-surface-1, #ffffff);
+  box-shadow:
+    -1px 0 1.44px rgba(0, 0, 0, 0.03),
+    -4px 0 4.4px rgba(0, 0, 0, 0.09),
+    0 0 4.4px rgba(0, 0, 0, 0.09);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+// ── Header (Figma 13068:330832) ───────────────────────────────────
+// 50-px min height, 12-px padding, 8-px gap, bottom hairline.
+.seller-home__schedule-side-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+
+  min-height: 3.125rem; // 50px
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  border-bottom: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+}
+
+.seller-home__schedule-side-title {
+  flex: 1 0 0;
+  margin: 0;
+  min-width: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-2, 1rem); // 16px
+  font-weight: var(--slds-g-font-weight-4, 400); // Figma: Regular
+  line-height: 1.375rem; // 22px
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+// Header action cluster (overflow ⋮ + close), right-anchored.
+.seller-home__schedule-side-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+}
+
+// ── Overflow (⋮) menu ─────────────────────────────────────────────
+.seller-home__schedule-side-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.seller-home__schedule-side-menu-list {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(100% + 0.25rem);
+  z-index: 20;
+
+  min-width: 11rem;
+  padding: var(--slds-g-spacing-1, 0.25rem);
+  background: var(--slds-g-color-surface-1, #ffffff);
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.seller-home__schedule-side-menu-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.seller-home__schedule-side-menu-item {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  margin: 0;
+  cursor: pointer;
+  text-align: start;
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+
+  padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
+  border-radius: var(--slds-g-radius-border-1, 0.25rem);
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.1875rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  transition: background-color 120ms ease, color 120ms ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--slds-g-color-surface-container-2, #f3f3f3);
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+    outline: none;
+  }
+
+  &[hidden] {
+    display: none;
+  }
+
+  // Disabled — e.g. Run now while a blocking issue remains. Muted, no
+  // hover affordance, but still listed so the action stays discoverable.
+  &:disabled,
+  &[aria-disabled="true"] {
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+    cursor: default;
+    opacity: 0.5;
+  }
+  &:disabled:hover,
+  &[aria-disabled="true"]:hover {
+    background: transparent;
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  }
+}
+
+.seller-home__schedule-side-menu-item-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  fill: currentColor;
+  flex: 0 0 auto;
+}
+
+// ── Body (Figma 13068:330833) — 12-px padding, 8-px section gap ────
+.seller-home__schedule-side-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: clip;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-2, 0.5rem); // 8px
+  padding: var(--slds-g-spacing-3, 0.75rem);
+}
+
+// Section group (label over control), 4-px internal gap.
+.seller-home__schedule-side-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+}
+
+// ── Error alert (Figma "Scoped Notification - Error", 13106:332987) ─
+// error-container-1 surface, 12-px padding, 8-px radius; a warning glyph
+// + semibold heading, then an indented body (description + a "Reconnect
+// Slack" text link) aligned under the heading text (16-px icon + 12-px
+// gap = 28-px inset). All text on-error-1 at 13px/18px. Persistent —
+// the controller toggles `hidden`; it never auto-dismisses.
+.seller-home__schedule-side-alert {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-1, 0.375rem); // ~6px between heading + body
+
+  padding: var(--slds-g-spacing-3, 0.75rem); // 12px
+  border-radius: var(--slds-g-radius-border-2, 0.5rem); // 8px
+  background: var(--slds-g-color-error-container-1, #fddde3);
+  color: var(--slds-g-color-on-error-1, #b60554);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.seller-home__schedule-side-alert-head {
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-3, 0.75rem); // 12px icon → heading
+}
+
+.seller-home__schedule-side-alert-icon {
+  flex: 0 0 auto;
+  inline-size: 1rem; // 16px — x-small utility icon
+  block-size: 1rem;
+  fill: var(--slds-g-color-on-error-1, #b60554);
+}
+
+.seller-home__schedule-side-alert-title {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  font-weight: var(--slds-g-font-weight-6, 590); // Semibold
+  line-height: 1.125rem; // 18px
+  color: var(--slds-g-color-on-error-1, #b60554);
+}
+
+// Body aligns under the heading text: 16px icon + 12px gap = 28px inset.
+.seller-home__schedule-side-alert-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-1, 0.375rem); // ~6px description → link
+  padding-inline-start: 1.75rem; // 28px
+}
+
+.seller-home__schedule-side-alert-desc {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.125rem; // 18px
+  color: var(--slds-g-color-on-error-1, #b60554);
+  word-break: break-word; // wrap the full message, never clip
+}
+
+// "Reconnect Slack" — DS text link (underline semibold) in the error
+// color. Swaps its label for the shared spinner while the flow runs.
+.seller-home__schedule-side-alert-link {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 1.125rem; // 18px — sits on the text baseline
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  font-weight: var(--slds-g-font-weight-6, 590); // Semibold
+  line-height: 1.125rem; // 18px
+  color: var(--slds-g-color-on-error-1, #b60554);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--slds-g-color-error-2, #8a033e);
+  }
+  &:focus {
+    outline: none;
+  }
+  &:focus-visible {
+    outline: none;
+    border-radius: 0.1875rem; // 3px
+    box-shadow: 0 0 0 2px var(--slds-g-color-on-error-1, #b60554);
+  }
+
+  &[aria-busy="true"] {
+    cursor: default;
+    pointer-events: none;
+    text-decoration: none;
+  }
+}
+
+// Spinner scoped under the link so it beats the shared `.sh-spinner`
+// defaults on specificity; hidden until the link goes busy.
+.seller-home__schedule-side-alert-link .seller-home__schedule-side-alert-link-spinner {
+  display: none;
+  width: 0.875rem; // 14px
+  height: 0.875rem;
+  border-width: 2px;
+}
+
+.seller-home__schedule-side-alert-link[aria-busy="true"]
+  .seller-home__schedule-side-alert-link-label {
+  display: none;
+}
+
+.seller-home__schedule-side-alert-link[aria-busy="true"]
+  .seller-home__schedule-side-alert-link-spinner {
+  display: inline-block;
+}
+
+// Last-run FAILED status treatment — the status words carry the error
+// color; only "View run" (the sibling link) is interactive.
+.seller-home__schedule-side-meta-error {
+  color: var(--slds-g-color-error-1, #b60554);
+}
+
+// Section label — 13px Semibold, Neutral-20.
+.seller-home__schedule-side-label {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.125rem; // 18px
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// Plain value line (Delivery) — 13px Regular, wraps.
+.seller-home__schedule-side-value {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.125rem; // 18px
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  word-break: break-word;
+}
+
+// ── Frequency row ─────────────────────────────────────────────────
+.seller-home__schedule-side-frequency {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.seller-home__schedule-side-frequency-on {
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.125rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// Editable picklist styled like the SLDS 2 input the Figma uses. The
+// bordered box is the container; the native <select> fills it (its own
+// chrome removed) and a sprite chevron sits at the trailing edge.
+.seller-home__schedule-side-input {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+
+  min-height: 2rem; // 32px — SLDS input height
+  padding-inline: var(--slds-g-spacing-2, 0.5rem);
+  padding-block: var(--slds-g-spacing-1, 0.25rem);
+
+  background: var(--slds-g-color-surface-1, #ffffff);
+  border: 1px solid var(--slds-g-color-border-2, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem); // 8px
+
+  // Focus ring driven by the inner <select>'s focus.
+  &:focus-within {
+    border-color: var(--slds-g-color-accent-2, #0250d9);
+    box-shadow: 0 0 0 1px var(--slds-g-color-accent-2, #0250d9);
+  }
+}
+
+.seller-home__schedule-side-input-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.125rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  text-overflow: ellipsis;
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
+
+  // Kill the legacy IE/Edge picklist arrow so only our chevron shows.
+  &::-ms-expand {
+    display: none;
+  }
+}
+
+.seller-home__schedule-side-input--picklist {
+  min-width: 8.75rem; // 140px — matches the Figma picklist width
+}
+
+.seller-home__schedule-side-input--time {
+  min-width: 6.25rem; // 100px — snug around "12:00 AM" + chevron
+}
+
+.seller-home__schedule-side-input-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+  flex: 0 0 auto;
+  pointer-events: none; // clicks fall through to the <select>
+}
+
+// ── Uses-Skill chip (Figma 13068:331255) ──────────────────────────
+// Matches the skill editor's supporting-skill chip (skills.scss →
+// `.seller-home__skill-canvas-doc .seller-home__skill-chip`): a 24-px
+// #f3f3f3 capsule with a hairline #e5e5e5 border, 14-px indigo skill
+// badge, 12-px label, and an #e5e5e5 hover surface.
+.seller-home__schedule-side-skill-chip {
+  align-self: flex-start;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+
+  min-block-size: 1.5rem; // 24px — matches the skill-chip pill height
+  padding-block: 2px;
+  padding-inline: 4px;
+  max-width: 100%;
+
+  background-color: #f3f3f3;
+  border: 1px solid #e5e5e5;
+  border-radius: 999px;
+
+  color: #2e2e2e;
+  text-decoration: none;
+  transition: border-color 0.1s ease, background-color 0.1s ease;
+
+  &:hover,
+  &:focus-visible {
+    background-color: #e5e5e5;
+    text-decoration: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-accent-2, #0176d3);
+    outline-offset: 1px;
+  }
+}
+
+.seller-home__schedule-side-skill-icon {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.seller-home__schedule-side-skill-name {
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: 0.75rem; // 12px — Figma Resource Chip label
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.0625rem; // 17px
+  color: #2e2e2e;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+// ── Divider (Figma "Menu - Divider", 16-px band around a hairline) ─
+.seller-home__schedule-side-divider {
+  height: 0;
+  border: 0;
+  border-top: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  margin-block: 0.4375rem; // ~16px band with the hairline centered
+  width: 100%;
+}
+
+// ── Instructions box (Figma 13068:331137) — editable in place ─────
+.seller-home__schedule-side-instructions {
+  width: 100%;
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  background: var(--slds-g-color-surface-1, #ffffff);
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
+
+  &:focus-within {
+    border-color: var(--slds-g-color-accent-2, #0250d9);
+    box-shadow: 0 0 0 1px var(--slds-g-color-accent-2, #0250d9);
+  }
+}
+
+// Shared type for both display + edit states so the box doesn't jump.
+.seller-home__schedule-side-instructions-display,
+.seller-home__schedule-side-instructions-edit {
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.125rem; // 18px
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.seller-home__schedule-side-instructions-display {
+  cursor: text;
+
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
+    outline-offset: 2px;
+    border-radius: var(--slds-g-radius-border-1, 0.25rem);
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.seller-home__schedule-side-instructions-edit {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  resize: none;
+  overflow: hidden; // JS auto-grows to content so nothing clips
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+// ── Created + Last run (Figma 13068:331122) ───────────────────────
+.seller-home__schedule-side-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.seller-home__schedule-side-meta-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.seller-home__schedule-side-meta-label {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.0625rem; // 17px
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+.seller-home__schedule-side-meta-value {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.0625rem; // 17px
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  word-break: break-word;
+}
+
+// The Last-run value is a link when a run id exists (jumps into chat).
+.seller-home__schedule-side-meta-link {
+  color: var(--slds-g-color-accent-2, #0250d9);
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Narrow viewports — the docked panel becomes a right-anchored overlay
+// inside the (relatively positioned) main region so the list keeps its
+// full width behind it and nothing scrolls horizontally.
+@media (max-width: 48rem) {
+  .seller-home__schedule-side {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    z-index: 30;
+    flex-basis: min(22.5rem, 100%);
+    width: min(22.5rem, 100%);
   }
 }
 
