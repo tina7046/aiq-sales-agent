@@ -2311,6 +2311,16 @@ main.app-wrapper {
   z-index: 2;
 }
 
+// With the filter menu open, lift the header above the empty-state panel.
+// Both otherwise sit at z-index 2, but the empty panel is a LATER sibling,
+// so at equal z-index it paints over the menu that hangs down from the
+// header. On the Archived view (no rows by default) that panel is shown,
+// so without this it covers the open listbox and swallows clicks on its
+// options — you can see the menu but can't pick Active/Scheduled.
+.seller-home__feed-header:has(.seller-home__feed-filter-menu.is-open) {
+  z-index: 3;
+}
+
 // ── Header ────────────────────────────────────────────────────────────
 // The tab bar used to own the gap down to the list; with it gone the
 // header carries that space itself.
