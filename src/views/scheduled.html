@@ -51,74 +51,6 @@
 {% set navFooter  = readData("index").navFooter %}
 {% set recents    = readData("index").recents %}
 
-{# ── One list, two surfaces ────────────────────────────────────────
-   The Scheduled tab shows the SAME workflows the home "Agents at Work"
-   feed does, so the two can't drift: rather than keep a parallel list in
-   scheduled.json, build the rows here from index.json's `feed.items`.
-   Each feed item maps to a scheduled row. Three values are derived so a
-   workflow reads the same on both surfaces AND drills into its skill:
-
-     • title   — the WORKFLOW NAME, resolved from the backing skill via
-                 `feed item → workflow.id → skills.json name` (e.g. the
-                 feed's output-phrased "Found new prospects" becomes
-                 "Find Prospects" here). Falls back to the feed title
-                 when a skill can't be resolved.
-     • cadence — the FULL home subline string, composed exactly like
-                 the feed's second line so "Weekly · Next run in 3 days"
-                 reads identically on both surfaces. Ready and Scheduled
-                 rows lead with cadence; Running leads with step
-                 progress; Paused / Failed / Archived lead with a
-                 status word.
-     • skillId — the backing skill id, surfaced on the row so the
-                 ⋮ → Edit action deep-links to /skill_detail.html.
-
-   A `conversationId` still becomes the drill-in href (items without one
-   render as unlinked rows). `tabs`, `statusTypes`, `rowActions`,
-   `banner` and `emptyState` still come from scheduled.json; only
-   `workflows` is sourced here, so the tab counts below (which iterate
-   `workflows` and read `.status`) stay correct.
-
-   Rows are grouped by the feed's own `stateOrder` (completed before
-   running) rather than the feed's raw array order, so the Active tab
-   reads completed-on-top / running-below. Within a status the feed's
-   authored order is preserved (the inner loop keeps array order). #}
-{% set statusSort   = readData("index").feed.stateOrder or ["completed", "running", "scheduled", "paused", "failed", "archived"] %}
-{% set statusLabels = readData("index").feed.statusLabels or {} %}
-{% set skillCatalog = readData("skills").skills or [] %}
-{% set workflows = [] %}
-{% for _st in statusSort %}
-  {% for _it in (readData("index").feed.items or []) %}
-    {% if _it.state == _st %}
-      {# Resolve the workflow name from the backing skill (workflow.id).
-         Reset per item so a miss can't leak the prior row's name; the
-         outer-scope set propagates in this build (same pattern the tab
-         counts below rely on). #}
-      {% set _skillId = _it.workflow.id if _it.workflow else "" %}
-      {% set _skillName = "" %}
-      {% for _sk in skillCatalog %}
-        {% if _sk.id == _skillId %}{% set _skillName = _sk.name %}{% endif %}
-      {% endfor %}
-      {# Compose the subline exactly like the feed: Ready + Scheduled
-         lead with cadence, Running with step progress, everything else
-         with its status label; the right slot is the time field that
-         state uses. Single `set` expressions so the values aren't
-         trapped in Nunjucks' block scope. #}
-      {% set _left = _it.cadence if (_it.state == "completed" or _it.state == "scheduled") else ((_it.stepProgress or statusLabels.running or _it.state) if _it.state == "running" else (statusLabels[_it.state] or _it.state)) %}
-      {% set _right = _it.startedAt if _it.state == "running" else (_it.lastRun if (_it.state == "paused" or _it.state == "failed") else _it.nextRun) %}
-      {% set _meta = (_left ~ " · " ~ _right) if _right else _left %}
-      {% set _ = workflows.push({
-        id:      _it.id,
-        title:   _skillName or _it.title,
-        cadence: _meta,
-        status:  _it.state,
-        skillId: _skillId,
-        linked:  (true if _it.conversationId else false),
-        href:    (("/home_conversation.html?id=" ~ _it.conversationId) if _it.conversationId else "")
-      }) %}
-    {% endif %}
-  {% endfor %}
-{% endfor %}
-
 {% block styles %}
   <link rel="stylesheet" href="/styles/home.css" />
   <link rel="stylesheet" href="/styles/knowledge.css" />
@@ -167,30 +99,41 @@
          the same class so `padding-inline`, `min-height`, and
          `border-bottom` come from `.seller-home__knowledge-header`
          without duplication. #}
-      <header
-        class="seller-home__knowledge-header"
-        data-sh-scheduled-header
-      >
-        <h1 class="seller-home__knowledge-header-title">{{ header.heading }}</h1>
-      </header>
+      {# ── Workspace (left column + detail panel) ──────────────────
+         Flex row. The LEFT column stacks the page header + the
+         scrollable body; the schedule-details panel docks to the
+         right and spans the FULL workspace height (header row
+         included) so it reads as a top-to-bottom rail. The left
+         column reflows to make room when the panel opens (no overlay,
+         no horizontal scroll). The panel is collapsed until a card is
+         opened.
 
-      {# ── Body section ────────────────────────────────────────────
-         Same scrollable pattern as Knowledge. The inner column is
-         capped at 50 rem (800 px) via the shared
-         `.seller-home__knowledge-body-inner` rule. Content order
-         mirrors Figma node 8831:380388:
+         The header lives INSIDE this row (not above it) so that, with
+         the panel open, the "Scheduled" header shrinks to the same
+         width as the body list rather than spanning the full region.
+
+         Body content order mirrors Figma node 8831:380388:
            1. Shared educational banner (same partial Skills uses)
            2. Tabs + filter button
            3. Workflow list
-         The prior intro paragraph + "Schedule a task" composer were
-         retired when the page adopted the shared banner — the
-         `composer` block stays in scheduled.json (dormant) so re-
-         introducing that surface later is a one-line template
-         edit. #}
-      <section
-        class="seller-home__knowledge-body"
-        aria-label="{{ pageTitle }}"
-      >
+         (The old intro paragraph + "Schedule a task" composer were
+         retired when the page adopted the shared banner; the dormant
+         `composer` block stays in scheduled.json for later reuse.) #}
+      <div class="seller-home__scheduled-workspace" data-sh-scheduled-workspace>
+        <div class="seller-home__scheduled-main">
+          {# ── Header band (48 px) ───────────────────────────────── #}
+          <header
+            class="seller-home__knowledge-header"
+            data-sh-scheduled-header
+          >
+            <h1 class="seller-home__knowledge-header-title">{{ header.heading }}</h1>
+          </header>
+
+          {# ── Body section (scrollable, 50 rem inner column) ────── #}
+          <section
+            class="seller-home__knowledge-body"
+            aria-label="{{ pageTitle }}"
+          >
         <div class="seller-home__knowledge-body-inner">
           {# ── Educational banner ───────────────────────────────────
              Shared partial (also consumed by /skills.html). Copy +
@@ -212,7 +155,7 @@
             {% include "_seller_home_banner.html" %}
           {% endif %}
 
-          {# ── Tabs row (filter chips) ─────────────────────────────
+          {# ── Tabs row (filter chips) + filter button ─────────────
              ARIA note: these are filter chips over one list, NOT
              SLDS tabpanel-swapping tabs. So we use `role="radiogroup"`
              + `role="radio"` per the WAI-ARIA authoring practices
@@ -290,6 +233,101 @@
                 </button>
               {% endfor %}
             </div>
+
+            {# ── Right-anchored controls: filter + overflow ──────
+               Both sit at the trailing edge. The filter icon-button
+               dispatches `sh:scheduled-filter` (future filter menu).
+               The overflow (⋮) menu holds views that don't earn a
+               visible tab — Archived — authored under
+               `tabs.overflow`; bindScheduled() filters the list to
+               the chosen view. #}
+            <div class="seller-home__scheduled-toolbar-actions">
+              <button
+                type="button"
+                class="slds-button slds-button_icon slds-button_icon-bare seller-home__scheduled-filter"
+                data-sh-scheduled-filter
+                title="{{ filterAction.label }}"
+                aria-label="{{ filterAction.label }}"
+              >
+                <svg class="slds-button__icon" aria-hidden="true">
+                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ filterAction.icon }}"></use>
+                </svg>
+                <span class="slds-assistive-text">{{ filterAction.label }}</span>
+              </button>
+
+              {% if tabs.overflow and (tabs.overflow | length) > 0 %}
+              <div class="seller-home__scheduled-overflow" data-sh-scheduled-overflow>
+                <button
+                  type="button"
+                  class="slds-button slds-button_icon slds-button_icon-bare seller-home__scheduled-overflow-trigger"
+                  data-sh-scheduled-overflow-trigger
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  aria-controls="seller-home-scheduled-overflow-menu"
+                  title="{{ overflowAction.label | default('More views') }}"
+                  aria-label="{{ overflowAction.label | default('More views') }}"
+                >
+                  <svg class="slds-button__icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ overflowAction.icon | default('threedots_vertical') }}"></use>
+                  </svg>
+                  <span class="slds-assistive-text">{{ overflowAction.label | default('More views') }}</span>
+                </button>
+                <div
+                  class="seller-home__scheduled-overflow-menu"
+                  id="seller-home-scheduled-overflow-menu"
+                  role="menu"
+                  aria-label="More views"
+                  data-sh-scheduled-overflow-menu
+                  hidden
+                >
+                  <ul class="seller-home__scheduled-overflow-items" role="none">
+                    {% for view in tabs.overflow %}
+                    <li role="none">
+                      <button
+                        type="button"
+                        class="seller-home__scheduled-overflow-item"
+                        role="menuitem"
+                        data-sh-scheduled-view="{{ view.id }}"
+                        data-sh-scheduled-view-statuses="{{ view.statuses | join(',') }}"
+                      >
+                        {% if view.icon %}
+                        <svg class="seller-home__scheduled-overflow-item-icon" aria-hidden="true">
+                          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ view.icon }}"></use>
+                        </svg>
+                        {% endif %}
+                        <span class="seller-home__scheduled-overflow-item-label">{{ view.label }}</span>
+                      </button>
+                    </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          {# ── Archived-view bar ───────────────────────────────────
+             Hidden until the Archived view is chosen from the ⋮ menu.
+             Gives the archived list a clear heading and a Back control
+             that returns to the last main tab. #}
+          <div
+            class="seller-home__scheduled-archived-bar"
+            data-sh-scheduled-archived-bar
+            hidden
+          >
+            <button
+              type="button"
+              class="slds-button slds-button_icon slds-button_icon-bare seller-home__scheduled-archived-back"
+              data-sh-scheduled-archived-back
+              aria-label="Back to schedules"
+              title="Back to schedules"
+            >
+              <svg class="slds-button__icon" aria-hidden="true">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronleft"></use>
+              </svg>
+              <span class="slds-assistive-text">Back to schedules</span>
+            </button>
+            <h2 class="seller-home__scheduled-archived-title">Archived</h2>
           </div>
 
           {# ── Live-region — announces tab-switch results ─────────
@@ -326,7 +364,38 @@
             {% include "_scheduled_workflow_list.html" %}
           </div>
         </div>
-      </section>
+          </section>
+        </div>{# /.seller-home__scheduled-main #}
+
+      {# Schedule-details panel — one shell that spans the full
+         workspace height, populated by bindScheduled() from the config
+         scripts below.
+
+         TEMPORARILY DISABLED during the main→branch merge: the partial
+         `_schedule_side_panel.html` and its SCSS were never committed to
+         this branch, so the include broke the build. bindScheduled() in
+         home.js is written to no-op when the panel markup is absent, so
+         the page works without it. Restore this once the partial + styles
+         are added back (just uncomment the line below):
+         {% include "_schedule_side_panel.html" %}
+      #}
+      </div>{# /.seller-home__scheduled-workspace #}
+
+      {# ── Config for the details panel ────────────────────────────
+         `sh-scheduled-details` maps each card id → its title, status,
+         cadence, linked conversation, and detail fields.
+         `sh-scheduled-panel-config` carries the field order/labels and
+         the action set (from scheduled.json → `panel`). #}
+      <script type="application/json" id="sh-scheduled-details">
+        [
+        {%- for w in workflows -%}
+          {{ w | dump | safe }}{% if not loop.last %},{% endif %}
+        {%- endfor -%}
+        ]
+      </script>
+      <script type="application/json" id="sh-scheduled-panel-config">
+        {{ panel | dump | safe }}
+      </script>
     </div>
   </div>
 

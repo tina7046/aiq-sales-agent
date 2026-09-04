@@ -4,98 +4,39 @@
 // gulpfile.js:getData() because the filename matches the .html stem.
 //
 // Sections:
-//   • pageTitle     — accessible name for the right-column `<main>`
-//                     region and the document title. Kept parallel
-//                     to knowledge.json for consistency.
-//   • header        — text above the body.
-//                       - heading      → the visible `<h1>`
-//                     (The prior `description` intro paragraph was
-//                     retired when the page adopted the shared
-//                     educational banner — its copy now lives in
-//                     `banner.description` below.)
-//   • banner        — shared educational-banner block. Same shape
-//                     Skills uses; rendered by the shared partial
-//                     `_seller_home_banner.html`. See that file for
-//                     field-level docs. `banner.title` must be
-//                     non-empty for the include to render.
-//   • composer      — DORMANT (mirrors the Skills precedent). Kept
-//                     as-is so re-adding the chat surface is a one-
-//                     line template edit; no live consumer today.
-//                     Shape stays parallel to index.json's
-//                     `composer`.
-//   • tabs          — filter chips + counts across the workflow list.
-//                       - id           → filter key wired to `status`
-//                       - label        → visible label
-//                       - statuses[]   → status values that pass this
-//                                        filter (empty → "match all")
-//                     `defaultTabId` selects which tab paints active
-//                     on first paint; JS hydrates from URL hash if
-//                     one is present. Counts are recomputed by JS on
-//                     load so they never drift when the workflow list
-//                     is edited.
-//   • statusTypes   — semantic status registry. Each entry:
-//                       - label        → screen-reader-friendly name
-//                       - action       → verb for the status button's
-//                                         accessible name ("Pause
-//                                         Buyer Engage"), i.e. what a
-//                                         click does from this state
-//                     Keys are the `status` values referenced by each
-//                     workflow row, and they're the home feed's five
-//                     states verbatim ("completed" | "running" |
-//                     "scheduled" | "paused" | "failed") — the two
-//                     surfaces share one status control, so they have
-//                     to share its vocabulary. Which glyph each state
-//                     paints is decided in home.scss, not here.
-//   • workflows     — the rows. Each entry:
-//                       - id           → stable dom + event key
-//                       - title        → semibold 14 px name
-//                       - cadence      → 12 px muted meta line
-//                       - status       → key into statusTypes
-//                       - linked       → optional; `false` opts the
-//                                         row out of drill-in (the
-//                                         template renders it as an
-//                                         inert `<div>` with no
-//                                         chevron affordance).
-//   • rowActions    — overflow-menu (⋮) actions per workflow. Dispatch
-//                     `sh:workflow-action` on click; a future
-//                     scheduler backend can listen.
-//   • filterAction  — the top-right filter icon-button. Same
-//                     dispatch pattern — click emits
-//                     `sh:scheduled-filter` for a future consumer.
-//   • emptyState    — copy shown when a tab filter has zero matches
-//                     (rendered by the list partial's sibling block,
-//                     toggled by JS).
+//   • pageTitle     — accessible name for the right-column <main>.
+//   • header        — visible <h1>.
+//   • banner        — shared educational-banner block.
+//   • composer      — DORMANT (kept shape-parallel to index.json).
+//   • tabs          — visible filter chips (Active / Need Attention /
+//                     Paused) plus `overflow` entries (Archived) that
+//                     render inside the toolbar's ⋮ menu instead of the
+//                     tab row. Each carries `statuses[]` (the workflow
+//                     statuses it matches; empty → match all).
+//   • statusTypes   — semantic status registry, one entry per
+//                     `workflow.status`. `label` is the SR-friendly
+//                     name; `action` is the status-button verb.
+//   • workflows     — the schedule cards. The card shows only status +
+//                     name + cadence; everything else lives under
+//                     `details` and surfaces in the side panel.
+//   • panel         — side-panel field order/labels + the action set.
+//   • rowActions    — per-card overflow (⋮) actions.
+//   • filterAction  — toolbar filter icon-button.
+//   • emptyState    — copy when a tab filters to zero.
 {
   "pageTitle": "Scheduled",
   "header": {
     "heading": "Scheduled"
   },
-  // Shared educational banner (see `_seller_home_banner.html`).
-  // Copy mirrors the Skills banner's tone/length so the two landing
-  // pages read as a matched pair. Same illustration asset as Skills
-  // for now — the mascot artwork is generic to Seller Home and no
-  // Scheduled-specific composition exists yet. Dropping in a
-  // Scheduled-specific illustration is a one-line JSON edit.
-  //
-  // This block replaced the prior `header.description` intro
-  // paragraph, whose copy the banner now carries.
   "banner": {
     "title":       "Put your recurring tasks on a schedule",
     "description": "Let Agentforce Coworker handle recurring work, like daily pipeline summaries or weekly project updates. Choose what runs and when, then share schedules with your team.",
     "imageSrc":    "/assets/images/skills-banner.jpg"
   },
-  // Composer — DORMANT since the page adopted the shared banner
-  // (mirrors the Skills precedent). No live consumer: scheduled.html
-  // no longer includes `_home_composer.html`. Kept as-is, and kept
-  // shape-parallel to index.json's `composer`, so re-adding the chat
-  // surface is a one-line template edit.
   "composer": {
     "placeholder": "Schedule a task",
     "ariaLabel": "Schedule a task",
     "samplePrompts": [],
-    // Same trio, same order, same sources as the Home composer in
-    // index.json — one composer component, so a change there is a change
-    // here. `end` is empty; the mic is gone from both.
     "actions": {
       "start": [
         { "id": "add",       "label": "Add",       "icon": "add" },
@@ -105,175 +46,223 @@
       "end": []
     }
   },
-  // Tabs. Counts are computed client-side from `workflows[]` by
-  // bindScheduled() in home.js so the JSON never has to hand-track
-  // them. `statuses: []` on "all" means the tab matches everything.
-  //
-  // Errored workflows are promoted out of the "Scheduled" bucket into
-  // their own "Need attention" tab — the surface's most actionable
-  // state, so the design elevates it. Default tab is "all" so a seller
-  // with mixed workflows lands on the fullest picture rather than an
-  // initially-empty "Need attention" tab.
-  //
-  // "Scheduled" covers every workflow in a healthy cadence, which
-  // includes the ones mid-run and the ones whose last run finished:
-  // all three are on the same schedule, they're just at different
-  // points in it. Splitting them out would put a workflow in a
-  // different tab depending on the minute you looked, and leave rows
-  // reachable from no tab but "All".
-  // Tabs mirror the home feed's three filter views (Active / Scheduled /
-  // Archived). Active gathers the live states (completed + running +
-  // paused); Scheduled and Archived are single-state. Default is Active,
-  // matching the feed.
+  // Visible tabs + the overflow bucket. "Active" gathers every enabled
+  // schedule, which includes the one currently running (Running is a
+  // transient execution state of an Active schedule, not its own tab).
+  // "Archived" is reachable only from the toolbar ⋮ menu — it filters
+  // the same list, so it's authored here beside the visible tabs with
+  // an `icon` the menu renders.
   "tabs": {
     "defaultTabId": "active",
     "items": [
-      { "id": "active",    "label": "Active",    "statuses": ["completed", "running", "paused"] },
-      { "id": "scheduled", "label": "Scheduled", "statuses": ["scheduled"] },
-      { "id": "archived",  "label": "Archived",  "statuses": ["archived"] }
+      { "id": "active",         "label": "Active",         "statuses": ["scheduled", "running", "completed"] },
+      { "id": "need_attention", "label": "Needs Attention", "statuses": ["failed"] },
+      { "id": "paused",         "label": "Paused",         "statuses": ["paused"] }
+    ],
+    "overflow": [
+      { "id": "archived", "label": "Archived", "statuses": ["archived"], "icon": "archive" }
     ]
   },
-  // Status registry — one entry per `workflow.status` value, matching
-  // the home feed's states so a workflow reads the same on both
-  // surfaces. The glyph each state paints lives in home.scss (one
-  // mapping, shared with the feed); this block only carries copy.
-  //
-  // `action` is what the status button offers from that state, which
-  // is why `failed` says "Retry" rather than "Pause": what the seller
-  // came to an errored workflow for is to run it again.
+  // Status registry. `failed` is the "needs attention" state and paints
+  // the red warning glyph; `running` paints the animated spinner;
+  // `scheduled` the clock; `paused` the pause bars; `archived` the
+  // archive box (shown in the archived view). Glyph mapping lives in
+  // home.scss.
   "statusTypes": {
     "failed":    { "label": "Needs attention", "action": "Retry"   },
-    "running":   { "label": "Running now",     "action": "Stop"    },
-    "completed": { "label": "Completed",       "action": "Run now" },
-    "scheduled": { "label": "Scheduled",       "action": "Run now" },
+    "running":   { "label": "Running now",     "action": "Pause"   },
+    "completed": { "label": "Completed",       "action": "Pause"   },
+    "scheduled": { "label": "Scheduled",       "action": "Pause"   },
     "paused":    { "label": "Paused",          "action": "Resume"  },
-    "archived":  { "label": "Archived",        "action": "Restart" }
+    "archived":  { "label": "Archived",        "action": "Restore" }
   },
-  // ⚠️ IGNORED AT BUILD TIME. scheduled.html rebuilds this list from
-  // index.json → feed.items (`{% set workflows = [] %}`), so EDITING THIS
-  // ARRAY HAS NO EFFECT on the rendered page. To change the Scheduled
-  // workflows, edit index.json → feed.items (+ skills.json). This block is
-  // kept only as an accurate mirror. See /AUTHORING_DEMO_WORKFLOWS.md.
+  // Schedule cards. `title` is the unique schedule name (NOT the
+  // reusable Skill). `cadence` is the single muted meta line. `details`
+  // feeds the side panel; `conversationId` (when present) enables the
+  // panel's "Open conversation" action.
   //
-  // Workflows. A row drills in when it has somewhere to go: drop the
-  // `linked: false` and give it an `href`, and the row macro renders it
-  // as an `<a>` instead of an inert `<div>`.
+  // Two schedules below deliberately share one Skill (Daily Pipeline
+  // Snapshot) with different cadence/scope/delivery — proof that one
+  // reusable Skill backs many independently configured schedules.
   //
-  // ── One shared workflow set with the Home feed ────────────────────
-  // These eight rows mirror index.json → feed.items 1:1 — same workflow,
-  // same state, same subline — because Home and Scheduled represent the
-  // SAME data through two lenses (a flat filtered feed vs. tabs). The
-  // Home item's output-phrased title ("Found new prospects") becomes the
-  // workflow NAME here ("Find Prospects"); everything else agrees.
-  //
-  //   • title    → the workflow name (Home's `workflow.label`).
-  //   • status   → the Home item's `state` verbatim.
-  //   • cadence  → the FULL Home subline string ("Weekly · Next run
-  //                in 3 days"), since the row template renders
-  //                `cadence` as-is. Dead data: the live page composes
-  //                this from index.json.
-  //   • skillId  → the backing skill (skills.json). The ⋮ → Edit action
-  //                opens /skill_detail.html?id=<skillId>.
-  //   • linked+href → set only for the four workflows that have a
-  //                conversation in index.json (the others render inert,
-  //                mirroring Home rows that carry no `conversationId`).
-  //
-  // Order follows the feed's `stateOrder` (completed → running →
-  // scheduled); the Active tab's build-time sort groups completed above
-  // running regardless.
+  // Each schedule carries the full detail model the side panel needs
+  // (`_schedule_side_panel.html`): frequency/time/timezone drive the
+  // Frequency row; `delivery` the Delivery line; `skillId`/`skillName`
+  // the Uses-Skill chip (which links to the Skill details route);
+  // `instructions` the editable Instructions box; `createdAt`/
+  // `createdBy` the Created line; `lastRunId`/`lastRunStatus`/
+  // `lastRunAt` the Last-run line (interactive when `lastRunId` is set,
+  // jumping into `chatId` at that run). `title` is the schedule NAME
+  // (never the Skill name); `cadence` is the single card meta line.
   "workflows": [
     {
-      "id":      "wf-find-prospects",
-      "title":   "Find Prospects",
-      "cadence": "Completed · Next run in 3 days",
-      "status":  "completed",
-      "skillId": "sk-find-prospects",
-      "linked":  true,
-      "href":    "/home_conversation.html?id=conv-001"
+      "id":            "wf-east-coast-morning-brief",
+      "title":         "Daily East Coast Pipeline Snapshot",
+      "cadence":       "Weekdays at 8:00 AM · Next run tomorrow",
+      "status":        "scheduled",
+      "frequency":     "Weekdays",
+      "time":          "8:00 AM",
+      "timezone":      "ET",
+      "nextRun":       "Tomorrow at 8:00 AM",
+      "delivery":      "#east-coast-sales on Slack",
+      "skillId":       "skill-daily-pipeline-snapshot",
+      "skillName":     "Daily Pipeline Snapshot",
+      "instructions":  "Review the East Coast sales pipeline and identify the most important changes since the previous run. Highlight opportunities that were created, advanced, stalled, pushed out, or became at risk. Prioritize high-value deals and opportunities closing this quarter.\n\nSummarize overall pipeline coverage, notable stage changes, upcoming close dates, key risks, and recommended follow-up actions. Only include information supported by current CRM data, and clearly flag missing or outdated fields.\n\nKeep the update concise and post it to the #east-coast-sales Slack channel.",
+      "createdAt":     "1st Jan 4:00PM",
+      "createdBy":     "You",
+      "lastRunId":     "run-east-coast-0901",
+      "lastRunStatus": "Completed",
+      "lastRunAt":     "today at 8:00 AM",
+      "chatId":        "conv-daily-pipeline-snapshot"
     },
     {
-      "id":      "wf-draft-proposals",
-      "title":   "Draft Proposals",
-      "cadence": "Completed · Next run tomorrow at 6:00 AM",
-      "status":  "completed",
-      "skillId": "sk-draft-proposals",
-      "linked":  false
+      "id":            "wf-weekly-pipeline-leadership-recap",
+      "title":         "Weekly Pipeline Leadership Recap",
+      "cadence":       "Fridays at 3:00 PM · Next run Friday",
+      "status":        "scheduled",
+      "frequency":     "Fridays",
+      "time":          "3:00 PM",
+      "timezone":      "ET",
+      "nextRun":       "Friday at 3:00 PM",
+      "delivery":      "Sales Leadership via email",
+      "skillId":       "skill-daily-pipeline-snapshot",
+      "skillName":     "Daily Pipeline Snapshot",
+      "instructions":  "Summarize the company-wide pipeline for sales leadership. Call out week-over-week movement, notable stage changes, and the deals most likely to close this quarter.\n\nFlag risks and coverage gaps, and recommend where leadership attention will move the number most. Keep it to an executive-length brief and email it to Sales Leadership.",
+      "createdAt":     "30th Jul 9:15AM",
+      "createdBy":     "You",
+      "lastRunId":     "run-weekly-recap-0829",
+      "lastRunStatus": "Completed",
+      "lastRunAt":     "last Friday at 3:00 PM",
+      "chatId":        "conv-daily-pipeline-snapshot"
     },
     {
-      "id":      "wf-weekly-top-3",
-      "title":   "Quota Health Check",
-      "cadence": "Weekly · Next run Monday at 9:00 AM",
-      "status":  "scheduled",
-      "skillId": "sk-weekly-top-3",
-      "linked":  true,
-      "href":    "/home_conversation.html?id=conv-weekly-top-3"
+      "id":            "wf-daily-cold-prospecting",
+      "title":         "Daily Cold Prospecting",
+      "cadence":       "Running now · Started at 9:00 AM",
+      "status":        "running",
+      "frequency":     "Weekdays",
+      "time":          "9:00 AM",
+      "timezone":      "PT",
+      "nextRun":       "Tomorrow at 9:00 AM",
+      "delivery":      "Creates tasks in Salesforce",
+      "skillId":       "skill-cold-prospecting",
+      "skillName":     "Cold Prospecting Outreach",
+      "instructions":  "Identify net-new accounts that fit the ICP and haven't been contacted. Draft a first-touch outreach task for each, prioritized by fit and buying signals.\n\nCreate the tasks in Salesforce and keep the queue to a manageable daily volume.",
+      "createdAt":     "5th Aug 11:00AM",
+      "createdBy":     "You",
+      "lastRunId":     "",
+      "lastRunStatus": "Running",
+      "lastRunAt":     "today at 9:00 AM",
+      "chatId":        ""
     },
     {
-      "id":      "wf-daily-pipeline-snapshot",
-      "title":   "Pipeline Snapshot",
-      "cadence": "Daily · Next run tomorrow at 9:00 AM",
-      "status":  "scheduled",
-      "skillId": "sk-daily-pipeline-snapshot",
-      "linked":  true,
-      "href":    "/home_conversation.html?id=conv-daily-pipeline-snapshot"
+      "id":            "wf-daily-priority-buyer-outreach",
+      "title":         "Daily Priority Buyer Outreach",
+      "cadence":       "Slack connection expired",
+      "reconnect":     {
+        "message":     "Slack connection expired",
+        "description": "This schedule couldn’t deliver today’s update and won’t run again until Slack is reconnected.",
+        "label":       "Reconnect",
+        "linkLabel":   "Reconnect Slack",
+        "ariaLabel":   "Reconnect Slack for Daily Priority Buyer Outreach"
+      },
+      "status":        "failed",
+      "frequency":     "Weekdays",
+      "time":          "8:30 AM",
+      "timezone":      "PT",
+      "nextRun":       "Paused until reconnected",
+      "delivery":      "#priority-buyers on Slack",
+      "skillId":       "skill-buyer-engagement",
+      "skillName":     "Buyer Engagement",
+      "instructions":  "Review recent activity across priority accounts and identify buying-group contacts who are ready for follow-up. Prioritize contacts showing strong engagement signals, such as repeat website visits, content engagement, event attendance, email activity, or recent interactions with the sales team.\n\nFor each contact, recommend a personalized outreach angle and the next best action based on their role, account context, and recent activity. Exclude contacts who are already in an active cadence, have opted out, or were contacted recently.\n\nSummarize the selected contacts, supporting signals, and recommended next steps. Only use verified CRM and engagement data, clearly flag missing information, and post the update to the #priority-buyers Slack channel.",
+      "createdAt":     "Jul 22 at 2:45 PM",
+      "createdBy":     "You",
+      "lastRunId":     "run-priority-buyer-0903",
+      "lastRunStatus": "Failed",
+      "lastRunAt":     "today at 8:30 AM",
+      "chatId":        "conv-priority-buyer-outreach"
     },
     {
-      "id":      "wf-account-research",
-      "title":   "Account Research",
-      "cadence": "Running now · Started 12 min ago",
-      "status":  "running",
-      "skillId": "sk-account-research",
-      "linked":  false
+      "id":            "wf-all-hands-meeting-prep",
+      "title":         "All-Hands Meeting Preparation Brief",
+      "cadence":       "Paused · Previously ran weekdays at 8:00 AM",
+      "status":        "paused",
+      "frequency":     "Weekdays",
+      "time":          "8:00 AM",
+      "timezone":      "PT",
+      "nextRun":       "—",
+      "delivery":      "Emails you",
+      "skillId":       "skill-meeting-prep",
+      "skillName":     "Meeting Prep Brief",
+      "instructions":  "Assemble the all-hands agenda with the latest metrics and highlights. Email the brief to me the morning of the meeting.",
+      "createdAt":     "15th Jun 4:20PM",
+      "createdBy":     "You",
+      "lastRunId":     "",
+      "lastRunStatus": "Completed",
+      "lastRunAt":     "Aug 28 at 8:00 AM",
+      "chatId":        ""
     },
     {
-      "id":      "wf-write-sales-emails",
-      "title":   "Write Sales Emails",
-      "cadence": "Running now · Started 4 min ago",
-      "status":  "running",
-      "skillId": "sk-write-sales-emails",
-      "linked":  false
-    },
-    {
-      "id":      "wf-weekly-exec-brief",
-      "title":   "Executive Brief",
-      "cadence": "Weekly · Next run Friday at 5:00 AM",
-      "status":  "scheduled",
-      "skillId": "sk-weekly-exec-brief",
-      "linked":  false
-    },
-    {
-      "id":      "wf-prepare-for-meetings",
-      "title":   "Prepare for Meetings",
-      "cadence": "Daily · Next run Friday at 9:00 AM",
-      "status":  "scheduled",
-      "skillId": "sk-prepare-for-meetings",
-      "linked":  true,
-      "href":    "/home_conversation.html?id=conv-003"
+      "id":            "wf-monthly-territory-review",
+      "title":         "Monthly Territory Review",
+      "cadence":       "Archived",
+      "status":        "archived",
+      "frequency":     "Monthly",
+      "time":          "7:00 AM",
+      "timezone":      "PT",
+      "nextRun":       "—",
+      "delivery":      "Emails you",
+      "skillId":       "skill-territory-analysis",
+      "skillName":     "Territory Analysis",
+      "instructions":  "Review territory pipeline health and coverage. Summarize movement and risks, and email the review to me on the first Monday of the month.",
+      "createdAt":     "3rd Feb 10:05AM",
+      "createdBy":     "You",
+      "lastRunId":     "",
+      "lastRunStatus": "Completed",
+      "lastRunAt":     "Aug 1 at 7:00 AM",
+      "chatId":        ""
     }
   ],
-  // Per-row overflow menu (⋮). Same per-state set the home feed uses,
-  // so the two surfaces offer identical actions. `onlyForState` scopes an
-  // action to the states it makes sense in (space-separated list,
-  // enforced in CSS off the row's `data-sh-workflow-status`), so per state
-  // the menu reads:
-  //   completed  Run now · Edit · Archive
-  //   running    Stop · Edit
-  //   scheduled  Run now · Edit · Archive
-  //   archived   Restart · Edit
-  // Run now / Stop / Restart / Archive change the row's state (home.js);
-  // all still emit `sh:workflow-action` for a future scheduler backend.
+  // Side-panel config. The details panel is bespoke (Frequency /
+  // Delivery / Uses Skill / Instructions / Created / Last run — see the
+  // partial), so this block only carries the header overflow-menu action
+  // set and the routes the panel links out to. The controller shows
+  // Pause OR Resume for the current status, and hides Open Chat / Last
+  // run links when the schedule has no `chatId` / `lastRunId`.
+  "panel": {
+    "menuActions": [
+      { "id": "run_now",   "label": "Run now",  "icon": "play"        },
+      { "id": "pause",     "label": "Pause",    "icon": "pause"       },
+      { "id": "resume",    "label": "Resume",   "icon": "play"        },
+      { "id": "open_chat", "label": "Open Chat", "icon": "socialshare" },
+      { "id": "archive",   "label": "Archive",  "icon": "archive"     }
+    ],
+    "skillRoute": "/skill_detail.html",
+    "chatRoute":  "/home_conversation.html"
+  },
+  // Per-card overflow (⋮) actions. Dispatch `sh:workflow-action`.
   "rowActions": [
-    { "id": "run_now", "label": "Run now", "icon": "play",    "onlyForState": "completed scheduled" },
-    { "id": "stop",    "label": "Stop",    "icon": "stop",    "onlyForState": "running" },
-    { "id": "restart", "label": "Restart", "icon": "refresh", "onlyForState": "archived" },
-    { "id": "edit",    "label": "Edit Skill", "icon": "edit" },
-    { "id": "archive", "label": "Archive", "icon": "archive", "onlyForState": "completed scheduled" }
+    { "id": "edit",    "label": "Edit",    "icon": "edit"    },
+    { "id": "run_now", "label": "Run now", "icon": "play"    },
+    { "id": "pause",   "label": "Pause",   "icon": "pause"   },
+    { "id": "resume",  "label": "Resume",  "icon": "play"    },
+    { "id": "archive", "label": "Archive", "icon": "archive" }
   ],
-  // Empty state — rendered as a sibling of the list. Hidden by
-  // default; bindScheduled() toggles the `hidden` attribute when
-  // the active tab filters out every workflow.
+  "filterAction": {
+    "id":       "filter",
+    "label":    "Filter schedules",
+    "icon":     "filterList"
+  },
+  // Toolbar overflow (⋮) menu, right of the filter control. Holds the
+  // Archived view entry (authored under `tabs.overflow`); dispatched by
+  // bindScheduled().
+  "overflowAction": {
+    "id":    "overflow",
+    "label": "More views",
+    "icon":  "threedots_vertical"
+  },
   "emptyState": {
-    "title":       "No workflows match this filter",
-    "description": "Switch to another tab to see workflows in a different state."
+    "title":       "No schedules match this filter",
+    "description": "Switch to another tab to see schedules in a different state."
   }
 }
