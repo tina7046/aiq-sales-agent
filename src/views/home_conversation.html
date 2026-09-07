@@ -58,7 +58,7 @@
    Fetched at build time from the page data that also drives the
    review cards linking here. If index.json is ever moved or renamed,
    `readData("index")` returns null and the lookup below yields an
-   empty map — the shell still renders its empty-thread fallback. #}
+   empty map — the thread list simply stays empty. #}
 {% set _home = readData("index") or {} %}
 {% set conversations = _home.conversations or {} %}
 
@@ -272,17 +272,7 @@
         >
           {# The thread starts empty and is filled by JS from the
              templates below, because which conversation to show is a
-             runtime question (`?id=`) and this is a static build.
-
-             So the placeholder is what the markup ships, and it's
-             honest in the two cases where nothing replaces it: a
-             conversation with no messages, and no JS at all. Anything
-             real that arrives clears it on the way in. #}
-          <li class="seller-home__conv-thread-empty">
-            <p class="seller-home__conv-thread-placeholder">
-              Messages will appear here.
-            </p>
-          </li>
+             runtime question (`?id=`) and this is a static build. #}
         </ol>
       </section>
 

@@ -1341,9 +1341,8 @@
       if (done) done()
     }
 
-    // Drop the "Messages will appear here." row the first time real
-    // content arrives, so an empty thread doesn't keep claiming it is
-    // one.
+    // No-op if the empty row is already gone (it is no longer in the
+    // markup). Kept so every append path can still call it.
     function removeEmptyPlaceholder () {
       var empty = threadInner.querySelector(SELECTORS.threadEmpty)
       if (empty && empty.parentNode) empty.parentNode.removeChild(empty)
