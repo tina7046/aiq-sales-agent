@@ -12,7 +12,7 @@
     │  ┌────────────────────────────────────────────────────────┐  │
     │  │ ✓  Found new prospects                     [badge]  ⋮  │  │
     │  │    Weekly · Next run in 3 days                         │  │
-    │  │    ( ▨ 7 new accounts ) ( ▨ 25 prospects )             │  │
+    │  │    ( ▨ 6 new accounts ) ( ▨ 10 prospects )             │  │
     │  └────────────────────────────────────────────────────────┘  │
     └──────────────────────────────────────────────────────────────┘
 
@@ -619,7 +619,14 @@
       {% elif not feed.filter and feed.groups and state == "paused" %}{{ groupHeader("paused", feed.groups.paused, "paused") }}{% endif %}
       {% for item in feed.items %}
         {% if item.state == state %}
-          <li class="seller-home__feed-list-item" data-sh-feed-list-item>
+          <li
+            class="seller-home__feed-list-item"
+            data-sh-feed-list-item
+            {%- if item.demoGate %}
+            data-sh-feed-demo-gate="{{ item.demoGate }}"
+            hidden
+            {%- endif %}
+          >
             {{ feedItem(item, feed.outputTypes, feed.rowActions, feed.statusLabels, feed.retryTime, feed.filter) }}
           </li>
         {% endif %}

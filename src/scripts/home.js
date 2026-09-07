@@ -147,6 +147,10 @@
   // its first opening plays and suppress the reveal.
   var FEED_CONSUMED_KEY = 'sh:feedConsumed'
 
+  // Unlocks the "Drafted reply to Marcus Chen" feed row after Approve
+  // on Marcus's cadence in conv-001. Same session lifecycle as Recents.
+  var MARCUS_REPLY_KEY = 'sh:marcusReplyReady'
+
   // Cap the rail so a long session can't scroll forever. Oldest fall
   // off the bottom.
   var RECENTS_MAX = 12
@@ -215,7 +219,7 @@
   // already played their opening. It belongs in this list or a restart
   // would clear the rail but still treat every conversation as read,
   // painting them instantly instead of replaying them.
-  var DEMO_SESSION_KEYS = [RECENTS_KEY, KNOWLEDGE_BANNER_KEY, 'sh:convSeen', FEED_CONSUMED_KEY]
+  var DEMO_SESSION_KEYS = [RECENTS_KEY, KNOWLEDGE_BANNER_KEY, 'sh:convSeen', FEED_CONSUMED_KEY, MARCUS_REPLY_KEY]
   var DEMO_LOCAL_KEYS = [DRAFT_LIST_KEY, 'sh:scheduledWorkflows:v1']
   var DEMO_LOCAL_PREFIXES = ['sh:convDraft:v1:', 'sh:convSched:v1:']
 
@@ -475,6 +479,16 @@
   // listing a thread twice when it IS a workflow. Each workflow entry is
   // cloned into the recents shape so a live status patch never mutates
   // the cached base.
+  function isWorkflowSessionVisible (session) {
+    if (!session || !session.demoGate) return true
+    // Same gate the Home feed uses to unhide `ri-marcus-reply`. Reset
+    // and refresh clear this key, so the Recents row leaves with it.
+    if (session.demoGate === 'marcus-reply') {
+      try { return window.sessionStorage.getItem(MARCUS_REPLY_KEY) === '1' } catch (e) { return false }
+    }
+    return false
+  }
+
   function withWorkflowSessions (recents) {
     var sessions = readWorkflowSessions()
     var consumed = readConsumedConversations()
@@ -483,6 +497,7 @@
     for (var i = 0; i < sessions.length; i++) {
       var s = sessions[i]
       if (!s || !s.feedId) continue
+      if (!isWorkflowSessionVisible(s)) continue
       // A completed workflow whose thread has been opened has had its
       // results consumed: drop it out of the "New" (completed) indicator
       // the same way the feed drops it out of Completed. Down-ranking to
@@ -2885,12 +2900,22 @@
     })
   }
 
+  function revealGatedFeedItems (feedRoot) {
+    var ready = false
+    try { ready = window.sessionStorage.getItem(MARCUS_REPLY_KEY) === '1' } catch (e) {}
+    if (!ready) return
+    toArray(feedRoot.querySelectorAll('[data-sh-feed-demo-gate="marcus-reply"]')).forEach(function (el) {
+      el.removeAttribute('hidden')
+    })
+  }
+
   function bindFeed (feedRoot) {
     if (typeof gsap !== 'undefined' && typeof Flip !== 'undefined') {
       gsap.registerPlugin(Flip)
     }
 
     stampFeedOrder(feedRoot)
+    revealGatedFeedItems(feedRoot)
     reconcileConsumedFeedRows(feedRoot)
     bindFeedMenus(feedRoot)
     bindFeedFilter(feedRoot)

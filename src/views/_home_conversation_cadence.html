@@ -200,7 +200,7 @@
 {% set _firstSeq = cadence.sequences[_first.id] or cadence.sequences.default or { steps: [] } %}
 
 <section
-  class="seller-home__conv-cadence"
+  class="seller-home__conv-cadence{% if cadence.thread %} seller-home__conv-cadence--thread{% endif %}"
   role="region"
   aria-labelledby="{{ cadence.id }}-heading"
   data-sh-cadence-root
@@ -208,6 +208,7 @@
   data-sh-cadence-total="{{ prospects | length }}"
   data-sh-cadence-prospect-ids="{{ _prospectIds | trim }}"
   data-sh-cadence-prospects="{{ _meta | tojson | escape }}"
+  {% if cadence.thread %}data-sh-cadence-thread{% endif %}
 >
   {# ── Header: which cadence, and which prospect ─────────────────
 
@@ -231,6 +232,9 @@
        • The header is the two fields and nothing else, so the rule in
          home_conversation.scss stacks rather than spreads.
   #}
+  {% if cadence.thread %}
+  <h3 id="{{ cadence.id }}-heading" class="slds-assistive-text">{{ cadence.name }}</h3>
+  {% else %}
   <header class="seller-home__conv-cadence-header">
     <div class="seller-home__conv-cadence-meta">
       <h3 id="{{ cadence.id }}-heading" class="slds-assistive-text">{{ cadence.name }}</h3>
@@ -288,6 +292,7 @@
           else. -#}
     </div>
   </header>
+  {% endif %}
 
   {#- ── Whose sequence this is ────────────────────────────────────
       A prospect row stood here, holding two things:
@@ -372,7 +377,11 @@
 
        slds-border_top          the line above it, in place of the
                                 docked footer's upward shadow, which
-                                home_conversation.scss clears. #}
+                                home_conversation.scss clears.
+
+     Thread mode (`cadence.thread`) is a read-only email thread, not a
+     review: no Approve chrome, no completed swap. #}
+  {% if not cadence.thread %}
   <div class="slds-docked-form-footer slds-theme_shade slds-border_top seller-home__conv-cadence-batch">
     <div class="seller-home__conv-cadence-actions" role="group" aria-label="Sequence actions">
       {# Stateful, so approving swaps the label to "Approved" behind a
@@ -431,6 +440,7 @@
       </p>
     </div>
   </div>
+  {% endif %}
 
   {{ citationPopover() }}
 
@@ -453,8 +463,9 @@
   Approve-all confirmation. Outside the card's `role="region"` so the
   modal's focus context doesn't nest inside it — JS finds it by
   searching the shared parent first, so a second cadence card drives
-  its own dialog.
+  its own dialog. Thread mode has no Approve All, so no dialog.
 #}
+{% if not cadence.thread %}
 <section
   class="slds-modal seller-home__conv-review-dialog"
   role="dialog"
@@ -489,6 +500,7 @@
   </div>
 </section>
 <div class="slds-backdrop seller-home__conv-review-backdrop" role="presentation" data-sh-cadence-dialog-backdrop hidden></div>
+{% endif %}
 
 {% endif %}
 {% endmacro %}
@@ -518,16 +530,17 @@
    Regenerate presses and indexes into the alternate versions parked
    as templates at the end of the article. #}
 {% macro sequenceStep(step, index, p) %}
-{#- Only the first touch opens; the rest render collapsed so the whole
-    sequence is scannable as a list of headers and the reviewer expands
-    the one they want. Rendered as the initial state rather than
-    collapsed by JS on mount, so there's no expand-then-collapse flash
-    and the pager's per-prospect re-render (renderSequence clones this
-    template fresh) starts each prospect the same way.
+{#- Default: first touch open, the rest collapsed — so a five-touch
+    sequence is scannable as a list of headers. A step can override
+    with `collapsed: true|false` (email threads open the last touch).
+    Rendered as the initial state rather than collapsed by JS on
+    mount, so there's no expand-then-collapse flash and the pager's
+    per-prospect re-render (renderSequence clones this template
+    fresh) starts each prospect the same way.
 
     The `is-collapsed` class is the same one collapseStep() toggles,
     so the first click on a pre-collapsed touch expands it. -#}
-{%- set _collapsed = index > 0 -%}
+{%- set _collapsed = step.collapsed if step.collapsed is defined else index > 0 -%}
 <article
   class="seller-home__conv-step seller-home__conv-step--{{ step.type }}{% if _collapsed %} is-collapsed{% endif %}"
   data-sh-step
@@ -573,7 +586,43 @@
   {% for alt in step.regenerations %}
   <template data-sh-step-alt="{{ loop.index }}">{{ stepCard(alt, p) }}</template>
   {% endfor %}
+  {# Voice-demo revision: a separate template from `regenerations` so
+     the Feedback tab's Regenerate still cycles the authored alts.
+     Applied by `ShCadence.applyVoiceRevision` after the composer
+     Check → Send path. #}
+  {% if step.voiceRevision %}
+  <template data-sh-step-voice-alt>{{ stepCard(step.voiceRevision, p) }}</template>
+  {% endif %}
 </article>
+{% endmacro %}
+
+
+{# ── Details body: Email Type / Reasoning / Sources ───────────────
+   Shared by the tabbed card and the thread's tabless side panel. #}
+{% macro stepDetailsBody(step, p) %}
+{% for detail in step.details %}
+<div class="seller-home__conv-step-detail">
+  <div class="seller-home__conv-step-detail-title">{{ detail.title }}</div>
+  <div class="seller-home__conv-step-detail-value">{{ fill(detail.value, p) }}</div>
+</div>
+{% endfor %}
+
+{% if step.sources and step.sources | length > 0 %}
+<div class="seller-home__conv-step-detail">
+  <div class="seller-home__conv-step-detail-title">Sources</div>
+  <div class="seller-home__conv-step-sources">
+    {% for source in step.sources %}
+    {# Sources are raster/vector files on disk, not sprite
+       symbols, so <img> rather than <use>. Decorative: the
+       label beside it carries the meaning. #}
+    <span class="seller-home__conv-step-source">
+      <img class="seller-home__conv-step-source-icon" src="{{ source.icon }}" alt="" aria-hidden="true" />
+      <span>{{ source.label }}</span>
+    </span>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
 {% endmacro %}
 
 
@@ -582,8 +631,8 @@
    that's a snug two-up, which is the trade for keeping hunter's
    side-by-side reading of "here's the draft, here's why". #}
 {% macro stepCard(step, p) %}
-<div class="seller-home__conv-step-card slds-grid" data-sh-step-card>
-  <div class="seller-home__conv-step-message slds-col slds-size_7-of-12">
+<div class="seller-home__conv-step-card slds-grid{% if step.hideTabs %} seller-home__conv-step-card--full{% endif %}" data-sh-step-card>
+  <div class="seller-home__conv-step-message slds-col {% if step.hideTabs %}slds-size_12-of-12{% else %}slds-size_7-of-12{% endif %}">
     <div class="seller-home__conv-step-draft" data-sh-step-draft>
       {{ regenBanner() }}
 
@@ -612,7 +661,13 @@
     </div>
   </div>
 
-  <div class="seller-home__conv-step-side slds-col slds-size_5-of-12" data-sh-step-tabs>
+  {% if not step.hideTabs %}
+  <div class="seller-home__conv-step-side slds-col slds-size_5-of-12"{% if not step.hideFeedback %} data-sh-step-tabs{% endif %}>
+    {% if step.hideFeedback %}
+    <div class="seller-home__conv-step-details">
+      {{ stepDetailsBody(step, p) }}
+    </div>
+    {% else %}
     <div class="slds-tabs_default">
       {#
         Tab ids are minted per card by JS: this markup is cloned for
@@ -630,29 +685,7 @@
       </ul>
 
       <div class="slds-tabs_default__content slds-show" role="tabpanel" data-sh-tab-panel="details">
-        {% for detail in step.details %}
-        <div class="seller-home__conv-step-detail">
-          <div class="seller-home__conv-step-detail-title">{{ detail.title }}</div>
-          <div class="seller-home__conv-step-detail-value">{{ fill(detail.value, p) }}</div>
-        </div>
-        {% endfor %}
-
-        {% if step.sources and step.sources | length > 0 %}
-        <div class="seller-home__conv-step-detail">
-          <div class="seller-home__conv-step-detail-title">Sources</div>
-          <div class="seller-home__conv-step-sources">
-            {% for source in step.sources %}
-            {# Sources are raster/vector files on disk, not sprite
-               symbols, so <img> rather than <use>. Decorative: the
-               label beside it carries the meaning. #}
-            <span class="seller-home__conv-step-source">
-              <img class="seller-home__conv-step-source-icon" src="{{ source.icon }}" alt="" aria-hidden="true" />
-              <span>{{ source.label }}</span>
-            </span>
-            {% endfor %}
-          </div>
-        </div>
-        {% endif %}
+        {{ stepDetailsBody(step, p) }}
       </div>
 
       <div class="slds-tabs_default__content slds-hide" role="tabpanel" data-sh-tab-panel="feedback">
@@ -672,7 +705,9 @@
         </div>
       </div>
     </div>
+    {% endif %}
   </div>
+  {% endif %}
 </div>
 {% endmacro %}
 

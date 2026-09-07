@@ -1040,48 +1040,29 @@
   flex-direction: column;
 }
 
-// Title row — name + optional badge on one line. `min-width: 0` lets the
-// name shrink so its ellipsis fires while the badge keeps its full size.
-.seller-home__knowledge-doc-name-row {
-  display: flex;
-  align-items: center;
-  gap: var(--slds-g-spacing-2, 0.5rem); // 8px name-to-badge
-  min-width: 0;
-}
-
 .seller-home__knowledge-doc-name {
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
   font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
   font-weight: 600; // Semibold (SF Pro variable axis)
   line-height: 1.1875rem; // 19px — Figma Body/font-scale-1/Semibold
   color: var(--slds-g-color-on-surface-2, #2e2e2e);
-
-  // One-line + ellipsis. `min-width: 0` lets it shrink inside the flex
-  // title row so the ellipsis fires instead of pushing the badge out.
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-width: 0;
-  max-width: 100%;
 }
 
-// Provenance pill ("Auto-learned"), set from `doc.badge`. Deliberately
-// the same purple pair as `.knowledge-banner__badge` at the top of this
-// page — one visual vocabulary for "the agent produced this" — but a
-// separate rule because the banner badge carries block-end margin for
-// its stacked context, which would break this one's vertical centring.
-// Retune both together.
-//
-// `.doc-primary` (flex-grow) eats the free space to the badge's left, so
-// the badge sits at the right end of the row with just a small gap off
-// the name; `flex: 0 0 auto` keeps the pill legible so a long name
-// ellipsizes inside `.doc-primary` instead of squeezing the badge. The
-// row's `align-items: center` centers it vertically against the whole
-// tile — level with the overflow ⋮ and the chevron.
+// Provenance pill ("Auto-learned" / "Updated"), set from `doc.badge`.
+// Deliberately the same purple pair as `.knowledge-banner__badge`.
+// Sibling of `.doc-primary` on the row, so `align-items: center` on
+// the card vertically centers it against the whole tile — level with
+// the overflow ⋮ and the chevron.
 .seller-home__knowledge-doc-badge {
   flex: 0 0 auto;
-  // Spacing from the name is handled by `.doc-name-row`'s gap now that the
-  // badge lives on the title line.
+  align-self: center;
+  margin-inline-start: var(--slds-g-spacing-2, 0.5rem); // 8px from the title
+  // 32px overflow trigger + 8px gap. The ⋮ is `right: 1rem` on the
+  // card, so this end margin lands the badge 8px left of it.
+  margin-inline-end: 2.5rem;
 
   padding: 0.125rem var(--slds-g-spacing-2, 0.5rem); // 2px / 8px
   border-radius: var(--slds-g-radius-border-pill, 15rem);
@@ -1192,18 +1173,13 @@
   height: 0.75rem; // 12px
   color: #747474;  // Figma "Icon / Default"
 
-  // Chevron removed from the hover affordance — it no longer appears.
-  // Hidden with `visibility: hidden` (NOT `display: none`) so its box
-  // still reserves the overflow-⋮ gutter below; this also overrides the
-  // opacity hover/touch reveals. Delete this line to bring it back.
+  // Chevron is hidden; don't reserve the old 56px gutter — the badge's
+  // `margin-inline-end` now holds the 8px gap to the overflow ⋮.
   visibility: hidden;
-
-  // Reserve the overflow-⋮ gutter to the chevron's left. The ⋮ is
-  // absolutely positioned at right: 3rem (48px, 32px wide → out to 80px);
-  // this margin holds a ~56px gap so the badge / name end clear of it and
-  // the ⋮ lands cleanly between them and the chevron. (Was carried by
-  // `.doc-body`'s margin-inline-end before the two-line rebuild.)
-  margin-inline-start: 3.5rem; // 56px
+  width: 0;
+  height: 0;
+  margin-inline-start: 0;
+  overflow: hidden;
 
   opacity: 0;
   transition: opacity 160ms ease;

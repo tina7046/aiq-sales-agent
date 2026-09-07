@@ -11,7 +11,7 @@
     {
       id:   String,          // stable, unique within the thread
       type: 'user' | 'agent' | 'insight' | 'workflow_activity'
-          | 'suggestions',
+          | 'suggestions' | 'email_drafts' | 'record_cards',
       ...  // type-specific fields (see per-macro headers below)
     }
 
@@ -88,6 +88,8 @@
     {{ suggestions(msg) }}
   {% elif msg.type == 'email_drafts' %}
     {{ emailDrafts(msg) }}
+  {% elif msg.type == 'record_cards' %}
+    {{ recordCards(msg) }}
   {% endif %}
 </li>
 {% endmacro %}
@@ -358,7 +360,7 @@
 {% macro agentMessage(msg, rows) %}
 {# Roster: this message's own table rows when it has a table,
    otherwise the rows the page resolved from `rowsFrom`. #}
-{% set _rows = (msg.table and msg.table.rows) or rows or [] %}
+{% set _rows = (msg.table and msg.table.rows) or rows or (msg.cadence and msg.cadence.roster) or [] %}
 <article
   class="seller-home__conv-msg seller-home__conv-msg--agent{% if msg.table %} seller-home__conv-msg--has-table{% endif %}{% if msg.cadence %} seller-home__conv-msg--has-cadence{% endif %}{% if msg.snapshot %} seller-home__conv-msg--has-snapshot{% endif %}"
   data-sh-conv-msg="{{ msg.id }}"
@@ -381,9 +383,10 @@
 
   {#
     A cadence needs a roster to page through, so it renders only when
-    rows resolved — from this message's table, or from the message
-    named by `rowsFrom`. With neither, it's skipped rather than
-    rendered as an empty tool.
+    rows resolved — from this message's table, the message named by
+    `rowsFrom`, or `cadence.roster` (thread cards with no prospect
+    table). With none of those, it's skipped rather than rendered as
+    an empty tool.
   #}
   {% if msg.cadence and _rows | length > 0 %}
   {{ cadence.cadenceMessage(msg.cadence, _rows) }}
@@ -789,13 +792,16 @@
     } -%}
     <section class="seller-home__conv-email-draft">
       {#- Whose email this is. The name leads; role and company trail
-          as a muted qualifier, bullet-separated. -#}
+          as a muted qualifier, bullet-separated. Skip when the thread
+          is already about one person (`hideIdentity`). -#}
+      {% if not email.hideIdentity %}
       <h4 class="seller-home__conv-email-draft-identity">
         <span class="seller-home__conv-email-draft-name">{{ email.prospect }}</span>
         {%- if email.role or email.company %}
         <span class="seller-home__conv-email-draft-meta">{{ email.role }}{% if email.role and email.company %} &middot; {% endif %}{{ email.company }}</span>
         {%- endif %}
       </h4>
+      {% endif %}
       {{ cadence.stepCard(email.step, _p) }}
     </section>
     {% endfor %}
@@ -805,6 +811,65 @@
         cadence uses. -#}
     {{ cadence.citationPopover() }}
   </div>
+  {% endif %}
+</article>
+{% endmacro %}
+
+
+{# ── Record cards ─────────────────────────────────────────────────
+   Compact CRM result cards inside an agent message: standard-object
+   icon + title + subtitle, the whole card a link. Markup matches the
+   kitchen-sink demo on feed_components.html, restyled under
+   `.seller-home__conv-record-*` so conversation density (800 px
+   thread, 8 px item gap) owns the spacing.
+
+   Data contract:
+     {
+       id: String, type: 'record_cards',
+       text?: String,
+       records: [ { object, icon, title, subtitle, href } ]
+     }
+   `icon` is an SLDS standard-sprite symbol id (`account`,
+   `opportunity`). `href` of `#` is swallowed by the existing
+   `[data-sh-conv-record-link]` click handler in home_conversation.js.
+#}
+{% macro recordCards(msg) %}
+<article
+  class="seller-home__conv-msg seller-home__conv-msg--agent seller-home__conv-msg--has-records"
+  data-sh-conv-msg="{{ msg.id }}"
+  data-sh-conv-msg-type="agent"
+  aria-label="Agent response"
+>
+  {% if msg.text %}
+  <p class="seller-home__conv-msg-agent-text">{{ msg.text | emphasis | safe }}</p>
+  {% endif %}
+
+  {% if msg.records and msg.records | length > 0 %}
+  <ul class="seller-home__conv-record-list" role="list">
+    {% for rec in msg.records %}
+    <li>
+      <article class="seller-home__conv-record-card">
+        <a
+          class="seller-home__conv-record-link"
+          href="{{ rec.href or '#' }}"
+          data-sh-conv-record-link
+        >
+          <span class="slds-icon_container slds-icon-standard-{{ rec.object or rec.icon }} seller-home__conv-record-icon">
+            <svg class="slds-icon slds-icon_small" aria-hidden="true">
+              <use xlink:href="/assets/icons/standard-sprite/svg/symbols.svg#{{ rec.icon or rec.object }}"></use>
+            </svg>
+          </span>
+          <div class="seller-home__conv-record-body">
+            <span class="seller-home__conv-record-title" title="{{ rec.title }}">{{ rec.title }}</span>
+            {% if rec.subtitle %}
+            <span class="seller-home__conv-record-subtitle" title="{{ rec.subtitle }}">{{ rec.subtitle }}</span>
+            {% endif %}
+          </div>
+        </a>
+      </article>
+    </li>
+    {% endfor %}
+  </ul>
   {% endif %}
 </article>
 {% endmacro %}

@@ -605,6 +605,59 @@
   pointer-events: none;
 }
 
+// ── Simulated voice input ─────────────────────────────────────────
+// Recording replaces the toolbar in-place: same padding and control
+// height so the composer box does not grow. Waveform fills the row
+// beside Stop / Check.
+.seller-home__conv-composer-recording {
+  display: none;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  box-sizing: border-box;
+  min-height: calc(var(--slds-g-sizing-9, 2rem) + var(--slds-g-spacing-3, 0.75rem) * 2);
+}
+
+.seller-home__conv-composer-waveform {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  height: var(--slds-g-sizing-9, 2rem); // same as toolbar icon buttons
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  overflow: hidden;
+}
+
+.seller-home__conv-composer-recording-actions {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 0;
+}
+
+.seller-home__conv-composer-mic-confirm {
+  color: var(--slds-g-color-success-base-40, #2e844a);
+
+  .slds-button__icon {
+    fill: currentColor;
+  }
+}
+
+.seller-home__conv-composer.is-recording {
+  .seller-home__conv-composer-toolbar {
+    display: none;
+  }
+
+  .seller-home__conv-composer-recording {
+    display: flex;
+  }
+
+  .seller-home__conv-composer-textarea {
+    caret-color: transparent;
+  }
+}
+
 
 // ──────────────────────────────────────────────────────────────────────
 // Messages — user / agent / workflow_activity
@@ -2904,6 +2957,16 @@ $sh-conv-table-rows: 5.5;
   text-align: center;
 }
 
+// Read-only thread: the step list is the chrome. Drop the card's own
+// border and padding so it doesn't nest a second surface inside the
+// agent article.
+.seller-home__conv-cadence--thread {
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
 .seller-home__conv-cadence-empty-body {
   margin: 0;
   color: var(--slds-g-color-on-surface-1, #5c5c5c);
@@ -3192,10 +3255,11 @@ $sh-conv-table-rows: 5.5;
   }
 }
 
-// The last touch has nothing to connect to, so its line would hang
-// below the sequence.
+// The last touch has nothing to connect to. Keep the line so it runs
+// beside an expanded card, but stop it at the rail's bottom instead of
+// hanging (`bottom: -1.5rem` above) into empty space below the sequence.
 .seller-home__conv-step-item:last-child .seller-home__conv-step-rail::after {
-  display: none;
+  bottom: 0;
 }
 
 .seller-home__conv-step-toggle {
@@ -3397,6 +3461,10 @@ $sh-linkedin-brand: #0a66c2;
   border: 1px solid var(--slds-g-color-surface-container-3, #e5e5e5);
   border-radius: var(--slds-g-radius-border-2, 0.5rem);
   overflow: hidden;   // clips the two panels' corners to the radius
+}
+
+.seller-home__conv-step-card--full .seller-home__conv-step-message {
+  border-right: none;
 }
 
 .seller-home__conv-step-message {
@@ -5397,6 +5465,33 @@ $sh-linkedin-brand: #0a66c2;
   }
 }
 
+// Three-column "What / Detail / Why it matters" briefings (Marcus reply
+// thread). Overrides the 4-col Opportunity/Amount/Change/Why widths so
+// Detail is not starved at the 5rem Amount slot.
+.seller-home__snapshot-changes-table-el--3col {
+  th:nth-child(1),
+  td:nth-child(1) { width: 11rem; }
+
+  th:nth-child(2),
+  td:nth-child(2) { width: auto; }
+
+  th:nth-child(3),
+  td:nth-child(3) { width: auto; }
+
+  td:nth-child(2),
+  td:nth-child(3) {
+    vertical-align: top;
+    padding-block: 0.5rem;
+
+    .slds-truncate {
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+      line-height: 1.125rem;
+    }
+  }
+}
+
 // ── Attention cards ──────────────────────────────────────────────
 .seller-home__snapshot-attention-list {
   list-style: none;
@@ -5663,10 +5758,94 @@ $sh-linkedin-brand: #0a66c2;
     th:nth-child(4),
     td:nth-child(4) { width: auto; }     // Why it matters — narrative, share width
   }
+
+  .seller-home__snapshot-changes-table-el--3col {
+    th:nth-child(1),
+    td:nth-child(1) { width: 8rem; }
+    th:nth-child(2),
+    td:nth-child(2) { width: auto; }
+    th:nth-child(3),
+    td:nth-child(3) { width: auto; }
+  }
 }
 
 @container snapshot (max-width: 28rem) {   // ~448px — stack the metrics
   .seller-home__snapshot-metric-grid {
     grid-template-columns: 1fr;
   }
+}
+
+// ── Record cards (CRM result minis in-thread) ────────────────────
+// Port of feed_components.html `.record-card-list` / `.card`, scoped
+// to the conversation thread so the kitchen-sink demo page keeps its
+// page-local class names.
+.seller-home__conv-msg--has-records {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+}
+
+.seller-home__conv-record-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  max-width: 32rem;
+}
+
+.seller-home__conv-record-card {
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  background: var(--slds-g-color-surface-container-1, #fff);
+  transition: box-shadow 120ms ease, border-color 120ms ease;
+
+  &:hover {
+    border-color: var(--slds-g-color-border-2, #aeaeae);
+    box-shadow: var(--slds-g-shadow-2, 0 2px 4px 0 rgba(0, 0, 0, 0.1));
+  }
+}
+
+.seller-home__conv-record-link {
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  padding: var(--slds-g-spacing-1, 0.25rem) var(--slds-g-spacing-3, 0.75rem);
+  border-radius: inherit;
+  text-decoration: none;
+  color: inherit;
+
+  &:hover { text-decoration: none; }
+
+  &:focus-visible {
+    outline: 2px solid var(--slds-g-color-accent-2, #0176d3);
+    outline-offset: -2px;
+  }
+}
+
+.seller-home__conv-record-icon { flex: 0 0 auto; }
+
+.seller-home__conv-record-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.seller-home__conv-record-title {
+  font-size: var(--slds-g-font-scale-base, 0.8125rem);
+  line-height: var(--slds-g-font-lineheight-2, 1.25);
+  color: var(--slds-g-color-neutral-base-20, #2e2e2e);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seller-home__conv-record-subtitle {
+  font-size: var(--slds-g-font-scale-neg-2, 0.625rem);
+  color: var(--slds-g-color-neutral-base-20, #2e2e2e);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

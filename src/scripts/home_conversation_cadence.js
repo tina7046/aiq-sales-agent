@@ -20,6 +20,9 @@
 //     in on the way.
 //   • Per-touch interaction: collapse, the Details / Feedback tabs,
 //     the inline citation hover card, and feedback-driven Regenerate.
+//   • Voice-demo rewrite: `applyVoiceRevision` swaps Email 1 for an
+//     authored `voiceRevision` template, separate from the regenerate
+//     cycle.
 //   • Per-prospect approval. Approving covers the whole sequence, so
 //     the card speaks the same events the outreach review did and the
 //     table's row stripe keeps working unchanged.
@@ -85,6 +88,7 @@
     stepCard:    '[data-sh-step-card]',
     stepDraft:   '[data-sh-step-draft]',
     stepAlt:     '[data-sh-step-alt]',
+    stepVoiceAlt: '[data-sh-step-voice-alt]',
     tabsRoot:    '[data-sh-step-tabs]',
     tabLink:     '[data-sh-tab-link]',
     tabItem:     '[data-sh-tab-item]',
@@ -151,6 +155,10 @@
 
   // Unique enough for one page, and readable in the inspector.
   var uid = 0
+
+  // Live cadence cards, so a composer send can retarget a specific
+  // prospect's Email 1 without walking the DOM from outside.
+  var controllers = []
 
   // ── Utilities ───────────────────────────────────────────────────
   function dispatch (sourceEl, name, detail) {
@@ -352,7 +360,12 @@
       if (metaList[m] && metaList[m].id) metaById[metaList[m].id] = metaList[m]
     }
 
-    bindLookups(root, metaList)
+    // Thread mode is a read-only email list — no Prospect / Cadence
+    // lookups — so skip the global lookup bind that would otherwise
+    // rewrite SH_PROSPECT_DATA from this card's one-row roster.
+    if (!root.hasAttribute('data-sh-cadence-thread')) {
+      bindLookups(root, metaList)
+    }
 
     var statuses = readStatusMap(root) || STATUS_FALLBACK
 
@@ -415,6 +428,64 @@
     wireCard()
 
     render({ rerender: state.selectedId !== state.renderedFor })
+
+    controllers.push({
+      root: root,
+      applyVoiceRevision: applyVoiceRevisionOnCard
+    })
+
+    // Confirmed voice send: switch to the named prospect, expand the
+    // named touch, and swap in `voiceRevision` with the same
+    // regenerating stencil Regenerate uses. Returns false when this
+    // card doesn't own that prospect.
+    function applyVoiceRevisionOnCard (prospectId, stepIndex) {
+      if (!prospectId || ids.indexOf(prospectId) < 0) return false
+      if (prospectId !== state.selectedId) setSelected(prospectId, 'table')
+      var step = els.steps.querySelector('[data-sh-step-index="' + String(stepIndex) + '"]')
+      if (!step) return false
+      if (step.classList.contains(COLLAPSED_CLASS)) collapseStep(step)
+      applyVoiceCard(step)
+      return true
+    }
+
+    function applyVoiceCard (step) {
+      var card = step.querySelector(SELECTORS.stepCard)
+      var draft = step.querySelector(SELECTORS.stepDraft)
+      var tpl = step.querySelector(SELECTORS.stepVoiceAlt)
+      if (!card || !draft || !tpl) return
+      var voiceCard = tpl.content && tpl.content.querySelector(SELECTORS.stepCard)
+      if (!voiceCard) return
+
+      // Snapshot authored versions before the visible card becomes the
+      // voice revision, so later Regenerate still cycles original ↔ alts.
+      stepVersions(step)
+
+      draft.style.height = draft.offsetHeight + 'px'
+      draft.classList.add(REGENERATING)
+      showBanner(card, 'loading')
+
+      var button = step.querySelector(SELECTORS.regenerate)
+      var input = step.querySelector(SELECTORS.feedback)
+      if (button) {
+        button.disabled = true
+        button.setAttribute('aria-busy', 'true')
+      }
+      if (input) input.disabled = true
+
+      setTimeout(function () {
+        var replacement = voiceCard.cloneNode(true)
+        if (card.parentNode) card.parentNode.replaceChild(replacement, card)
+        mintStepIds(step)
+        showBanner(replacement, 'success')
+        activateTab(replacement.querySelector(SELECTORS.tabsRoot), 'details')
+        var newDraft = step.querySelector(SELECTORS.stepDraft)
+        if (newDraft) newDraft.style.height = ''
+        if (input) input.disabled = false
+        if (button) button.removeAttribute('aria-busy')
+        syncRegenerate(step)
+        scrollIntoView(step)
+      }, REGEN_MS)
+    }
 
     // ── Sequence rendering ────────────────────────────────────
     // Swap in the template for this prospect, tokens filled. Nothing
@@ -516,10 +587,16 @@
       if (source === 'table') scrollIntoView(root)
     }
 
+    function unlockMarcusReplyFeed (id) {
+      if (id !== 'acct-05-p06') return
+      try { window.sessionStorage.setItem('sh:marcusReplyReady', '1') } catch (e) {}
+    }
+
     function setReview (id, status) {
       if (ids.indexOf(id) < 0) return
       state.reviews[id] = { status: status }
       render()
+      if (status === 'approved') unlockMarcusReplyFeed(id)
       dispatch(root, EVT_DECISION, {
         rowId: id,
         decision: status === 'approved' ? 'approve'
@@ -532,6 +609,7 @@
       for (var i = 0; i < ids.length; i++) state.reviews[ids[i]] = { status: 'approved' }
       state.completed = true
       render()
+      unlockMarcusReplyFeed('acct-05-p06')
       dispatch(root, EVT_DECISION, { decision: 'approve_all' })
     }
 
@@ -1073,5 +1151,18 @@
     }
   }
 
-  window.ShCadence = { mount: mount }
+  function applyVoiceRevision (opts) {
+    opts = opts || {}
+    var prospectId = opts.prospectId
+    var stepIndex = parseInt(opts.stepIndex, 10)
+    if (!isFinite(stepIndex) || stepIndex < 0) stepIndex = 0
+    for (var i = 0; i < controllers.length; i++) {
+      var ctrl = controllers[i]
+      if (!ctrl.root || (ctrl.root.isConnected === false)) continue
+      if (ctrl.applyVoiceRevision(prospectId, stepIndex)) return true
+    }
+    return false
+  }
+
+  window.ShCadence = { mount: mount, applyVoiceRevision: applyVoiceRevision }
 }())

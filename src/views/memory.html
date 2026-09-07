@@ -1,0 +1,376 @@
+{% extends "_template.html" %}
+
+{# Grain-agnostic contribution calendar. Cells are generated from
+   `memory.json` + memory.js — day, week, or month buckets. #}
+
+{% block styles %}
+<link rel="stylesheet" href="/styles/memory.css" />
+{% endblock %}
+
+{% block content %}
+
+<style>
+  :root {
+    --color-neutral-0: #ffffff;
+    --color-neutral-50: #f6f8fa;
+    --color-neutral-100: #eaeef2;
+    --color-neutral-200: #d0d7de;
+    --color-neutral-600: #57606a;
+    --color-neutral-900: #24292f;
+    --color-neutral-950: #1f2328;
+
+    --color-green-100: #aceebb;
+    --color-green-200: #4ac26b;
+    --color-green-300: #2da44e;
+    --color-green-500: #116329;
+
+    --color-yellow-200: #f0db3d;
+    --color-yellow-300: #ffd642;
+    --color-orange-400: #f68c41;
+
+    --color-blue-100: #b6e3ff;
+    --color-blue-200: #54aeff;
+    --color-blue-400: #0969da;
+    --color-blue-700: #0a3069;
+
+    /* Custom heatmap — replace these. 0 = empty, 4 = highest. */
+    --color-custom-0: var(--slds-g-color-palette-blue-95);
+    --color-custom-1: var(--slds-g-color-palette-blue-80);
+    --color-custom-2: var(--slds-g-color-palette-blue-60);
+    --color-custom-3: var(--slds-g-color-palette-blue-40);
+    --color-custom-4: var(--slds-g-color-palette-blue-20, #032d60);
+
+    --tt-in-dur: 150ms;
+    --tt-out-dur: 50ms;
+    --tt-delay: 80ms;
+    --tt-in-ease: ease-out;
+    --tt-out-ease: ease-out;
+    --tt-scale: 0.98;
+
+    --tooltip-bg: var(--color-neutral-900);
+    --tooltip-fg: var(--color-neutral-0);
+  }
+
+  .cal-page {
+    max-width: 72rem;
+    margin: 1.5rem auto;
+    padding: 0 1.5rem 3rem;
+  }
+
+  .cal {
+    --cal-cell-size: 12px;
+    --cal-gap: 3px;
+    --cal-radius: 2px;
+    --cal-level-0: var(--color-neutral-100);
+    --cal-level-1: var(--color-green-100);
+    --cal-level-2: var(--color-green-200);
+    --cal-level-3: var(--color-green-300);
+    --cal-level-4: var(--color-green-500);
+    --cal-border: color-mix(in srgb, var(--color-neutral-950) 8%, transparent);
+    --cal-tip-top: 0px;
+    --cal-tip-left: 0px;
+  }
+
+  .cal[data-palette="green"] {
+    --cal-level-0: var(--color-neutral-100);
+    --cal-level-1: var(--color-green-100);
+    --cal-level-2: var(--color-green-200);
+    --cal-level-3: var(--color-green-300);
+    --cal-level-4: var(--color-green-500);
+  }
+
+  .cal[data-palette="blue"] {
+    --cal-level-0: var(--color-neutral-100);
+    --cal-level-1: var(--color-blue-100);
+    --cal-level-2: var(--color-blue-200);
+    --cal-level-3: var(--color-blue-400);
+    --cal-level-4: var(--color-blue-700);
+  }
+
+  .cal[data-palette="warm"] {
+    --cal-level-0: var(--color-neutral-100);
+    --cal-level-1: var(--color-yellow-200);
+    --cal-level-2: var(--color-yellow-300);
+    --cal-level-3: var(--color-orange-400);
+    --cal-level-4: var(--color-neutral-950);
+  }
+
+  .cal[data-palette="custom"] {
+    --cal-level-0: var(--color-custom-0);
+    --cal-level-1: var(--color-custom-1);
+    --cal-level-2: var(--color-custom-2);
+    --cal-level-3: var(--color-custom-3);
+    --cal-level-4: var(--color-custom-4);
+  }
+
+  .cal-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .cal-toolbar label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font: 600 0.6875rem/1.2 system-ui, sans-serif;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--color-neutral-600);
+  }
+
+  .cal-toolbar select,
+  .cal-toolbar input[type="number"] {
+    min-width: 9rem;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--color-neutral-200);
+    border-radius: 6px;
+    background: var(--color-neutral-0);
+    color: var(--color-neutral-950);
+    font: 400 0.8125rem/1.3 system-ui, sans-serif;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .cal-toolbar input[type="number"] {
+    min-width: 5.5rem;
+    width: 5.5rem;
+  }
+
+  .cal-body {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.4rem;
+  }
+
+  .cal-scroll {
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+
+  .cal-axis-x {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: var(--cal-cell-size);
+    gap: var(--cal-gap);
+    height: 1.15rem;
+    margin-bottom: 0.2rem;
+    font: 400 0.6875rem/1 system-ui, sans-serif;
+    color: var(--color-neutral-600);
+    /* Labels are wider than a cell; clip them to the grid so they
+       cannot add a few pixels of scrollWidth. */
+    overflow: hidden;
+  }
+
+  /* Author `display: grid` otherwise wins over the hidden attribute. */
+  .cal-axis-x[hidden] {
+    display: none;
+  }
+
+  .cal-axis-x span {
+    /* Shrink the layout box so "Sep" does not widen the column;
+       the text still paints into following columns, then clips at
+       the axis edge instead of adding scroll. */
+    width: 0;
+    min-width: 0;
+    overflow: visible;
+    white-space: nowrap;
+  }
+
+  .cal-axis-y {
+    display: grid;
+    grid-template-rows: repeat(var(--cal-rows, 7), var(--cal-cell-size));
+    gap: var(--cal-gap);
+    font: 400 0.625rem/var(--cal-cell-size) system-ui, sans-serif;
+    color: var(--color-neutral-600);
+    text-align: right;
+  }
+
+  .cal:not([data-weekdays]) .cal-axis-y {
+    display: none;
+  }
+
+  .cal-grid {
+    display: grid;
+    gap: var(--cal-gap);
+    grid-auto-flow: var(--cal-flow, column);
+    grid-auto-columns: var(--cal-cell-size);
+    grid-auto-rows: var(--cal-cell-size);
+  }
+
+  .cal-cell {
+    box-sizing: border-box;
+    width: var(--cal-cell-size);
+    height: var(--cal-cell-size);
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border: 0.5px solid var(--cal-border);
+    border-radius: var(--cal-radius);
+    background: var(--cal-level-0);
+    appearance: none;
+    display: block;
+    flex: none;
+  }
+
+  button.cal-cell {
+    cursor: pointer;
+  }
+
+  button.cal-cell:focus-visible {
+    outline: 2px solid var(--color-blue-400);
+    outline-offset: 1px;
+  }
+
+  .cal-cell[data-level="1"] { background: var(--cal-level-1); }
+  .cal-cell[data-level="2"] { background: var(--cal-level-2); }
+  .cal-cell[data-level="3"] { background: var(--cal-level-3); }
+  .cal-cell[data-level="4"] { background: var(--cal-level-4); }
+
+  .cal-cell.is-empty {
+    background: transparent;
+    border-color: transparent;
+    pointer-events: none;
+  }
+
+  .cal-legend {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--cal-gap);
+    margin-top: 0.75rem;
+    font: 400 0.6875rem/1 system-ui, sans-serif;
+    color: var(--color-neutral-600);
+  }
+
+  .cal-legend .cal-cell {
+    pointer-events: none;
+  }
+
+  .cal-tip {
+    position: fixed;
+    margin: 0 !important;
+    inset: var(--cal-tip-top) auto auto var(--cal-tip-left) !important;
+    max-width: 16rem;
+    padding: 0.35rem 0.5rem;
+    border: 0;
+    border-radius: 6px;
+    background: var(--tooltip-bg);
+    color: var(--tooltip-fg);
+    font: 400 0.75rem/1.35 system-ui, sans-serif;
+    text-align: center;
+    opacity: 0;
+    transform: scale(var(--tt-scale));
+    pointer-events: none;
+    transition:
+      opacity var(--tt-out-dur) var(--tt-out-ease),
+      transform var(--tt-out-dur) var(--tt-out-ease);
+  }
+
+  .cal-tip:popover-open {
+    pointer-events: auto;
+    opacity: 1;
+    transform: scale(1);
+    transition-duration: var(--tt-in-dur);
+    transition-timing-function: var(--tt-in-ease);
+    transition-delay: var(--tt-delay);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cal-tip {
+      transition: none !important;
+    }
+  }
+
+  main{
+   background-color: white;
+  }
+
+</style>
+
+<div class="cal-page">
+  <div class="cal" data-cal data-grain="day" data-palette="custom">
+    <div class="cal-toolbar">
+      <label>Timeframe
+        <select data-cal-field="timeframe">
+          <option value="90d" selected>Last 90 days</option>
+          <option value="12w">Last 12 weeks</option>
+          <option value="12m">Last 12 months</option>
+          <option value="year">Last year</option>
+        </select>
+      </label>
+      <label>Grain
+        <select data-cal-field="grain">
+          <option value="day" selected>Day</option>
+          <option value="week">Week</option>
+          <option value="month">Month</option>
+        </select>
+      </label>
+      <label>Square size
+        <select data-cal-field="cellSize">
+          <option value="8">8px</option>
+          <option value="12">12px</option>
+          <option value="16">16px</option>
+          <option value="24" selected>24px</option>
+          <option value="32">32px</option>
+        </select>
+      </label>
+      <label>Columns
+        <input type="number" data-cal-field="cols" min="1" max="120" placeholder="Auto" inputmode="numeric" value="15">
+      </label>
+      <label>Rows
+        <input type="number" data-cal-field="rows" min="1" max="120" placeholder="Auto" inputmode="numeric">
+      </label>
+      <label>Palette
+        <select data-cal-field="palette">
+          <option value="green">Green</option>
+          <option value="blue">Blue</option>
+          <option value="warm">Warm</option>
+          <option value="custom" selected>Custom</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="memory-card">
+      <div class="memory-card-header">
+        <div class="memory-card-header-stack">
+          <div class="memory-card-header-title">Auto Learned</div>
+          <div class="memory-card-header-description">Here's what I learned in last 90 days</div>
+        </div>
+        <div class="memory-card-header-action">
+          <button type="button" class="slds-button slds-button_brand">Add</button>
+        </div>
+      </div>
+      <div class="memory-card-body">
+        <div class="memory-card-heatmap">
+          <div class="cal-body">
+            <div class="cal-axis-y" data-cal-axis-y hidden></div>
+            <div class="cal-scroll">
+              <div class="cal-axis-x" data-cal-axis-x></div>
+              <div class="cal-grid" data-cal-grid></div>
+            </div>
+          </div>
+          <!-- <div class="cal-legend" data-cal-legend></div> -->
+        </div>
+        <div class="memory-card-aside" style="background: #fafafa; width:100%; height:100%">
+          {# Right column — content TBD #}
+        </div>
+      </div>
+    </div>
+
+    
+  </div>
+</div>
+
+<div class="cal-tip" id="cal-tip" popover="manual" role="tooltip"></div>
+
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+  window.MEMORY_CAL = {{ cal | tojson | safe }};
+</script>
+<script src="/scripts/memory.js"></script>
+{% endblock %}

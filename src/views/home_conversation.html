@@ -398,7 +398,17 @@
       >
         {%- for msg in _messages -%}
           {%- if msg.id in (stage.messageIds or []) -%}
+          {%- if msg.rowsFrom -%}
+            {%- set _rows = [] -%}
+            {%- for _m in _messages -%}
+              {%- if _m.id == msg.rowsFrom and _m.table and _m.table.rows -%}
+                {%- set _ = _rows.push(_m.table.rows) -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {{ convo.messageItem(msg, _rows[0] or []) }}
+          {%- else -%}
             {{ convo.messageItem(msg) }}
+          {%- endif -%}
           {%- endif -%}
         {%- endfor -%}
       </template>
@@ -580,20 +590,77 @@
               <div
                 class="seller-home__conv-composer-slot seller-home__conv-composer-slot--end"
                 role="group"
-                aria-label="Send"
+                aria-label="Voice and send"
               >
+                <button
+                  type="button"
+                  class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn seller-home__conv-composer-btn"
+                  title="Start voice input"
+                  aria-label="Start voice input"
+                  data-sh-conv-composer-mic
+                >
+                  <svg class="slds-button__icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#unmuted"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Start voice input</span>
+                </button>
                 <button
                   type="submit"
                   class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn seller-home__conv-composer-btn seller-home__conv-composer-send"
                   title="Send message"
                   aria-label="Send message"
                   data-sh-conv-composer-send
-                  disabled
                 >
                   <svg class="slds-button__icon" aria-hidden="true">
                     <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#send"></use>
                   </svg>
                   <span class="slds-assistive-text">Send message</span>
+                </button>
+              </div>
+            </div>
+
+            {# Recording chrome: hides the toolbar while the mic is live.
+               Waveform + Stop (cancel) + Check (insert the hardcoded
+               transcript). Wired in bindConvComposer. #}
+            <div
+              class="seller-home__conv-composer-recording"
+              data-sh-conv-composer-recording
+              hidden
+            >
+              <div
+                class="seller-home__conv-composer-waveform"
+                data-sh-conv-composer-waveform
+                role="img"
+                aria-label="Live audio waveform"
+              ></div>
+              <div
+                class="seller-home__conv-composer-recording-actions"
+                role="group"
+                aria-label="Voice input"
+              >
+                <button
+                  type="button"
+                  class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn seller-home__conv-composer-btn"
+                  title="Stop"
+                  aria-label="Stop recording"
+                  data-sh-conv-composer-mic-stop
+                >
+                  <svg class="slds-button__icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#stop"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Stop recording</span>
+                </button>
+                <button
+                  type="button"
+                  class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn seller-home__conv-composer-btn seller-home__conv-composer-mic-confirm"
+                  title="Use recording"
+                  aria-label="Use recording"
+                  data-sh-conv-composer-mic-confirm
+                >
+                  <svg class="slds-button__icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Use recording</span>
                 </button>
               </div>
             </div>
@@ -805,6 +872,10 @@
      home_conversation.js as the opening thinking phase when a conversation's
      `opening.trace` is present. Loaded before it so the global exists at boot. #}
   <script src="/scripts/thinking_trace.js"></script>
+  {# Canvas waveform for the composer's simulated voice input. Loaded
+     before home_conversation.js so `ShLiveWaveform.mount` exists when
+     the mic is first pressed. #}
+  <script src="/scripts/live_waveform.js"></script>
   <script src="/scripts/home_conversation.js"></script>
 
   {# Tools modal for the composer's "View all". GSAP (vendored) loads

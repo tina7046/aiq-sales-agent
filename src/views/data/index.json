@@ -188,7 +188,7 @@
   "briefing": {
     // Full greeting line, rendered verbatim — edit the whole sentence
     // here (including the time of day and the name).
-    "heading": "You're 80% to goal, Kris 🚀",
+    "heading": "You're 80% to goal, Rohan 🚀",
     // The briefing sentence, also rendered verbatim. Numbers are baked into
     // the copy rather than interpolated from the fields below, so reword
     // freely without touching the template — but see `linkPhrase` below,
@@ -581,7 +581,7 @@
         {
           "id":   "msg-response",
           "type": "agent",
-          "text": "I found 25 strong-fit prospects across 7 priority accounts and prepared personalized outreach for each one. They\u2019re ready for your review before sending."
+          "text": "I found 10 strong-fit prospects across 6 priority accounts and prepared personalized outreach for each one. They\u2019re ready for your review before sending."
         },
         {
           "id":   "msg-prospects",
@@ -615,82 +615,21 @@
               { "id": "accountId",   "label": "Account ID" }
             ],
             "rows": [
-              // Generated. 24 of the 25 rows here, across 7 accounts, joined from
-              // accounts_full.csv + prospects_full.csv by
-              // tools/lab-data/build_lab_data.py, which writes
-              // data/prospect_table_lab.json — the source the three
-              // prospect-table labs render.
+              // Ten prospects across 6 accounts. Grouped by account,
+              // contiguously — the table has no grouping UI, so account
+              // order IS the grouping. Cirrus leads; Brightloop AI
+              // follows (Nina Patel is a Brightloop contact).
               //
-              // A SUBSET of that source, not the whole of it, which is
-              // the one way this list and the labs' now differ. Two
-              // rules shape it:
+              // Cadence-safe: the three authored sequences (acct-05-p06,
+              // acct-05-p01, acct-04-p01) stay in the roster. Everyone
+              // else uses `default`.
               //
-              //   • Grouped by account, contiguously. The table has no
-              //     grouping UI, so account order IS the grouping — a
-              //     company's rows split across the list read as two
-              //     unrelated runs of the same name. Cirrus leads.
-              //   • At most four prospects per account. Brightloop AI had ten,
-              //     which buried every other account below a single
-              //     company's worth of scrolling; four is enough to show
-              //     an account has depth without letting the widest one
-              //     set the length of the table.
-              //
-              // Trimming is safe for the cadence card because the three
-              // authored sequences (acct-05-p06, acct-05-p01, acct-04-p01)
-              // all belong to rows inside the cap. Every other row falls
-              // through to the `default` sequence, as it did before.
-              //
-              // Three fields are hand-written per person and no longer
-              // come from the CSVs: `whyProspect`, `signals` and the
-              // legacy `source`. The generator emits them per ACCOUNT, so
-              // every row of an account carried a byte-identical copy —
-              // four Cirrus rows with the same reason, the same five
-              // signals and the same source marks, which made the table
-              // read as one repeated row and made the Signals column
-              // worthless for telling two people apart. They are now
-              // specific to the individual: their team size, their
-              // tenure, their open reqs, what they own.
-              //
-              // Two things are kept in sync by hand as a result, both
-              // checked by eye when this was written:
-              //
-              //   • `signal` (singular) is the first entry of `signals`.
-              //     The cadence card templates its email copy off it.
-              //   • `source` is that first signal's provider. The Source
-              //     column doesn't read it — that's `signals |
-              //     distinctSources` — but it's the fallback for a row
-              //     with no signals, so it shouldn't contradict them.
-              //
-              // Salesforce is deliberately absent from the signal
-              // sources: it's the CRM, and the CRM column is where CRM
-              // facts belong.
-              //
-              // Rows carry every field the labs have columns for,
-              // including the seven this page renders and the eight it
-              // skips (see `_hidden` in _home_conversation_messages.html).
-              // "n/a" is the marker for what the CSVs do not carry —
-              // Last touch and Owner — and renders muted.
-              //
-              // NO email drafts: the fake twelve carried channel /
-              // subject / body for the parked outreach review, and these
-              // do not. Nothing live reads them — the cadence card
-              // templates its own copy from `prospect`, `company` and
-              // `signal` — but unparking that review means writing 25
-              // drafts or narrowing its roster first.
-              //
-              // Marcus Chen is the exception to "generated": hand-added
-              // from docs/alex-bristor.md and pinned first by request, so
-              // he leads the table and the cadence card's roster. His
-              // account-level fields (employees, industry, location,
-              // whyProspect, signals, rank, tier, icpFit, accountId,
-              // themes, crm, pitch) match the other Cirrus rows because
-              // the doc carries the same account context they were built
-              // from. `isNewContact` is false because the doc supplies a
-              // live Contact record ID and Lightning link — he's already
-              // in the CRM. His `source` reads Demandbase like every
-              // other row's now does: a prospecting vendor rather than
-              // the CRM record, since the CRM is what the CRM column
-              // says.
+              // `signal` is the first entry of `signals`. `source` is
+              // that first signal's provider (fallback if a row has no
+              // signals). The Source column reads `signals |
+              // distinctSources`. Each row carries 1–3 distinct vendors;
+              // Marcus Chen has three, and no two 3-source rows share
+              // the same set.
               {
                 "id": "acct-05-p06", "prospect": "Marcus Chen", "role": "VP, Sales", "company": "Cirrus",
                 "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YmiRNIAZ",
@@ -698,7 +637,7 @@
                 "companyLogoUrl": "/assets/images/company-logos/accounts/cirrus.png",
                 "employees": "~3,500", "industry": "Software / HR & IT Management", "location": "San Francisco, CA",
                 "whyProspect": "Owns the number the in-house Dark TAM Engine was built to hit; ML entity resolution and list building still on the eng roadmap",
-                "signals": [{ "text": "290+ SDRs across 4 regions", "source": "ZoomInfo" }, { "text": "$450M Series G at $16.8B", "source": "TechCrunch" }, { "text": "Dark TAM Engine built in-house", "source": "Gong" }, { "text": "8+ GTM tools in the stack", "source": "G2" }, { "text": "DACH founding BDR team hiring", "source": "Apollo" }],
+                "signals": [{ "text": "290+ SDRs across 4 regions", "source": "ZoomInfo" }, { "text": "Dark TAM Engine built in-house", "source": "Gong" }, { "text": "8+ GTM tools in the stack", "source": "G2" }],
                 "signal": "290+ SDRs across 4 regions",
                 "source": "ZoomInfo", "isNewContact": false, "isNewAccount": false,
                 "rank": "5", "tier": "Red Hot", "icpFit": "Solid — built internal Dark TAM Engine",
@@ -715,7 +654,7 @@
                 "companyLogoUrl": "/assets/images/company-logos/accounts/cirrus.png",
                 "employees": "~3,500", "industry": "Software / HR & IT Management", "location": "San Francisco, CA",
                 "whyProspect": "Four months into the enterprise SDR seat, inheriting a 60-rep org and a quota that assumes the Dark TAM Engine works",
-                "signals": [{ "text": "Promoted to SDR Director 4 months ago", "source": "SalesIntel" }, { "text": "60 enterprise SDRs reporting in", "source": "Apollo" }, { "text": "Enterprise pipeline coverage at 2.1x", "source": "Gong" }, { "text": "Hiring 12 enterprise SDRs in NYC", "source": "Demandbase" }, { "text": "Speaking at Pavilion GTM Summit", "source": "TechCrunch" }],
+                "signals": [{ "text": "Promoted to SDR Director 4 months ago", "source": "SalesIntel" }, { "text": "60 enterprise SDRs reporting in", "source": "Apollo" }],
                 "signal": "Promoted to SDR Director 4 months ago",
                 "source": "SalesIntel", "isNewContact": false, "isNewAccount": false,
                 "rank": "5", "tier": "Red Hot", "icpFit": "Solid — built internal Dark TAM Engine",
@@ -732,7 +671,7 @@
                 "companyLogoUrl": "/assets/images/company-logos/accounts/cirrus.png",
                 "employees": "~3,500", "industry": "Software / HR & IT Management", "location": "San Francisco, CA",
                 "whyProspect": "Owns the GTM stack the Dark TAM Engine sits on, with a consolidation review open across 8+ overlapping tools",
-                "signals": [{ "text": "8+ overlapping GTM tools under review", "source": "G2" }, { "text": "Owns Clay and Outreach renewals", "source": "Demandbase" }, { "text": "Two RevOps engineers hired this quarter", "source": "Apollo" }, { "text": "Data quality raised on the Q2 earnings call", "source": "Moody’s" }, { "text": "Migrating to a single customer data platform", "source": "6sense" }],
+                "signals": [{ "text": "8+ overlapping GTM tools under review", "source": "G2" }, { "text": "Owns Clay and Outreach renewals", "source": "Demandbase" }, { "text": "Two RevOps engineers hired this quarter", "source": "Apollo" }],
                 "signal": "8+ overlapping GTM tools under review",
                 "source": "G2", "isNewContact": false, "isNewAccount": false,
                 "rank": "5", "tier": "Red Hot", "icpFit": "Solid — built internal Dark TAM Engine",
@@ -743,20 +682,20 @@
                 "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
               },
               {
-                "id": "acct-05-p03", "prospect": "Nina Patel", "role": "Director, Sales Dev", "company": "Cirrus",
+                "id": "acct-05-p03", "prospect": "Nina Patel", "role": "Director, Sales Dev", "company": "Brightloop AI",
                 "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000Ylh17IAB",
-                "email": "nina.patel@cirrus.com", "phone": "+1 (415) 555-1002",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/cirrus.png",
-                "employees": "~3,500", "industry": "Software / HR & IT Management", "location": "San Francisco, CA",
-                "whyProspect": "Runs the commercial SDR floor that works whatever the Dark TAM Engine does not prioritise; names list quality as the bottleneck",
-                "signals": [{ "text": "Commercial SDR team of 40", "source": "ZoomInfo" }, { "text": "Ramp time cited as a top-three priority", "source": "Gong" }, { "text": "Backfilling 6 SDR seats after attrition", "source": "SalesIntel" }, { "text": "Posted about list quality on LinkedIn", "source": "6sense" }],
+                "email": "nina.patel@brightloop.ai", "phone": "+1 (415) 555-1002",
+                "companyLogoUrl": "/assets/images/company-logos/accounts/brightloop.png",
+                "employees": "~600", "industry": "Software / Productivity", "location": "San Francisco, CA",
+                "whyProspect": "Runs the commercial SDR floor in a 120-rep org that 5x'd in two years; names list quality as the bottleneck on the PLG-to-outbound shift",
+                "signals": [{ "text": "Commercial SDR team of 40", "source": "Demandbase" }, { "text": "List quality named as the bottleneck", "source": "TechCrunch" }, { "text": "Backfilling 6 SDR seats after attrition", "source": "6sense" }],
                 "signal": "Commercial SDR team of 40",
-                "source": "ZoomInfo", "isNewContact": false, "isNewAccount": false,
-                "rank": "5", "tier": "Red Hot", "icpFit": "Solid — built internal Dark TAM Engine",
-                "accountId": "001Wt00001eZqgwIAC", "themes": "1, 2, 4, 7, 8",
-                "crm": "Active SDR Ramp Acceleration opp ($260K Discovery)",
-                "opportunities": [{ "name": "SDR Ramp Acceleration", "amount": "$260K", "stage": "Discovery", "close": "", "meta": "$260K · Discovery" }],
-                "pitch": "Your internal engine is engineering-dependent — Bluebirds gives SDR managers the same power without depending on eng. Time-to-value for DACH launch: days, not quarters",
+                "source": "Demandbase", "isNewContact": false, "isNewAccount": false,
+                "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
+                "accountId": "001Wt00001eZpBOIA0", "themes": "1, 2, 4, 6, 7, 8",
+                "crm": "Active GTM Platform opp ($180K Discovery) + Renewal ($145K)",
+                "opportunities": [{ "name": "GTM Platform", "amount": "$180K", "stage": "Discovery", "close": "", "meta": "$180K · Discovery" }, { "name": "Renewal", "amount": "$145K", "stage": "", "close": "", "meta": "$145K" }],
+                "pitch": "You've 5x'd your SDR team — Bluebirds collapses Common Room + Clay + ZoomInfo + Outreach into one AI-native layer",
                 "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
               },
               {
@@ -766,7 +705,7 @@
                 "companyLogoUrl": "/assets/images/company-logos/accounts/brightloop.png",
                 "employees": "~600", "industry": "Software / Productivity", "location": "San Francisco, CA",
                 "whyProspect": "Owns the PLG-to-outbound transition end to end, with 120+ reps added in two years against a pre-IPO revenue plan",
-                "signals": [{ "text": "SDR team 5x’d to 120+ reps", "source": "ZoomInfo" }, { "text": "$500M+ ARR ahead of IPO", "source": "Moody’s" }, { "text": "PLG to outbound transition underway", "source": "Gong" }, { "text": "Hiring SDRs in 6 countries", "source": "Apollo" }, { "text": "Common Room in the stack", "source": "G2" }],
+                "signals": [{ "text": "SDR team 5x’d to 120+ reps", "source": "ZoomInfo" }, { "text": "$500M+ ARR ahead of IPO", "source": "Moody’s" }],
                 "signal": "SDR team 5x’d to 120+ reps",
                 "source": "ZoomInfo", "isNewContact": true, "isNewAccount": false,
                 "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
@@ -783,43 +722,9 @@
                 "companyLogoUrl": "/assets/images/company-logos/accounts/brightloop.png",
                 "employees": "~600", "industry": "Software / Productivity", "location": "San Francisco, CA",
                 "whyProspect": "Runs the largest and most outbound-dependent SDR pod; the self-serve motion North America grew on has gone flat",
-                "signals": [{ "text": "50 SDRs in North America", "source": "Apollo" }, { "text": "Self-serve signups flat quarter on quarter", "source": "Demandbase" }, { "text": "Built an internal Salestino bot", "source": "TechCrunch" }, { "text": "Outbound-sourced pipeline up 3x", "source": "Gong" }],
+                "signals": [{ "text": "50 SDRs in North America", "source": "Apollo" }],
                 "signal": "50 SDRs in North America",
                 "source": "Apollo", "isNewContact": false, "isNewAccount": false,
-                "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
-                "accountId": "001Wt00001eZpBOIA0", "themes": "1, 2, 4, 6, 7, 8",
-                "crm": "Active GTM Platform opp ($180K Discovery) + Renewal ($145K)",
-                "opportunities": [{ "name": "GTM Platform", "amount": "$180K", "stage": "Discovery", "close": "", "meta": "$180K · Discovery" }, { "name": "Renewal", "amount": "$145K", "stage": "", "close": "", "meta": "$145K" }],
-                "pitch": "You've 5x'd your SDR team — Bluebirds collapses Common Room + Clay + ZoomInfo + Outreach into one AI-native layer",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-01-p03", "prospect": "James Okonkwo", "role": "Head of Sales Dev (EMEA)", "company": "Brightloop AI",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YlVPmIAN",
-                "email": "james.okonkwo@brightloop.ai", "phone": "+1 (415) 555-0231",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/brightloop.png",
-                "employees": "~600", "industry": "Software / Productivity", "location": "San Francisco, CA",
-                "whyProspect": "Standing up EMEA outbound from nothing after the Dublin hub opened, with no territory data behind it",
-                "signals": [{ "text": "Dublin SDR hub opened in Q1", "source": "TechCrunch" }, { "text": "18 SDRs hired across EMEA this year", "source": "Apollo" }, { "text": "EMEA territory data flagged as thin", "source": "SalesIntel" }, { "text": "Outbound running in 4 languages", "source": "6sense" }],
-                "signal": "Dublin SDR hub opened in Q1",
-                "source": "TechCrunch", "isNewContact": false, "isNewAccount": false,
-                "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
-                "accountId": "001Wt00001eZpBOIA0", "themes": "1, 2, 4, 6, 7, 8",
-                "crm": "Active GTM Platform opp ($180K Discovery) + Renewal ($145K)",
-                "opportunities": [{ "name": "GTM Platform", "amount": "$180K", "stage": "Discovery", "close": "", "meta": "$180K · Discovery" }, { "name": "Renewal", "amount": "$145K", "stage": "", "close": "", "meta": "$145K" }],
-                "pitch": "You've 5x'd your SDR team — Bluebirds collapses Common Room + Clay + ZoomInfo + Outreach into one AI-native layer",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-01-p04", "prospect": "Laura Mitchell", "role": "Enterprise Demand Gen Head", "company": "Brightloop AI",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YlW7JIAV",
-                "email": "laura.mitchell@brightloop.ai", "phone": "+1 (415) 555-0298",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/brightloop.png",
-                "employees": "~600", "industry": "Software / Productivity", "location": "San Francisco, CA",
-                "whyProspect": "Funds the top of the enterprise funnel and is measured on the MQL-to-SQL conversion the SDR team keeps missing",
-                "signals": [{ "text": "Enterprise demand gen budget up 40%", "source": "Moody’s" }, { "text": "MQL to SQL conversion under review", "source": "Gong" }, { "text": "Job posts explicitly mention AI outbound", "source": "Apollo" }, { "text": "Evaluating intent data vendors", "source": "6sense" }, { "text": "Common Room renewal lands in Q4", "source": "G2" }],
-                "signal": "Enterprise demand gen budget up 40%",
-                "source": "Moody’s", "isNewContact": false, "isNewAccount": false,
                 "rank": "1", "tier": "Red Hot", "icpFit": "Perfect (all 5 criteria met)",
                 "accountId": "001Wt00001eZpBOIA0", "themes": "1, 2, 4, 6, 7, 8",
                 "crm": "Active GTM Platform opp ($180K Discovery) + Renewal ($145K)",
@@ -834,60 +739,9 @@
                 "companyLogoUrl": "/assets/images/company-logos/accounts/meridian.png",
                 "employees": "~7,000", "industry": "Software / Cloud Monitoring & Observability", "location": "New York, NY",
                 "whyProspect": "Owns SDR productivity across 8 offices and has an open req that names AI-driven SDR productivity as the job",
-                "signals": [{ "text": "SDR hiring across 8 offices", "source": "Apollo" }, { "text": "$3.67B revenue growing 28-32% YoY", "source": "Moody’s" }, { "text": "Open GTM StratOps SDR & AI role", "source": "SalesIntel" }, { "text": "200+ SDRs globally", "source": "ZoomInfo" }, { "text": "Territory coverage gaps in APAC", "source": "6sense" }],
-                "signal": "SDR hiring across 8 offices",
-                "source": "Apollo", "isNewContact": true, "isNewAccount": false,
-                "rank": "2", "tier": "Red Hot", "icpFit": "Full match",
-                "accountId": "001Wt00001eZvyNIAS", "themes": "3, 7, 8, 9",
-                "crm": "Active RevOps Enablement opp ($220K Discovery) with VP RevOps Sandra Webb as champion",
-                "opportunities": [{ "name": "RevOps Enablement", "amount": "$220K", "stage": "Discovery", "close": "", "meta": "$220K · Discovery" }],
-                "pitch": "You're actively building an AI-powered SDR productivity function — Bluebirds delivers this out of the box in 30 minutes",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-02-p02", "prospect": "Daniel O'Brien", "role": "Director, Sales Dev", "company": "Meridian Analytics",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YlfwzIAB",
-                "email": "daniel.obrien@meridian.io", "phone": "+1 (212) 555-0187",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/meridian.png",
-                "employees": "~7,000", "industry": "Software / Cloud Monitoring & Observability", "location": "New York, NY",
-                "whyProspect": "Runs the AMER commercial floor, the largest rep count in the org and the lowest meetings per rep",
-                "signals": [{ "text": "90 SDRs on the AMER floor", "source": "ZoomInfo" }, { "text": "Meetings per rep down quarter on quarter", "source": "Gong" }, { "text": "Hiring 15 SDRs in Denver", "source": "Apollo" }, { "text": "Running Outreach and Salesloft side by side", "source": "G2" }],
-                "signal": "90 SDRs on the AMER floor",
-                "source": "ZoomInfo", "isNewContact": true, "isNewAccount": false,
-                "rank": "2", "tier": "Red Hot", "icpFit": "Full match",
-                "accountId": "001Wt00001eZvyNIAS", "themes": "3, 7, 8, 9",
-                "crm": "Active RevOps Enablement opp ($220K Discovery) with VP RevOps Sandra Webb as champion",
-                "opportunities": [{ "name": "RevOps Enablement", "amount": "$220K", "stage": "Discovery", "close": "", "meta": "$220K · Discovery" }],
-                "pitch": "You're actively building an AI-powered SDR productivity function — Bluebirds delivers this out of the box in 30 minutes",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-02-p03", "prospect": "Priya Sharma", "role": "Sr Director, Sales Dev", "company": "Meridian Analytics",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000Ylg0DIAR",
-                "email": "priya.sharma@meridian.io", "phone": "+1 (212) 555-0231",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/meridian.png",
-                "employees": "~7,000", "industry": "Software / Cloud Monitoring & Observability", "location": "New York, NY",
-                "whyProspect": "Owns EMEA sales development from Dublin and Paris, opening two more markets on flat headcount",
-                "signals": [{ "text": "Dublin and Paris SDR teams", "source": "Demandbase" }, { "text": "Opening Milan and Madrid", "source": "TechCrunch" }, { "text": "EMEA SDR headcount held flat", "source": "SalesIntel" }, { "text": "GDPR-constrained data sourcing", "source": "6sense" }],
-                "signal": "Dublin and Paris SDR teams",
-                "source": "Demandbase", "isNewContact": true, "isNewAccount": false,
-                "rank": "2", "tier": "Red Hot", "icpFit": "Full match",
-                "accountId": "001Wt00001eZvyNIAS", "themes": "3, 7, 8, 9",
-                "crm": "Active RevOps Enablement opp ($220K Discovery) with VP RevOps Sandra Webb as champion",
-                "opportunities": [{ "name": "RevOps Enablement", "amount": "$220K", "stage": "Discovery", "close": "", "meta": "$220K · Discovery" }],
-                "pitch": "You're actively building an AI-powered SDR productivity function — Bluebirds delivers this out of the box in 30 minutes",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-02-p04", "prospect": "Sandra Ng", "role": "VP, GTM StratOps", "company": "Meridian Analytics",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YmhtVIAR",
-                "email": "sandra.ng@meridian.io", "phone": "+1 (212) 555-0298",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/meridian.png",
-                "employees": "~7,000", "industry": "Software / Cloud Monitoring & Observability", "location": "New York, NY",
-                "whyProspect": "Wrote the GTM StratOps SDR & AI charter and controls the budget line any SDR tooling would come out of",
-                "signals": [{ "text": "Authored the SDR & AI charter", "source": "SalesIntel" }, { "text": "Owns the GTM tooling budget", "source": "Demandbase" }, { "text": "Consolidating 3 data vendors into 1", "source": "G2" }, { "text": "Quarterly GTM efficiency review", "source": "Moody’s" }],
-                "signal": "Authored the SDR & AI charter",
-                "source": "SalesIntel", "isNewContact": false, "isNewAccount": false,
+                "signals": [{ "text": "SDR productivity review in last QBR", "source": "Gong" }, { "text": "Open GTM StratOps SDR & AI role", "source": "SalesIntel" }, { "text": "200+ SDRs globally", "source": "ZoomInfo" }],
+                "signal": "SDR productivity review in last QBR",
+                "source": "Gong", "isNewContact": true, "isNewAccount": false,
                 "rank": "2", "tier": "Red Hot", "icpFit": "Full match",
                 "accountId": "001Wt00001eZvyNIAS", "themes": "3, 7, 8, 9",
                 "crm": "Active RevOps Enablement opp ($220K Discovery) with VP RevOps Sandra Webb as champion",
@@ -902,43 +756,9 @@
                 "companyLogoUrl": "/assets/images/company-logos/accounts/apex.png",
                 "employees": "~800", "industry": "Software / Security & Compliance", "location": "San Francisco, CA",
                 "whyProspect": "Asked for the Q3 re-engagement window himself, and owns the AE org the in-house AI SDR is meant to feed",
-                "signals": [{ "text": "Requested a Q3 re-engagement", "source": "Gong" }, { "text": "In-house AI SDR at a crossroads", "source": "TechCrunch" }, { "text": "$300M ARR and accelerating", "source": "Moody’s" }, { "text": "120+ SDRs after a 4x scale-up", "source": "ZoomInfo" }],
-                "signal": "Requested a Q3 re-engagement",
-                "source": "Gong", "isNewContact": false, "isNewAccount": false,
-                "rank": "3", "tier": "Red Hot", "icpFit": "Perfect",
-                "accountId": "001Wt00001eZwETIA0", "themes": "1, 2, 7, 9",
-                "crm": "Active Outbound Motion opp ($120K Qualification); Michael Torres requested Q3 re-engagement",
-                "opportunities": [{ "name": "Outbound Motion", "amount": "$120K", "stage": "Qualification", "close": "", "meta": "$120K · Qualification" }],
-                "pitch": "120+ SDRs at scale — every week of ramp = six figures in missed pipeline. Bluebirds ships the same outcome as your internal Clay AI SDR without the engineering dependency",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-03-p02", "prospect": "Elena Vasquez", "role": "Director, Sales Dev EMEA", "company": "Apex Ventures",
-                "icon": "contact", "recordType": "Contact", "recordId": "CRM existing",
-                "email": "elena.vasquez@apexventures.com", "phone": "+1 (415) 555-0756",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/apex.png",
-                "employees": "~800", "industry": "Software / Security & Compliance", "location": "San Francisco, CA",
-                "whyProspect": "Building the EMEA SDR team the expansion depends on, against compliance-buyer data US vendors cover poorly",
-                "signals": [{ "text": "EMEA expansion underway", "source": "TechCrunch" }, { "text": "Hiring 20 SDRs in London", "source": "Apollo" }, { "text": "Compliance-buyer coverage gaps", "source": "SalesIntel" }, { "text": "ISO 27001 buyer intent spiking", "source": "6sense" }],
-                "signal": "EMEA expansion underway",
-                "source": "TechCrunch", "isNewContact": false, "isNewAccount": false,
-                "rank": "3", "tier": "Red Hot", "icpFit": "Perfect",
-                "accountId": "001Wt00001eZwETIA0", "themes": "1, 2, 7, 9",
-                "crm": "Active Outbound Motion opp ($120K Qualification); Michael Torres requested Q3 re-engagement",
-                "opportunities": [{ "name": "Outbound Motion", "amount": "$120K", "stage": "Qualification", "close": "", "meta": "$120K · Qualification" }],
-                "pitch": "120+ SDRs at scale — every week of ramp = six figures in missed pipeline. Bluebirds ships the same outcome as your internal Clay AI SDR without the engineering dependency",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-03-p03", "prospect": "Andrew Park", "role": "Head of Sales, Startups & Growth", "company": "Apex Ventures",
-                "icon": "contact", "recordType": "Contact", "recordId": "CRM existing",
-                "email": "andrew.park@apexventures.com", "phone": "+1 (415) 555-0812",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/apex.png",
-                "employees": "~800", "industry": "Software / Security & Compliance", "location": "San Francisco, CA",
-                "whyProspect": "Runs the highest-volume, lowest-ACV segment, where the in-house AI SDR either pays for itself or does not",
-                "signals": [{ "text": "Startups segment carries the most volume", "source": "Demandbase" }, { "text": "Redesigning the self-serve to sales handoff", "source": "Gong" }, { "text": "SOC 2 buyer cohort growing", "source": "6sense" }, { "text": "Hiring 10 growth SDRs", "source": "Apollo" }],
-                "signal": "Startups segment carries the most volume",
-                "source": "Demandbase", "isNewContact": true, "isNewAccount": false,
+                "signals": [{ "text": "In-house AI SDR at a crossroads", "source": "G2" }, { "text": "Q3 re-engagement window on named accounts", "source": "Demandbase" }],
+                "signal": "In-house AI SDR at a crossroads",
+                "source": "G2", "isNewContact": false, "isNewAccount": false,
                 "rank": "3", "tier": "Red Hot", "icpFit": "Perfect",
                 "accountId": "001Wt00001eZwETIA0", "themes": "1, 2, 7, 9",
                 "crm": "Active Outbound Motion opp ($120K Qualification); Michael Torres requested Q3 re-engagement",
@@ -953,60 +773,9 @@
                 "companyLogoUrl": "/assets/images/company-logos/accounts/harbour.png",
                 "employees": "~1,300", "industry": "Fintech / Corporate Cards & Spend", "location": "New York, NY",
                 "whyProspect": "Sponsors the in-house outbound engine and the 5-7 growth engineers maintaining it instead of shipping product",
-                "signals": [{ "text": "130+ SDRs onboarding 10-12 a month", "source": "ZoomInfo" }, { "text": "5-7 growth engineers on GTM tooling", "source": "TechCrunch" }, { "text": "Dark TAM equivalent built in-house", "source": "Gong" }, { "text": "Valuation marked up in the latest round", "source": "Moody’s" }],
-                "signal": "130+ SDRs onboarding 10-12 a month",
-                "source": "ZoomInfo", "isNewContact": false, "isNewAccount": false,
-                "rank": "4", "tier": "Solid", "icpFit": "n/a",
-                "accountId": "001Wt00001eZwCrIAK", "themes": "1, 2, 4, 8",
-                "crm": "Active SDR Automation opp ($145K Discovery)",
-                "opportunities": [{ "name": "SDR Automation", "amount": "$145K", "stage": "Discovery", "close": "", "meta": "$145K · Discovery" }],
-                "pitch": "Your outbound machine is best-in-class but takes an army of GTM engineers. Bluebirds gives you the same output without the custom infrastructure",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-04-p02", "prospect": "Diana Kovacs", "role": "Sr Manager, New Biz Dev", "company": "Harbour Capital",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YlgufIAB",
-                "email": "diana.kovacs@harbourcapital.com", "phone": "+1 (646) 555-0187",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/harbour.png",
-                "employees": "~1,300", "industry": "Fintech / Corporate Cards & Spend", "location": "New York, NY",
-                "whyProspect": "Onboards 10-12 SDRs a month and owns the ramp curve the in-house engine’s list quality sets",
-                "signals": [{ "text": "Onboarding 10-12 SDRs monthly", "source": "Apollo" }, { "text": "Ramp to quota sitting at 5 months", "source": "Gong" }, { "text": "Running a 3-week SDR bootcamp", "source": "SalesIntel" }, { "text": "Territory reshuffle mid-quarter", "source": "Demandbase" }],
-                "signal": "Onboarding 10-12 SDRs monthly",
-                "source": "Apollo", "isNewContact": false, "isNewAccount": false,
-                "rank": "4", "tier": "Solid", "icpFit": "n/a",
-                "accountId": "001Wt00001eZwCrIAK", "themes": "1, 2, 4, 8",
-                "crm": "Active SDR Automation opp ($145K Discovery)",
-                "opportunities": [{ "name": "SDR Automation", "amount": "$145K", "stage": "Discovery", "close": "", "meta": "$145K · Discovery" }],
-                "pitch": "Your outbound machine is best-in-class but takes an army of GTM engineers. Bluebirds gives you the same output without the custom infrastructure",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-04-p03", "prospect": "Nathaniel Brooks", "role": "Head of New Business", "company": "Harbour Capital",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YlfNVIAZ",
-                "email": "nathaniel.brooks@harbourcapital.com", "phone": "+1 (646) 555-0231",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/harbour.png",
-                "employees": "~1,300", "industry": "Fintech / Corporate Cards & Spend", "location": "New York, NY",
-                "whyProspect": "Carries the new-logo number and is the internal skeptic on whether the homegrown engine beats buying",
-                "signals": [{ "text": "New-logo target up 45% YoY", "source": "Moody’s" }, { "text": "Build-versus-buy review on GTM tooling", "source": "G2" }, { "text": "Mid-market push into 3 verticals", "source": "6sense" }, { "text": "Hiring an outbound strategy lead", "source": "Apollo" }],
-                "signal": "New-logo target up 45% YoY",
-                "source": "Moody’s", "isNewContact": false, "isNewAccount": false,
-                "rank": "4", "tier": "Solid", "icpFit": "n/a",
-                "accountId": "001Wt00001eZwCrIAK", "themes": "1, 2, 4, 8",
-                "crm": "Active SDR Automation opp ($145K Discovery)",
-                "opportunities": [{ "name": "SDR Automation", "amount": "$145K", "stage": "Discovery", "close": "", "meta": "$145K · Discovery" }],
-                "pitch": "Your outbound machine is best-in-class but takes an army of GTM engineers. Bluebirds gives you the same output without the custom infrastructure",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-04-p04", "prospect": "Kevin Rhodes", "role": "Director, Revenue Enablement", "company": "Harbour Capital",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YlafaIAB",
-                "email": "kevin.rhodes@harbourcapital.com", "phone": "+1 (646) 555-0298",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/harbour.png",
-                "employees": "~1,300", "industry": "Fintech / Corporate Cards & Spend", "location": "New York, NY",
-                "whyProspect": "Owns SDR ramp content and is measured on time-to-first-meeting, which the in-house lists keep pushing out",
-                "signals": [{ "text": "Time to first meeting is his top metric", "source": "Gong" }, { "text": "Rebuilding the SDR enablement path", "source": "SalesIntel" }, { "text": "Certification program for 130 reps", "source": "Apollo" }, { "text": "Evaluating conversation intelligence add-ons", "source": "G2" }],
-                "signal": "Time to first meeting is his top metric",
-                "source": "Gong", "isNewContact": false, "isNewAccount": false,
+                "signals": [{ "text": "5-7 growth engineers on GTM tooling", "source": "TechCrunch" }],
+                "signal": "5-7 growth engineers on GTM tooling",
+                "source": "TechCrunch", "isNewContact": false, "isNewAccount": false,
                 "rank": "4", "tier": "Solid", "icpFit": "n/a",
                 "accountId": "001Wt00001eZwCrIAK", "themes": "1, 2, 4, 8",
                 "crm": "Active SDR Automation opp ($145K Discovery)",
@@ -1021,99 +790,14 @@
                 "companyLogoUrl": "/assets/images/company-logos/accounts/nexgen.png",
                 "employees": "~8,500", "industry": "Fintech / Payments Infrastructure", "location": "South San Francisco, CA / Dublin",
                 "whyProspect": "Enterprise SDR lead under a CRO four months into the job who is rebuilding outbound around named accounts",
-                "signals": [{ "text": "New CRO Derek Simmons (Jun 2026)", "source": "TechCrunch" }, { "text": "Named-account model being introduced", "source": "Gong" }, { "text": "Enterprise SDR team of 35", "source": "ZoomInfo" }, { "text": "Hiring in New York and London", "source": "Apollo" }],
-                "signal": "New CRO Derek Simmons (Jun 2026)",
-                "source": "TechCrunch", "isNewContact": false, "isNewAccount": false,
+                "signals": [{ "text": "Named-account model being introduced", "source": "6sense" }, { "text": "Hiring in New York and London", "source": "Apollo" }, { "text": "Evaluating analytics add-ons for the renewal", "source": "G2" }],
+                "signal": "Named-account model being introduced",
+                "source": "6sense", "isNewContact": false, "isNewAccount": false,
                 "rank": "6", "tier": "Solid", "icpFit": "Existing customer — renewal/expansion",
                 "accountId": "001Wt00001eZj2lIAC", "themes": "1, 5, 7, 13",
                 "crm": "Active Enterprise Renewal ($320K Negotiation, close Sep 3)",
                 "opportunities": [{ "name": "Enterprise Renewal", "amount": "$320K", "stage": "Negotiation", "close": "Sep 3", "meta": "$320K · Negotiation · closes Sep 3" }],
                 "pitch": "Quick win for Derek's first 60 days — prove Bluebirds drives pipeline, not just sits on the invoice. Get Analytics module into the renewal before terms lock",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-06-p02", "prospect": "Steve Quinn", "role": "GTM FS Head", "company": "NexGen Systems",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YlYcAIAV",
-                "email": "steve.quinn@nexgen.io", "phone": "+1 (650) 555-0187",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/nexgen.png",
-                "employees": "~8,500", "industry": "Fintech / Payments Infrastructure", "location": "South San Francisco, CA / Dublin",
-                "whyProspect": "Owns financial services GTM, the segment the new CRO named first and the one with the least usable prospect data",
-                "signals": [{ "text": "Financial services named a 2026 priority", "source": "Moody’s" }, { "text": "FS buyer data coverage is thin", "source": "SalesIntel" }, { "text": "Regulated-industry compliance review", "source": "Demandbase" }, { "text": "Two FS enterprise logos closed in Q2", "source": "Gong" }],
-                "signal": "Financial services named a 2026 priority",
-                "source": "Moody’s", "isNewContact": false, "isNewAccount": false,
-                "rank": "6", "tier": "Solid", "icpFit": "Existing customer — renewal/expansion",
-                "accountId": "001Wt00001eZj2lIAC", "themes": "1, 5, 7, 13",
-                "crm": "Active Enterprise Renewal ($320K Negotiation, close Sep 3)",
-                "opportunities": [{ "name": "Enterprise Renewal", "amount": "$320K", "stage": "Negotiation", "close": "Sep 3", "meta": "$320K · Negotiation · closes Sep 3" }],
-                "pitch": "Quick win for Derek's first 60 days — prove Bluebirds drives pipeline, not just sits on the invoice. Get Analytics module into the renewal before terms lock",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-06-p03", "prospect": "Lisa Chang", "role": "GTM Strategy & Ops Head (Americas)", "company": "NexGen Systems",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YlfVZIAZ",
-                "email": "lisa.chang@nexgen.io", "phone": "+1 (650) 555-0231",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/nexgen.png",
-                "employees": "~8,500", "industry": "Fintech / Payments Infrastructure", "location": "South San Francisco, CA / Dublin",
-                "whyProspect": "Redrawing Americas territories for the new CRO’s coverage model, which puts the account data underneath it in play",
-                "signals": [{ "text": "Americas territory redesign underway", "source": "Demandbase" }, { "text": "Account scoring model being rebuilt", "source": "6sense" }, { "text": "CRM data hygiene project funded", "source": "G2" }, { "text": "Reports into the new CRO", "source": "SalesIntel" }],
-                "signal": "Americas territory redesign underway",
-                "source": "Demandbase", "isNewContact": false, "isNewAccount": false,
-                "rank": "6", "tier": "Solid", "icpFit": "Existing customer — renewal/expansion",
-                "accountId": "001Wt00001eZj2lIAC", "themes": "1, 5, 7, 13",
-                "crm": "Active Enterprise Renewal ($320K Negotiation, close Sep 3)",
-                "opportunities": [{ "name": "Enterprise Renewal", "amount": "$320K", "stage": "Negotiation", "close": "Sep 3", "meta": "$320K · Negotiation · closes Sep 3" }],
-                "pitch": "Quick win for Derek's first 60 days — prove Bluebirds drives pipeline, not just sits on the invoice. Get Analytics module into the renewal before terms lock",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-08-p01", "prospect": "Frank Miller", "role": "Head of Sales, EMEA", "company": "CloudNine Dev",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YmgEIIAZ",
-                "email": "frank.miller@cloudnine.dev", "phone": "+1 (415) 555-1301",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/cloudnine.png",
-                "employees": "~500", "industry": "Software / B2B SaaS (demo)", "location": "San Francisco, CA",
-                "whyProspect": "Opening EMEA on Series C money with no local pipeline and a number that starts this quarter",
-                "signals": [{ "text": "$50M Series C (Feb 2026)", "source": "TechCrunch" }, { "text": "EMEA entry planned for Q3", "source": "Demandbase" }, { "text": "First 5 EMEA roles posted", "source": "Apollo" }, { "text": "No local pipeline coverage yet", "source": "6sense" }],
-                "signal": "$50M Series C (Feb 2026)",
-                "source": "TechCrunch", "isNewContact": false, "isNewAccount": false,
-                "rank": "8", "tier": "Solid", "icpFit": "n/a",
-                "accountId": "001Wt00001eRF6hIAG", "themes": "5, 14",
-                "crm": "Active Platform Expansion opp ($240K Solution Validation)",
-                "opportunities": [{ "name": "Platform Expansion", "amount": "$240K", "stage": "Solution Validation", "close": "", "meta": "$240K · Solution Validation" }],
-                "pitch": "You're opening London, Singapore, Tokyo — cold TAM in every geo. Bluebirds gives your new EMEA Head of Sales prioritized lists from day one",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-08-p02", "prospect": "Maria Santos", "role": "CMO", "company": "CloudNine Dev",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YmjFNIAZ",
-                "email": "maria.santos@cloudnine.dev", "phone": "+1 (415) 555-1345",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/cloudnine.png",
-                "employees": "~500", "industry": "Software / B2B SaaS (demo)", "location": "San Francisco, CA",
-                "whyProspect": "Owns the demand number the Series C was raised against, with pipeline targets tripled and no matching team",
-                "signals": [{ "text": "Pipeline target tripled after the raise", "source": "Moody’s" }, { "text": "Marketing headcount doubled", "source": "Apollo" }, { "text": "First brand campaign in market", "source": "TechCrunch" }, { "text": "Evaluating an ABM platform", "source": "G2" }],
-                "signal": "Pipeline target tripled after the raise",
-                "source": "Moody’s", "isNewContact": false, "isNewAccount": false,
-                "rank": "8", "tier": "Solid", "icpFit": "n/a",
-                "accountId": "001Wt00001eRF6hIAG", "themes": "5, 14",
-                "crm": "Active Platform Expansion opp ($240K Solution Validation)",
-                "opportunities": [{ "name": "Platform Expansion", "amount": "$240K", "stage": "Solution Validation", "close": "", "meta": "$240K · Solution Validation" }],
-                "pitch": "You're opening London, Singapore, Tokyo — cold TAM in every geo. Bluebirds gives your new EMEA Head of Sales prioritized lists from day one",
-                "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
-              },
-              {
-                "id": "acct-08-p03", "prospect": "Greg Norton", "role": "CEO", "company": "CloudNine Dev",
-                "icon": "contact", "recordType": "Contact", "recordId": "003Wt00000YmjGzIAJ",
-                "email": "greg.norton@cloudnine.dev", "phone": "+1 (415) 555-1389",
-                "companyLogoUrl": "/assets/images/company-logos/accounts/cloudnine.png",
-                "employees": "~500", "industry": "Software / B2B SaaS (demo)", "location": "San Francisco, CA",
-                "whyProspect": "Set the Series C growth plan personally and reviews pipeline weekly; the buyer for anything that changes the top of funnel",
-                "signals": [{ "text": "Set a 3x growth plan after the raise", "source": "Moody’s" }, { "text": "Weekly pipeline review with the board", "source": "Gong" }, { "text": "$50M Series C (Feb 2026)", "source": "TechCrunch" }, { "text": "Hiring a first CRO", "source": "SalesIntel" }],
-                "signal": "Set a 3x growth plan after the raise",
-                "source": "Moody’s", "isNewContact": false, "isNewAccount": false,
-                "rank": "8", "tier": "Solid", "icpFit": "n/a",
-                "accountId": "001Wt00001eRF6hIAG", "themes": "5, 14",
-                "crm": "Active Platform Expansion opp ($240K Solution Validation)",
-                "opportunities": [{ "name": "Platform Expansion", "amount": "$240K", "stage": "Solution Validation", "close": "", "meta": "$240K · Solution Validation" }],
-                "pitch": "You're opening London, Singapore, Tokyo — cold TAM in every geo. Bluebirds gives your new EMEA Head of Sales prioritized lists from day one",
                 "lastTouch": "n/a", "lastTouchIso": "", "owner": "n/a"
               }
             ]
@@ -1130,150 +814,13 @@
           "type": "workflow_activity",
           "workflowLabel": "Prospecting workflow completed",
           "workflowIcon":  "apps",
-          "statusText":    "25 prospects \u00b7 7 accounts \u00b7 25 drafts",
+          "statusText":    "10 prospects \u00b7 6 accounts \u00b7 10 drafts",
           "expandsTable":  "conv-001-prospects"
         },
-        // Closing nudge under the list. `text` is the bold heading; each
-        // item is a sentence that ends in a clickable CTA. Clicking the
-        // CTA drops its `prompt` into the composer and focuses it, so
-        // the seller can send or edit. Optional fields per item:
-        //   boldPhrase — substring of `text` to embolden inline.
-        //   prompt     — text to send when it differs from `cta`.
         {
-          "id":   "msg-next-steps",
-          "type": "suggestions",
-          "text": "What do you want me to do next?",
-          "items": [
-            {
-              "id":     "draft-emails",
-              "text":   "Draft personalized outreach for every prospect on this list.",
-              "cta":    "Draft cadences",
-              "prompt": "Draft cadences for these prospects"
-            },
-            {
-              "id":     "more-prospects",
-              "text":   "Find more prospects like these at the accounts you already cover.",
-              "cta":    "Find more prospects",
-              "prompt": "Find more prospects like these"
-            },
-            {
-              "id":         "create-workflow",
-              "text":       "I can also turn this account prospecting into a reusable workflow for future use.",
-              "boldPhrase": "account prospecting",
-              "cta":        "Create this workflow",
-              "prompt":     "Turn this account prospecting into a reusable workflow"
-            }
-          ]
-        }
-      ],
-      // ── Opening sequence ──────────────────────────────────────────
-      // The thread doesn't arrive fully written: it plays itself out
-      // on load, so the drill-in reads as the agent working rather
-      // than as a page that was already finished.
-      //
-      // Each stage shows the thinking indicator for `thinkingMs`, then
-      // reveals the messages it names. Stages run back to back, so the
-      // seller sees: thinking → the agent's answer → thinking again →
-      // the list and what to do with it.
-      //
-      //   thinkingMs    — how long this stage's indicator shows, in ms.
-      //   thinkingLabel — copy inside it. Falls back to `thinkingLabel`
-      //                   in home_conversation.json.
-      //   messageIds    — ids from `messages` above, revealed together
-      //                   when the stage ends.
-      //
-      // A message no stage names renders at first paint, above
-      // everything the stages bring in — that's the escape hatch for
-      // content that shouldn't wait. Remove `opening` entirely and the
-      // whole thread paints at once, as it did before.
-      "opening": {
-        // ThinkingTrace as the single thinking phase — connect the tools, then
-        // use the skills — folding to a completed header before the answer
-        // streams in from msg-response. Content mirrors the retired running-lab
-        // flat prototype this "Found new prospects" flow was built in.
-        // Rendered by ThinkingTrace.mount in home_conversation.js.
-        "trace": {
-          // No completedLabel → the header shows the REAL elapsed time on
-          // finish (e.g. "Worked for 15s"). Narratives are brief; the detailed
-          // reasoning shows in each step's cycling `cycle` micro-texts.
-          "timings": { "totalMs": 14000, "stepGapMs": 200 },
-          "steps": [
-            {
-              "label": "Connected 5 tools",
-              "narrative": "First, let me connect the tools I'll pull real signal from.",
-              "cycle": ["Connecting tools", "Reading your Salesforce pipeline", "Pulling ZoomInfo firmographics", "Scanning recent Gong calls", "Checking the web for signals", "Reviewing LinkedIn profiles"],
-              "substeps": [
-                { "source": "Gong", "label": "Gong" },
-                { "source": "Web", "label": "Web" },
-                { "source": "LinkedIn", "label": "LinkedIn" },
-                { "source": "ZoomInfo", "label": "ZoomInfo" },
-                { "source": "Salesforce", "label": "Salesforce" }
-              ]
-            },
-            {
-              "label": "Used 4 skills",
-              "narrative": "Now I'll run the analysis with the right skills.",
-              "cycle": ["Loaded skills", "Starting account research", "Scoring accounts against ICP", "Finding prospects", "Scoring against persona", "Drafting outreach", "Building cadences"],
-              "substeps": [
-                { "img": "/assets/images/nav-icons/skills.png", "label": "Account research" },
-                { "img": "/assets/images/nav-icons/skills.png", "label": "Find prospects" },
-                { "img": "/assets/images/nav-icons/skills.png", "label": "Write emails" },
-                { "img": "/assets/images/nav-icons/skills.png", "label": "Create cadence" }
-              ]
-            }
-          ]
-        },
-        "stages": [
-          {
-            "id": "open-01",
-            "thinkingMs": 2000,
-            "thinkingLabel": "Searching your accounts for prospects\u2026",
-            "messageIds": ["msg-response"]
-          },
-          {
-            "id": "open-02",
-            "thinkingMs": 2800,
-            "thinkingLabel": "Preparing personalized outreach\u2026",
-            "messageIds": ["msg-prospects", "msg-activity", "msg-next-steps"]
-          }
-        ]
-      },
-      // ── Scripted follow-up turns ──────────────────────────────────
-      // The demo reply queue. Each send in the composer consumes the
-      // NEXT entry: the thinking indicator shows for `thinkingMs`, then
-      // `reply` is appended to the thread. Once the queue runs out,
-      // later sends still echo the seller's message but no reply comes
-      // back, so the demo ends cleanly instead of looping.
-      //
-      // `reply` entries use the exact same shape as `messages` above
-      // and render through the same macros — so a turn can answer with
-      // an `agent` message carrying a full prospect `table` or a
-      // cadence of drafted touches, not just prose. Ids must be unique
-      // across the whole thread (they become `data-sh-conv-msg` hooks).
-      //
-      //   thinkingMs    — how long the indicator shows, in ms.
-      //   thinkingLabel — copy inside the indicator. Falls back to
-      //                   `thinkingLabel` in home_conversation.json.
-      //   rowsFrom      — on a reply whose component needs a prospect
-      //                   roster (the cadence card, or the parked
-      //                   outreach review): the id of the message whose
-      //                   `table.rows` it should page through. Lets the
-      //                   component arrive later than the list it acts
-      //                   on without a second copy of the records.
-      //
-      // The seeded flow: the thread opens on the prospect list, and the
-      // seller's first message — whatever they type — brings back the
-      // drafted cadence for those same twelve prospects.
-      "scriptedTurns": [
-        {
-          "id": "turn-01",
-          "thinkingMs": 2400,
-          "thinkingLabel": "Drafting your sequences\u2026",
-          "reply": [
-            {
-              "id":   "turn-01-cadence",
+              "id":   "msg-cadence",
               "type": "agent",
-              "text": "Here are the drafted sequences, one per prospect across email, LinkedIn, and call. Step through a prospect's touches below, or approve all 25 at once.",
+              "text": "Here are the drafted sequences, one per prospect across email, LinkedIn, and call. Step through a prospect's touches below, or approve all 10 at once.",
               "rowsFrom": "msg-prospects",
               // ── Cadence ───────────────────────────────────────────
               // One drafted sequence of touches per prospect, shown one
@@ -1318,13 +865,13 @@
                 "name": "High Touch Prospects",
                 "summary": "Multi-channel sequence, paced over three weeks.",
                 "confirmDialog": {
-                  "title": "Approve all 25 sequences?",
-                  "body": "Every touch in all 25 sequences will be released to the configured outreach workflow.",
-                  "primary": "Approve 25 sequences",
+                  "title": "Approve all 10 sequences?",
+                  "body": "Every touch in all 10 sequences will be released to the configured outreach workflow.",
+                  "primary": "Approve 10 sequences",
                   "secondary": "Cancel"
                 },
                 "completed": {
-                  "heading": "All 25 sequences approved",
+                  "heading": "All 10 sequences approved",
                   "body": "The approved sequences will be released to the configured outreach workflow."
                 },
 
@@ -1563,7 +1110,27 @@
                               { "label": "Web", "icon": "/assets/images/source_icons/source_web.svg" }
                             ]
                           }
-                        ]
+                        ],
+                        // Voice-demo rewrite. Applied by Check → Send in
+                        // the composer, NOT by the Feedback tab's
+                        // Regenerate. `[PLACEHOLDER]` markers are there
+                        // so final copy is a find-and-replace.
+                        "voiceRevision": {
+                          "type": "email",
+                          "headerLabel": "Email 1",
+                          "headerValue": "First touch",
+                          "subject": "[PLACEHOLDER] Dreamforce + staying close",
+                          "body": "Hi Marcus,<br><br>Great connecting at <span class='email-highlight' data-link='context' data-popover-title='[PLACEHOLDER] Event' data-popover-question='[PLACEHOLDER] Is Dreamforce the right hook?' data-popover-body='[PLACEHOLDER] Seller met Maya, a coworker of Marcus, at Dreamforce. Swap this for the final event cite.' data-source-label='[PLACEHOLDER] Event' data-source-icon='/assets/images/source_icons/source_web.svg'>Dreamforce</span> — and it stuck with me that <span class='email-highlight' data-link='context' data-popover-title='[PLACEHOLDER] Maya' data-popover-question='[PLACEHOLDER] Should we name Maya?' data-popover-body='[PLACEHOLDER] Maya, a coworker of Marcus, asked to stay close to this evaluation. Replace with the real name and source.' data-source-label='[PLACEHOLDER] CRM' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>Maya</span> wanted to stay close to this evaluation.<br><br>Cirrus's outbound stack still runs through <span class='email-highlight' data-link='context' data-popover-title='[PLACEHOLDER] Stack' data-popover-question='[PLACEHOLDER] Keep the tool list?' data-popover-body='[PLACEHOLDER] 8+ GTM tools in the account tech profile. Reuse or replace the original ZoomInfo cite.' data-source-label='[PLACEHOLDER] ZoomInfo' data-source-icon='/assets/images/source_icons/source_zoominfo.svg'>ZoomInfo, Apollo, Clay, Outreach, Demandbase, and Lusha</span>. Bluebirds consolidates enrichment across 15 data vendors into one platform.<br><br>Can I share a 2-min walkthrough — and copy Maya so she stays in the loop?",
+                          "details": [
+                            { "title": "Email Type", "value": "Warm outbound (revised)" },
+                            { "title": "Reasoning",  "value": "[PLACEHOLDER] Names the Dreamforce meeting with Maya (Marcus’s coworker) and her ask to stay close, then keeps the stack research as the reason to talk." }
+                          ],
+                          "sources": [
+                            { "label": "[PLACEHOLDER] Event",    "icon": "/assets/images/source_icons/source_web.svg" },
+                            { "label": "[PLACEHOLDER] CRM",      "icon": "/assets/images/source_icons/source_salesforce.svg" },
+                            { "label": "[PLACEHOLDER] ZoomInfo", "icon": "/assets/images/source_icons/source_zoominfo.svg" }
+                          ]
+                        }
                       },
                       {
                         "type": "linkedin",
@@ -2089,10 +1656,112 @@
                   }
                 }
               }
+            },
+        // Closing nudge under the list. `text` is the bold heading; each
+        // item is a sentence that ends in a clickable CTA. Clicking the
+        // CTA drops its `prompt` into the composer and focuses it, so
+        // the seller can send or edit. Optional fields per item:
+        //   boldPhrase — substring of `text` to embolden inline.
+        //   prompt     — text to send when it differs from `cta`.
+        {
+          "id":   "msg-next-steps",
+          "type": "suggestions",
+          "text": "What do you want me to do next?",
+          "items": [
+            {
+              "id":     "more-prospects",
+              "text":   "Find more prospects like these at the accounts you already cover.",
+              "cta":    "Find more prospects",
+              "prompt": "Find more prospects like these"
+            },
+            {
+              "id":         "create-workflow",
+              "text":       "I can also turn this account prospecting into a reusable workflow for future use.",
+              "boldPhrase": "account prospecting",
+              "cta":        "Create this workflow",
+              "prompt":     "Turn this account prospecting into a reusable workflow"
             }
           ]
         }
       ],
+      // ── Opening sequence ──────────────────────────────────────────
+      // The thread doesn't arrive fully written: it plays itself out
+      // on load, so the drill-in reads as the agent working rather
+      // than as a page that was already finished.
+      //
+      // Each stage shows the thinking indicator for `thinkingMs`, then
+      // reveals the messages it names. Stages run back to back, so the
+      // seller sees: thinking → the agent's answer → thinking again →
+      // the list and what to do with it.
+      //
+      //   thinkingMs    — how long this stage's indicator shows, in ms.
+      //   thinkingLabel — copy inside it. Falls back to `thinkingLabel`
+      //                   in home_conversation.json.
+      //   messageIds    — ids from `messages` above, revealed together
+      //                   when the stage ends.
+      //
+      // A message no stage names renders at first paint, above
+      // everything the stages bring in — that's the escape hatch for
+      // content that shouldn't wait. Remove `opening` entirely and the
+      // whole thread paints at once, as it did before.
+      // skipThinking: first open streams staged messages with no thinking
+      // row and no ThinkingTrace. conv-002 still uses `trace`.
+      "opening": {
+        "skipThinking": true,
+        "stages": [
+          {
+            "id": "open-01",
+            "messageIds": ["msg-response"]
+          },
+          {
+            "id": "open-02",
+            "messageIds": ["msg-prospects", "msg-activity"]
+          },
+          {
+            "id": "open-03",
+            "messageIds": ["msg-cadence"]
+          },
+          {
+            "id": "open-04",
+            "messageIds": ["msg-next-steps"]
+          }
+        ]
+      },
+      // ── Scripted follow-up turns ──────────────────────────────────
+      // The demo reply queue. Each send in the composer consumes the
+      // NEXT entry: the thinking indicator shows for `thinkingMs`, then
+      // `reply` is appended to the thread. Once the queue runs out,
+      // later sends still echo the seller's message but no reply comes
+      // back, so the demo ends cleanly instead of looping.
+      //
+      // `reply` entries use the exact same shape as `messages` above
+      // and render through the same macros — so a turn can answer with
+      // an `agent` message carrying a full prospect `table` or a
+      // cadence of drafted touches, not just prose. Ids must be unique
+      // across the whole thread (they become `data-sh-conv-msg` hooks).
+      //
+      //   thinkingMs    — how long the indicator shows, in ms.
+      //   thinkingLabel — copy inside the indicator. Falls back to
+      //                   `thinkingLabel` in home_conversation.json.
+      //   rowsFrom      — on a reply whose component needs a prospect
+      //                   roster (the cadence card, or the parked
+      //                   outreach review): the id of the message whose
+      //                   `table.rows` it should page through. Lets the
+      //                   component arrive later than the list it acts
+      //                   on without a second copy of the records.
+      //
+      // The cadence card is `msg-cadence` in the opening thread now.
+      // Composer sends still echo; this queue is empty so they do not
+      // replay the sequences.
+      "scriptedTurns": [],
+      // Simulated voice input. `transcript` is what Check dumps into
+      // the composer (no speech-to-text). After Send, Email 1 for
+      // `targetProspectId` is swapped to that step's `voiceRevision`.
+      "voiceInput": {
+        "transcript": "Hunter, I actually met Maya who's a coworker of Marcus at Dreamforce, and she wanted to stay close to this evaluation. Can we mention her in the email?",
+        "targetProspectId": "acct-05-p06",
+        "targetStepIndex": 0
+      },
       // ── Parked: single-draft outreach review ──────────────────────
       // The review card the cadence above replaced. Kept whole so the
       // one-draft-at-a-time flow can be brought back: rename this key
@@ -2103,23 +1772,202 @@
       // One thing changed under it while it was parked: this card reads
       // `subject` / `body` off each prospect ROW, and the rows are now
       // the labs' generated dataset, which has no drafts. Unparking it
-      // means authoring 25 or cutting the roster down first — the
-      // cadence card that replaced it doesn't care, because it templates
-      // its own copy from the identity fields.
+      // means authoring 10 drafts first — the cadence card that replaced
+      // it doesn't care, because it templates its own copy from the
+      // identity fields.
       "_reviewParked": {
         "id": "conv-001-review",
         "channel": "email",
         "heading": "Outreach review",
         "confirmDialog": {
-          "title": "Approve outreach to 25 prospects?",
+          "title": "Approve outreach to 10 prospects?",
           "body": "The approved drafts will be released to the configured outreach workflow.",
-          "primary": "Approve 25 drafts",
+          "primary": "Approve 10 drafts",
           "secondary": "Cancel"
         },
         "completed": {
-          "heading": "All 25 drafts approved",
+          "heading": "All 10 drafts approved",
           "body": "The approved drafts will be released to the configured outreach workflow."
         }
+      }
+    },
+    // ── conv-marcus-reply — drafted reply after Marcus cadence Approve ─
+    // Unlocked when the seller Approves Marcus Chen (`acct-05-p06`) on
+    // conv-001. The matching feed row `ri-marcus-reply` stays hidden
+    // until `sh:marcusReplyReady` is set. Opening stages stream like
+    // conv-001 (`skipThinking`): email thread first (sent Email 1,
+    // Marcus's inbound, drafted reply expanded), then what changed.
+    "conv-marcus-reply": {
+      "id": "conv-marcus-reply",
+      "title": "Drafted reply to Marcus Chen",
+      "subtitle": "Buyer Engage",
+      "workflow": { "id": "buyer_engage", "label": "Buyer Engage" },
+      "status": "in_progress",
+      "recentLabel": "Drafted reply to Marcus Chen",
+      "scriptedTurns": [],
+      "messages": [
+        {
+          "id": "msg-draft-reply",
+          "type": "agent",
+          "text": "Here’s the reply I drafted.",
+          "cadence": {
+            "id": "conv-marcus-reply-thread",
+            "name": "Marcus Chen thread",
+            "thread": true,
+            "roster": [
+              {
+                "id": "acct-05-p06",
+                "prospect": "Marcus Chen",
+                "role": "VP, Sales",
+                "company": "Cirrus",
+                "signal": "290+ SDRs across 4 regions"
+              }
+            ],
+            "sequences": {
+              "default": {
+                "steps": [
+                  {
+                    "type": "email",
+                    "collapsed": true,
+                    "hideFeedback": true,
+                    "headerLabel": "Email 1",
+                    "headerValue": "First touch",
+                    "subject": "8 tools, one list build",
+                    "body": "Hi Marcus,<br><br>Cirrus's outbound stack runs through <span class='email-highlight' data-link='context' data-popover-title='Opening Line' data-popover-question='Is this a good opening line?' data-popover-body='8+ GTM tools active in the account tech profile — ZoomInfo, Apollo, Clay, Outreach, Demandbase and Lusha among them.' data-source-label='ZoomInfo' data-source-icon='/assets/images/source_icons/source_zoominfo.svg'>ZoomInfo, Apollo, Clay, Outreach, Demandbase, and Lusha — at minimum</span>. Your cross-sell SDRs are toggling between all of them just to build a single target list.<br><br>That's <span class='email-highlight' data-link='pain' data-popover-title='Pain Statement' data-popover-question='Is this a good pain statement?' data-popover-body='Top-cited productivity drain among SDR managers at companies over 1,000 employees.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>the #1 productivity drain we hear from SDR managers at this scale</span> — reps spend more time sourcing across fragmented tools than actually selling.<br><br>Bluebirds consolidates enrichment across 15 data vendors into one platform. <span class='email-highlight' data-link='solution' data-popover-title='Value Prop' data-popover-question='Is this a good value prop?' data-popover-body='Median package install and field mapping time across 2025 Salesforce onboardings.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>30-min Salesforce setup, no new UI for reps to learn</span>.<br><br>Can I share a 2-min walkthrough of the platform running a cross-sell list build?",
+                    "details": [
+                      { "title": "Email Type", "value": "Warm outbound" },
+                      { "title": "Reasoning",  "value": "Names all six tools instead of gesturing at sprawl, so the opening proves the research rather than claiming it. The ask is a two-minute walkthrough, not a meeting, which keeps the first reply cheap." }
+                    ],
+                    "sources": [
+                      { "label": "ZoomInfo",   "icon": "/assets/images/source_icons/source_zoominfo.svg" },
+                      { "label": "G2",         "icon": "/assets/images/source_icons/source_g2.svg" },
+                      { "label": "Salesforce", "icon": "/assets/images/source_icons/source_salesforce.svg" }
+                    ]
+                  },
+                  {
+                    "type": "email",
+                    "collapsed": true,
+                    "hideFeedback": true,
+                    "headerLabel": "Inbound",
+                    "headerValue": "Marcus replied",
+                    "subject": "Re: 8 tools, one list build",
+                    "body": "Hi,<br><br>Thanks for this — a 2-min walkthrough this week would be useful, especially if it covers how you'd run a DACH list build without waiting on our Dark TAM Engine.<br><br>Thursday or Friday works on my side. I'll loop Jennifer in if we take it.",
+                    "details": [
+                      { "title": "Email Type", "value": "Inbound reply" },
+                      { "title": "Reasoning",  "value": "He accepted the two-minute walkthrough, named Thursday or Friday, and offered Jennifer — the draft locks those in rather than reopening the ask." }
+                    ],
+                    "sources": [
+                      { "label": "Web", "icon": "/assets/images/source_icons/source_web.svg" }
+                    ]
+                  },
+                  {
+                    "type": "email",
+                    "collapsed": false,
+                    "hideFeedback": true,
+                    "headerLabel": "Reply",
+                    "headerValue": "Draft",
+                    "subject": "Re: 8 tools, one list build",
+                    "body": "Hi Marcus,<br><br>Thanks for the quick turnaround — glad the two-minute walkthrough is the right next step.<br><br>I’ll keep it focused on how Bluebirds would run a <span class='email-highlight' data-link='context' data-popover-title='Trigger' data-popover-question='Is DACH the right hook for the walkthrough?' data-popover-body='DACH founding BDR team launching; new SDR Director Jennifer Walsh.' data-source-label='Web' data-source-icon='/assets/images/source_icons/source_web.svg'>DACH founding BDR list build</span> without waiting on the <span class='email-highlight' data-link='context' data-popover-title='Context' data-popover-question='Should we name the internal engine?' data-popover-body='Built internal Dark TAM Engine — ML entity resolution, automated list building.' data-source-label='Web' data-source-icon='/assets/images/source_icons/source_web.svg'>Dark TAM Engine</span>. Happy to include <span class='email-highlight' data-link='context' data-popover-title='Buying group' data-popover-question='Should Jennifer join?' data-popover-body='Jennifer Walsh — Director, Sales Dev (Enterprise); four months into the seat, inheriting a 60-rep org.' data-source-label='SalesIntel' data-source-icon='/assets/images/source_icons/source_salesintel.svg'>Jennifer</span> if you want the SDR Director in the room.<br><br>Thursday or Friday this week work on your side?",
+                    "details": [
+                      { "title": "Email Type", "value": "Reply — meeting ask" },
+                      { "title": "Reasoning",  "value": "Mirrors his ask (two minutes, not a demo), names the DACH launch as the reason to meet now, and offers Jennifer so the working owner is in the room without making it a committee." }
+                    ],
+                    "sources": [
+                      { "label": "Web",        "icon": "/assets/images/source_icons/source_web.svg" },
+                      { "label": "SalesIntel", "icon": "/assets/images/source_icons/source_salesintel.svg" }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "msg-briefing",
+          "type": "agent",
+          "snapshot": {
+            "summary": "Marcus replied to Email 1. I logged the inbound, created the Cirrus account and SDR Ramp Acceleration opportunity, and drafted a reply for your review.",
+            "changes": {
+              "heading": "What changed",
+              "ariaLabel": "What changed after Marcus Chen replied",
+              "columns": [
+                { "id": "what", "label": "What" },
+                { "id": "detail", "label": "Detail" },
+                { "id": "whyItMatters", "label": "Why it matters" }
+              ],
+              "rows": [
+                {
+                  "id": "chg-sent-email",
+                  "what": "Email sent",
+                  "detail": "Email 1 · 8 tools, one list build",
+                  "whyItMatters": "First touch is in-market with cited research"
+                },
+                {
+                  "id": "chg-inbound",
+                  "what": "Marcus replied",
+                  "detail": "Asked for the 2-min walkthrough this week",
+                  "whyItMatters": "The buying conversation is live, not a one-way cadence"
+                },
+                {
+                  "id": "chg-draft",
+                  "what": "Reply drafted",
+                  "detail": "Re: 8 tools, one list build",
+                  "whyItMatters": "Ready for your review before it goes out"
+                },
+                {
+                  "id": "chg-account",
+                  "what": "Account created",
+                  "detail": "Cirrus",
+                  "whyItMatters": "Gives the thread a CRM home instead of staying in email"
+                },
+                {
+                  "id": "chg-opp",
+                  "what": "Opportunity created",
+                  "detail": "SDR Ramp Acceleration · $260K · Discovery",
+                  "whyItMatters": "Puts a working deal on this quarter’s pipeline"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "msg-records",
+          "type": "record_cards",
+          "text": "I created these records from the thread:",
+          "records": [
+            {
+              "object": "account",
+              "icon": "account",
+              "title": "Cirrus",
+              "subtitle": "Account · Software / HR & IT Management · San Francisco, CA",
+              "href": "#"
+            },
+            {
+              "object": "opportunity",
+              "icon": "opportunity",
+              "title": "SDR Ramp Acceleration",
+              "subtitle": "Opportunity · $260K · Discovery",
+              "href": "#"
+            }
+          ]
+        }
+      ],
+      "opening": {
+        "skipThinking": true,
+        "stages": [
+          {
+            "id": "open-01",
+            "messageIds": ["msg-draft-reply"]
+          },
+          {
+            "id": "open-02",
+            "messageIds": ["msg-briefing"]
+          },
+          {
+            "id": "open-03",
+            "messageIds": ["msg-records"]
+          }
+        ]
       }
     },
     // ── conv-002 — the Seller Home composer's landing thread ─────────
@@ -3968,6 +3816,27 @@
     //     a third line, so retrying doesn't change its height.
     "items": [
       {
+        "id": "ri-marcus-reply",
+        "conversationId": "conv-marcus-reply",
+        "title": "Drafted reply to Marcus Chen",
+        "titles": {
+          "running": "Drafting reply to Marcus Chen",
+          "neutral": "Draft reply to Marcus Chen"
+        },
+        "cadence": "Today",
+        "stepProgress": "1 of 3 steps",
+        "nextRun": "Just now",
+        "lastRun": "Last run just now",
+        "state": "completed",
+        "demoGate": "marcus-reply",
+        "outputs": [
+          { "icon": "doc-green",  "label": "1 reply",       "scheduledIcon": "doc-grey", "scheduledLabel": "Reply" },
+          { "icon": "doc-yellow", "label": "1 account",     "scheduledIcon": "doc-grey", "scheduledLabel": "Account" },
+          { "icon": "doc-blue",   "label": "1 opportunity", "scheduledIcon": "doc-grey", "scheduledLabel": "Opportunity" }
+        ],
+        "workflow": { "id": "sk-find-prospects", "label": "" }
+      },
+      {
         "id": "ri-01",
         "conversationId": "conv-001",
         "title": "Found new prospects",
@@ -3981,8 +3850,8 @@
         "lastRun": "Last run Thursday",
         "state": "completed",
         "outputs": [
-          { "icon": "doc-green",  "label": "7 new accounts", "scheduledIcon": "doc-grey", "scheduledLabel": "New accounts" },
-          { "icon": "doc-yellow", "label": "25 prospects", "scheduledIcon": "doc-grey", "scheduledLabel": "Prospects" }
+          { "icon": "doc-green",  "label": "6 new accounts", "scheduledIcon": "doc-grey", "scheduledLabel": "New accounts" },
+          { "icon": "doc-yellow", "label": "10 prospects", "scheduledIcon": "doc-grey", "scheduledLabel": "Prospects" }
         ],
         "workflow": { "id": "sk-find-prospects", "label": "" }
       },

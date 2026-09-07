@@ -187,15 +187,10 @@
          child's intrinsic width would push the row wider than its parent.
          Metadata is nowrap so a narrow column breaks the name first. #}
       <span class="seller-home__knowledge-doc-text">
-        {# Title line — the name plus the optional badge, on one row so the
-           badge sits inline with the title. The name ellipsizes; the badge
-           holds its size. #}
-        <span class="seller-home__knowledge-doc-name-row">
-          <span class="seller-home__knowledge-doc-name">{{ doc.name }}</span>
-          {% if doc.badge %}
-          <span class="seller-home__knowledge-doc-badge">{{ doc.badge }}</span>
-          {% endif %}
-        </span>
+        {# Title uses the full text column so the whole name is
+           visible. The optional badge is a sibling of `.doc-primary`
+           so the row centers it against the card, not this line. #}
+        <span class="seller-home__knowledge-doc-name">{{ doc.name }}</span>
         {# Meta line — "<type> · <size> · Updated <date>". The doc-type
            label ("Document") is dropped on Learnings tiles (redundant
            there) but kept on Sources tiles, where it names the file
@@ -235,9 +230,14 @@
       {% endif %}
       </span>{# /.seller-home__knowledge-doc-primary #}
 
-      {# Right cluster — chevron only now; the badge moved onto the title
-         line inside `.doc-text`. The overflow ⋮ menu is a sibling of the
-         anchor, absolutely positioned in the same right gutter. #}
+      {# Badge is a sibling of the primary column so the row's
+         `align-items: center` vertically centers it on the card. #}
+      {% if doc.badge %}
+      <span class="seller-home__knowledge-doc-badge">{{ doc.badge }}</span>
+      {% endif %}
+
+      {# Right cluster — chevron only; the overflow ⋮ menu is a sibling of
+         the anchor, absolutely positioned in the same right gutter. #}
 
       {# Chevron affordance ("this row leads somewhere"). Purely
          decorative — the anchor is the click target, not this element.

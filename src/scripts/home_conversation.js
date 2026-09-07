@@ -34,9 +34,11 @@
 //   • Approve-all dialog: SLDS 2 modal with focus trap +
 //     Escape/backdrop close + focus restore. Also dormant with the
 //     review — the cadence card ships its own.
-//   • Composer: autosize, Enter-to-send, and the scripted-turn queue
+//   • Composer: autosize, Enter-to-send, simulated voice input (mic →
+//     waveform → hardcoded transcript), and the scripted-turn queue
 //     (send → thinking indicator → hardcoded reply). See
-//     `bindConvComposer`.
+//     `bindConvComposer`. On conv-001, a confirmed voice send also
+//     rewrites Marcus Chen's Email 1 via `ShCadence.applyVoiceRevision`.
 //   • Opening sequence: on load, play the conversation's staged
 //     messages in on a timer instead of painting the finished thread,
 //     so arriving here looks like the agent working. Same beat player
@@ -128,6 +130,11 @@
     composer:         '[data-sh-conv-composer]',
     composerInput:    '[data-sh-conv-composer-input]',
     composerSend:     '[data-sh-conv-composer-send]',
+    composerMic:       '[data-sh-conv-composer-mic]',
+    composerRecording: '[data-sh-conv-composer-recording]',
+    composerWaveform:  '[data-sh-conv-composer-waveform]',
+    composerMicStop:   '[data-sh-conv-composer-mic-stop]',
+    composerMicConfirm: '[data-sh-conv-composer-mic-confirm]',
     userTemplate:     '[data-sh-conv-user-template]',
     thinkingTemplate: '[data-sh-conv-thinking-template]',
     thinkingItem:     '[data-sh-conv-thinking]',
@@ -215,6 +222,15 @@
   var MODAL_TRANSITION    = '.t-modal'
   // Class the composer carries while a scripted turn is in flight.
   var BUSY_CLASS = 'is-busy'
+  // Composer is capturing a simulated voice input: toolbar hidden,
+  // waveform + Stop / Check showing.
+  var RECORDING_CLASS = 'is-recording'
+  // Hardcoded transcript inserted when the seller confirms a recording.
+  // Overridden per conversation by `voiceInput.transcript`.
+  var DEFAULT_VOICE_TRANSCRIPT = 'Hunter, I actually met Maya who\'s a coworker of Marcus at Dreamforce, and she wanted to stay close to this evaluation. Can we mention her in the email?'
+  // Short beat after a confirmed voice send, before the cadence card
+  // starts its own regenerating stencil.
+  var VOICE_THINKING_MS = 1200
   // Skill chip inside the composer. Also the hook the CSS styles and
   // the marker the text serializer uses to tell a chip apart from the
   // seller's own typing, so it lives here rather than inline.
@@ -545,6 +561,11 @@
     var form        = root.querySelector(SELECTORS.composer)
     var input       = root.querySelector(SELECTORS.composerInput)
     var send        = root.querySelector(SELECTORS.composerSend)
+    var mic         = root.querySelector(SELECTORS.composerMic)
+    var recordingEl = root.querySelector(SELECTORS.composerRecording)
+    var waveformEl  = root.querySelector(SELECTORS.composerWaveform)
+    var micStop     = root.querySelector(SELECTORS.composerMicStop)
+    var micConfirm  = root.querySelector(SELECTORS.composerMicConfirm)
     var thread      = root.querySelector(SELECTORS.thread)
     var threadInner = root.querySelector(SELECTORS.threadInner)
     if (!form || !input || !send || !thread || !threadInner) return
@@ -580,11 +601,20 @@
       for (var s = 0; s < stageNodes.length; s++) stages.push(stageNodes[s])
     }
 
+    var convEntry = (convMap && convId && convMap[convId]) || null
+    var voiceInput = (convEntry && convEntry.voiceInput) || null
+    var voiceTranscript = (voiceInput && voiceInput.transcript) || DEFAULT_VOICE_TRANSCRIPT
+
     var state = {
       nextTurn: 0,   // index into `turns`
       sent: 0,       // how many messages the seller has sent
-      busy: false    // a turn is mid-flight
+      busy: false,   // a turn is mid-flight
+      recording: false,
+      // Check was pressed this session; the next Send applies the
+      // cadence voice revision even if the seller edits the transcript.
+      voicePending: false
     }
+    var waveformApi = null
 
     autosize()
     refreshEmptyState()
@@ -627,6 +657,10 @@
     input.addEventListener('keydown', function (event) {
       if (event.key === 'Enter') {
         if (event.isComposing || event.keyCode === 229) return
+        if (state.recording) {
+          event.preventDefault()
+          return
+        }
         if (event.shiftKey) {
           // Insert a real newline. Left to the browser, contenteditable
           // wraps the caret in a <div>, which breaks both the visual
@@ -674,6 +708,34 @@
     form.addEventListener('submit', function (event) {
       event.preventDefault()
       submit()
+    })
+
+    // ── Simulated voice input ────────────────────────────────
+    // Mic starts a recording chrome (waveform + Stop / Check). Stop
+    // cancels. Check dumps the hardcoded transcript into the composer
+    // and restores the toolbar; the seller still has to press Send.
+    if (mic) {
+      mic.addEventListener('click', function () {
+        if (state.busy || state.recording) return
+        startRecording()
+      })
+    }
+    if (micStop) {
+      micStop.addEventListener('click', function () {
+        stopRecording(false)
+      })
+    }
+    if (micConfirm) {
+      micConfirm.addEventListener('click', function () {
+        stopRecording(true)
+      })
+    }
+    form.addEventListener('keydown', function (event) {
+      if (!state.recording) return
+      if (event.key === 'Escape' || event.key === 'Esc') {
+        event.preventDefault()
+        stopRecording(false)
+      }
     })
 
     // Record names in a data table are real anchors so they get the
@@ -747,9 +809,12 @@
     function submit () {
       // Guard rather than trust the button's disabled state — Enter
       // and `requestSubmit` can both reach here around it.
-      if (state.busy) return
+      if (state.busy || state.recording) return
       var text = getComposerText().trim()
       if (!text) return
+
+      var pendingVoice = state.voicePending
+      state.voicePending = false
 
       state.sent++
       removeEmptyPlaceholder()
@@ -775,6 +840,14 @@
         return
       }
 
+      // Confirmed voice demo: echo the seller, then rewrite Marcus's
+      // Email 1. Gated on `voiceInput.targetProspectId` so other
+      // threads keep their empty-queue echo.
+      if (pendingVoice && voiceInput && voiceInput.targetProspectId) {
+        runVoiceRevision(userItem)
+        return
+      }
+
       var turnTpl = turns[state.nextTurn] || null
       if (!turnTpl) {
         // Queue exhausted — the echo is the whole interaction, and it's
@@ -788,6 +861,95 @@
       // The seller's own question anchors the reply: it stays put at the
       // top while the answer builds underneath it.
       runTurn(turnTpl, userItem)
+    }
+
+    // Thinking beat, then swap Marcus Email 1 for the authored
+    // `voiceRevision`. The cadence module owns the card animation.
+    function runVoiceRevision (anchor) {
+      setBusy(true)
+      var indicator = appendThinking('Updating Email 1\u2026')
+      var settle = anchor
+        ? function () { scrollAnchorToTop(anchor) }
+        : scrollToLatest
+      settle()
+
+      window.setTimeout(function () {
+        if (indicator && indicator.parentNode) {
+          indicator.parentNode.removeChild(indicator)
+        }
+        if (window.ShCadence && typeof window.ShCadence.applyVoiceRevision === 'function') {
+          window.ShCadence.applyVoiceRevision({
+            prospectId: voiceInput.targetProspectId,
+            stepIndex: voiceInput.targetStepIndex || 0
+          })
+        }
+        settle()
+        setBusy(false)
+        if (typeof input.focus === 'function') input.focus()
+      }, VOICE_THINKING_MS)
+    }
+
+    function startRecording () {
+      if (state.recording) return
+      setRecording(true)
+      window.requestAnimationFrame(function () { mountWaveform() })
+    }
+
+    function stopRecording (confirm) {
+      if (!state.recording) return
+      destroyWaveform()
+      setRecording(false)
+      if (confirm) {
+        state.voicePending = true
+        setComposerText(voiceTranscript)
+        autosize()
+        updateSendState()
+        caretToEnd()
+      } else {
+        updateSendState()
+      }
+    }
+
+    function setRecording (isRecording) {
+      state.recording = !!isRecording
+      form.classList.toggle(RECORDING_CLASS, state.recording)
+      if (recordingEl) {
+        if (state.recording) recordingEl.removeAttribute('hidden')
+        else recordingEl.setAttribute('hidden', '')
+      }
+      input.setAttribute('contenteditable', state.recording ? 'false' : 'true')
+      input.setAttribute('aria-disabled', state.recording ? 'true' : 'false')
+      if (mic) mic.setAttribute('aria-pressed', state.recording ? 'true' : 'false')
+      updateSendState()
+    }
+
+    function mountWaveform () {
+      destroyWaveform()
+      if (!waveformEl || !window.ShLiveWaveform || typeof window.ShLiveWaveform.mount !== 'function') return
+      var reduced = prefersReducedMotion()
+      waveformApi = window.ShLiveWaveform.mount(waveformEl, {
+        height: 32,
+        barWidth: 3,
+        barGap: 2,
+        barRadius: 1.5,
+        fadeEdges: true,
+        mode: 'scrolling',
+        active: !reduced,
+        processing: reduced,
+        onError: function () {
+          if (waveformApi) waveformApi.setProcessing(true)
+        }
+      })
+    }
+
+    function destroyWaveform () {
+      if (waveformApi && typeof waveformApi.destroy === 'function') {
+        waveformApi.destroy()
+      }
+      waveformApi = null
+      if (waveformEl) {
+        while (waveformEl.firstChild) waveformEl.removeChild(waveformEl.firstChild)
+      }
     }
 
     // One beat of the agent working: show the indicator for the
@@ -1051,6 +1213,11 @@
         return
       }
 
+      if (openingCfg && openingCfg.skipThinking) {
+        revealStages(0)
+        return
+      }
+
       next(0)
 
       // Normal path: each stage thinks, then drops its messages.
@@ -1062,8 +1229,7 @@
         playBeat(stages[i], function () { next(i + 1) })
       }
 
-      // Trace path: the trace already was the thinking, so each stage's
-      // messages stream in back to back with no thinking row in front.
+      // skipThinking streams the same way, with no thinking row in front.
       function revealStages (i) {
         if (i >= stages.length) {
           setBusy(false)
@@ -1277,10 +1443,11 @@
     }
 
     function updateSendState () {
-      // A chip on its own is a legal message — "schedule this" needs no
-      // accompanying prose — so either chips or text arms Send.
-      var hasContent = !!getComposerText().trim() || hasPill()
-      send.disabled = state.busy || !hasContent
+      // Send stays visually enabled while idle. Empty submit is still
+      // a no-op in `submit()`. Busy / recording still lock it so two
+      // turns cannot overlap and the recording chrome owns the row.
+      send.disabled = state.busy || state.recording
+      if (mic) mic.disabled = state.busy || state.recording
     }
 
     // The composer is a contenteditable, which grows on its own; the

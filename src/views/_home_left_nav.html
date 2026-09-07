@@ -342,13 +342,20 @@
    server-rendered seed). #}
 {% set _feedItems = readData("index").feed.items or [] %}
 {% set workflowSessions = [] %}
+{% set workflowSessionsSeed = [] %}
 {% for _it in _feedItems %}
-  {% set _ = workflowSessions.push({
+  {% set _row = {
     "feedId":         _it.id,
     "conversationId": _it.conversationId or "",
     "label":          _it.title,
-    "status":         _it.state
-  }) %}
+    "status":         _it.state,
+    "demoGate":       _it.demoGate or ""
+  } %}
+  {% set _ = workflowSessions.push(_row) %}
+  {# SSR seed omits gated rows so Recents does not flash them before JS. #}
+  {% if not _it.demoGate %}
+    {% set _ = workflowSessionsSeed.push(_row) %}
+  {% endif %}
 {% endfor %}
 
 {# ── Pre-paint nav state ──────────────────────────────────────────────
@@ -460,7 +467,7 @@
         role="list"
         data-sh-recents-list
       >
-        {% for r in workflowSessions %}
+        {% for r in workflowSessionsSeed %}
         {# One row per workflow (see the `workflowSessions` derivation
            above). Recents rows have no icon — Figma shows label-only,
            indented under the "Recents" header. The monogram ahead of the

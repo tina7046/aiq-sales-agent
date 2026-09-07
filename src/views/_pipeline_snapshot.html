@@ -96,18 +96,27 @@
 <section
   class="seller-home__snapshot"
   data-sh-snapshot
+  {% if snapshot.titleLabel or snapshot.dateLabel %}
   aria-labelledby="{{ messageId }}-title"
+  {% elif snapshot.changes %}
+  aria-labelledby="{{ messageId }}-changes-heading"
+  {% endif %}
 >
   {# ── Header: title + freshness ─────────────────────────────────
      "Pipeline Snapshot | August 11, 2026" per the design. One <h2>
      with a visual pipe separator; the accessible name reads the two
      parts naturally. The freshness note sits beneath as compact
-     metadata in the same gray as the workflow-activity chip. #}
+     metadata in the same gray as the workflow-activity chip.
+     Optional: omit `titleLabel` and `dateLabel` to skip the banner
+     (used by the Marcus reply briefing). #}
+  {% if snapshot.titleLabel or snapshot.dateLabel %}
   <header class="seller-home__snapshot-header">
     <h2 id="{{ messageId }}-title" class="seller-home__snapshot-title">
       <span class="seller-home__snapshot-title-primary">{{ snapshot.titleLabel or "Pipeline Snapshot" }}</span>
+      {% if snapshot.dateLabel %}
       <span class="seller-home__snapshot-title-sep" aria-hidden="true">|</span>
       <span class="seller-home__snapshot-title-date">{{ snapshot.dateLabel }}</span>
+      {% endif %}
     </h2>
     {% if snapshot.freshness and snapshot.freshness.text %}
     <p class="seller-home__snapshot-freshness">
@@ -119,6 +128,7 @@
     </p>
     {% endif %}
   </header>
+  {% endif %}
 
   {# ── Summary ────────────────────────────────────────────────────
      Concise outcome-oriented lead. Same typography as plain agent
@@ -198,7 +208,7 @@
       data-sh-conv-table="{{ _tableId }}"
     >
       <table
-        class="slds-table slds-table_bordered slds-table_fixed-layout slds-table-uplift seller-home__conv-prospect-table-el seller-home__snapshot-changes-table-el"
+        class="slds-table slds-table_bordered slds-table_fixed-layout slds-table-uplift seller-home__conv-prospect-table-el seller-home__snapshot-changes-table-el{% if snapshot.changes.columns|length == 3 %} seller-home__snapshot-changes-table-el--3col{% endif %}"
         role="grid"
         aria-label="{{ snapshot.changes.ariaLabel or snapshot.changes.heading }}"
       >

@@ -2378,6 +2378,13 @@ main.app-wrapper {
   &:last-child {
     margin-bottom: 0;
   }
+
+  // Demo-gated rows ship `hidden` until sessionStorage unhides them.
+  // `!important` keeps the UA `hidden` style ahead of filter `display`
+  // rules that would otherwise show a completed row before Approve.
+  &[hidden] {
+    display: none !important;
+  }
 }
 
 // ── Group headers ─────────────────────────────────────────────────────
