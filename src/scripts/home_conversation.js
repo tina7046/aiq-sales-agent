@@ -840,6 +840,13 @@
         return
       }
 
+      // Confirmed mic send: same success toast (and delay) as Approve.
+      if (pendingVoice) {
+        setTimeout(function () {
+          if (window._shShowToast) window._shShowToast('Memory saved')
+        }, 800)
+      }
+
       // Confirmed voice demo: echo the seller, then rewrite Marcus's
       // Email 1. Gated on `voiceInput.targetProspectId` so other
       // threads keep their empty-queue echo.

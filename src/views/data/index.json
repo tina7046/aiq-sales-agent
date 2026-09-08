@@ -195,14 +195,8 @@
     // which DOES have to be edited in step with this string.
     //
     // Dollars rather than a percentage, and the pair isn't arbitrary:
-    // $20M against a $25M quota is the 80% the heading above claims.
-    //
-    // Cross-reference worth knowing: conv-002's pipeline detail reports
-    // "$19.0M won vs $6.5M lost" for Q3, so the two surfaces currently
-    // disagree by $1M on how much is closed. Harmless in a demo, but if
-    // anyone reads both in one sitting it looks like a bug — move one to
-    // match the other when it matters.
-    "text": "You’ve closed $20M of your $25M quota — President's Club is within reach.  It looks like the top of funnel is light, so let's focus on increasing outreach to prospects and cold leads.",
+    // $1.6M against a $2M quota is the 80% the heading above claims.
+    "text": "You’ve closed $1.6M of your $2M quota — President's Club is within reach. It looks like the top of funnel is light, so let's focus on increasing outreach to prospects.",
     // Substring of `text` to render with the interactive link treatment
     // (accent color, dotted underline that thickens on hover, pointer
     // cursor). Appearance only — clicking is a no-op until a topic is
@@ -215,9 +209,9 @@
     // dollar figures, wording, or punctuation of `text` has to be made
     // here too, or the treatment quietly disappears. (That's exactly how
     // it broke once: `text` moved to $20M while this still read $19M.)
-    "linkPhrase": "$20M of your $25M quota",
+    "linkPhrase": "$1.6M of your $2M quota",
     // Attainment as a number, for anything that wants the figure rather
-    // than the sentence: 80%, i.e. $20M of $25M, matching both the
+    // than the sentence: 80%, i.e. $1.6M of $2M, matching both the
     // heading and the sentence above. No template reads this today, so
     // it's here to stay consistent rather than to render.
     "quotaPercent": 80,
@@ -488,8 +482,8 @@
   // `conversations` registry below, falling back to `title`.
   "recents": [],
   "navFooter": [
-    { "id": "feedback", "label": "Feedback", "icon": "share" },
-    { "id": "tools",     "label": "Connections", "icon": "custom_apps", "href": "/tools.html", "opensToolsModal": true },
+    { "id": "feedback", "label": "Feedback", "icon": "share", "hidden": true },
+    { "id": "tools",     "label": "Connections", "icon": "custom_apps", "href": "/tools.html", "opensToolsModal": true, "hidden": true },
     { "id": "settings", "label": "Settings", "icon": "settings" }
   ],
   // ── Conversations ────────────────────────────────────────────────
@@ -1084,16 +1078,15 @@
                         "headerLabel": "Email 1",
                         "headerValue": "First touch",
                         "day": 1,
-                        "subject": "Three new SDRs, one list-build tax",
-                        "body": "Hi Marcus,<br><br>Cirrus just posted <span class='email-highlight' data-link='context' data-popover-title='Trigger' data-popover-question='Is the hiring wave the right hook?' data-popover-body='Cirrus posted three SDR openings after Series B.' data-source-label='Web' data-source-icon='/assets/images/source_icons/source_web.svg'>three SDR openings after Series B</span>. That's a hiring wave on a team you already run.<br><br>At this scale, <span class='email-highlight' data-link='pain' data-popover-title='Pain Statement' data-popover-question='Is SDR productivity the right opener?' data-popover-body='Top-cited productivity drain among SDR managers at companies over 1,000 employees.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>SDR productivity is the drain managers name first</span> — reps spend more time sourcing than selling, and every new seat inherits that tax.<br><br>Bluebirds consolidates enrichment so new reps ramp on one workflow. <span class='email-highlight' data-link='solution' data-popover-title='Value Prop' data-popover-question='Is this a good value prop?' data-popover-body='Median package install and field mapping time across 2025 Salesforce onboardings.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>30-min Salesforce setup, no new UI for them to learn</span>.<br><br>Can I share a 2-min walkthrough of a list build those three hires could run on day one?",
+                        "subject": "List building tax",
+                        "body": "Hi Marcus,<br><br>With <span class='email-highlight' data-link='context' data-popover-title='Trigger' data-popover-question='Is the post-fundraise SDR expansion the right hook?' data-popover-body='Cirrus posted three SDR openings after Series B.' data-source-label='Web' data-source-icon='/assets/images/source_icons/source_web.svg'>Cirrus growing the SDR team post-fundraise</span>, I'd imagine pipeline per rep is top of mind.<br><br><span class='email-highlight' data-link='solution' data-popover-title='Social Proof' data-popover-question='Are these the right peer accounts?' data-popover-body='Customer conversations at Meridian Analytics, Harbour Capital, and Brightloop — SDR teams wasting hours a week on manual research, list building, and contact sourcing after a new round.' data-source-label='Gong' data-source-icon='/assets/images/source_icons/source_gong.svg'>Meridian Analytics, Harbour Capital, and Brightloop</span> — high expectations after a new round, but SDRs wasting hours each week to manual research, list building, and contact sourcing across disparate tools.<br><br>Our Sales agent, Hunter, learns how your team sells, finds the right accounts and contacts, and gives each rep a prioritized shortlist with pre-drafted cadences, so they can build pipeline faster.<br><br>Worth a 20-minute look next week?",
                         "details": [
                           { "title": "Email Type", "value": "Warm outbound" },
-                          { "title": "Reasoning",  "value": "Leads with the Series B hiring trigger and SDR productivity — the opener our best reps use — then keeps the ask a two-minute walkthrough." }
+                          { "title": "Reasoning",  "value": "Opens on Cirrus growing the SDR team post-fundraise, names peer accounts that already feel the list-building tax, then pitches Hunter as the way each rep gets a prioritized shortlist." }
                         ],
                         "sources": [
-                          { "label": "Web",        "icon": "/assets/images/source_icons/source_web.svg" },
-                          { "label": "G2",         "icon": "/assets/images/source_icons/source_g2.svg" },
-                          { "label": "Salesforce", "icon": "/assets/images/source_icons/source_salesforce.svg" }
+                          { "label": "Web",  "icon": "/assets/images/source_icons/source_web.svg" },
+                          { "label": "Gong", "icon": "/assets/images/source_icons/source_gong.svg" }
                         ],
                         "regenerations": [
                           {
@@ -1119,16 +1112,15 @@
                           "type": "email",
                           "headerLabel": "Email 1",
                           "headerValue": "First touch",
-                          "subject": "Maya at Dreamforce",
-                          "body": "Hi Marcus,<br><br>I met <span class='email-highlight' data-link='context' data-popover-title='Maya' data-popover-question='Should we name Maya?' data-popover-body='Maya, a coworker of Marcus, asked to stay close to this evaluation.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>Maya</span> at <span class='email-highlight' data-link='context' data-popover-title='Event' data-popover-question='Is Dreamforce the right hook?' data-popover-body='Seller met Maya, a coworker of Marcus, at Dreamforce.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>Dreamforce</span> — she wanted to stay close to this evaluation, so I wanted to loop her in.<br><br>Cirrus posted <span class='email-highlight' data-link='context' data-popover-title='Trigger' data-popover-question='Keep the hiring wave?' data-popover-body='Cirrus posted three SDR openings after Series B.' data-source-label='Web' data-source-icon='/assets/images/source_icons/source_web.svg'>three SDR openings after Series B</span>. That's a hiring wave on a team you run — and <span class='email-highlight' data-link='pain' data-popover-title='Pain Statement' data-popover-question='Keep the productivity opener?' data-popover-body='Top-cited productivity drain among SDR managers at companies over 1,000 employees.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>SDR productivity is the drain we hear first</span> from managers at this scale.<br><br>Can I share a 2-min walkthrough — and copy Maya so she stays in the loop?",
+                          "subject": "Spoke to Maya",
+                          "body": "Hi Marcus,<br><br>I met <span class='email-highlight' data-link='context' data-popover-title='Maya' data-popover-question='Should we name Maya and Dreamforce?' data-popover-body='Seller met Maya, a coworker of Marcus, at Dreamforce. Pipeline is her top priority.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>Maya at Dreamforce</span> — she mentioned pipeline is her top priority and wanted us to connect next week.<br><br>We saw the same with <span class='email-highlight' data-link='solution' data-popover-title='Social Proof' data-popover-question='Are these the right peer accounts?' data-popover-body='Customer conversations at Meridian Analytics, Harbour Capital, and Brightloop — SDR teams wasting hours a week on manual research, list building, and contact sourcing after a new round.' data-source-label='Gong' data-source-icon='/assets/images/source_icons/source_gong.svg'>Meridian Analytics, Harbour Capital, and Brightloop</span> — high expectations after a new round, but SDRs wasting hours each week to manual research, list building, and contact sourcing across disparate tools.<br><br>Our Sales agent, Hunter, learns how your team sells, finds the right accounts and contacts, and gives each rep a prioritized shortlist with pre-drafted cadences, so they can build pipeline faster.<br><br>Can I shoot over a hold for Tuesday 3pm?",
                           "details": [
                             { "title": "Email Type", "value": "Warm outbound (revised)" },
-                            { "title": "Reasoning",  "value": "Opens on meeting Maya (Marcus’s coworker) at Dreamforce, then keeps the Series B hiring wave and SDR productivity opener — not a meeting with Marcus." }
+                            { "title": "Reasoning",  "value": "Opens mentioning conversation with Maya (New CRO) at Dreamforce, then mentions customer stories also focused on SDR productivity post fundraise." }
                           ],
                           "sources": [
                             { "label": "Salesforce", "icon": "/assets/images/source_icons/source_salesforce.svg" },
-                            { "label": "Web",        "icon": "/assets/images/source_icons/source_web.svg" },
-                            { "label": "G2",         "icon": "/assets/images/source_icons/source_g2.svg" }
+                            { "label": "Gong",       "icon": "/assets/images/source_icons/source_gong.svg" }
                           ]
                         }
                       },
@@ -1199,7 +1191,7 @@
                         "headerLabel": "Email 2",
                         "headerValue": "Nudge",
                         "day": 7,
-                        "subject": "Re: Three new SDRs, one list-build tax",
+                        "subject": "Re: List building tax",
                         "body": "Hi Marcus,<br><br>Quick bump. That 2-min walkthrough shows a new SDR building a list in one session — <span class='email-highlight' data-link='solution' data-popover-title='Value Prop' data-popover-question='Is this a good value prop?' data-popover-body='Bluebirds runs natively in Salesforce — no separate console for reps to learn.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>reps stayed in Salesforce the whole time</span>.<br><br>Worth 20 min before <span class='email-highlight' data-link='context' data-popover-title='Trigger' data-popover-question='Is the hiring deadline the right bump?' data-popover-body='Cirrus posted three SDR openings after Series B.' data-source-label='Web' data-source-icon='/assets/images/source_icons/source_web.svg'>those three seats fill</span>?",
                         "details": [
                           { "title": "Email Type", "value": "Nudge" },
@@ -1832,16 +1824,15 @@
                     "hideFeedback": true,
                     "headerLabel": "Email 1",
                     "headerValue": "First touch",
-                    "subject": "Maya at Dreamforce",
-                    "body": "Hi Marcus,<br><br>I met <span class='email-highlight' data-link='context' data-popover-title='Maya' data-popover-question='Should we name Maya?' data-popover-body='Maya, a coworker of Marcus, asked to stay close to this evaluation.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>Maya</span> at <span class='email-highlight' data-link='context' data-popover-title='Event' data-popover-question='Is Dreamforce the right hook?' data-popover-body='Seller met Maya, a coworker of Marcus, at Dreamforce.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>Dreamforce</span> — she wanted to stay close to this evaluation, so I wanted to loop her in.<br><br>Cirrus posted <span class='email-highlight' data-link='context' data-popover-title='Trigger' data-popover-question='Keep the hiring wave?' data-popover-body='Cirrus posted three SDR openings after Series B.' data-source-label='Web' data-source-icon='/assets/images/source_icons/source_web.svg'>three SDR openings after Series B</span>. That's a hiring wave on a team you run — and <span class='email-highlight' data-link='pain' data-popover-title='Pain Statement' data-popover-question='Keep the productivity opener?' data-popover-body='Top-cited productivity drain among SDR managers at companies over 1,000 employees.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>SDR productivity is the drain we hear first</span> from managers at this scale.<br><br>Can I share a 2-min walkthrough — and copy Maya so she stays in the loop?",
+                    "subject": "Spoke to Maya",
+                    "body": "Hi Marcus,<br><br>I met <span class='email-highlight' data-link='context' data-popover-title='Maya' data-popover-question='Should we name Maya and Dreamforce?' data-popover-body='Seller met Maya, a coworker of Marcus, at Dreamforce. Pipeline is her top priority.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>Maya at Dreamforce</span> — she mentioned pipeline is her top priority and wanted us to connect next week.<br><br>We saw the same with <span class='email-highlight' data-link='solution' data-popover-title='Social Proof' data-popover-question='Are these the right peer accounts?' data-popover-body='Customer conversations at Meridian Analytics, Harbour Capital, and Brightloop — SDR teams wasting hours a week on manual research, list building, and contact sourcing after a new round.' data-source-label='Gong' data-source-icon='/assets/images/source_icons/source_gong.svg'>Meridian Analytics, Harbour Capital, and Brightloop</span> — high expectations after a new round, but SDRs wasting hours each week to manual research, list building, and contact sourcing across disparate tools.<br><br>Our Sales agent, Hunter, learns how your team sells, finds the right accounts and contacts, and gives each rep a prioritized shortlist with pre-drafted cadences, so they can build pipeline faster.<br><br>Can I shoot over a hold for Tuesday 3pm?",
                     "details": [
                       { "title": "Email Type", "value": "Warm outbound" },
-                      { "title": "Reasoning",  "value": "Opens on meeting Maya (Marcus’s coworker) at Dreamforce, then keeps the Series B hiring wave and SDR productivity opener — not a meeting with Marcus." }
+                      { "title": "Reasoning",  "value": "Opens mentioning conversation with Maya (New CRO) at Dreamforce, then mentions customer stories also focused on SDR productivity post fundraise." }
                     ],
                     "sources": [
                       { "label": "Salesforce", "icon": "/assets/images/source_icons/source_salesforce.svg" },
-                      { "label": "Web",        "icon": "/assets/images/source_icons/source_web.svg" },
-                      { "label": "G2",         "icon": "/assets/images/source_icons/source_g2.svg" }
+                      { "label": "Gong",       "icon": "/assets/images/source_icons/source_gong.svg" }
                     ]
                   },
                   {
@@ -1850,7 +1841,7 @@
                     "hideFeedback": true,
                     "headerLabel": "Inbound",
                     "headerValue": "Marcus replied",
-                    "subject": "Re: Maya at Dreamforce",
+                    "subject": "Re: Spoke to Maya",
                     "body": "Hi,<br><br>Thanks for looping Maya in — she mentioned you two connected at Dreamforce.<br><br>A 2-min walkthrough this week would be useful, especially if it covers how you'd ramp the three new SDR seats without the usual list-build tax.<br><br>Thursday or Friday works on my side. Please copy Maya on the next note.",
                     "details": [
                       { "title": "Email Type", "value": "Inbound reply" },
@@ -1866,7 +1857,7 @@
                     "hideFeedback": true,
                     "headerLabel": "Reply",
                     "headerValue": "Draft",
-                    "subject": "Re: Maya at Dreamforce",
+                    "subject": "Re: Spoke to Maya",
                     "body": "Hi Marcus,<br><br>Thanks for the quick turnaround — glad the two-minute walkthrough is the right next step. I’ll copy <span class='email-highlight' data-link='context' data-popover-title='Maya' data-popover-question='Should Maya stay on the thread?' data-popover-body='Maya, a coworker of Marcus, asked at Dreamforce to stay close to this evaluation.' data-source-label='Salesforce' data-source-icon='/assets/images/source_icons/source_salesforce.svg'>Maya</span> as requested.<br><br>I’ll keep it focused on how Bluebirds would ramp those <span class='email-highlight' data-link='context' data-popover-title='Trigger' data-popover-question='Keep the hiring wave in the walkthrough?' data-popover-body='Cirrus posted three SDR openings after Series B.' data-source-label='Web' data-source-icon='/assets/images/source_icons/source_web.svg'>three new SDR seats</span> — one workflow, no extra console — so <span class='email-highlight' data-link='pain' data-popover-title='Pain Statement' data-popover-question='Keep productivity as the reason to meet?' data-popover-body='Top-cited productivity drain among SDR managers at companies over 1,000 employees.' data-source-label='G2' data-source-icon='/assets/images/source_icons/source_g2.svg'>productivity doesn’t take the hit a hiring wave usually does</span>.<br><br>Thursday or Friday this week work on your side?",
                     "details": [
                       { "title": "Email Type", "value": "Reply — meeting ask" },
@@ -1900,7 +1891,7 @@
                 {
                   "id": "chg-sent-email",
                   "what": "Email sent",
-                  "detail": "Email 1 · Maya at Dreamforce",
+                  "detail": "Email 1 · Spoke to Maya",
                   "whyItMatters": "First touch is in-market with cited research"
                 },
                 {
@@ -1912,7 +1903,7 @@
                 {
                   "id": "chg-draft",
                   "what": "Reply drafted",
-                  "detail": "Re: Maya at Dreamforce",
+                  "detail": "Re: Spoke to Maya",
                   "whyItMatters": "Ready for your review before it goes out"
                 },
                 {

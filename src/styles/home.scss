@@ -571,7 +571,7 @@ main.app-wrapper {
 .seller-home__nav-section {
   display: flex;
   flex-direction: column;
-  padding: 2.5rem 0 var(--slds-g-spacing-4, 1rem);
+  // padding: 2.5rem 0 var(--slds-g-spacing-4, 1rem);
 }
 
 // Recents header — same 36px row shape as the primary items, semibold,
@@ -635,6 +635,11 @@ main.app-wrapper {
   cursor: pointer;
   border: 0;
   background: transparent;
+
+  // `display: flex` outranks the UA `[hidden] { display: none }`.
+  &[hidden] {
+    display: none;
+  }
 
   // Hover and active both add a 2px accent strip down the left edge —
   // see the shared block below for why it's a shadow and not a border.
