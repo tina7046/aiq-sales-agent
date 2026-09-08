@@ -322,7 +322,7 @@
 
   {# ── The sequence ────────────────────────────────────────────── #}
   <div class="seller-home__conv-cadence-steps" data-sh-cadence-steps>
-    {{ sequenceSteps(_firstSeq.steps, _firstMeta) }}
+    {{ sequenceSteps(_firstSeq.steps, _firstMeta, cadence.thread) }}
   </div>
 
   {#
@@ -333,7 +333,7 @@
   #}
   {% for key, seq in cadence.sequences %}
   <template data-sh-cadence-seq="{{ key }}" data-sh-cadence-seq-touches="{{ seq.steps | length }}" data-sh-cadence-seq-channels="{{ channelSummary(seq.steps) }}" data-sh-cadence-seq-summary="{{ seq.summary or cadence.summary }}">
-    {{ sequenceSteps(seq.steps, null) }}
+    {{ sequenceSteps(seq.steps, null, cadence.thread) }}
   </template>
   {% endfor %}
 
@@ -379,8 +379,8 @@
                                 docked footer's upward shadow, which
                                 home_conversation.scss clears.
 
-     Thread mode (`cadence.thread`) is a read-only email thread, not a
-     review: no Approve chrome, no completed swap. #}
+     Thread mode docks Send on the last draft card instead — see
+     `stepCard` — so this row stays off that surface. #}
   {% if not cadence.thread %}
   <div class="slds-docked-form-footer slds-theme_shade slds-border_top seller-home__conv-cadence-batch">
     <div class="seller-home__conv-cadence-actions" role="group" aria-label="Sequence actions">
@@ -509,10 +509,10 @@
 {# ── Steps ────────────────────────────────────────────────────────
    The list of touches. An <ol> because the order IS the cadence —
    "Email 1" before "Email 2" is the content, not a layout choice. #}
-{% macro sequenceSteps(steps, p) %}
+{% macro sequenceSteps(steps, p, sendOnLast) %}
 <ol class="seller-home__conv-step-list">
   {% for step in steps %}
-  <li class="seller-home__conv-step-item">{{ sequenceStep(step, loop.index0, p) }}</li>
+  <li class="seller-home__conv-step-item">{{ sequenceStep(step, loop.index0, p, sendOnLast and loop.last) }}</li>
   {% endfor %}
 </ol>
 {% endmacro %}
@@ -529,7 +529,7 @@
    five-touch sequence stays scannable. `data-sh-step-regen` counts
    Regenerate presses and indexes into the alternate versions parked
    as templates at the end of the article. #}
-{% macro sequenceStep(step, index, p) %}
+{% macro sequenceStep(step, index, p, showSendFooter) %}
 {#- Default: first touch open, the rest collapsed — so a five-touch
     sequence is scannable as a list of headers. A step can override
     with `collapsed: true|false` (email threads open the last touch).
@@ -573,7 +573,7 @@
       {%- endif %}
     </h4>
 
-    {{ stepCard(step, p) }}
+    {{ stepCard(step, p, showSendFooter) }}
   </div>
 
   {#
@@ -630,8 +630,8 @@
    Split 7/5 with SLDS's grid. Inside the thread's 800 px column
    that's a snug two-up, which is the trade for keeping hunter's
    side-by-side reading of "here's the draft, here's why". #}
-{% macro stepCard(step, p) %}
-<div class="seller-home__conv-step-card slds-grid{% if step.hideTabs %} seller-home__conv-step-card--full{% endif %}" data-sh-step-card>
+{% macro stepCard(step, p, showSendFooter) %}
+<div class="seller-home__conv-step-card slds-grid{% if showSendFooter %} slds-wrap seller-home__conv-step-card--with-footer{% endif %}{% if step.hideTabs %} seller-home__conv-step-card--full{% endif %}" data-sh-step-card>
   <div class="seller-home__conv-step-message slds-col {% if step.hideTabs %}slds-size_12-of-12{% else %}slds-size_7-of-12{% endif %}">
     <div class="seller-home__conv-step-draft" data-sh-step-draft>
       {{ regenBanner() }}
@@ -706,6 +706,31 @@
       </div>
     </div>
     {% endif %}
+  </div>
+  {% endif %}
+
+  {# Thread mode: the Found Prospects docked footer, on this draft
+     card rather than the cadence shell. Send / Sent instead of
+     Approve, and no Approve All — there is one email, not a roster.
+     Same `data-sh-cadence-approve` hook so the cadence controller
+     drives it. #}
+  {% if showSendFooter %}
+  <div class="slds-col slds-size_12-of-12 slds-docked-form-footer slds-theme_shade slds-border_top seller-home__conv-cadence-batch seller-home__conv-cadence-batch--on-card">
+    <div class="seller-home__conv-cadence-actions" role="group" aria-label="Email actions">
+      <button
+        type="button"
+        class="slds-button slds-button_brand slds-button_stateful slds-not-selected seller-home__conv-review-btn"
+        data-sh-cadence-approve
+        aria-live="assertive"
+        aria-pressed="false"
+      >
+        <span class="slds-text-not-selected">Send</span>
+        <span class="slds-text-selected">
+          <svg class="slds-button__icon slds-button__icon_small slds-button__icon_left" aria-hidden="true">
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+          </svg>Sent</span>
+      </button>
+    </div>
   </div>
   {% endif %}
 </div>

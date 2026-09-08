@@ -3444,6 +3444,13 @@ $sh-linkedin-brand: #0a66c2;
   overflow: hidden;   // clips the two panels' corners to the radius
 }
 
+// Thread draft: the Send footer is a 12-col wrap under the 7/5
+// message + details row. Wrap is also `slds-wrap` in the markup;
+// this keeps the modifier self-sufficient if that class drops.
+.seller-home__conv-step-card--with-footer {
+  flex-wrap: wrap;
+}
+
 .seller-home__conv-step-card--full .seller-home__conv-step-message {
   border-right: none;
 }
@@ -3921,6 +3928,19 @@ $sh-linkedin-brand: #0a66c2;
   // Fill and top border are both SLDS utilities in the markup —
   // `slds-theme_shade` and `slds-border_top`. Neither is set here, so
   // changing either is a class change rather than a stylesheet edit.
+
+  // Thread mode docks this bar on the last draft card, which has no
+  // padded shell to bleed into. Zero the cadence-card offsets or the
+  // footer hangs off the step card.
+  &--on-card {
+    margin-inline: 0;
+    margin-block-end: 0;
+    border-end-start-radius: 0;
+    border-end-end-radius: 0;
+    flex: 1 0 100%;
+    width: 100%;
+    max-width: 100%;
+  }
 }
 
 // The footer's only child today, so the auto margin is what holds the

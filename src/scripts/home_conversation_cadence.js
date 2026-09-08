@@ -557,13 +557,21 @@
     // two are opposites in SLDS's sheet, and leaving the stale one on
     // would show both labels at once. This runs on every render, so
     // switching to a different prospect resets the button to "Approve".
+    function approveButton () {
+      // Live query: thread mode parks this button inside the last
+      // step card, which renderSequence replaces. The bind-time
+      // `els.approve` would point at a detached node after a swap.
+      return root.querySelector(SELECTORS.approve)
+    }
+
     function applyActions (statusKey) {
       var conf = ACTION_STATE[statusKey] || ACTION_STATE.not_reviewed
-      if (els.approve) {
-        els.approve.disabled = conf.approveDisabled
-        els.approve.classList.toggle('slds-is-selected',  conf.approveSelected)
-        els.approve.classList.toggle('slds-not-selected', !conf.approveSelected)
-        els.approve.setAttribute('aria-pressed', conf.approveSelected ? 'true' : 'false')
+      var approve = approveButton()
+      if (approve) {
+        approve.disabled = conf.approveDisabled
+        approve.classList.toggle('slds-is-selected',  conf.approveSelected)
+        approve.classList.toggle('slds-not-selected', !conf.approveSelected)
+        approve.setAttribute('aria-pressed', conf.approveSelected ? 'true' : 'false')
       }
     }
 
@@ -596,7 +604,9 @@
       if (ids.indexOf(id) < 0) return
       state.reviews[id] = { status: status }
       render()
-      if (status === 'approved') unlockMarcusReplyFeed(id)
+      if (status === 'approved' && !root.hasAttribute('data-sh-cadence-thread')) {
+        unlockMarcusReplyFeed(id)
+      }
       dispatch(root, EVT_DECISION, {
         rowId: id,
         decision: status === 'approved' ? 'approve'
@@ -633,22 +643,30 @@
         setSelected(neighborId(1), 'cadence')
       })
 
-      if (els.approve) els.approve.addEventListener('click', function () {
-        if (els.approve.disabled) return
+      root.addEventListener('click', function (event) {
+        var target = event.target
+        if (!target || !target.closest) return
+        var approve = target.closest(SELECTORS.approve)
+        if (!approve || !root.contains(approve) || approve.disabled) return
+
+        var isThread = root.hasAttribute('data-sh-cadence-thread')
         var meta = metaById[state.selectedId] || {}
         var name = meta.prospect || meta.company || ''
         var pendingId = state.selectedId
 
-        // Show "Approving..." state
-        els.approve.disabled = true
-        var notSelectedSpan = els.approve.querySelector('.slds-text-not-selected')
+        approve.disabled = true
+        var notSelectedSpan = approve.querySelector('.slds-text-not-selected')
         var origLabel = notSelectedSpan ? notSelectedSpan.textContent : ''
-        if (notSelectedSpan) notSelectedSpan.textContent = 'Approving…'
+        if (notSelectedSpan) {
+          notSelectedSpan.textContent = isThread ? 'Sending\u2026' : 'Approving\u2026'
+        }
 
         setTimeout(function () {
           if (notSelectedSpan) notSelectedSpan.textContent = origLabel
           setReview(pendingId, 'approved')
-          if (window._shShowToast) window._shShowToast('Cadence approved for ' + name)
+          if (window._shShowToast) {
+            window._shShowToast(isThread ? 'Email sent' : ('Cadence approved for ' + name))
+          }
         }, 800)
       })
       if (els.approveAll) els.approveAll.addEventListener('click', function () {
