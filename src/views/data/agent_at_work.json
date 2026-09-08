@@ -8,10 +8,9 @@
   //  includes `_home_feed.html`, loads home.css and boots home.js — so
   //  there is one implementation and it cannot drift.
   //
-  //  What forks is the content: rows added here are visible on the lab
-  //  page only, which is what makes it a place to try an idea before
-  //  deciding it belongs on Seller Home. Porting one back is moving the
-  //  object into index.json's `feed.items`.
+  //  What forks is the content: this file is the time-lapse seed for
+  //  /agent_at_work.html — two running Rohan rows on a pinned Tuesday.
+  //  Markup, styles and behaviour stay shared with Seller Home.
   //
   //  Gulp injects this automatically — `getData` reads
   //  `data/<page>.json` for `<page>.html` — so defining `feed` here is
@@ -23,7 +22,7 @@
     // Optional PIN for the date beside the heading. null = show today,
     // recomputed on every page load. Set a literal string ("Mon July 13")
     // to freeze it — useful when a screenshot has to match a deck.
-    "date": null,
+    "date": "Tue September 8",
     // ── The subline ───────────────────────────────────────────────────
     // Every row's second line is two slots: "<left> · <right>".
     //
@@ -182,86 +181,19 @@
       "doc":      { "sprite": "gdoc",   "spriteFamily": "doctype" },
       "message":  { "sprite": "txt",    "spriteFamily": "doctype" },
       "document": { "iconImage": "/assets/images/output-icons/doc.png" },
-      "pdf":      { "sprite": "pdf",    "spriteFamily": "doctype" }
+      "pdf":      { "sprite": "pdf",    "spriteFamily": "doctype" },
+      "doc-green": { "iconImage": "/assets/images/doctype-icons/Doc-green.svg" },
+      "doc-blue":  { "iconImage": "/assets/images/doctype-icons/Doc-blue.svg" },
+      "doc-grey":  { "iconImage": "/assets/images/doctype-icons/Doc-grey.svg" }
     },
-    // ── One list, one row per recurring workflow ──────────────────────
-    // The Completed / Running / Scheduled tabs are gone, so a workflow
-    // is no longer three potential rows (its last result, its current
-    // run, its next run) — it's one row that carries its own state.
-    //
-    // Row contract matches index.json `feed.items`. Cadence is the left
-    // slot on Ready/Scheduled; `stepProgress` is the left slot while
-    // running ("2 of 5 steps"); `startedAt` is elapsed ("4 min elapsed").
+    // ── Time-lapse seed (slice 1) ────────────────────────────────────
+    // Two Rohan-flavored running rows on a pinned Tuesday. Scheduled /
+    // failed / paused / archived extras are out so the one-day loop is
+    // readable: Running → Ready → swipe-out. Later slices add stagger-in
+    // and date changes; this array is the known Replay seed.
     "items": [
       {
-        "id": "ri-01",
-        "conversationId": "conv-001",
-        "title": "Found new prospects",
-        "titles": {
-          "running": "Finding new prospects",
-          "neutral": "Find new prospects"
-        },
-        "cadence": "Weekly",
-        "stepProgress": "1 of 3 steps",
-        "nextRun": "Next run in 3 days",
-        "lastRun": "Last run Thursday",
-        "state": "completed",
-        "outputs": [
-          { "icon": "table",   "label": "6 new accounts" },
-          { "icon": "message", "label": "10 prospects" }
-        ],
-        "workflow": { "id": "", "label": "" }
-      },
-      {
-        "id": "ri-02",
-        "conversationId": "conv-002",
-        "title": "Drafted proposals to send",
-        "titles": {
-          "running": "Drafting proposals to send",
-          "neutral": "Draft proposals to send"
-        },
-        "cadence": "Daily",
-        "stepProgress": "1 of 3 steps",
-        "nextRun": "Next run tomorrow at 6:00 AM",
-        "lastRun": "Last run today",
-        "state": "completed",
-        "outputs": [
-          { "icon": "pdf", "label": "10 proposals" }
-        ],
-        "workflow": { "id": "", "label": "" }
-      },
-      {
-        "id": "ri-03",
-        "title": "Executive Brief",
-        "titles": {
-          "running": "Preparing your executive brief",
-          "neutral": "Executive Brief"
-        },
-        "cadence": "Weekly",
-        "stepProgress": "1 of 3 steps",
-        "nextRun": "Next run Friday at 5:00 AM",
-        "lastRun": "Last run Friday",
-        "state": "scheduled",
-        // No `todayPrefix` here, unlike a completed row: it stamps today's
-        // date onto the label, and this run hasn't happened yet — the brief
-        // named below is what Friday will produce, not something that
-        // exists now.
-        "outputs": [
-          { "icon": "doc", "label": "Quarterly Deal Pulse" }
-        ],
-        "workflow": { "id": "", "label": "" }
-      },
-      // ── Lab-only rows ─────────────────────────────────────────────
-      // Two runs in flight, added here to try the in-progress treatment
-      // against a list that also has finished and scheduled work in it.
-      // They exist on this page only; Seller Home still shows three.
-      {
         "id": "run-01",
-        // The count lives in the pill, not the title: a title that names
-        // a number goes stale the moment the run moves on, and it has to
-        // read correctly in every tense (the neutral form would be
-        // "Research 42 target accounts" for a run that hasn't counted
-        // anything yet). The pill can carry progress instead.
         "title": "Researching target accounts",
         "titles": {
           "running": "Researching target accounts",
@@ -270,12 +202,18 @@
         "cadence": "Weekly",
         "stepProgress": "4 of 5 steps",
         "startedAt": "12 min elapsed",
+        "nextRun": "Next run Monday at 9:00 AM",
         "lastRun": "Last run Monday",
         "state": "running",
         "outputs": [
-          { "icon": "table", "label": "42 of 50 accounts" }
+          {
+            "icon": "doc-green",
+            "label": "42 of 50 accounts",
+            "scheduledIcon": "doc-grey",
+            "scheduledLabel": "Target accounts"
+          }
         ],
-        "workflow": { "id": "", "label": "" }
+        "workflow": { "id": "sk-account-research", "label": "" }
       },
       {
         "id": "run-02",
@@ -287,158 +225,22 @@
         "cadence": "Daily",
         "stepProgress": "2 of 4 steps",
         "startedAt": "4 min elapsed",
+        "nextRun": "Next run tomorrow at 6:00 AM",
         "lastRun": "Last run yesterday",
         "state": "running",
         "outputs": [
-          { "icon": "message", "label": "12 of 30 drafted" }
+          {
+            "icon": "doc-blue",
+            "label": "12 of 30 drafted",
+            "scheduledIcon": "doc-grey",
+            "scheduledLabel": "Outreach drafts"
+          }
         ],
-        "workflow": { "id": "", "label": "" }
-      },
-      // Lab-only: a scheduled row so the Scheduled view has content on
-      // load. Nothing ships paused — the running-row action is Stop, which
-      // sends it back to Scheduled, not Paused.
-      {
-        "id": "pau-01",
-        "title": "Re-engage stalled opportunities",
-        "titles": {
-          "running": "Re-engaging stalled opportunities",
-          "neutral": "Re-engage stalled opportunities"
-        },
-        "cadence": "Weekly",
-        "stepProgress": "1 of 3 steps",
-        "nextRun": "Next run Tuesday at 8:00 AM",
-        "lastRun": "Last run Tuesday",
-        "state": "scheduled",
-        "outputs": [
-          { "icon": "doc", "label": "Re-engagement plan" }
-        ],
-        "workflow": { "id": "", "label": "" }
-      },
-      // Lab-only: two archived rows so the Archived view has content on
-      // load. Archive (kebab) on a completed/scheduled row moves it here;
-      // Restart sends an archived row back to Scheduled.
-      {
-        "id": "arc-01",
-        "title": "Summarized competitor news",
-        "titles": {
-          "running": "Summarizing competitor news",
-          "neutral": "Summarize competitor news"
-        },
-        "cadence": "Daily",
-        "stepProgress": "1 of 3 steps",
-        "nextRun": "Next run tomorrow at 7:00 AM",
-        "lastRun": "Archived today",
-        "state": "archived",
-        "outputs": [
-          { "icon": "doc", "label": "Competitor news summary" }
-        ],
-        "workflow": { "id": "", "label": "" }
-      },
-      {
-        "id": "arc-02",
-        "title": "Cleaned up duplicate leads",
-        "titles": {
-          "running": "Cleaning up duplicate leads",
-          "neutral": "Clean up duplicate leads"
-        },
-        "cadence": "Weekly",
-        "stepProgress": "1 of 3 steps",
-        "nextRun": "Next run Monday at 6:00 AM",
-        "lastRun": "Archived yesterday",
-        "state": "archived",
-        "outputs": [
-          { "icon": "doc", "label": "Duplicate cleanup report" }
-        ],
-        "workflow": { "id": "", "label": "" }
+        "workflow": { "id": "sk-write-sales-emails", "label": "" }
       }
     ],
+    "itemsParked": [],
+    "tasks": []
 
-    // ── Parked rows ───────────────────────────────────────────────────
-    // Not rendered. The template only reads `items`, so these sit here
-    // as ready-made examples of the states the page doesn't currently
-    // show — move one into `items` above and it works, no template, CSS
-    // or JS change needed.
-    //
-    // Every state is fully supported today: `stateOrder` sorts it, the
-    // status button has its glyph pair, and the subline slots carry the
-    // strings for it. This array is only about what's on screen.
-    "itemsParked": [
-      {
-        "id": "fail-01",
-        "title": "Sync territory quota changes",
-        "titles": {
-          "running": "Syncing territory quota changes",
-          "neutral": "Sync territory quota changes"
-        },
-        "cadence": "Daily",
-        "stepProgress": "1 of 3 steps",
-        "lastRun": "Last run today at 6:00 AM",
-        "state": "failed",
-        "error": "Quota API returned 502 — 0 of 214 territories synced",
-        "retryOutput": { "icon": "doc", "label": "Syncing 214 territories" },
-        "workflow": { "id": "", "label": "" }
-      },
-      // No parked `running` example here, unlike index.json: this page
-      // has two live in `items` above, so a third copy under the same id
-      // would only be a duplicate to trip over.
-      {
-        "id": "sch-01",
-        "title": "Refresh account health scores",
-        "titles": {
-          "running": "Refreshing account health scores",
-          "neutral": "Refresh account health scores"
-        },
-        "cadence": "Monthly",
-        "stepProgress": "1 of 4 steps",
-        "nextRun": "Next run Monday at 6:00 AM",
-        "lastRun": "Last run Jul 20",
-        "state": "scheduled",
-        // "~" estimates read as "expected" for a run that hasn't
-        // happened yet.
-        "outputs": [
-          { "icon": "table", "label": "~1,240 accounts" }
-        ],
-        "workflow": { "id": "", "label": "" }
-      },
-      {
-        "id": "pau-01",
-        "title": "Re-engage stalled opportunities",
-        "titles": {
-          "running": "Re-engaging stalled opportunities",
-          "neutral": "Re-engage stalled opportunities"
-        },
-        "cadence": "Weekly",
-        "stepProgress": "1 of 3 steps",
-        // A paused row DISPLAYS "Paused" (the template substitutes it),
-        // while the schedule underneath is what resuming restores — so
-        // `nextRun` stays a real time even here.
-        "nextRun": "Next run Tuesday at 8:00 AM",
-        "lastRun": "Last run Tuesday",
-        "state": "paused",
-        "workflow": { "id": "", "label": "" }
-      }
-    ],
-    "tasks": [
-      {
-        "id": "tk-01",
-        "title": "Confirm demo agenda with Northwind",
-        "description": "Demo is Thursday at 10am; agenda still lists last quarter\u2019s topics.",
-        "icon":     { "sprite": "task" },
-        "workflow": { "id":     "prepare_for_meetings", "label": "Prepare for Meetings" }
-      },
-      {
-        "id": "tk-02",
-        "title": "Send updated pricing sheet to Globex",
-        "description": "Legal cleared the enterprise tier yesterday; Globex asked for revised numbers on the 12th.",
-        "icon":     { "sprite": "opportunity" },
-        "workflow": { "id":     "manage_opportunities", "label": "Manage Opportunities" }
-      },
-      {
-        "id": "tk-03",
-        "title": "Log call notes for Initech intro",
-        "description": "45-minute discovery call closed Tuesday; notes still in your scratchpad.",
-        "icon":     { "sprite": "contact" }
-      }
-    ]
   },
 }

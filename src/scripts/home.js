@@ -2929,6 +2929,15 @@
     bindFeedFilter(feedRoot)
     bindFeedRowControls(feedRoot)
     bindFeedRowClicks(feedRoot)
+
+    // Narrow director hook. Labs (and later Home) drive Running → Ready
+    // and swipe-out through the same Flip / dismiss timelines the kebab
+    // already uses — they must not click hidden menu items or copy GSAP.
+    window.SH = window.SH || {}
+    window.SH.feed = {
+      changeState: function (row, state) { changeFeedState(feedRoot, row, state) },
+      dismiss: function (li) { dismissListItem(li) }
+    }
   }
 
   // ── Phase 5: Knowledge doc list ───────────────────────────────────

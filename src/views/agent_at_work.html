@@ -29,6 +29,11 @@
     .aaw-lab__god-rays  shader host (scripts/aaw_god_rays.js)
     .aaw-lab__inner     the 800px content column
     .aaw-lab__note      the header note
+    .aaw-lab__director  Play / Replay + TIMING inputs
+
+  Slice 1 time-lapse: `feed_timelapse.js` drives two running rows through
+  Home's Flip (Ready) and swipe-out dismiss. Durations live in TIMING
+  at the top of that file (and the inputs bound to it).
 
   The shader is the same one Seller Home runs, tuned to converge above
   the page rather than on a composer that isn't here.
@@ -54,9 +59,39 @@
     <p class="aaw-lab__note">
       Lab — the live Seller Home “Your agent at work” feed, on its own.
       Markup <code>_home_feed.html</code> · styles <code>home.scss</code> ·
-      behaviour <code>home.js</code> · data <code>data/index.json</code>.
-      Edits here are edits to Seller Home.
+      behaviour <code>home.js</code> · director <code>feed_timelapse.js</code> ·
+      data <code>data/agent_at_work.json</code>.
+      Feed motion edits here are edits to Seller Home.
     </p>
+
+    <div class="aaw-lab__director" data-aaw-director>
+      <div class="aaw-lab__director-actions">
+        <button type="button" class="slds-button slds-button_brand" data-aaw-play>Play</button>
+        <button type="button" class="slds-button slds-button_neutral" data-aaw-replay>Replay</button>
+      </div>
+      <form class="aaw-lab__timing" data-aaw-timing>
+        <label class="aaw-lab__timing-field">
+          <span>holdRunning</span>
+          <input type="number" name="holdRunning" min="0" step="0.1" value="1.4" />
+        </label>
+        <label class="aaw-lab__timing-field">
+          <span>betweenComplete</span>
+          <input type="number" name="betweenComplete" min="0" step="0.1" value="0.7" />
+        </label>
+        <label class="aaw-lab__timing-field">
+          <span>holdReady</span>
+          <input type="number" name="holdReady" min="0" step="0.1" value="1.6" />
+        </label>
+        <label class="aaw-lab__timing-field">
+          <span>betweenDismiss</span>
+          <input type="number" name="betweenDismiss" min="0" step="0.1" value="0.45" />
+        </label>
+        <label class="aaw-lab__timing-field">
+          <span>playDelay</span>
+          <input type="number" name="playDelay" min="0" step="0.1" value="0.5" />
+        </label>
+      </form>
+    </div>
 
     {# `feed` comes from data/agent_at_work.json, which gulp injects for
        this page. That file is a copy of index.json's `feed` block plus
@@ -73,6 +108,7 @@
 <script src="/scripts/vendor/gsap.min.js"></script>
 <script src="/scripts/vendor/Flip.min.js"></script>
 <script src="/scripts/home.js"></script>
+<script src="/scripts/feed_timelapse.js"></script>
 
 {# ES module, so it defers on its own and the shader mounts after the
    list is in the DOM — it measures the content column to place the
