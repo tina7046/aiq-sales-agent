@@ -34,7 +34,8 @@
     cellSize: Number(fixture.cellSize) || 12,
     palette: fixture.palette || 'green',
     cols: parseDim(fixture.cols),
-    rows: parseDim(fixture.rows)
+    rows: parseDim(fixture.rows),
+    selectedStart: null
   }
 
   var grid = root.querySelector('[data-cal-grid]')
@@ -79,6 +80,33 @@
 
   function monthShort(value) {
     return MONTHS[parseIso(value).getMonth()]
+  }
+
+  var sources = Array.isArray(window.MEMORY_SOURCES) ? window.MEMORY_SOURCES : []
+
+  function sourceDates () {
+    var dates = []
+    var i
+    for (i = 0; i < sources.length; i++) {
+      if (sources[i] && sources[i].learnedOn) dates.push(String(sources[i].learnedOn))
+    }
+    return dates
+  }
+
+  function countSourcesBetween (startIso, endIso) {
+    var dates = sourceDates()
+    var n = 0
+    var i
+    for (i = 0; i < dates.length; i++) {
+      if (dates[i] >= startIso && dates[i] <= endIso) n++
+    }
+    return n
+  }
+
+  function bucketValue (startDate, endDate) {
+    var startIso = iso(startDate)
+    if (!sources.length) return synthValue(startIso)
+    return countSourcesBetween(startIso, iso(endDate))
   }
 
   function hashIso(value) {
@@ -148,7 +176,7 @@
       while (cursor <= lastWeek) {
         var weekEnd = addDays(cursor, 6)
         var startIso = iso(cursor)
-        var value = synthValue(startIso)
+        var value = bucketValue(cursor, weekEnd)
         buckets.push({
           start: startIso,
           value: value,
@@ -164,7 +192,8 @@
       var lastMonth = startOfMonth(end)
       while (cursor <= lastMonth) {
         var monthIso = iso(cursor)
-        var monthValue = synthValue(monthIso)
+        var monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0)
+        var monthValue = bucketValue(cursor, monthEnd)
         buckets.push({
           start: monthIso,
           value: monthValue,
@@ -181,7 +210,7 @@
     while (cursor <= lastDay) {
       var dayIso = iso(cursor)
       var inRange = cursor >= start && cursor <= end
-      var dayValue = inRange ? synthValue(dayIso) : null
+      var dayValue = inRange ? bucketValue(cursor, cursor) : null
       buckets.push({
         start: dayIso,
         value: dayValue,
@@ -455,6 +484,122 @@
     grid.replaceChildren(frag)
   }
 
+  var listRoot = document.querySelector('[data-sh-memory-source-list]')
+  var emptyEl = document.querySelector('[data-sh-memory-source-empty]')
+
+  function bucketEndIso (startIso, grain) {
+    var start = parseIso(startIso)
+    if (grain === 'week') return iso(addDays(start, 6))
+    if (grain === 'month') {
+      return iso(new Date(start.getFullYear(), start.getMonth() + 1, 0))
+    }
+    return startIso
+  }
+
+  function learnedOnInBucket (learnedOn, startIso) {
+    if (!learnedOn || !startIso) return false
+    var endIso = bucketEndIso(startIso, state.grain)
+    return learnedOn >= startIso && learnedOn <= endIso
+  }
+
+  function findLatestStart (buckets) {
+    var latest = ''
+    var i
+    for (i = 0; i < buckets.length; i++) {
+      var b = buckets[i]
+      if (!b || b.empty || !b.start || !b.value) continue
+      if (b.start > latest) latest = b.start
+    }
+    return latest || null
+  }
+
+  function paintSelection () {
+    if (!grid) return
+    var cells = grid.querySelectorAll('button.cal-cell')
+    var i
+    for (i = 0; i < cells.length; i++) {
+      var on = cells[i].getAttribute('data-start') === state.selectedStart
+      cells[i].classList.toggle('is-selected', on)
+      cells[i].setAttribute('aria-pressed', on ? 'true' : 'false')
+    }
+  }
+
+  function filterSourceList () {
+    if (!listRoot) return
+    var rows = listRoot.querySelectorAll('[data-sh-knowledge-doc-item]')
+    var shown = 0
+    var start = state.selectedStart
+    var i
+    for (i = 0; i < rows.length; i++) {
+      var on = learnedOnInBucket(rows[i].getAttribute('data-sh-memory-learned-on'), start)
+      rows[i].hidden = !on
+      if (on) shown++
+    }
+    listRoot.hidden = shown === 0
+    if (emptyEl) emptyEl.hidden = shown > 0
+  }
+
+  function ensureSelection (buckets) {
+    var stillThere = false
+    var i
+    if (state.selectedStart) {
+      for (i = 0; i < buckets.length; i++) {
+        if (buckets[i] && !buckets[i].empty && buckets[i].start === state.selectedStart) {
+          stillThere = true
+          break
+        }
+      }
+    }
+    if (!stillThere) state.selectedStart = findLatestStart(buckets)
+    paintSelection()
+    filterSourceList()
+  }
+
+  function bindSourceMenus (root) {
+    if (!root) return
+    var openMenu = null
+    var openTrigger = null
+
+    function closeMenu () {
+      if (!openMenu || !openTrigger) return
+      openMenu.hidden = true
+      openMenu.classList.remove('is-open')
+      openTrigger.setAttribute('aria-expanded', 'false')
+      openMenu = null
+      openTrigger = null
+    }
+
+    root.addEventListener('click', function (event) {
+      var trigger = event.target.closest('[data-sh-knowledge-doc-menu-trigger]')
+      if (!trigger || !root.contains(trigger)) return
+      event.preventDefault()
+      event.stopPropagation()
+      var wrap = trigger.closest('[data-sh-knowledge-doc-menu]')
+      var menu = wrap && wrap.querySelector('[data-sh-knowledge-doc-menu-list]')
+      if (!menu) return
+      if (openMenu === menu) {
+        closeMenu()
+        return
+      }
+      closeMenu()
+      menu.hidden = false
+      menu.classList.add('is-open')
+      trigger.setAttribute('aria-expanded', 'true')
+      openMenu = menu
+      openTrigger = trigger
+    })
+
+    document.addEventListener('click', function (event) {
+      if (!openMenu) return
+      if (root.contains(event.target) && event.target.closest('[data-sh-knowledge-doc-menu]')) return
+      closeMenu()
+    })
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') closeMenu()
+    })
+  }
+
   function renderLegend() {
     if (!legend) return
     legend.replaceChildren()
@@ -520,6 +665,7 @@
     renderGrid(buckets)
     renderLegend()
     syncControls()
+    ensureSelection(buckets)
   }
 
   function applyField(field) {
@@ -528,7 +674,10 @@
     var value = field.value
     if (key === 'cellSize') state.cellSize = Number(value)
     else if (key === 'cols' || key === 'rows') state[key] = parseDim(value)
-    else state[key] = value
+    else {
+      if (key === 'grain' || key === 'timeframe') state.selectedStart = null
+      state[key] = value
+    }
     render()
   }
 
@@ -541,6 +690,15 @@
   })
 
   if (grid) {
+    grid.addEventListener('click', function (event) {
+      var cell = event.target.closest('button.cal-cell')
+      if (!cell || !grid.contains(cell) || cell.classList.contains('is-empty')) return
+      var start = cell.getAttribute('data-start')
+      if (!start) return
+      state.selectedStart = start
+      paintSelection()
+      filterSourceList()
+    })
     grid.addEventListener('pointerover', function (event) {
       var cell = event.target.closest('.cal-cell')
       if (!cell || cell.classList.contains('is-empty') || !grid.contains(cell)) return
@@ -576,6 +734,8 @@
   window.addEventListener('keydown', function (event) {
     if (event.key === 'Escape') hideTip()
   })
+
+  bindSourceMenus(listRoot)
 
   render()
 })()

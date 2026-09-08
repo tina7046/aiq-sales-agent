@@ -167,7 +167,7 @@
         <div class="seller-home__knowledge-doc-detail-header-lead">
           <a
             class="seller-home__knowledge-doc-detail-back"
-            href="{{ back.href }}"
+            href="{{ back.href | appUrl }}"
             data-sh-knowledge-doc-detail-back
           >
             <svg class="seller-home__knowledge-doc-detail-back-icon" aria-hidden="true" focusable="false">
@@ -340,10 +340,11 @@
            INSIDE the `.__-main` column — same choice Agent
            Configuration made — so the doc title enters the scroll
            flow instead of stealing pinned space from the outer
-           chrome. The glue script overwrites both slots at run time
-           with the resolved doc's `name` + updated caption; before
-           it runs the `fallbackTitle` from JSON shows so a slow JS
-           load still renders a meaningful heading. #}
+           chrome.            The glue script overwrites both slots at run time
+           with the resolved doc's `name` + updated caption. The
+           heading starts empty (not `fallbackTitle`) so "Document"
+           never flashes; an inline boot script just below fills the
+           real name from `?id=` before first paint. #}
         <div
           class="seller-home__knowledge-doc-detail-preview"
           data-knowledge-preview
@@ -360,11 +361,37 @@
                   id="hunter-agent-knowledge-title"
                   class="hunter-agent-knowledge__article-title"
                   data-sh-knowledge-doc-detail-title
-                >{{ fallbackTitle }}</h1>
+                ></h1>
                 <p
                   class="hunter-agent-knowledge__article-updated"
                   data-sh-knowledge-doc-detail-updated
                 ></p>
+                {# Nunjucks cannot read `?id=`, so the heading above is
+                   empty in the static HTML. This runs here — not at the
+                   end of the page — so the name is in the H1 (and the
+                   tab) before first paint, and before the deferred
+                   catalog/module scripts hydrate the body. #}
+                <script>
+                  (function () {
+                    var titles = {
+                      {%- for doc in catalog -%}
+                      {{ doc.id | tojson | safe }}: {{ (doc.name or '') | tojson | safe }}{% if not loop.last %},{% endif %}
+                      {%- endfor -%}
+                    }
+                    var aliases = {{ (documentAliases or {}) | tojson | safe }}
+                    var titleEl = document.querySelector('[data-sh-knowledge-doc-detail-title]')
+                    var id = null
+                    try {
+                      id = new URLSearchParams(window.location.search).get('id')
+                    } catch (e) { /* leave empty */ }
+                    var heading = (id && titles[id]) || ''
+                    if (!heading && id && aliases && aliases[id]) {
+                      heading = titles[aliases[id]] || ''
+                    }
+                    if (titleEl && heading) titleEl.textContent = heading
+                    if (heading) document.title = heading
+                  })()
+                </script>
               </header>
 
               {# Reused article partial — carries `.hunter-agent-
@@ -418,7 +445,7 @@
           <p class="seller-home__knowledge-doc-detail-notfound-description">{{ notFound.description }}</p>
           <a
             class="seller-home__knowledge-doc-detail-notfound-action"
-            href="{{ back.href }}"
+            href="{{ back.href | appUrl }}"
           >{{ notFound.actionLabel }}</a>
         </div>
       </section>

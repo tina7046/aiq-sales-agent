@@ -1,28 +1,5 @@
-// Seller Home — Scheduled workflows
-// =====================================================================
-// Data source for /scheduled.html. Read at build time by
-// gulpfile.js:getData() because the filename matches the .html stem.
-//
-// Sections:
-//   • pageTitle     — accessible name for the right-column <main>.
-//   • header        — visible <h1>.
-//   • banner        — shared educational-banner block.
-//   • composer      — DORMANT (kept shape-parallel to index.json).
-//   • tabs          — visible filter chips (Active / Need Attention /
-//                     Paused) plus `overflow` entries (Archived) that
-//                     render inside the toolbar's ⋮ menu instead of the
-//                     tab row. Each carries `statuses[]` (the workflow
-//                     statuses it matches; empty → match all).
-//   • statusTypes   — semantic status registry, one entry per
-//                     `workflow.status`. `label` is the SR-friendly
-//                     name; `action` is the status-button verb.
-//   • workflows     — the schedule cards. The card shows only status +
-//                     name + cadence; everything else lives under
-//                     `details` and surfaces in the side panel.
-//   • panel         — side-panel field order/labels + the action set.
-//   • rowActions    — per-card overflow (⋮) actions.
-//   • filterAction  — toolbar filter icon-button.
-//   • emptyState    — copy when a tab filters to zero.
+// Scheduled shared chrome (tabs, panel, empty state).
+// Workflow records live in src/views/data/users/<id>/scheduled.json.
 {
   "pageTitle": "Scheduled",
   "header": {
@@ -30,9 +7,9 @@
     "actionLabel": "New Schedule"
   },
   "banner": {
-    "title":       "Put your recurring tasks on a schedule",
+    "title": "Put your recurring tasks on a schedule",
     "description": "Let Agentforce Coworker handle recurring work, like daily pipeline summaries or weekly project updates. Choose what runs and when, then share schedules with your team.",
-    "imageSrc":    "/assets/images/skills-banner.jpg"
+    "imageSrc": "/assets/images/skills-banner.jpg"
   },
   "composer": {
     "placeholder": "Schedule a task",
@@ -40,230 +17,160 @@
     "samplePrompts": [],
     "actions": {
       "start": [
-        { "id": "add",       "label": "Add",       "icon": "add" },
-        { "id": "skills",    "label": "Skills",    "iconImage": "/assets/images/nav-icons/skills.png" },
-        { "id": "all_tools", "label": "All tools", "icon": "all" }
+        {
+          "id": "add",
+          "label": "Add",
+          "icon": "add"
+        },
+        {
+          "id": "skills",
+          "label": "Skills",
+          "iconImage": "/assets/images/nav-icons/skills.png"
+        },
+        {
+          "id": "all_tools",
+          "label": "All tools",
+          "icon": "all"
+        }
       ],
       "end": []
     }
   },
-  // Visible tabs + the overflow bucket. "Active" gathers every enabled
-  // schedule, which includes the one currently running (Running is a
-  // transient execution state of an Active schedule, not its own tab).
-  // "Archived" is reachable only from the toolbar ⋮ menu — it filters
-  // the same list, so it's authored here beside the visible tabs with
-  // an `icon` the menu renders.
   "tabs": {
     "defaultTabId": "active",
     "items": [
-      { "id": "active",         "label": "Active",         "statuses": ["scheduled", "running", "completed"] },
-      { "id": "need_attention", "label": "Needs Attention", "statuses": ["failed"] },
-      { "id": "paused",         "label": "Paused",         "statuses": ["paused"] }
+      {
+        "id": "active",
+        "label": "Active",
+        "statuses": [
+          "scheduled",
+          "running",
+          "completed"
+        ]
+      },
+      {
+        "id": "need_attention",
+        "label": "Needs Attention",
+        "statuses": [
+          "failed"
+        ]
+      },
+      {
+        "id": "paused",
+        "label": "Paused",
+        "statuses": [
+          "paused"
+        ]
+      }
     ],
     "overflow": [
-      { "id": "archived", "label": "Archived", "statuses": ["archived"], "icon": "archive" }
+      {
+        "id": "archived",
+        "label": "Archived",
+        "statuses": [
+          "archived"
+        ],
+        "icon": "archive"
+      }
     ]
   },
-  // Status registry. `failed` is the "needs attention" state and paints
-  // the red warning glyph; `running` paints the animated spinner;
-  // `scheduled` the clock; `paused` the pause bars; `archived` the
-  // archive box (shown in the archived view). Glyph mapping lives in
-  // home.scss.
   "statusTypes": {
-    "failed":    { "label": "Needs attention", "action": "Retry"   },
-    "running":   { "label": "Running now",     "action": "Pause"   },
-    "completed": { "label": "Completed",       "action": "Pause"   },
-    "scheduled": { "label": "Scheduled",       "action": "Pause"   },
-    "paused":    { "label": "Paused",          "action": "Resume"  },
-    "archived":  { "label": "Archived",        "action": "Restore" }
-  },
-  // Schedule cards. `title` is the unique schedule name (NOT the
-  // reusable Skill). `cadence` is the single muted meta line. `details`
-  // feeds the side panel; `conversationId` (when present) enables the
-  // panel's "Open conversation" action.
-  //
-  // Two schedules below deliberately share one Skill (Daily Pipeline
-  // Snapshot) with different cadence/scope/delivery — proof that one
-  // reusable Skill backs many independently configured schedules.
-  //
-  // Each schedule carries the full detail model the side panel needs
-  // (`_schedule_side_panel.html`): frequency/time/timezone drive the
-  // Frequency row; `delivery` the Delivery line; `skillId`/`skillName`
-  // the Uses-Skill chip (which links to the Skill details route);
-  // `instructions` the editable Instructions box; `createdAt`/
-  // `createdBy` the Created line; `lastRunId`/`lastRunStatus`/
-  // `lastRunAt` the Last-run line (interactive when `lastRunId` is set,
-  // jumping into `chatId` at that run). `title` is the schedule NAME
-  // (never the Skill name); `cadence` is the single card meta line.
-  "workflows": [
-    {
-      "id":            "wf-east-coast-morning-brief",
-      "title":         "Daily East Coast Pipeline Snapshot",
-      "cadence":       "Weekdays at 8:00 AM · Next run tomorrow",
-      "status":        "scheduled",
-      "frequency":     "Weekdays",
-      "time":          "8:00 AM",
-      "timezone":      "ET",
-      "nextRun":       "Tomorrow at 8:00 AM",
-      "delivery":      "#east-coast-sales on Slack",
-      "skillId":       "skill-daily-pipeline-snapshot",
-      "skillName":     "Daily Pipeline Snapshot",
-      "instructions":  "Review the East Coast sales pipeline and identify the most important changes since the previous run. Highlight opportunities that were created, advanced, stalled, pushed out, or became at risk. Prioritize high-value deals and opportunities closing this quarter.\n\nSummarize overall pipeline coverage, notable stage changes, upcoming close dates, key risks, and recommended follow-up actions. Only include information supported by current CRM data, and clearly flag missing or outdated fields.\n\nKeep the update concise and post it to the #east-coast-sales Slack channel.",
-      "createdAt":     "1st Jan 4:00PM",
-      "createdBy":     "You",
-      "lastRunId":     "run-east-coast-0901",
-      "lastRunStatus": "Completed",
-      "lastRunAt":     "today at 8:00 AM",
-      "chatId":        "conv-daily-pipeline-snapshot"
+    "failed": {
+      "label": "Needs attention",
+      "action": "Retry"
     },
-    {
-      "id":            "wf-weekly-pipeline-leadership-recap",
-      "title":         "Weekly Pipeline Leadership Recap",
-      "cadence":       "Fridays at 3:00 PM · Next run Friday",
-      "status":        "scheduled",
-      "frequency":     "Fridays",
-      "time":          "3:00 PM",
-      "timezone":      "ET",
-      "nextRun":       "Friday at 3:00 PM",
-      "delivery":      "Sales Leadership via email",
-      "skillId":       "skill-daily-pipeline-snapshot",
-      "skillName":     "Daily Pipeline Snapshot",
-      "instructions":  "Summarize the company-wide pipeline for sales leadership. Call out week-over-week movement, notable stage changes, and the deals most likely to close this quarter.\n\nFlag risks and coverage gaps, and recommend where leadership attention will move the number most. Keep it to an executive-length brief and email it to Sales Leadership.",
-      "createdAt":     "30th Jul 9:15AM",
-      "createdBy":     "You",
-      "lastRunId":     "run-weekly-recap-0829",
-      "lastRunStatus": "Completed",
-      "lastRunAt":     "last Friday at 3:00 PM",
-      "chatId":        "conv-daily-pipeline-snapshot"
+    "running": {
+      "label": "Running now",
+      "action": "Pause"
     },
-    {
-      "id":            "wf-daily-cold-prospecting",
-      "title":         "Daily Cold Prospecting",
-      "cadence":       "Running now · Started at 9:00 AM",
-      "status":        "running",
-      "frequency":     "Weekdays",
-      "time":          "9:00 AM",
-      "timezone":      "PT",
-      "nextRun":       "Tomorrow at 9:00 AM",
-      "delivery":      "Creates tasks in Salesforce",
-      "skillId":       "skill-cold-prospecting",
-      "skillName":     "Cold Prospecting Outreach",
-      "instructions":  "Identify net-new accounts that fit the ICP and haven't been contacted. Draft a first-touch outreach task for each, prioritized by fit and buying signals.\n\nCreate the tasks in Salesforce and keep the queue to a manageable daily volume.",
-      "createdAt":     "5th Aug 11:00AM",
-      "createdBy":     "You",
-      "lastRunId":     "",
-      "lastRunStatus": "Running",
-      "lastRunAt":     "today at 9:00 AM",
-      "chatId":        ""
+    "completed": {
+      "label": "Completed",
+      "action": "Pause"
     },
-    {
-      "id":            "wf-daily-priority-buyer-outreach",
-      "title":         "Daily Priority Buyer Outreach",
-      "cadence":       "Slack connection expired",
-      "reconnect":     {
-        "message":     "Slack connection expired",
-        "description": "This schedule couldn’t deliver today’s update and won’t run again until Slack is reconnected.",
-        "label":       "Reconnect",
-        "linkLabel":   "Reconnect Slack",
-        "ariaLabel":   "Reconnect Slack for Daily Priority Buyer Outreach"
-      },
-      "status":        "failed",
-      "frequency":     "Weekdays",
-      "time":          "8:30 AM",
-      "timezone":      "PT",
-      "nextRun":       "Paused until reconnected",
-      "delivery":      "#priority-buyers on Slack",
-      "skillId":       "skill-buyer-engagement",
-      "skillName":     "Buyer Engagement",
-      "instructions":  "Review recent activity across priority accounts and identify buying-group contacts who are ready for follow-up. Prioritize contacts showing strong engagement signals, such as repeat website visits, content engagement, event attendance, email activity, or recent interactions with the sales team.\n\nFor each contact, recommend a personalized outreach angle and the next best action based on their role, account context, and recent activity. Exclude contacts who are already in an active cadence, have opted out, or were contacted recently.\n\nSummarize the selected contacts, supporting signals, and recommended next steps. Only use verified CRM and engagement data, clearly flag missing information, and post the update to the #priority-buyers Slack channel.",
-      "createdAt":     "Jul 22 at 2:45 PM",
-      "createdBy":     "You",
-      "lastRunId":     "run-priority-buyer-0903",
-      "lastRunStatus": "Failed",
-      "lastRunAt":     "today at 8:30 AM",
-      "chatId":        "conv-priority-buyer-outreach"
+    "scheduled": {
+      "label": "Scheduled",
+      "action": "Pause"
     },
-    {
-      "id":            "wf-all-hands-meeting-prep",
-      "title":         "All-Hands Meeting Preparation Brief",
-      "cadence":       "Paused · Previously ran weekdays at 8:00 AM",
-      "status":        "paused",
-      "frequency":     "Weekdays",
-      "time":          "8:00 AM",
-      "timezone":      "PT",
-      "nextRun":       "—",
-      "delivery":      "Emails you",
-      "skillId":       "skill-meeting-prep",
-      "skillName":     "Meeting Prep Brief",
-      "instructions":  "Assemble the all-hands agenda with the latest metrics and highlights. Email the brief to me the morning of the meeting.",
-      "createdAt":     "15th Jun 4:20PM",
-      "createdBy":     "You",
-      "lastRunId":     "",
-      "lastRunStatus": "Completed",
-      "lastRunAt":     "Aug 28 at 8:00 AM",
-      "chatId":        ""
+    "paused": {
+      "label": "Paused",
+      "action": "Resume"
     },
-    {
-      "id":            "wf-monthly-territory-review",
-      "title":         "Monthly Territory Review",
-      "cadence":       "Archived",
-      "status":        "archived",
-      "frequency":     "Monthly",
-      "time":          "7:00 AM",
-      "timezone":      "PT",
-      "nextRun":       "—",
-      "delivery":      "Emails you",
-      "skillId":       "skill-territory-analysis",
-      "skillName":     "Territory Analysis",
-      "instructions":  "Review territory pipeline health and coverage. Summarize movement and risks, and email the review to me on the first Monday of the month.",
-      "createdAt":     "3rd Feb 10:05AM",
-      "createdBy":     "You",
-      "lastRunId":     "",
-      "lastRunStatus": "Completed",
-      "lastRunAt":     "Aug 1 at 7:00 AM",
-      "chatId":        ""
+    "archived": {
+      "label": "Archived",
+      "action": "Restore"
     }
-  ],
-  // Side-panel config. The details panel is bespoke (Frequency /
-  // Delivery / Uses Skill / Instructions / Created / Last run — see the
-  // partial), so this block only carries the header overflow-menu action
-  // set and the routes the panel links out to. The controller shows
-  // Pause OR Resume for the current status, and hides Open Chat / Last
-  // run links when the schedule has no `chatId` / `lastRunId`.
+  },
+  "workflows": [],
   "panel": {
     "menuActions": [
-      { "id": "run_now",   "label": "Run now",  "icon": "play"        },
-      { "id": "pause",     "label": "Pause",    "icon": "pause"       },
-      { "id": "resume",    "label": "Resume",   "icon": "play"        },
-      { "id": "open_chat", "label": "Open Chat", "icon": "socialshare" },
-      { "id": "archive",   "label": "Archive",  "icon": "archive"     }
+      {
+        "id": "run_now",
+        "label": "Run now",
+        "icon": "play"
+      },
+      {
+        "id": "pause",
+        "label": "Pause",
+        "icon": "pause"
+      },
+      {
+        "id": "resume",
+        "label": "Resume",
+        "icon": "play"
+      },
+      {
+        "id": "open_chat",
+        "label": "Open Chat",
+        "icon": "socialshare"
+      },
+      {
+        "id": "archive",
+        "label": "Archive",
+        "icon": "archive"
+      }
     ],
     "skillRoute": "/skill_detail.html",
-    "chatRoute":  "/home_conversation.html"
+    "chatRoute": "/home_conversation.html"
   },
-  // Per-card overflow (⋮) actions. Dispatch `sh:workflow-action`.
   "rowActions": [
-    { "id": "edit",    "label": "Edit",    "icon": "edit"    },
-    { "id": "run_now", "label": "Run now", "icon": "play"    },
-    { "id": "pause",   "label": "Pause",   "icon": "pause"   },
-    { "id": "resume",  "label": "Resume",  "icon": "play"    },
-    { "id": "archive", "label": "Archive", "icon": "archive" }
+    {
+      "id": "edit",
+      "label": "Edit",
+      "icon": "edit"
+    },
+    {
+      "id": "run_now",
+      "label": "Run now",
+      "icon": "play"
+    },
+    {
+      "id": "pause",
+      "label": "Pause",
+      "icon": "pause"
+    },
+    {
+      "id": "resume",
+      "label": "Resume",
+      "icon": "play"
+    },
+    {
+      "id": "archive",
+      "label": "Archive",
+      "icon": "archive"
+    }
   ],
   "filterAction": {
-    "id":       "filter",
-    "label":    "Filter schedules",
-    "icon":     "filterList"
+    "id": "filter",
+    "label": "Filter schedules",
+    "icon": "filterList"
   },
-  // Toolbar overflow (⋮) menu, right of the filter control. Holds the
-  // Archived view entry (authored under `tabs.overflow`); dispatched by
-  // bindScheduled().
   "overflowAction": {
-    "id":    "overflow",
+    "id": "overflow",
     "label": "More views",
-    "icon":  "threedots_vertical"
+    "icon": "threedots_vertical"
   },
   "emptyState": {
-    "title":       "No schedules match this filter",
+    "title": "No schedules match this filter",
     "description": "Switch to another tab to see schedules in a different state."
   }
 }

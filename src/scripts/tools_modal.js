@@ -182,7 +182,11 @@ function init() {
       .filter((t) => t.state === "added")
       .map((t) => t.id);
     try {
-      if (window.sessionStorage.getItem("zoominfo_connected") === "true" &&
+      if (window.sessionStorage.getItem(
+        (window.SH && window.SH.storageKey)
+          ? window.SH.storageKey("zoominfo_connected")
+          : "zoominfo_connected"
+      ) === "true" &&
           ids.indexOf("zoominfo_lookup") === -1) {
         ids.push("zoominfo_lookup");
       }
@@ -191,14 +195,19 @@ function init() {
   }
   function readConnected() {
     try {
-      const raw = window.sessionStorage.getItem(CONNECTED_KEY);
+      const raw = window.sessionStorage.getItem(
+        (window.SH && window.SH.storageKey) ? window.SH.storageKey(CONNECTED_KEY) : CONNECTED_KEY
+      );
       if (raw) return new Set(JSON.parse(raw));
     } catch (e) { /* fall through to defaults */ }
     return new Set(seedConnected());
   }
   function writeConnected() {
     try {
-      window.sessionStorage.setItem(CONNECTED_KEY, JSON.stringify(Array.from(connectedTools)));
+      window.sessionStorage.setItem(
+        (window.SH && window.SH.storageKey) ? window.SH.storageKey(CONNECTED_KEY) : CONNECTED_KEY,
+        JSON.stringify(Array.from(connectedTools))
+      );
     } catch (e) { /* storage unavailable — state stays in-memory only */ }
   }
   const connectedTools = readConnected();

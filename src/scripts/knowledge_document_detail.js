@@ -250,7 +250,10 @@
   //     JSON → null → treated as "no draft").
 
   function getDraftKey(id) {
-    return DRAFT_KEY_PREFIX + String(id);
+    var logical = DRAFT_KEY_PREFIX + String(id);
+    return (window.SH && typeof window.SH.storageKey === 'function')
+      ? window.SH.storageKey(logical)
+      : logical;
   }
 
   // Envelope schema:

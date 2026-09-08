@@ -261,7 +261,11 @@
               var banner = document.querySelector('[data-sh-knowledge-banner]')
               if (!banner) return
               try {
-                if (window.sessionStorage.getItem('sh:knowledgeBannerDismissed') === 'true') {
+                if (window.sessionStorage.getItem(
+                  (window.SH && window.SH.storageKey)
+                    ? window.SH.storageKey('sh:knowledgeBannerDismissed')
+                    : 'sh:knowledgeBannerDismissed'
+                ) === 'true') {
                   banner.hidden = true
                 }
               } catch (e) {

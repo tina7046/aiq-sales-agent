@@ -170,9 +170,15 @@
   // genuinely replays every conversation from scratch.
   var CONV_SEEN_KEY = 'sh:convSeen'
 
+  function sk (key) {
+    return (window.SH && typeof window.SH.storageKey === 'function')
+      ? window.SH.storageKey(key)
+      : key
+  }
+
   function readSeenConversations () {
     try {
-      var raw = window.sessionStorage.getItem(CONV_SEEN_KEY)
+      var raw = window.sessionStorage.getItem(sk(CONV_SEEN_KEY))
       if (!raw) return []
       var parsed = JSON.parse(raw)
       return Object.prototype.toString.call(parsed) === '[object Array]' ? parsed : []
@@ -200,7 +206,7 @@
         if (seen[i] === convId) return
       }
       seen.push(convId)
-      window.sessionStorage.setItem(CONV_SEEN_KEY, JSON.stringify(seen))
+      window.sessionStorage.setItem(sk(CONV_SEEN_KEY), JSON.stringify(seen))
     } catch (e) {
       // Silent — worst case the thread replays its opening next time.
     }
@@ -2773,7 +2779,7 @@
       var wfId = visiblePanel.getAttribute('data-sh-workflow-panel-id') || ''
       var pref = null
       try {
-        pref = window.localStorage && window.localStorage.getItem('sh:convPanel:' + wfId)
+        pref = window.localStorage && window.localStorage.getItem(sk('sh:convPanel:' + wfId))
       } catch (e) { /* private mode: fall through to open */ }
       if (pref === 'collapsed') layout.classList.add('is-panel-collapsed')
       else layout.classList.remove('is-panel-collapsed')
@@ -3081,7 +3087,7 @@
 
     var workflowId = panel.getAttribute('data-sh-workflow-panel-id') || ''
     var layout = panel.closest ? panel.closest('[data-sh-conv-layout]') : null
-    var storageKey = 'sh:convPanel:' + workflowId
+    var storageKey = sk('sh:convPanel:' + workflowId)
     var ERROR_TIMEOUT_MS = 6000
     var RETRY_MOCK_MS = 2000
 
@@ -3393,7 +3399,7 @@
 
       layout.classList.remove('is-panel-collapsed')
       try {
-        if (window.localStorage) window.localStorage.removeItem('sh:convPanel:' + wfId)
+        if (window.localStorage) window.localStorage.removeItem(sk('sh:convPanel:' + wfId))
       } catch (e) { /* no-op */ }
 
       // Land focus on the first labelled control inside the region

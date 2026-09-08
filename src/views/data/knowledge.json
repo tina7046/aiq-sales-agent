@@ -1,294 +1,5 @@
-// Seller Home — Knowledge page data
-// =====================================================================
-// Consumed by src/views/knowledge.html (which composes _home_left_nav
-// via the .seller-home shell). gulpfile.js's getData() auto-merges
-// this file into the template's local scope by filename → template lookup.
-//
-// This file intentionally carries ONLY page-specific bindings. Global
-// nav content (navPrimary, navFooter, recents) is pulled at template
-// time from home.json via the `readData("home").<key>` Nunjucks
-// global registered in gulpfile.js — the Knowledge page is a sub-
-// surface of the Seller Home nav, so both pages must show the same
-// primary items and recents list without duplication.
-//
-// Fields:
-//   • pageTitle          (string) window title + <main aria-label>
-//   • navActive          (string) id of the currently-active left-nav
-//                        item. The renderNavItem macro in
-//                        _home_left_nav.html applies `.is-active` +
-//                        `aria-current="page"` when this equals
-//                        item.id. "knowledge" matches the renamed
-//                        entry in home.json → navPrimary.
-//   • newKnowledgeLabel  (string) label for the header CTA button.
-//                        Kept as data so future localization + a
-//                        possible label change ("Add document",
-//                        "New file") happens without a template edit.
-//   • header             (object) misc header content:
-//                        - heading   (string) H1 displayed above the
-//                                    document list; matches the SLDS
-//                                    Titles/font-scale-3 treatment
-//                                    from the Figma frame 8931:383002.
-//   • banner             (object) copy for the promo banner at the top
-//                        of the scrollable body, above the search field —
-//                        badge, title, description, run-summary stats,
-//                        and CTA label, laid out beside the
-//                        illustration. Omit the whole
-//                        object and the template renders nothing — no
-//                        empty box, no reserved space — so turning the
-//                        banner off is a data-only edit. Fields:
-//                          - badge        (string) small pill above the
-//                                         title. Short: it's a label, not
-//                                         a sentence, and it does not
-//                                         wrap.
-//                          - title        (string) banner headline.
-//                                         Rendered as a `<p>`, NOT a
-//                                         heading — the page already has
-//                                         exactly one H1 ("Knowledge"),
-//                                         and a promo headline shouldn't
-//                                         compete with it in the document
-//                                         outline or a screen reader's
-//                                         heading list.
-//                          - description  (string) supporting paragraph.
-//                          - stats        (array of strings, optional)
-//                                         run-summary facts shown on one
-//                                         line under the description,
-//                                         joined by "∙" separators the
-//                                         TEMPLATE emits (each is
-//                                         `aria-hidden`, so a screen
-//                                         reader reads the facts as a
-//                                         list instead of "bullet
-//                                         operator" three times). Store
-//                                         the phrases only — no
-//                                         separators, no trailing
-//                                         punctuation. Any length: the
-//                                         line wraps item-by-item at
-//                                         narrow widths rather than
-//                                         breaking mid-phrase. Omit or
-//                                         empty the array and the line
-//                                         disappears.
-//                          - buttonLabel  (string) CTA label. The button
-//                                         is a stub — it carries a
-//                                         `data-sh-knowledge-setup` hook
-//                                         for a later phase to bind, and
-//                                         does nothing when clicked
-//                                         today.
-//
-//                        The illustration itself is NOT configured here.
-//                        It's a CSS `background-image` on
-//                        `.knowledge-banner__illustration` in home.scss,
-//                        because the authored markup for that element is
-//                        an empty div — which is also what lets the art
-//                        fill and crop to whatever height this copy
-//                        happens to need. Swapping the art is a one-line
-//                        change in home.scss, not a data edit.
-//   • search             (object) copy for the doc-list search field
-//                        (Figma frame 8931:383736 → "Input - Search").
-//                        Filtering is client-only (see home.js →
-//                        bindKnowledgeSearch): trimmed, case-
-//                        insensitive substring match against each
-//                        row's `name` + `type`. Fields:
-//                          - label         (string) accessible label
-//                                          for the input (rendered as
-//                                          `slds-assistive-text` for a
-//                                          visually iconic input that
-//                                          still names itself to a
-//                                          screen reader).
-//                          - placeholder   (string) input placeholder.
-//                          - clearLabel    (string) accessible label
-//                                          + tooltip for the clear (×)
-//                                          button that surfaces when
-//                                          the field has a value.
-//   • emptyState         (object) copy for the "no matches" state
-//                        shown in the doc-list slot when a search
-//                        query filters out every row. Kept as data so
-//                        the same partial can be reused for a future
-//                        "no documents yet" first-run state with
-//                        different copy. Fields:
-//                          - title         (string) primary heading
-//                                          for the empty state.
-//                          - description   (string) supporting text
-//                                          below the heading.
-//   • documents          (array) doc-list rows rendered by
-//                        _home_knowledge_list.html → renderKnowledgeDocRow.
-//                        Each item is a stable-shaped record so a
-//                        future API can drop in without template edits.
-//                        Fields:
-//                          - id         (string, required) URL-safe,
-//                                       collision-free identifier used
-//                                       as the DOM hook (`data-sh-
-//                                       knowledge-doc-id`), the menu's
-//                                       id-suffix, and the STABLE
-//                                       routing key for the doc detail
-//                                       view. Keep kebab-case.
-//
-//                                       Stable-route contract: the
-//                                       drill-in view is a single
-//                                       template (knowledge_document_
-//                                       detail.html) reached at
-//                                       /knowledge_document_detail.html
-//                                       ?id=<id>. Every id here is a
-//                                       durable, shareable URL — safe
-//                                       to bookmark, copy-paste into a
-//                                       DM, or link to from an external
-//                                       system. The extensionless
-//                                       shortcut /knowledge_document_
-//                                       detail?id=<id> resolves to the
-//                                       same page via server.js's
-//                                       `extensions: ['html']` config.
-//                                       DO NOT rename an id after it
-//                                       ships — bookmarks would 404.
-//                                       Renames land in `documentAliases`
-//                                       below (legacy → current
-//                                       forwarding); the resolver in
-//                                       knowledge_document_detail.js
-//                                       consults it when a direct id
-//                                       lookup misses.
-//                          - name       (string, required) primary text
-//                                       shown on the row. Long names
-//                                       ellipsize via CSS; the full
-//                                       string is exposed through the
-//                                       row's native `title` tooltip.
-//                          - badge      (string, optional) short pill
-//                                       label, right-aligned in the row
-//                                       just left of the overflow menu,
-//                                       in the same purple as the page
-//                                       banner's badge. Currently set on
-//                                       ONE row ("New Learnings" on the
-//                                       most recently updated doc) so it
-//                                       reads as a callout; the sibling
-//                                       docs keep the field commented
-//                                       out rather than deleted, so
-//                                       badging the whole set again is
-//                                       an uncomment. Keep it to one or
-//                                       two words: the badge never
-//                                       shrinks, so a long label eats
-//                                       the name's truncation budget.
-//                                       Omit and the row renders
-//                                       name-only.
-//
-//                                       NOT part of the search index —
-//                                       `bindKnowledgeSearch` matches
-//                                       `name` + `type` only, so a
-//                                       badge label is not a findable
-//                                       term.
-//                          - type       (string, required) high-level
-//                                       taxonomy label displayed in the
-//                                       row's secondary metadata line
-//                                       (e.g. "Document"). Kept as data
-//                                       so a future doc kind ("Skill
-//                                       File", "Playbook") reads through
-//                                       without template edits.
-//                          - fileType   (string, required) sprite id in
-//                                       /assets/icons/doctype-sprite/svg/
-//                                       symbols.svg → picks the yellow
-//                                       doctype icon (txt / pdf / …).
-//                                       Must be one of the sprites SLDS
-//                                       ships; unknown values render a
-//                                       blank <use> and swallow the
-//                                       icon visually. Ignored when
-//                                       `iconSrc` is set, but keep it
-//                                       populated anyway — see below.
-//                          - iconSrc    (string, optional) path under
-//                                       /assets to a bitmap icon that
-//                                       REPLACES the `fileType` sprite
-//                                       glyph on this row. For doc kinds
-//                                       SLDS ships no glyph for; the
-//                                       Auto-Learning documents use it
-//                                       to render the purple "AI" file
-//                                       icon instead of a generic TXT
-//                                       page. Painted into the same
-//                                       24-px box as the sprite, so
-//                                       rows stay aligned whichever
-//                                       branch renders.
-//
-//                                       Source art should be square and
-//                                       at least 48×48 so it survives
-//                                       retina; the AI icon is 96×96.
-//                                       Non-square art letterboxes
-//                                       rather than stretching.
-//
-//                                       Set BOTH this and `fileType`:
-//                                       deleting `iconSrc` then falls
-//                                       straight back to the sprite
-//                                       instead of rendering an empty
-//                                       icon box.
-//                          - updatedAt  (string, required) preformatted
-//                                       "MMMM D" date shown after the
-//                                       type on the metadata line, where
-//                                       the row template prefixes the
-//                                       word "Updated" → "Document ·
-//                                       Updated July 28". Store the date
-//                                       ONLY (no "Updated", no year);
-//                                       the year is dropped because
-//                                       every doc is current-year and
-//                                       the row reads tighter without
-//                                       it. Preformatted here (not a raw
-//                                       date) so the render path stays
-//                                       locale-agnostic; a future i18n
-//                                       phase can move this into a
-//                                       date-string producer.
-//
-//                                       Also feeds the detail page's
-//                                       "Last edited by <updatedBy> ·
-//                                       <updatedAt>" caption, so a
-//                                       format change here shows up in
-//                                       two places.
-//                          - updatedBy  (string, optional) display name
-//                                       of the last editor. Rendered on
-//                                       the document-detail page as
-//                                       "Last edited by <updatedBy> ·
-//                                       <updatedAt>". Omitted from the
-//                                       list row itself so the compact
-//                                       row shape stays unchanged.
-//                          - markdown   (string, required for the
-//                                       detail page) full document body
-//                                       in the same subset the shared
-//                                       `KnowledgeDocumentView` module
-//                                       parses (headings `#`/`##`/`###`,
-//                                       paragraphs, `-` ul, `1.` ol,
-//                                       inline `**bold**`, `*italic*`,
-//                                       `` `code` ``, `[link](url)`).
-//                                       The detail page reads this
-//                                       field client-side by matching
-//                                       the row's id against
-//                                       `?id=<id>` on the URL.
-//                          - href       (string, optional) target URL
-//                                       for the row's anchor. Omit or
-//                                       leave empty and the row
-//                                       template defaults to
-//                                       `/knowledge_document_detail.html
-//                                       ?id=<id>`, which is the built-in
-//                                       Seller Home detail page. Set an
-//                                       explicit `href` only when a
-//                                       specific doc should route
-//                                       somewhere else (a legacy URL,
-//                                       an external link, etc.).
-//   • documentActions    (array) menu items shown in every doc row's
-//                        overflow menu (⋮). Rendered by the row macro
-//                        in the same order they appear here, so
-//                        reordering is a data-only edit. Fields:
-//                          - id     (string, required) action slug
-//                                   emitted in `sh:knowledge-doc-
-//                                   action` details (`{action, docId}`).
-//                                   Kebab-case, stable across releases.
-//                          - label  (string, required) visible menu-
-//                                   item text.
-//                          - icon   (string, optional) utility-sprite id
-//                                   for the item's leading glyph. Same
-//                                   pattern the review-row overflow uses.
-//
-// Phase 4 landed: search input (Figma 8931:383736) filters the doc
-// list client-side against `documents[*].name` + `documents[*].type`
-// and swaps the list for an `emptyState`-driven "no matches" view
-// when nothing survives the query. Row-level overflow menu, doc
-// list, and mock-data-driven rendering are also in from Phase 3.
-//
-// Phase 5 landed: each document now carries a full markdown body +
-// author. Rows link to `/knowledge_document_detail.html?id=<id>` by
-// default (template-side fallback in `_home_knowledge_list.html`);
-// the detail page reads the SAME `documents[]` catalog via Nunjucks
-// `readData("knowledge")` so there's exactly one source of truth for
-// document data — no duplicated JSON, no drift between list + detail.
+// Knowledge shared chrome (header, tabs, empty state, generation metadata).
+// Document catalog lives in src/views/data/users/<id>/knowledge.json.
 {
   "pageTitle": "Knowledge",
   "navActive": "knowledge",
@@ -301,8 +12,14 @@
     "title": "Get deals done faster with<br>auto-learning",
     "description": "With agents that learn automatically, you get the highest-quality prospects, personalized emails, and AI-powered workflows based on your sales process and customer needs.",
     "stats": [
-      { "label": "Ran for", "value": "2 days and 18 hours" },
-      { "label": "Read", "value": "1.4k calls and 10.8k emails" }
+      {
+        "label": "Ran for",
+        "value": "2 days and 18 hours"
+      },
+      {
+        "label": "Read",
+        "value": "1.4k calls and 10.8k emails"
+      }
     ],
     "buttonLabel": "Got it"
   },
@@ -315,59 +32,31 @@
     "title": "No knowledge found",
     "description": "Try a different search term."
   },
-
-  // Tabs that filter the document list (see knowledge.html + home.js →
-  // bindKnowledgeTabs). Each document's `tab` field decides which tab it
-  // appears under; a document with no `tab` falls under "learnings".
-  // `defaultTabId` is the tab shown on first paint.
   "tabs": {
     "defaultTabId": "learnings",
     "items": [
-      { "id": "learnings", "label": "Learnings" },
-      { "id": "sources",   "label": "Sources" }
+      {
+        "id": "learnings",
+        "label": "Learnings"
+      },
+      {
+        "id": "sources",
+        "label": "Sources"
+      }
     ]
   },
-
   "documentActions": [
-    { "id": "download", "label": "Download", "icon": "download" },
-    { "id": "delete",   "label": "Delete",   "icon": "delete"   }
+    {
+      "id": "download",
+      "label": "Download",
+      "icon": "download"
+    },
+    {
+      "id": "delete",
+      "label": "Delete",
+      "icon": "delete"
+    }
   ],
-
-  // KnowledgeGenerationMetadata — shared generation metadata for the
-  // Auto-Learning run that produced the auto-learned documents (the
-  // ones carrying `badge: "Auto-learned"` in `documents[]` below).
-  //
-  // Lineage. In the pre-split doc this lived at the bottom of the body
-  // as `## Footer: Parameter Snapshot for Deterministic Re-Run`,
-  // rendered as an unordered list. The split refactor lifts that list
-  // out of every doc's markdown into ONE shared record so the five
-  // sibling docs don't each carry a copy that has to be kept in sync.
-  //
-  // Field mapping (Parameter Snapshot bullet → camelCased field):
-  //   run_id                → runId
-  //   plan_version          → planVersion
-  //   lookback_days         → lookbackDays
-  //   opp_cap               → opportunityCap
-  //   transcripts_per_opp   → transcriptsPerOpportunity
-  //   min_theme_support     → minimumThemeSupport
-  //   source                → source
-  //   opportunities_analyzed→ opportunitiesAnalyzed
-  //   transcripts_read      → transcriptsRead
-  //   skill_key             → skillKey
-  //
-  // Reference. Each of the five split docs joins to this record via its
-  // `generationMetadataId` field (all five point at
-  // "auto-learning-run-2026-07-28"). One-to-many by design — a future
-  // second Auto-Learning run would add a second record here and stamp
-  // its own id onto the docs it produced.
-  //
-  // Consumers. Not inlined into the detail-page config today (see
-  // `knowledge_document_detail.html`'s `<script id="sh-knowledge-doc-
-  // detail-config">` block — only `catalog` and the chrome strings are
-  // projected). The intentional omission keeps the reader surface
-  // quiet; wiring this into a "Run parameters" panel is a data-only
-  // template change when we're ready (add `generationMetadata` to the
-  // JSON blob, then look up `doc.generationMetadataId` client-side).
   "generationMetadata": {
     "id": "auto-learning-run-2026-07-28",
     "runId": "9e2b819a-5f71-413f-b95b-4362df9ee1e1",
@@ -381,397 +70,38 @@
     "transcriptsRead": "23 of 24 fetched; one no-show excluded",
     "skillKey": "customer_discovery_skill_v1"
   },
-
-  // ExecutionLogEntry[] — chronological run log for the same
-  // Auto-Learning run described by `generationMetadata` above.
-  //
-  // Lineage. In the pre-split doc this lived in the body as
-  // `## Execution Log`, rendered as a numbered list of `**Task N:**`
-  // lines followed by a bold "Skipped actions:" subsection. The split
-  // refactor lifts that list out of every doc's markdown into ONE
-  // shared array so the five sibling docs don't each carry a copy that
-  // has to be kept in sync.
-  //
-  // Field mapping (Execution Log entry → ExecutionLogEntry):
-  //   **Task 1:** …           → { id: "task-1",             status: "completed" }
-  //   **Tasks 2-3:** …        → { id: "tasks-2-3",          status: "completed" }
-  //   **Task 4:** …           → { id: "task-4",             status: "completed" }
-  //   **Task 5:** …           → { id: "task-5",             status: "completed" }
-  //   **Task 6:** …           → { id: "task-6",             status: "completed" }
-  //   Skipped actions: …      → { id: "skipped-save-skill", status: "skipped"   }
-  //
-  // Note: the `label` values above are pre-checkmark — the ✅ emoji
-  // that used to prefix "Task N" entries in the rendered body was a
-  // visual encoding of `status: "completed"`. Rendering surfaces can
-  // reintroduce it (or a green checkmark icon) from the structured
-  // field; do NOT bake glyphs into the label strings.
-  //
-  // Cardinality. This array belongs to the run, not to any single
-  // document — all five split docs share the same 6-entry log and
-  // reach it via `sourceGroupId` / the shared metadata, NOT a per-doc
-  // pointer. If a future second Auto-Learning run is added, expect
-  // this to become an object keyed by run id (or move under
-  // `generationMetadata.executionLog`) rather than being duplicated.
-  //
-  // `status` is one of "completed" | "skipped" | "warning". Not
-  // consumed by any template today (same rationale as
-  // `generationMetadata` above — reader surface stays quiet).
   "executionLog": [
-    { "id": "task-1",             "label": "95 qualifying accounts → 31 VoiceCalls → top 10 opportunities selected", "status": "completed" },
-    { "id": "tasks-2-3",          "label": "24 transcripts fetched and analyzed across 10 opportunities; 23 usable (1 no-show excluded from Tipalti)", "status": "completed" },
-    { "id": "task-4",             "label": "Results stored incrementally per opportunity", "status": "completed" },
-    { "id": "task-5",             "label": "5 parallel synthesis sub-passes completed (one per question)", "status": "completed" },
-    { "id": "task-6",             "label": "Skill file assembled and saved to durable state (key: customer_discovery_skill_v1)", "status": "completed" },
-    { "id": "skipped-save-skill", "label": "save_skill tool not available in environment; skill persisted via set_item_state only", "status": "skipped" }
-  ],
-
-  // Legacy-id → current-id redirect map, consulted by the drill-in
-  // resolver in knowledge_document_detail.js so bookmarks and links
-  // that still reference the pre-split single Auto-Learning document
-  // land on the closest present-day equivalent (the ICP document,
-  // which owns the top-level firmographic content readers most often
-  // arrive looking for). The resolver reads this table only when a
-  // direct `findDoc(catalog, id)` lookup misses, so unknown/non-legacy
-  // ids continue to fall through to the existing "Document not
-  // found" state.
-  //
-  // Two legacy identifiers can arrive at the drill-in resolver:
-  //   1. `customer-discovery-skill-file` — the pre-split doc's `id`
-  //      field, still shows up in any bookmark of the form
-  //      `?id=customer-discovery-skill-file`.
-  //   2. `auto-learning-customer-interactions` — the pre-split doc's
-  //      URL slug, still shows up in bookmarks of the form
-  //      `/knowledge/auto-learning-customer-interactions`. server.js
-  //      redirects that path shape to `?id=<slug>`, so both incoming
-  //      legacy shapes flow through the same client-side resolver.
-  //
-  // Both map to `auto-learning-icp` because ICP is the topmost content
-  // in the pre-split doc's narrative (What Is Your Ideal Customer
-  // Profile? — the answer readers scan for first). If a future split
-  // ever gains a proper "landing / overview" doc, redirect the aliases
-  // there instead. On resolve, the client uses `history.replaceState`
-  // to update the URL bar to the canonical `?id=auto-learning-icp`
-  // form so a re-share or reload lands directly at the current route.
-  "documentAliases": {
-    "customer-discovery-skill-file": "auto-learning-icp",
-    "auto-learning-customer-interactions": "auto-learning-icp"
-  },
-
-  "documents": [
-    // ─────────────────────────────────────────────────────────────
-    // Auto-Learning split (five sibling documents, one topic each).
-    //
-    // Previously a single "Auto-Learning from Your Past Customer
-    // Interactions" record with Q1–Q5 concatenated in one markdown
-    // body. Split into five per-topic documents that share:
-    //   • sourceGroupId          — logical run these docs came from
-    //   • generationMetadataId   — points at `generationMetadata`
-    //                              (Parameter Snapshot + Execution
-    //                              Log kept out of the reading
-    //                              experience per the IA refactor)
-    // The legacy id `customer-discovery-skill-file` is intentionally
-    // dropped from `documents[]`; bookmarks land on the ICP doc via
-    // the `documentAliases` map above (Step 16).
-    //
-    // Body markdown for each doc is stubbed here (Step 2) and filled
-    // in over Steps 3–7 with the corresponding slice of the original
-    // combined markdown, plus the weak-signals subsection and any
-    // cross-cutting observations that belong under that topic.
-    // ─────────────────────────────────────────────────────────────
     {
-      "id": "auto-learning-icp",
-      "name": "Your ICP: Who Buys From You",
-      // Badged rows are down to one ("New Learnings" on Customer
-      // Business Problem). Kept commented rather than deleted — see the
-      // `badge` field notes at the top of this file.
-      // "badge": "Auto-learned",
-      "type": "Document",
-      "size": "4.2 KB",
-      "fileType": "txt",
-      "iconSrc": "/assets/images/doctype-icons/ai.png",
-      "updatedAt": "July 14",
-      "sources": [
-        { "name": "Salesforce", "icon": "/assets/images/source_icons/source_salesforce.svg" },
-        { "name": "Gmail", "icon": "/assets/images/source_icons/source_gmail.png" },
-        { "name": "Gong", "icon": "/assets/images/source_icons/source_gong.svg" },
-        { "name": "Calendar", "icon": "/assets/images/source_icons/source_calendar.png" }
-      ],
-      "updatedBy": "Hunter",
-      "sourceGroupId": "auto-learning-customer-interactions",
-      "generationMetadataId": "auto-learning-run-2026-07-28",
-      "markdown": "# Ideal Customer Profile\n\n## What Is Your Ideal Customer Profile?\n\n### ICP Dimension 1: B2B SaaS / B2B Software Company\n\n**Frequency:** 9/9 opportunities | **Confidence:** High\n\nEvery opportunity in the dataset is a B2B software company. This is the foundational firmographic qualifier.\n\n**Evidence:**\n\n1. Mixpanel: Enterprise B2B SaaS with dedicated demand generation team and multi-region SDR coverage\n2. TravelPerk: Mid-market SaaS with BDR+SE team structure, 45-day sales cycle\n3. Udemy: B2B SaaS with global BDR teams, ~$25K ACV, 40 seats across engagement tools\n4. Zone & Co: FinTech B2B company transitioning from inbound to outbound\n\n### ICP Dimension 2: Sizeable SDR/BDR Team (15+ Reps)\n\n**Frequency:** 7/9 opportunities (Mixpanel, TravelPerk, Branch, Diligent, Udemy, Optimizely, Movable Ink) | **Confidence:** High\n\nStrong signal: 7 of 9 opportunities have 15+ SDRs/BDRs. The product's value scales with team size.\n\n**Evidence:**\n\n1. Diligent: 50-100+ BDRs across acquisitions\n2. Optimizely: 47 SDRs deployed globally\n3. Movable Ink: 25-30 SDRs, outbound-heavy\n4. Branch: 15+ BDRs, VC-backed mid-market SaaS\n\n### ICP Dimension 3: Outbound-Oriented Sales Motion\n\n**Frequency:** 5/9 opportunities | **Confidence:** High\n\nOutbound-heavy or actively transitioning to outbound. The product's value proposition centers on automating outbound workflows.\n\n### ICP Dimension 4: Existing Intent/ABM Tool Investment (6Sense, Demandbase, UserGems)\n\n**Frequency:** 5/9 opportunities (Workato, Udemy, Optimizely, Zone & Co, Branch) | **Confidence:** High\n\nCustomers already invested in intent/ABM tools and looking to complement, consolidate, or replace them.\n\n### ICP Dimension 5: Uses Conversation Intelligence (Gong)\n\n**Frequency:** 5/9 opportunities | **Confidence:** Medium\n\n### ICP Dimension 6: Salesforce as Primary CRM\n\n**Frequency:** 5/9 opportunities | **Confidence:** Medium\n\n### ICP Dimension 7: Multi-Tool Sales Tech Stack (4+ Tools)\n\n**Frequency:** 5/9 opportunities | **Confidence:** High\n\nCustomers using 4+ GTM tools (ZoomInfo, Gong, Demandbase, 6Sense, Outreach, Nooks, etc.) — creating both the pain (tool sprawl) and the opportunity (consolidation).\n\n### ICP Dimension 8: Global / Multi-Region Sales Teams\n\n**Frequency:** 4/9 opportunities | **Confidence:** Medium\n\n### ICP Dimension 9: High Call Volume / Activity-Dense Pipeline\n\n**Frequency:** 4/9 opportunities | **Confidence:** Medium\n\n### ICP Dimension 10: Uses Sales Engagement Platform (Outreach/SalesLoft/Nooks)\n\n**Frequency:** 4/9 opportunities | **Confidence:** Medium\n\n### ICP Dimension 11: Uses ZoomInfo for Data Enrichment\n\n**Frequency:** 3/9 opportunities | **Confidence:** Medium\n\n## Emerging and Weak Signals\n\n- **AI Agent / Automated Messaging Quality** (3 transcripts, 1 opp — Mixpanel only): AI agent mixing up persona messaging, QA bottlenecks. Single-opp signal.\n- **Internal Organizational Blockers** (2 transcripts, 1 opp — Diligent only): Internal politics and failed prior implementations blocking tool adoption.\n\n## Key Takeaway\n\n**ICP sweet spot:** B2B SaaS with 15+ BDRs, Salesforce-based, already invested in 4+ GTM tools, outbound-oriented or transitioning to outbound. These companies have both the pain (manual prospecting, tool sprawl) and the infrastructure (CRM, SEP) to integrate immediately.\n"
+      "id": "task-1",
+      "label": "95 qualifying accounts → 31 VoiceCalls → top 10 opportunities selected",
+      "status": "completed"
     },
     {
-      "id": "auto-learning-business-problem",
-      "name": "Your Customer's Business Problem",
-      // The one badged row: freshest in the set, so the pill and the
-      // "updated" timestamp tell the same story.
-      "badge": "Updated",
-      "type": "Document",
-      "size": "6.1 KB",
-      "fileType": "txt",
-      "iconSrc": "/assets/images/doctype-icons/ai.png",
-      "updatedAt": "24 mins ago",
-      "sources": [
-        { "name": "Gong", "icon": "/assets/images/source_icons/source_gong.svg" },
-        { "name": "Gmail", "icon": "/assets/images/source_icons/source_gmail.png" },
-        { "name": "Calendar", "icon": "/assets/images/source_icons/source_calendar.png" },
-        { "name": "Website", "icon": "/assets/images/source_icons/source_web.svg" }
-      ],
-      "updatedBy": "Hunter",
-      "sourceGroupId": "auto-learning-customer-interactions",
-      "generationMetadataId": "auto-learning-run-2026-07-28",
-      "markdown": "# Customer Business Problem\n\n## What Business Problem Is the Customer Trying to Solve?\n\n### Theme 1: Manual Prospecting & SDR Productivity Drain\n\n**Frequency:** 12/22 transcripts across 6 opportunities (Apex Ventures, Cirrus, Harbour Capital, Brightloop AI, Meridian Analytics, NexGen Systems) | **Confidence:** High\n\nThe dominant problem. SDR/BDR teams spend disproportionate time on manual research, list building, and contact sourcing \u2014 directly competing with selling time. Reps toggle between multiple tools to build prospect lists instead of running pipeline.\n\n**Evidence:**\n\n1. \"Reps spend too much time on manual prospecting and admin instead of selling\" \u2014 Apex Ventures (Customer)\n2. \"Reps waste time across five-plus tools for manual prospecting\" \u2014 Brightloop AI (Customer)\n3. \"SDRs spend excessive time manually sourcing contacts on Sales Navigator\" \u2014 Meridian Analytics (Customer)\n\n### Theme 2: CRM & Data Quality Degradation\n\n**Frequency:** 6/22 transcripts across 4 opportunities (Brightloop AI, Apex Ventures, Meridian Analytics, Harbour Capital) | **Confidence:** High\n\nDirty, inconsistent, or broken CRM data undermines downstream workflows \u2014 from incorrect field values to integration failures and M&A migration issues. Both a standalone pain and a root cause that amplifies other themes.\n\n**Evidence:**\n\n1. \"Three hundred-plus accounts had the wrong country assigned in CRM\" \u2014 Apex Ventures (Customer)\n2. \"Salesforce write errors from leads-to-contacts migration, industry taxonomy inconsistency\" \u2014 Apex Ventures (Customer)\n3. \"Broken data integrations between Salesforce, Outreach, and ZoomInfo\" \u2014 Brightloop AI (Customer)\n4. \"Manual painful contact enrichment, CRM data cleanliness is a constant struggle\" \u2014 Harbour Capital (Customer)\n\n### Theme 3: Pipeline Generation Under Pressure\n\n**Frequency:** 5/22 transcripts across 4 opportunities (Brightloop AI, Cirrus, Harbour Capital, NexGen Systems) | **Confidence:** High\n\nTeams failing to generate or maintain sufficient pipeline \u2014 outbound campaigns producing zero results, smaller teams expected to maintain output, headcount scaling hitting diminishing returns.\n\n**Evidence:**\n\n1. \"Zero pipeline generated from twenty-eight hundred emails sent\" \u2014 Brightloop AI (Customer)\n2. \"Maintain pipeline with a smaller SDR team, need to automate lower-tier outreach\" \u2014 NexGen Systems (Customer)\n3. \"Diminishing returns from headcount additions, deal fell through due to internal blockers\" \u2014 Harbour Capital (Seller)\n4. \"Pipeline issues, need fast time-to-value, avoid shelfware risk\" \u2014 Cirrus (Customer)\n\n### Theme 4: Account Prioritization & Scoring Model Gaps\n\n**Frequency:** 4/22 transcripts across 3 opportunities (Cirrus, Harbour Capital, Meridian Analytics) | **Confidence:** Medium\n\nExisting intent-scoring and account-prioritization models are underutilized, poorly configured, or absent \u2014 conflating fit with intent signals, lacking segment-specific models.\n\n**Evidence:**\n\n1. \"Team not leveraging intent scoring fully, scoring model mixes fit and signal fields\" \u2014 Cirrus (Customer)\n2. \"Need separate enterprise scoring model, want to validate Hunter versus Demandbase data\" \u2014 Cirrus (Customer)\n3. \"BDR low connection rates, cannot prioritize accounts effectively\" \u2014 Harbour Capital (Customer)\n\n### Theme 5: Tool Sprawl & Fragmentation\n\n**Frequency:** 4/22 transcripts across 3 opportunities (Cirrus, Brightloop AI, Meridian Analytics) | **Confidence:** High\n\nGTM stacks have accumulated 4-6+ overlapping tools with no unified layer, each adding friction and no single tool providing a consolidated view.\n\n**Evidence:**\n\n1. \"Need to consolidate GTM tools and reduce SDR admin and research time\" \u2014 Cirrus (Customer)\n2. \"Reps waste time across five-plus tools for manual prospecting workflows\" \u2014 Brightloop AI (Customer)\n3. \"Four separate 6sense models with no cross-prioritization across business units\" \u2014 Meridian Analytics (Customer)\n\n## Emerging and Weak Signals\n\n- **Hunter Acquisition by Salesforce** (2 transcripts, 2 opps): Platform transition as urgency context, not standalone trigger.\n- **Post-Loss Debrief / Underperformance Recovery** (2 transcripts, 1 opp \u2014 Harbour Capital): Previous tool/initiative failed, customer now receptive.\n- **Peer Recommendation / Word of Mouth** (1 transcript, 1 opp \u2014 NexGen Systems): Peer referral as trigger \u2014 likely underreported.\n"
+      "id": "tasks-2-3",
+      "label": "24 transcripts fetched and analyzed across 10 opportunities; 23 usable (1 no-show excluded from Tipalti)",
+      "status": "completed"
     },
     {
-      "id": "auto-learning-why-now",
-      "name": "Why Now: What's Driving Your Deals",
-      // "badge": "Auto-learned",
-      "type": "Document",
-      "size": "3.8 KB",
-      "fileType": "txt",
-      "iconSrc": "/assets/images/doctype-icons/ai.png",
-      "updatedAt": "July 2",
-      "sources": [
-        { "name": "Website", "icon": "/assets/images/source_icons/source_web.svg" },
-        { "name": "PDF", "icon": "/assets/images/source_icons/source_pdf.png" },
-        { "name": "Google Docs", "icon": "/assets/images/source_icons/source_gdocs.png" },
-        { "name": "Word", "icon": "/assets/images/source_icons/source_word.png" }
-      ],
-      "updatedBy": "Hunter",
-      "sourceGroupId": "auto-learning-customer-interactions",
-      "generationMetadataId": "auto-learning-run-2026-07-28",
-      "markdown": "# Why Now: Communication Strategies for Winning Deals Urgency\n\n## Why Are They Meeting with Us Now?\n\n### Theme 1: Quarterly / End-of-Period Pressure & Pipeline Targets\n\n**Frequency:** 8/22 transcripts across 5 opportunities (Mixpanel, TravelPerk, Branch, Diligent, Udemy) | **Confidence:** High\n\nFiscal quarter boundaries, QBR accountability, and pipeline shortfalls as the forcing function. Urgency tied to leadership visibility and measurable targets.\n\n**Evidence:**\n\n1. \"End of Q2 pressure, QBRs, leadership asking for ROI, only 900 of 3,000 leads sent\" — Mixpanel (Seller)\n2. \"End-of-quarter urgency, pilot launch for BDR productivity\" — TravelPerk (Customer)\n3. \"Want tool before end of Q3, fully operational by Q4\" — Branch (Customer)\n4. \"BDR charter underperforming, need to boost Q3 numbers\" — Diligent (Seller)\n\n### Theme 2: Imminent Launch Deadline or Time-Bound Deliverable\n\n**Frequency:** 6/22 transcripts across 4 opportunities (Mixpanel, TravelPerk, Workato, Branch) | **Confidence:** High\n\nConcrete near-term deadlines — pilot go-lives, rebranding cutovers, POC windows — creating urgency beyond general quarter pressure.\n\n**Evidence:**\n\n1. \"Upcoming September rebranding deadline\" — Mixpanel (Customer)\n2. \"Messaging approved, want leads flowing by midweek, 500 leads per week pressure\" — Mixpanel (Customer)\n3. \"Pilot launching Monday\" — TravelPerk (Customer)\n4. \"Re-evaluating target account list, need POC within one week\" — Workato (Customer)\n\n### Theme 3: Strategic Leadership Change or GTM Motion Shift\n\n**Frequency:** 5/22 transcripts across 4 opportunities (Movable Ink, Zone & Co, Optimizely, Branch) | **Confidence:** High\n\nNew leaders arrive with mandates to shift GTM — typically inbound-only or partner-led to outbound-first. Leadership transitions create budget unlocks and urgency.\n\n**Evidence:**\n\n1. \"New SDR leader 8 months in, peer recommendations\" — Movable Ink (Customer)\n2. \"New leadership team transitioning GTM from partner-driven to outbound\" — Zone & Co (Customer)\n3. \"Company-wide AI initiative, leadership loosened spending\" — Optimizely (Customer)\n4. \"Record inbound quarter but lower ACV, need outbound for bigger deals\" — Branch (Seller)\n\n### Theme 4: Vendor Evaluation Complete / Advancing to POC\n\n**Frequency:** 4/22 transcripts across 4 opportunities (Udemy, Optimizely, Workato, Diligent) | **Confidence:** Medium\n\nCustomers have done their research, narrowed the field, and are meeting now to move to proof-of-concept or contracting.\n\n**Evidence:**\n\n1. \"Finished vendor eval, prioritizing POC\" — Udemy (Customer)\n2. \"Completed POC review, internal AI effort stalled\" — Optimizely (Customer)\n3. \"LOI signed but internal dynamics shifted\" — Diligent (Customer)\n\n### Theme 5: Technical Blockers / Integration Failures Forcing Action\n\n**Frequency:** 4/22 transcripts across 3 opportunities (Mixpanel, TravelPerk, Optimizely) | **Confidence:** Medium\n\nSomething is actively broken — integrations failing, data quality blocking a launch, internal build that stalled. Triage calls, not exploratory.\n\n**Evidence:**\n\n1. \"Need to fix broken integrations urgently\" — Mixpanel (Customer)\n2. \"Data quality issues blocking launch\" — TravelPerk (Customer)\n3. \"Blocked on integration errors and taxonomy migration\" — TravelPerk (Customer)\n4. \"Internal AI effort stalled\" — Optimizely (Customer)\n\n### Theme 6: Team Readiness — Internal Stakeholders Finally Aligned\n\n**Frequency:** 3/22 transcripts across 2 opportunities (Workato, Udemy) | **Confidence:** Medium\n\nInterest was present but blocked by internal readiness — now demand gen is staffed, prospecting motion defined, or stakeholders aligned.\n\n**Evidence:**\n\n1. \"DG team finally ready to action intent signals\" — Workato (Customer)\n2. \"Q3 dedicated to solving prospecting motion\" — Udemy (Customer)\n3. \"Re-evaluating target account list, need POC within one week\" — Workato (Customer)\n\n## Emerging and Weak Signals\n\n- **Job Change / Signal-Based Triggers** (2 transcripts, 2 opps — Workato, Zone & Co): Using job change events for gifting campaigns and scoring model enrichment.\n\n## Key Takeaway\n\n**Quarter pressure is universal:** Fiscal quarter boundaries and QBR accountability appear as the #1 trigger event (5 opps, 8 transcripts). Time the outreach cycle accordingly.\n"
+      "id": "task-4",
+      "label": "Results stored incrementally per opportunity",
+      "status": "completed"
     },
     {
-      "id": "auto-learning-use-cases",
-      "name": "Your Top Use-Cases",
-      // "badge": "Auto-learned",
-      "type": "Document",
-      "size": "5.4 KB",
-      "fileType": "txt",
-      "iconSrc": "/assets/images/doctype-icons/ai.png",
-      "updatedAt": "June 24",
-      "sources": [
-        { "name": "PDF", "icon": "/assets/images/source_icons/source_pdf.png" },
-        { "name": "Google Docs", "icon": "/assets/images/source_icons/source_gdocs.png" },
-        { "name": "Word", "icon": "/assets/images/source_icons/source_word.png" }
-      ],
-      "updatedBy": "Hunter",
-      "sourceGroupId": "auto-learning-customer-interactions",
-      "generationMetadataId": "auto-learning-run-2026-07-28",
-      "markdown": "# Top Use Cases\n\n## What Use Cases Are Customers Interested In?\n\n### Theme 1: Automated List Building & AI Prospecting\n\n**Frequency:** 11/22 transcripts across 7 opportunities (Mixpanel, TravelPerk, Branch, Diligent, Udemy, Movable Ink, Zone & Co) | **Confidence:** High\n\nThe dominant use case. AI agent automatically builds target account/contact lists on a recurring basis (typically weekly), with enrichment data attached, ready to push into a sales engagement platform.\n\n**Evidence:**\n\n1. \"Weekly automated prospecting at scale, a hundred leads per rep per week\" — TravelPerk (Seller)\n2. \"Automated weekly list building for BDR cold calling, that's the core ask\" — Diligent (Seller)\n3. \"AI prospecting plus list building with enrichment flowing into Salesforce and Gong Engage\" — Udemy (Seller)\n4. \"AI agent identifies accounts and contacts, enriches with signals, drafts messaging, pushes to Outreach\" — TravelPerk (Seller)\n\n### Theme 2: Data Enrichment & CRM/SEP Integration\n\n**Frequency:** 7/22 transcripts across 6 opportunities (Mixpanel, TravelPerk, Branch, Udemy, Optimizely, Zone & Co) | **Confidence:** High\n\nCustomers call out the need for enrichment (contact data, technographics, intent signals) and seamless integration into Salesforce and sales engagement platforms. CRM cleanup and automated contact creation are recurring sub-themes.\n\n**Evidence:**\n\n1. \"Lead gen plus enrichment flowing into Outreach, and Salesforce campaign attribution\" — Mixpanel (Seller)\n2. \"CRM integration for automated contact creation plus Outreach sequencing\" — TravelPerk (Customer)\n3. \"Automated outbound list building, data enrichment, Demandbase operationalization\" — Branch (Seller)\n4. \"Contact enrichment, outbound support, gifting triggered by job changes\" — Zone & Co (Customer)\n\n### Theme 3: Multi-Channel Outbound Execution (Email, Phone, LinkedIn)\n\n**Frequency:** 5/22 transcripts across 4 opportunities (Mixpanel, TravelPerk, Branch, Diligent) | **Confidence:** High\n\nOutbound execution across multiple channels — not just email. Phone/cold calling, LinkedIn connection requests, and LinkedIn ads are explicitly mentioned.\n\n**Evidence:**\n\n1. \"Multi-channel outbound — email, LinkedIn ads, LinkedIn connection requests, cold calling via Nooks\" — Mixpanel (Customer)\n2. \"Strategic pivot to simpler play-based sequencing, BDR phone and LinkedIn over email\" — Mixpanel (Seller)\n3. \"Phone connection optimization, that's where they pivoted to TitanX\" — Diligent (Seller)\n\n### Theme 4: Account Prioritization & Intent Scoring\n\n**Frequency:** 4/22 transcripts across 2 opportunities (Workato, Optimizely) | **Confidence:** Medium\n\nScoring and ranking accounts using technographics, growth signals, and CIO presence. Includes unifying multiple scoring models and surfacing unassigned accounts.\n\n**Evidence:**\n\n1. \"Update intent scoring model plus job change campaign for enterprise targets\" — Workato (Customer)\n2. \"Separate enterprise scoring model with technographics, CIO presence, growth rate\" — Workato (Seller)\n3. \"Account prioritization plus finding the right people from CRM and LinkedIn\" — Optimizely (Customer)\n4. \"Unified cross-model account prioritization, unassigned account surfacing, CRM cleanup\" — Optimizely (Seller)\n\n### Theme 5: AI-Personalized Messaging & Outreach Drafting\n\n**Frequency:** 3/22 transcripts across 3 opportunities (Mixpanel, TravelPerk, Movable Ink) | **Confidence:** Medium\n\nAI drafts personalized outreach messages using buyer signals and persona mapping, including handling lower-tier accounts with AI-generated outreach.\n\n**Evidence:**\n\n1. \"Agent-powered personalized outbound email using signals plus persona mapping\" — Mixpanel (Seller)\n2. \"AI agent drafts messaging based on enriched signals, pushes directly to Outreach\" — TravelPerk (Seller)\n3. \"AI account research and targeting, handle lower-tier outreach automatically\" — Movable Ink (Customer)\n\n### Theme 6: Closed-Lost Re-engagement & Win-Back Plays\n\n**Frequency:** 3/22 transcripts across 3 opportunities (Mixpanel, TravelPerk, Branch) | **Confidence:** Medium\n\nUsing AI to mine closed-lost opportunities (often via Gong call transcript analysis) to identify re-engagement signals and run win-back campaigns.\n\n**Evidence:**\n\n1. \"Closed-loss re-engagement via call transcripts, mining those for signals\" — Mixpanel (Customer)\n2. \"AI lead gen plus closed-lost re-engagement via Gong transcript analysis\" — TravelPerk (Seller)\n3. \"Closed-loss play, tech rip-and-replace targeting competitive displacements\" — Branch (Seller)\n\n## Emerging and Weak Signals\n\n- **Speed-to-Value / Rapid Time-to-First-Lead** (1 transcript — Mixpanel): \"48-hour lead generation\" as proof point.\n- **Messaging Framework Simplification** (1 transcript — Mixpanel): Product simplifies how messaging is built.\n- **Pricing as Competitive Lever** (1 transcript — Udemy): Pricing model positioned as weapon against incumbents.\n- **Unlimited Predictive Models** (1 transcript — Zone & Co): Unlimited model capacity as differentiator.\n\n## How the Use Cases Connect\n\n**Use cases form a natural funnel:** Account Prioritization → Automated List Building → Data Enrichment & CRM Integration → AI-Personalized Messaging → Multi-Channel Outbound Execution. Most customers want 2-3 capabilities bundled, with list building as the anchor (7/9 opps).\n"
+      "id": "task-5",
+      "label": "5 parallel synthesis sub-passes completed (one per question)",
+      "status": "completed"
     },
     {
-      "id": "auto-learning-value-props",
-      "name": "Your Most Successful Value Props",
-      // "badge": "Auto-learned",
-      "type": "Document",
-      "size": "3.1 KB",
-      "fileType": "txt",
-      "iconSrc": "/assets/images/doctype-icons/ai.png",
-      "updatedAt": "June 11",
-      "sources": [
-        { "name": "Website", "icon": "/assets/images/source_icons/source_web.svg" },
-        { "name": "PDF", "icon": "/assets/images/source_icons/source_pdf.png" },
-        { "name": "Gong", "icon": "/assets/images/source_icons/source_gong.svg" }
-      ],
-      "updatedBy": "Hunter",
-      "sourceGroupId": "auto-learning-customer-interactions",
-      "generationMetadataId": "auto-learning-run-2026-07-28",
-      "markdown": "# Most Successful Value Propositions\n\n## How Do Our Sellers Articulate the Value Proposition?\n\n### Theme 1: Time Savings & Automation of Rep Prospecting\n\n**Frequency:** 7/23 transcripts across 5 opportunities (TravelPerk, Branch, Optimizely, Movable Ink, Udemy) | **Confidence:** High\n\nSellers frame the product as eliminating manual, time-intensive BDR/SDR work, quantifying savings in concrete percentages (30–90%).\n\n**Evidence:**\n\n1. \"Reduce prospecting from 100% to ~20% of rep time, automate 80-90%\" — TravelPerk (Seller)\n2. \"Automates 30-50% of rep list-building, LinkedIn-quality enrichment\" — Branch (Seller)\n3. \"AI agent replicates best SDR's nuance at scale, reads full LinkedIn profiles\" — Optimizely (Seller)\n4. \"Automates research/targeting bottleneck — 50% of BDR time — prioritized lists with verified data\" — Movable Ink (Seller)\n\n### Theme 2: Intelligent Targeting & ICP Scoring\n\n**Frequency:** 7/23 transcripts across 3 opportunities (Mixpanel, TravelPerk, Workato) | **Confidence:** High\n\nICP scoring and signal-based targeting positioned as the core value driver — not personalization, but getting in front of the right accounts.\n\n**Evidence:**\n\n1. \"Core value is targeting — ICP scoring, signals — not message personalization, 80% success through targeting\" — Mixpanel (Seller)\n2. \"Finding best accounts via scoring plus signals, personalized messaging, push to existing workflow tools\" — TravelPerk (Seller)\n3. \"Map TAM/SAM through weighted scoring, combine firmographic fit plus intent signals\" — Workato (Seller)\n4. \"Self-service targeting configuration, FIT score for LinkedIn ad spend optimization\" — Mixpanel (Seller)\n\n### Theme 3: Superior Enrichment & Data Quality\n\n**Frequency:** 6/23 transcripts across 5 opportunities (Branch, Diligent, Udemy, Zone & Co, Optimizely) | **Confidence:** High\n\nWaterfall enrichment across 15 vendors, LinkedIn-sourced data quality, and measurably low bounce rates (sub-1% to sub-2%) as differentiation proof points.\n\n**Evidence:**\n\n1. \"Best-in-class enrichment, in-house AI, waterfall enrichment 15 vendors, sub-1% bounce\" — Udemy (Seller)\n2. \"Waterfall enrichment via 15 vendors — BDRs never learn new tool, intelligent list building\" — Diligent (Seller)\n3. \"LinkedIn-sourced enrichment, sub-2% bounce rate\" — Zone & Co (Seller)\n4. \"Reps wake up Monday with prioritized lists, sub-2% bounce rate, 1-month onboarding\" — Branch (Seller)\n\n### Theme 4: Tool Consolidation & Vendor Displacement\n\n**Frequency:** 6/23 transcripts across 5 opportunities (Branch, Diligent, Workato, Udemy, Zone & Co) | **Confidence:** High\n\nThe platform replaces multiple point solutions (Demandbase, ZoomInfo, Common Room), enabling cost savings and reducing stack complexity.\n\n**Evidence:**\n\n1. \"Cut Demandbase licenses, automate workflow from intent to sequencing\" — Workato (Seller)\n2. \"AI-native vs bolt-on AI — Common Room — transparent vs black box — Actively — tool consolidation\" — Branch (Seller)\n3. \"Leverage against ZoomInfo, tool consolidation\" — Udemy (Seller)\n4. \"Consolidate point solutions, unlimited predictive models\" — Zone & Co (Seller)\n\n### Theme 5: Native CRM & Workflow Integration\n\n**Frequency:** 5/23 transcripts across 4 opportunities (Mixpanel, TravelPerk, Workato, Diligent) | **Confidence:** High\n\nProduct works inside existing tools (Salesforce first, then Outreach/HubSpot), requiring no new UI. Setup friction minimized (30-min install, dedup checks built in).\n\n**Evidence:**\n\n1. \"Seamless integration — Salesforce first then Outreach — dedup checks, respects existing workflows\" — TravelPerk (Seller)\n2. \"Native Salesforce integration eliminates need for separate tools\" — Workato (Seller)\n3. \"Low-risk integration, 30-min setup, opt-out clause, contained scope\" — Diligent (Seller)\n4. \"Automated lead gen engine, self-serve configuration, Salesforce campaign integration\" — Mixpanel (Seller)\n\n### Theme 6: AI-Native Differentiation vs Competitors\n\n**Frequency:** 3/23 transcripts across 3 opportunities (Branch, Diligent, Udemy) | **Confidence:** Medium\n\nSellers contrast the product's AI architecture against competitors — \"AI-native vs bolt-on\", \"transparent vs black box\", \"in-house AI\" — positioning technical superiority as trust and performance differentiator.\n\n**Evidence:**\n\n1. \"AI-native vs bolt-on AI — Common Room — transparent vs black box — Actively\" — Branch (Seller)\n2. \"Trusted advisor, complementary positioning with competitors\" — Diligent (Seller)\n3. \"Best-in-class enrichment, in-house AI, mirrors best SDR\" — Udemy (Seller)\n\n### Theme 7: Low Risk & Easy Onboarding\n\n**Frequency:** 3/23 transcripts across 3 opportunities (Diligent, Branch, TravelPerk) | **Confidence:** Medium\n\nSellers lower perceived risk with short onboarding windows, opt-out clauses, contained scope, and learning from feedback.\n\n**Evidence:**\n\n1. \"Low-risk integration, 30-min setup, opt-out clause, contained scope\" — Diligent (Seller)\n2. \"Sub-2% bounce rate, 1-month onboarding, no new tool\" — Branch (Seller)\n3. \"Automate 80-90%, learn from feedback\" — TravelPerk (Seller)\n\n## Emerging and Weak Signals\n\n- **Messy CRM from M&A / Acquisitions** (2 opps — Diligent, Optimizely): M&A-driven CRM data quality issues as a situational trigger.\n- **VC-Backed Growth Stage** (1 opp — Branch): VC-backed mid-market as growth-stage signal.\n- **Inbound-to-Outbound Transition** (1 opp — Zone & Co): Actively transitioning from 70-80% inbound to outbound.\n\n## Cross-Cutting Value Proposition Insights\n\n1. **Targeting > Messaging:** Sellers consistently lead with targeting/scoring as the primary value driver, with messaging/personalization secondary. As one seller put it: \"80% success through targeting + BDR follow-up.\"\n2. **\"No new tool\" is the meta-theme:** Tool Consolidation, CRM Integration, and Low Risk all orbit a single buyer objection — \"I don't want another tool.\" Sellers address it from multiple angles.\n3. **Competitor positioning varies by deal stage:** Named competitors (Common Room, Actively, Demandbase, ZoomInfo) appear in later-stage deals; earlier-stage calls use generic framing.\n"
-    },
-    // Placeholder — the sixth auto-learning topic, with no findings written
-    // yet. Carries just its H1 so the reader renders a titled, deliberately
-    // empty document instead of a blank white pane that reads as a failure
-    // to load. Drop the synthesis under the heading when it's ready; the
-    // sibling docs above are the shape to follow (## question, then
-    // ### Theme N with frequency, confidence, and numbered evidence).
-    {
-      "id": "auto-learning-voice",
-      "name": "Your Voice: How You Communicate with Customers",
-      // "badge": "Auto-learned",
-      "type": "Document",
-      "size": "2.7 KB",
-      "fileType": "txt",
-      "iconSrc": "/assets/images/doctype-icons/ai.png",
-      "updatedAt": "May 29",
-      "sources": [
-        { "name": "Gmail", "icon": "/assets/images/source_icons/source_gmail.png" },
-        { "name": "Gong", "icon": "/assets/images/source_icons/source_gong.svg" }
-      ],
-      "updatedBy": "Hunter",
-      "sourceGroupId": "auto-learning-customer-interactions",
-      "generationMetadataId": "auto-learning-run-2026-07-28",
-      "markdown": "# Your Voice: How You Communicate with Customers\n"
+      "id": "task-6",
+      "label": "Skill file assembled and saved to durable state (key: customer_discovery_skill_v1)",
+      "status": "completed"
     },
     {
-      "id": "q2-field-marketing",
-      "name": "Top Case Studies",
-      // Filed under the "Sources" tab; every other document defaults to
-      // "Learnings" (see the `tabs` config above).
-      "tab": "sources",
-      // `linked: false` marks the row as non-navigating — the template
-      // renders it as an inert `<div>` (no href, no
-      // `data-sh-knowledge-doc` hook, no chevron affordance) so click /
-      // Enter don't drill in to a detail page. The overflow menu
-      "type": "Slides",
-      "size": "12.8 MB",
-      // `fileType` is the doctype-sprite id resolved at render time
-      // (see `_home_knowledge_list.html` — the row's <use xlink:href>
-      // template dereferences /assets/icons/doctype-sprite/svg/
-      // symbols.svg#<fileType>). `slide` picks the generic blue slide
-      // glyph — format-agnostic — rather than a branded variant like
-      // `ppt` / `keynote` / `gpres`.
-      "fileType": "slide",
-      "updatedAt": "July 21",
-      "updatedBy": "Hunter",
-      "markdown": "# Q2 Field Marketing\n\nOur Q2 field-marketing plan focuses on the accounts that are most likely to move from consideration to evaluation this quarter. Every event, dinner, and executive briefing on this page is aimed at a specific set of accounts and a specific buying moment.\n\n## Priority Segments\n\nQ2 concentrates spend on three segments where the pipeline is strongest and the buying committee is most active:\n\n- **Financial Services** — 40% of budget. Focus on the top 25 named accounts.\n- **Manufacturing** — 35% of budget. Focus on plant-modernization deals.\n- **Healthcare and Life Sciences** — 25% of budget. Focus on the mid-market segment.\n\nAccounts outside these three segments still receive nurture and digital touches, but no field-marketing spend.\n\n## Signature Events\n\n### Executive Roundtable Series\n\nThree cities in Q2 — New York, Chicago, and San Francisco. Each roundtable seats 12 executives, hosted by a customer speaker plus a Salesforce leader. Invitations are curated jointly by the AE and the field-marketing partner.\n\n### Industry Summits\n\nWe are exhibiting at four industry events this quarter. Field-marketing owns booth logistics; AEs own the account list. Every booth staffer runs the shared *Discovery Conversation Guide* to keep messaging consistent.\n\n### Custom Dinners\n\nUp to 15 custom dinners are available for AE-nominated accounts. Each dinner requires an account plan showing at least one active opportunity or a documented executive sponsor.\n\n## Nomination Process\n\nAEs nominate accounts through the shared field-marketing portal. Every nomination captures:\n\n1. Account name and industry\n2. Opportunity stage and expected close date\n3. Named champion and economic buyer\n4. The specific event or asset requested\n5. The business outcome the seller expects from the touch\n\nNominations are reviewed weekly. Approvals are prioritized by pipeline stage, buying-committee depth, and how recently the account was last touched by field.\n\n## Measuring Success\n\nWe measure Q2 field motion on three signals: sourced pipeline, influenced pipeline, and net-new executive contacts added to targeted accounts. Weekly readouts are posted to the *field-marketing-q2* channel every Friday.\n"
-    },
-    // ─────────────────────────────────────────────────────────────
-    // Additional "Sources" tab sample files. Each is `linked: false`
-    // (renders as an inert row — no href, no chevron, no detail page)
-    // and carries a distinct `fileType` doctype-sprite glyph to show
-    // the spread of formats the agent ingests: PPT, PDF, Excel, Word,
-    // Keynote, Google Sheet/Doc, video, CSV, Pages, etc. No `markdown`
-    // since they don't drill in.
-    // ─────────────────────────────────────────────────────────────
-    {
-      "id": "src-sales-pitch-deck",
-      "name": "Sales Pitch Deck — FY26",
-      "tab": "sources",
-      "linked": false,
-      "type": "Presentation",
-      "size": "9.2 MB",
-      "fileType": "ppt",
-      "updatedAt": "Aug 6",
-      "updatedBy": "Hunter"
-    },
-    {
-      "id": "src-competitive-battlecards",
-      "name": "Competitive Battlecards",
-      "tab": "sources",
-      "linked": false,
-      "type": "PDF",
-      "size": "1.4 MB",
-      "fileType": "pdf",
-      "updatedAt": "Aug 3",
-      "updatedBy": "Hunter"
-    },
-    {
-      "id": "src-enterprise-pricing",
-      "name": "Enterprise Pricing & Packaging",
-      "tab": "sources",
-      "linked": false,
-      "type": "Spreadsheet",
-      "size": "512 KB",
-      "fileType": "excel",
-      "updatedAt": "Aug 1",
-      "updatedBy": "Hunter"
-    },
-    {
-      "id": "src-discovery-call-guide",
-      "name": "Discovery Call Guide",
-      "tab": "sources",
-      "linked": false,
-      "type": "Document",
-      "size": "288 KB",
-      "fileType": "word",
-      "updatedAt": "July 29",
-      "updatedBy": "Hunter"
-    },
-    {
-      "id": "src-customer-reference-stories",
-      "name": "Customer Reference Stories",
-      "tab": "sources",
-      "linked": false,
-      "type": "Keynote",
-      "size": "24.1 MB",
-      "fileType": "keynote",
-      "updatedAt": "July 27",
-      "updatedBy": "Hunter"
-    },
-    {
-      "id": "src-roi-calculator",
-      "name": "ROI & Business Case Calculator",
-      "tab": "sources",
-      "linked": false,
-      "type": "Google Sheet",
-      "size": "196 KB",
-      "fileType": "gsheet",
-      "updatedAt": "July 25",
-      "updatedBy": "Hunter"
-    },
-    {
-      "id": "src-product-demo-recording",
-      "name": "Product Demo Recording",
-      "tab": "sources",
-      "linked": false,
-      "type": "Video",
-      "size": "168 MB",
-      "fileType": "mp4",
-      "updatedAt": "July 23",
-      "updatedBy": "Hunter"
-    },
-    {
-      "id": "src-target-account-list",
-      "name": "Target Account List — FY26",
-      "tab": "sources",
-      "linked": false,
-      "type": "CSV",
-      "size": "84 KB",
-      "fileType": "csv",
-      "updatedAt": "July 21",
-      "updatedBy": "Hunter"
-    },
-    {
-      "id": "src-solution-overview",
-      "name": "Solution Overview One-Pager",
-      "tab": "sources",
-      "linked": false,
-      "type": "PDF",
-      "size": "620 KB",
-      "fileType": "pdf",
-      "updatedAt": "July 19",
-      "updatedBy": "Hunter"
-    },
-    {
-      "id": "src-objection-handling",
-      "name": "Objection Handling Playbook",
-      "tab": "sources",
-      "linked": false,
-      "type": "Google Doc",
-      "size": "264 KB",
-      "fileType": "gdoc",
-      "updatedAt": "July 16",
-      "updatedBy": "Hunter"
-    },
-    {
-      "id": "src-brand-guidelines",
-      "name": "Messaging & Brand Guidelines",
-      "tab": "sources",
-      "linked": false,
-      "type": "Pages",
-      "size": "4.6 MB",
-      "fileType": "pages",
-      "updatedAt": "July 13",
-      "updatedBy": "Hunter"
-    },
-    {
-      "id": "high-intent-accounts",
-      "name": "high-intent-accounts",
-      // `hidden: true` opts the doc out of the Knowledge list without
-      // deleting its entry — the row is skipped in
-      // `_home_knowledge_list.html` and the doc stops appearing in the
-      // client-side search index. Flip to `false` (or drop the field)
-      // to bring it back. Kept here rather than deleted so the copy /
-      // markdown / URL can be revived in place.
-      "hidden": true,
-      "type": "Document",
-      "fileType": "txt",
-      "updatedAt": "June 3",
-      "updatedBy": "Hunter",
-      "markdown": "# High-Intent Accounts\n\nA high-intent account is one where the buying committee has demonstrated recent, sustained interest in evaluating a solution. This document defines the signals we use, the thresholds that qualify an account as high-intent, and the plays the seller runs when an account crosses the line.\n\n## Signal Categories\n\nWe group intent signals into four categories. An account can qualify on any single category or a mix.\n\n### First-party Signals\n\n- Repeat product-page views by two or more contacts in the same 14-day window\n- Pricing-page views within the last 7 days\n- Return visits after downloading a `technical brief` or `security overview`\n- Attendance at a Salesforce-hosted event in the last 30 days\n\n### Third-party Signals\n\n- Sustained topic surges on 6sense, Bombora, or G2 in the account's industry taxonomy\n- Named competitor evaluations flagged by our win-loss vendor\n- Job postings that reference our category or a common displacement pattern\n\n### Relationship Signals\n\n- Meetings booked by two or more contacts inside the account in the last 30 days\n- New executive follows on the customer's leadership on LinkedIn\n- Positive replies from the champion inside the last cadence\n\n### Deal Signals\n\n- Any opportunity currently in *Discovery* or *Solution Design* with an economic buyer identified\n- A closed-lost deal within the last 12 months that is now re-engaging\n\n## Qualification Threshold\n\nAn account is considered high-intent when it accumulates **at least four signals across at least two categories** in a rolling 30-day window. Signals older than 30 days are dropped from the score so the definition reflects current momentum, not historical activity.\n\n## Plays We Run\n\n1. Notify the AE and the field-marketing partner within one business day\n2. Prioritize the account for the next available executive briefing\n3. Adjust the seller's outreach cadence to *Accelerated High-Intent* (7 touches over 10 days)\n4. Route the account to the top of the *Ready to Review* queue\n\nHigh-intent status expires 45 days after the last qualifying signal. Sellers can extend the window manually with a documented reason (for example, a scheduled executive meeting).\n\n## What This Definition Excludes\n\nHigh-intent is **not** a lead score. It says nothing about long-term account fit. Fit and intent are scored independently so the seller can prioritize accounts that are both a good fit *and* actively evaluating.\n"
+      "id": "skipped-save-skill",
+      "label": "save_skill tool not available in environment; skill persisted via set_item_state only",
+      "status": "skipped"
     }
-  ]
+  ],
+  "documentAliases": {},
+  "documents": []
 }

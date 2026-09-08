@@ -182,7 +182,7 @@
     // borrowing the macro's "Open workflow", which would promise a
     // detail page.
     var href = record.conversationId
-      ? '/home_conversation.html?id=' + encodeURIComponent(record.conversationId)
+      ? window.SH.userUrl('/home_conversation.html?id=' + encodeURIComponent(record.conversationId))
       : ''
     var body
 

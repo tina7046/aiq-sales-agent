@@ -597,7 +597,10 @@
 
     function unlockMarcusReplyFeed (id) {
       if (id !== 'acct-05-p06') return
-      try { window.sessionStorage.setItem('sh:marcusReplyReady', '1') } catch (e) {}
+      var key = (window.SH && typeof window.SH.storageKey === 'function')
+        ? window.SH.storageKey('sh:marcusReplyReady')
+        : 'sh:marcusReplyReady'
+      try { window.sessionStorage.setItem(key, '1') } catch (e) {}
     }
 
     function setReview (id, status) {

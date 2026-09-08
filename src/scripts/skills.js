@@ -212,7 +212,7 @@
             detail: { source: 'landing' }
           }))
         } catch (_e) { /* CustomEvent unsupported? Skip. */ }
-        window.location.href = '/skill_detail.html?new=1'
+        window.location.href = window.SH.userUrl('/skill_detail.html?new=1')
       })
     }
 

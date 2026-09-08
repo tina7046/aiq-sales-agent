@@ -162,7 +162,7 @@
               <li class="seller-home__skill-detail-breadcrumb-item">
                 <a
                   class="seller-home__skill-detail-breadcrumb-root"
-                  href="{{ breadcrumb.rootHref }}"
+                  href="{{ breadcrumb.rootHref | appUrl }}"
                 >{{ breadcrumb.rootLabel }}</a>
               </li>
               <li
@@ -845,7 +845,7 @@
           <p class="seller-home__knowledge-doc-detail-notfound-description">{{ notFound.description }}</p>
           <a
             class="seller-home__knowledge-doc-detail-notfound-action"
-            href="{{ back.href }}"
+            href="{{ back.href | appUrl }}"
           >{{ notFound.actionLabel }}</a>
         </div>
       </section>
@@ -880,7 +880,8 @@
           "agentLibrary": {{ agentLibrary | tojson | safe }},
           "statusLibrary": {{ statusLibrary | tojson | safe }},
           "tabs":         {{ tabs | tojson | safe }},
-          "detail":       {{ detail | tojson | safe }}
+          "detail":       {{ detail | tojson | safe }},
+          "currentUserName": {{ (currentUser.name if currentUser else '') | tojson | safe }}
         }
       </script>
 

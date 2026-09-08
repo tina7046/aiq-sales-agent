@@ -1,0 +1,756 @@
+// Nima overlay for index.json — briefing, composer, conversations, feed.
+// Replaces Rohan's pack for this page (gulp skips the default overlay
+// when this file exists). Admin persona: org health, Flows, permissions,
+// release updates — not quota or pipeline.
+{
+  "briefing": {
+    "heading": "Hey Nima 👋🏼",
+    "text": "I've been ingesting your org's CRM, email, meetings, and call recordings learning all about your org and sales reps.",
+    "linkPhrase": "4 release updates",
+    "quotaPercent": 65,
+    "quarterDaysRemaining": 33,
+    "atRiskDeals": {
+      "count": 3,
+      "valueUsd": 0,
+      "valueLabel": "47 interviews"
+    },
+    "reEngagedBuyers": {
+      "count": 1
+    },
+    "upcomingMeetings": {
+      "count": 2
+    },
+    "popovers": [
+      {
+        "topicId": "at_risk_deals",
+        "ariaLabel": "Release updates",
+        "description": "These Winter '27 updates are still in Enforced Soon. None of them are enabled in this org yet.",
+        "items": [
+          {
+            "id": "guest-user",
+            "name": "Restrict Guest User Sharing",
+            "value": "Oct 11",
+            "detail": "Experience Cloud site still open"
+          },
+          {
+            "id": "mfa-api",
+            "name": "Require MFA for API Users",
+            "value": "Oct 11",
+            "detail": "4 integration users exempt today"
+          },
+          {
+            "id": "unrestricted-flows",
+            "name": "Disable Unrestricted Flows",
+            "value": "Preview",
+            "detail": "Order Status Notify is unrestricted"
+          },
+          {
+            "id": "psg-recalc",
+            "name": "Permission Set Group Recalc",
+            "value": "Soon",
+            "detail": "Sales Ops PSG request pending"
+          }
+        ],
+        "secondaryAction": {
+          "id": "setup_workflow",
+          "label": "Set up a workflow"
+        },
+        "primaryAction": {
+          "id": "review_deals",
+          "label": "Review Updates"
+        }
+      }
+    ]
+  },
+  "composer": {
+    "placeholder": "Try “What did you learn about us?”",
+    "submitTarget": "/home_conversation.html?id=conv-n-org-health",
+    "samplePrompts": [],
+    "actions": {
+      "start": [
+        {
+          "id": "add",
+          "label": "Add",
+          "icon": "add"
+        },
+        {
+          "id": "skills",
+          "label": "Skills",
+          "iconImage": "/assets/images/nav-icons/skills.png"
+        },
+        {
+          "id": "all_tools",
+          "label": "All tools",
+          "icon": "all"
+        },
+        {
+          "id": "agent",
+          "label": "Agent",
+          "icon": "agent_astro",
+          "menu": {
+            "label": "Choose an agent",
+            "items": [
+              {
+                "id": "hunter",
+                "label": "Hunter Sales Agent",
+                "badgeLabel": "Hunter",
+                "iconImage": "/assets/images/agent-icons/hunter.png",
+                "iconRound": true,
+                "selected": true,
+                "useCase": "Best for admin tasks",
+                "examples": [
+                  "What broke in the org overnight?",
+                  "Which Flows failed in the last 12 hours?",
+                  "Draft a permission set for Sales Ops",
+                  "Which Winter '27 updates are Enforced Soon?",
+                  "Scan guest-user access on Experience Cloud"
+                ]
+              },
+              {
+                "id": "coworker",
+                "label": "Coworker Agent",
+                "badgeLabel": "Coworker",
+                "iconImage": "/assets/images/agent-icons/coworker.svg",
+                "useCase": "Best for general tasks",
+                "examples": [
+                  "Plan my work for today",
+                  "Show me trending support cases this month",
+                  "Which cases should I follow-up on?",
+                  "Which campaigns are running?",
+                  "Draft new marketing emails"
+                ]
+              },
+              {
+                "id": "custom",
+                "label": "Custom Agents",
+                "icon": "custom_notification",
+                "submenu": [
+                  {
+                    "id": "custom-1",
+                    "label": "Custom agent 1",
+                    "icon": "custom_notification"
+                  },
+                  {
+                    "id": "custom-2",
+                    "label": "Custom agent 2",
+                    "icon": "custom_notification"
+                  },
+                  {
+                    "id": "custom-3",
+                    "label": "Custom agent 3",
+                    "icon": "custom_notification"
+                  },
+                  {
+                    "id": "custom-4",
+                    "label": "Custom agent 4",
+                    "icon": "custom_notification"
+                  },
+                  {
+                    "id": "custom-5",
+                    "label": "Custom agent 5",
+                    "icon": "custom_notification"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "end": []
+    }
+  },
+  "conversations": {
+    "conv-n-org-health": {
+      "id": "conv-n-org-health",
+      "title": "Drafted plan to setup Hunter",
+      "subtitle": "Setup Plan",
+      "workflow": {
+        "id": "sk-daily-pipeline-snapshot",
+        "label": "Hunter setup"
+      },
+      "status": "in_progress",
+      "recentLabel": "Drafted plan to setup Hunter",
+      "messages": [
+        {
+          "id": "hs-lead",
+          "type": "agent",
+          "text": "Here's a **draft plan** to finish configuring Hunter for your org, Nima. Hunter will learn your GTM motion from **decision traces on real opportunities** — steering toward the most recent deals from your strongest sellers and healthiest customers. Nothing starts until you approve."
+        },
+        {
+          "id": "hs-sources",
+          "type": "insight",
+          "severity": "positive",
+          "heading": "Data already ingested",
+          "text": "Hunter used this corpus to draft the plan. Approval kicks off the long-running learning job on top of it.",
+          "tableTitle": "Sources",
+          "table": {
+            "id": "hs-sources-table",
+            "ariaLabel": "Ingested data sources",
+            "columns": [
+              {
+                "id": "source",
+                "label": "Source"
+              },
+              {
+                "id": "volume",
+                "label": "Volume"
+              },
+              {
+                "id": "window",
+                "label": "Window"
+              }
+            ],
+            "rows": [
+              {
+                "id": "hs-src-crm",
+                "source": "CRM",
+                "volume": "3,412 opps · 18,204 activities · 172 users",
+                "window": "24 months"
+              },
+              {
+                "id": "hs-src-email",
+                "source": "Email",
+                "volume": "1.2M messages · 172 mailboxes",
+                "window": "12 months"
+              },
+              {
+                "id": "hs-src-meetings",
+                "source": "Meetings",
+                "volume": "41,908 events with recordings",
+                "window": "12 months"
+              },
+              {
+                "id": "hs-src-calls",
+                "source": "Call recordings",
+                "volume": "8,214 Gong calls",
+                "window": "6 months"
+              }
+            ]
+          }
+        },
+        {
+          "id": "hs-traces",
+          "type": "insight",
+          "severity": "positive",
+          "heading": "Learning set — 430 real opportunities",
+          "text": "Once you approve, Hunter traces **430** recent opportunities from your strongest sellers and healthiest customers. Every call, email, note, CRM history, and seller action on those deals becomes a decision trace for GTM learning — not a random sample of the whole book.",
+          "stats": [
+            {
+              "label": "Opportunities to trace",
+              "value": "430",
+              "detail": "Most recent, strongest sellers"
+            },
+            {
+              "label": "Signals per opp",
+              "value": "5",
+              "detail": "Call, email, note, CRM, actions"
+            }
+          ],
+          "bottomLine": "**Bottom line:** Hunter learns from how your best reps actually win with healthy customers, then uses that to configure voice, workflows, and briefing cadences."
+        },
+        {
+          "id": "hs-phase-1",
+          "type": "insight",
+          "severity": "neutral",
+          "rank": 1,
+          "heading": "Phase 1 — Org learning (~2 hours)",
+          "text": "Build the org's GTM motion from those traces: stages, win/loss patterns, what customers buy, meeting rhythm, and house voice.",
+          "tableTitle": "Org learning",
+          "table": {
+            "id": "hs-phase-1-table",
+            "ariaLabel": "Phase 1 org learning steps",
+            "columns": [
+              {
+                "id": "step",
+                "label": "Step"
+              },
+              {
+                "id": "detail",
+                "label": "What Hunter will do"
+              }
+            ],
+            "rows": [
+              {
+                "id": "hs-p1-01",
+                "step": "Sales taxonomy",
+                "detail": "Pipeline stages, sales motions, deal shapes, industry segmentation"
+              },
+              {
+                "id": "hs-p1-02",
+                "step": "Win / loss patterns",
+                "detail": "Moves and messaging that separate Closed Won from Closed Lost"
+              },
+              {
+                "id": "hs-p1-03",
+                "step": "What customers buy",
+                "detail": "Discovery transcripts on Closed Won: problem, why-now, product, value prop, ICP"
+              },
+              {
+                "id": "hs-p1-04",
+                "step": "Meeting rhythm",
+                "detail": "Cadence per stage, discovery quality, executive engagement"
+              },
+              {
+                "id": "hs-p1-05",
+                "step": "Org voice",
+                "detail": "House tone from customer-facing email and top-performer style"
+              }
+            ]
+          }
+        },
+        {
+          "id": "hs-phase-2",
+          "type": "insight",
+          "severity": "neutral",
+          "rank": 2,
+          "heading": "Phase 2 — Per-rep configuration (~1 hour)",
+          "text": "After org patterns land, Hunter builds a voice profile, selling style, and working rhythm for each rep.",
+          "tableTitle": "Per-rep configuration",
+          "table": {
+            "id": "hs-phase-2-table",
+            "ariaLabel": "Phase 2 per-rep steps",
+            "columns": [
+              {
+                "id": "step",
+                "label": "Step"
+              },
+              {
+                "id": "detail",
+                "label": "What Hunter will do"
+              }
+            ],
+            "rows": [
+              {
+                "id": "hs-p2-01",
+                "step": "Voice profile",
+                "detail": "Tone, structure, sign-off, phrasing from outbound email"
+              },
+              {
+                "id": "hs-p2-02",
+                "step": "Selling style",
+                "detail": "Objection handling, discovery depth, follow-up SLA, deal velocity"
+              },
+              {
+                "id": "hs-p2-03",
+                "step": "Working rhythm",
+                "detail": "Meeting load, response times, pipeline shape"
+              }
+            ]
+          }
+        },
+        {
+          "id": "hs-phase-3",
+          "type": "insight",
+          "severity": "neutral",
+          "rank": 3,
+          "heading": "Phase 3 — Workflow suggestions",
+          "text": "Suggested workflows Hunter will offer once learning completes. You can pause any of them globally or per rep from Home.",
+          "tableTitle": "Workflows",
+          "table": {
+            "id": "hs-phase-3-table",
+            "ariaLabel": "Phase 3 workflow suggestions",
+            "columns": [
+              {
+                "id": "workflow",
+                "label": "Workflow"
+              },
+              {
+                "id": "detail",
+                "label": "What it does"
+              }
+            ],
+            "rows": [
+              {
+                "id": "hs-p3-01",
+                "workflow": "Burndown list",
+                "detail": "Top prospects to prioritize each day"
+              },
+              {
+                "id": "hs-p3-02",
+                "workflow": "Daily meeting prep",
+                "detail": "Briefs before every scheduled meeting"
+              },
+              {
+                "id": "hs-p3-03",
+                "workflow": "Weekly pipeline review",
+                "detail": "Deals at risk, deals with movement, deals to escalate"
+              },
+              {
+                "id": "hs-p3-04",
+                "workflow": "Follow-up SLA",
+                "detail": "Flags outreach gaps against the org baseline"
+              },
+              {
+                "id": "hs-p3-05",
+                "workflow": "Similar-account prospecting",
+                "detail": "Pattern-matches closed-won accounts"
+              }
+            ]
+          }
+        },
+        {
+          "id": "hs-gov",
+          "type": "insight",
+          "severity": "warning",
+          "heading": "Governance and schedule",
+          "text": "Hunter will **not** write to CRM without an explicit rep-side approval, and will **not** send email on a rep's behalf — only drafts held for review. PII redaction applies at ingest and inference. You can pause any workflow globally or per rep from Home at any time.",
+          "bottomLine": "**Kickoff:** immediately on approval. **Duration:** 3–4 hours. Hunter DMs you when Phase 1 completes, then again when Phase 2 completes so you can review org-level learnings and roll out to reps.",
+          "footnote": "On approval this plan is snapshotted as the org's Hunter configuration record, then the learning job starts."
+        },
+        {
+          "id": "hs-activity",
+          "type": "workflow_activity",
+          "workflowLabel": "Setup plan drafted",
+          "workflowIcon": "apps",
+          "statusText": "Pending admin approval"
+        },
+        {
+          "id": "hs-approve",
+          "type": "agent",
+          "text": "Approve this plan to snapshot the configuration and start learning.",
+          "actions": [
+            {
+              "id": "approve-start",
+              "label": "Approve & start"
+            }
+          ]
+        }
+      ],
+      "opening": {
+        "skipThinking": true,
+        "stages": [
+          {
+            "id": "hs-open-01",
+            "thinkingMs": 0,
+            "messageIds": [
+              "hs-lead",
+              "hs-sources",
+              "hs-traces",
+              "hs-phase-1",
+              "hs-phase-2",
+              "hs-phase-3",
+              "hs-gov",
+              "hs-activity",
+              "hs-approve"
+            ]
+          }
+        ]
+      },
+      "scriptedTurns": []
+    },
+    "conv-n-permset": {
+      "id": "conv-n-permset",
+      "title": "Drafted Sales Ops permission set",
+      "subtitle": "User Access",
+      "workflow": {
+        "id": "sk-data-sourcing",
+        "label": "User Access Review"
+      },
+      "status": "in_progress",
+      "recentLabel": "Drafted Sales Ops permission set",
+      "runHistory": {
+        "label": "Run history",
+        "cadence": "weekly",
+        "headerTitle": "User Access",
+        "runs": [
+          {
+            "runId": "conv-n-permset-run-1",
+            "status": "completed",
+            "label": "September 8 at 7:30 AM",
+            "period": "Sep 1 - Sep 8",
+            "startedAt": "2026-09-08T07:30:00-07:00",
+            "messageId": null
+          }
+        ]
+      },
+      "messages": [
+        {
+          "id": "np-lead",
+          "type": "agent",
+          "text": "Sales Ops has been waiting **11 days** on a permission set group. Six users still can’t edit Quote, and two of them opened cases this week. I drafted a group that clones AE Edit plus Quote — it is **not assigned** until you approve."
+        },
+        {
+          "id": "np-table",
+          "type": "insight",
+          "severity": "warning",
+          "rank": 1,
+          "heading": "6 Sales Ops users blocked on Quote",
+          "text": "All six are in the AE profile today. None of them should keep Modify All on Opportunity — that’s the over-grant in the current case-by-case perm sets.",
+          "tableTitle": "Pending — Sales Ops Permission Set Group",
+          "table": {
+            "id": "np-users",
+            "ariaLabel": "Users waiting on Sales Ops access",
+            "columns": [
+              {
+                "id": "user",
+                "label": "User"
+              },
+              {
+                "id": "role",
+                "label": "Role"
+              },
+              {
+                "id": "need",
+                "label": "Need"
+              },
+              {
+                "id": "waiting",
+                "label": "Waiting",
+                "align": "right"
+              }
+            ],
+            "rows": [
+              {
+                "id": "np-u-01",
+                "user": "Priya Chen",
+                "role": "Sales Ops Manager",
+                "need": "Quote edit + Opportunity read",
+                "waiting": {
+                  "value": "11d",
+                  "tone": "critical"
+                }
+              },
+              {
+                "id": "np-u-02",
+                "user": "Jonah Pell",
+                "role": "Sales Ops Analyst",
+                "need": "Quote edit",
+                "waiting": "9d"
+              },
+              {
+                "id": "np-u-03",
+                "user": "Maya Ellison",
+                "role": "RevOps",
+                "need": "Quote edit + Reports",
+                "waiting": "6d"
+              },
+              {
+                "id": "np-u-04",
+                "user": "Chris Adeyemi",
+                "role": "Sales Ops Analyst",
+                "need": "Quote edit",
+                "waiting": "6d"
+              },
+              {
+                "id": "np-u-05",
+                "user": "Elena Voss",
+                "role": "Deal Desk",
+                "need": "Quote edit + Price book",
+                "waiting": "4d"
+              },
+              {
+                "id": "np-u-06",
+                "user": "Sam Okonkwo",
+                "role": "Sales Ops Analyst",
+                "need": "Quote edit",
+                "waiting": "3d"
+              }
+            ]
+          },
+          "bottomLine": "**Bottom line:** One permission set group replaces the six one-off sets. I kept Modify All off Opportunity."
+        },
+        {
+          "id": "np-activity",
+          "type": "workflow_activity",
+          "workflowLabel": "User access review completed",
+          "workflowIcon": "apps",
+          "statusText": "6 users · 1 permission set group (draft)"
+        }
+      ],
+      "opening": {
+        "skipThinking": true,
+        "stages": [
+          {
+            "id": "np-open-01",
+            "thinkingMs": 0,
+            "messageIds": [
+              "np-lead",
+              "np-table",
+              "np-activity"
+            ]
+          }
+        ]
+      },
+      "scriptedTurns": []
+    }
+  },
+  "feed": {
+    "items": [
+      {
+        "id": "ri-n-org-health",
+        "conversationId": "conv-n-org-health",
+        "title": "Drafted plan to setup Hunter",
+        "titles": {
+          "running": "Drafting plan to setup Hunter",
+          "neutral": "Draft plan to setup Hunter"
+        },
+        "cadence": "One time",
+        "stepProgress": "1 of 3 steps",
+        "nextRun": "No next run",
+        "state": "completed",
+        "outputs": [
+          {
+            "icon": "doc-green",
+            "label": "11 Knowledge",
+            "scheduledIcon": "doc-grey",
+            "scheduledLabel": "Knowledge"
+          },
+          {
+            "icon": "doc-yellow",
+            "label": "16 Skills",
+            "scheduledIcon": "doc-grey",
+            "scheduledLabel": "Skills"
+          }
+        ],
+        "workflow": {
+          "id": "sk-daily-pipeline-snapshot",
+          "label": ""
+        }
+      },
+      {
+        "id": "ri-n-permset",
+        "conversationId": "conv-n-permset",
+        "title": "Draft Sales Ops permission set",
+        "titles": {
+          "running": "Drafting Sales Ops permission set",
+          "neutral": "Draft Sales Ops permission set"
+        },
+        "cadence": "Weekly",
+        "stepProgress": "1 of 3 steps",
+        "nextRun": "Next run in 5 days",
+        "lastRun": "Last run today",
+        "state": "scheduled",
+        "outputs": [
+          {
+            "icon": "doc-grey",
+            "label": "Access requests"
+          }
+        ],
+        "workflow": {
+          "id": "sk-data-sourcing",
+          "label": ""
+        }
+      },
+      {
+        "id": "ri-n-release",
+        "title": "Winter ’27 release-update brief",
+        "titles": {
+          "running": "Preparing your Winter ’27 brief",
+          "neutral": "Winter ’27 release-update brief"
+        },
+        "cadence": "Weekly",
+        "stepProgress": "1 of 3 steps",
+        "nextRun": "Next run Friday at 4:00 PM",
+        "lastRun": "Last run Friday",
+        "state": "scheduled",
+        "outputs": [
+          {
+            "icon": "doc-grey",
+            "label": "Release-update brief"
+          }
+        ],
+        "workflow": {
+          "id": "sk-weekly-exec-brief",
+          "label": ""
+        }
+      },
+      {
+        "id": "run-n-guest-user",
+        "title": "Scan guest-user access",
+        "titles": {
+          "running": "Scanning guest-user access",
+          "neutral": "Scan guest-user access"
+        },
+        "cadence": "Daily",
+        "stepProgress": "3 of 5 steps",
+        "nextRun": "Next run tomorrow at 7:00 AM",
+        "lastRun": "Last run Monday",
+        "state": "scheduled",
+        "outputs": [
+          {
+            "icon": "doc-grey",
+            "label": "Guest-user objects"
+          }
+        ],
+        "workflow": {
+          "id": "sk-account-research",
+          "label": ""
+        }
+      }
+    ],
+    "itemsParked": [
+      {
+        "id": "fail-n-slack",
+        "title": "Post org health to #admin-alerts",
+        "titles": {
+          "running": "Posting org health to #admin-alerts",
+          "neutral": "Post org health to #admin-alerts"
+        },
+        "cadence": "Weekdays",
+        "stepProgress": "1 of 3 steps",
+        "lastRun": "Last run today at 7:00 AM",
+        "state": "failed",
+        "error": "Slack connection expired — 0 of 1 posts delivered",
+        "retryOutput": {
+          "icon": "doc",
+          "label": "Retrying Slack post"
+        },
+        "workflow": {
+          "id": "",
+          "label": ""
+        }
+      },
+      {
+        "id": "pau-n-unused-reports",
+        "title": "Clean up unused reports",
+        "titles": {
+          "running": "Cleaning up unused reports",
+          "neutral": "Clean up unused reports"
+        },
+        "cadence": "Weekly",
+        "stepProgress": "1 of 3 steps",
+        "nextRun": "Next run Wednesday at 9:00 AM",
+        "lastRun": "Last run Wednesday",
+        "state": "paused",
+        "workflow": {
+          "id": "",
+          "label": ""
+        }
+      }
+    ],
+    "tasks": [
+      {
+        "id": "tk-n-01",
+        "title": "Fix Order Status Notify fault path",
+        "description": "47 failed interviews overnight; null Email on Contact. Fault email still points at a deactivated user.",
+        "icon": {
+          "sprite": "task"
+        },
+        "workflow": {
+          "id": "sk-daily-pipeline-snapshot",
+          "label": "Org Health Snapshot"
+        }
+      },
+      {
+        "id": "tk-n-02",
+        "title": "Approve Sales Ops permission set group",
+        "description": "Six users blocked on Quote edit for 11 days. Draft clones AE Edit plus Quote — Modify All stays off.",
+        "icon": {
+          "sprite": "task"
+        },
+        "workflow": {
+          "id": "sk-data-sourcing",
+          "label": "User Access Review"
+        }
+      },
+      {
+        "id": "tk-n-03",
+        "title": "Confirm UAT sandbox refresh Friday 6pm",
+        "description": "Full copy is queued; Sales Ops asked to keep the Order Status Notify draft in UAT through Monday.",
+        "icon": {
+          "sprite": "task"
+        }
+      }
+    ]
+  }
+}

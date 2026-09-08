@@ -1,0 +1,94 @@
+// Nima overlay for scheduled.json — workflows[]. Chrome stays in
+// src/views/data/scheduled.json. Admin schedules; skill ids point at
+// the shared (Rohan) catalog so Knowledge/Skills stay the same.
+{
+  "workflows": [
+    {
+      "id": "wf-n-org-health",
+      "title": "Weekday Org Health Snapshot",
+      "cadence": "Weekdays at 7:00 AM · Next run tomorrow",
+      "status": "scheduled",
+      "frequency": "Weekdays",
+      "time": "7:00 AM",
+      "timezone": "PT",
+      "nextRun": "Tomorrow at 7:00 AM",
+      "delivery": "#admin-alerts on Slack",
+      "skillId": "sk-daily-pipeline-snapshot",
+      "skillName": "Org Health Snapshot",
+      "instructions": "Review overnight Flow interviews, Winter '27 release updates still in Enforced Soon, and guest-user sharing drift on Experience Cloud. Flag anything that will break before standup. Post a short brief to #admin-alerts.",
+      "createdAt": "12th Aug 9:00AM",
+      "createdBy": "You",
+      "lastRunId": "run-n-org-health-0908",
+      "lastRunStatus": "Completed",
+      "lastRunAt": "today at 7:00 AM",
+      "chatId": "conv-n-org-health"
+    },
+    {
+      "id": "wf-n-guest-user",
+      "title": "Nightly guest-user access scan",
+      "cadence": "Running now · Started at 7:00 AM",
+      "status": "running",
+      "frequency": "Nightly",
+      "time": "7:00 AM",
+      "timezone": "PT",
+      "nextRun": "Tomorrow at 7:00 AM",
+      "delivery": "Creates tasks in Salesforce",
+      "skillId": "sk-account-research",
+      "skillName": "Guest User Access Scan",
+      "instructions": "Compare guest-user object and field access on the Acme Support Experience Cloud site to last month’s lock. Flag any Read or Edit that came back. Keep the list to objects the site actually uses.",
+      "createdAt": "1st Sep 10:00AM",
+      "createdBy": "You",
+      "lastRunId": "",
+      "lastRunStatus": "Running",
+      "lastRunAt": "today at 7:00 AM",
+      "chatId": ""
+    },
+    {
+      "id": "wf-n-slack-alerts",
+      "title": "Daily org-health post to #admin-alerts",
+      "cadence": "Slack connection expired",
+      "reconnect": {
+        "message": "Slack connection expired",
+        "description": "This schedule couldn’t deliver today’s update and won’t run again until Slack is reconnected.",
+        "label": "Reconnect",
+        "linkLabel": "Reconnect Slack",
+        "ariaLabel": "Reconnect Slack for daily org-health"
+      },
+      "status": "failed",
+      "frequency": "Weekdays",
+      "time": "7:00 AM",
+      "timezone": "PT",
+      "nextRun": "Paused until reconnected",
+      "delivery": "#admin-alerts on Slack",
+      "skillId": "sk-daily-pipeline-snapshot",
+      "skillName": "Org Health Snapshot",
+      "instructions": "Post overnight Flow failures and any Enforced Soon release updates to #admin-alerts.",
+      "createdAt": "Aug 18 at 3:00 PM",
+      "createdBy": "You",
+      "lastRunId": "run-n-slack-0908",
+      "lastRunStatus": "Failed",
+      "lastRunAt": "today at 7:00 AM",
+      "chatId": ""
+    },
+    {
+      "id": "wf-n-unused-reports",
+      "title": "Weekly unused-report cleanup",
+      "cadence": "Paused · Previously ran Wednesdays at 9:00 AM",
+      "status": "paused",
+      "frequency": "Wednesdays",
+      "time": "9:00 AM",
+      "timezone": "PT",
+      "nextRun": "—",
+      "delivery": "Emails you",
+      "skillId": "sk-weekly-exec-brief",
+      "skillName": "Unused Report Cleanup",
+      "instructions": "List reports with no run in 90 days, excluding anything in the Finance folder. Do not delete until Nima unpauses.",
+      "createdAt": "20th Jul 11:00AM",
+      "createdBy": "You",
+      "lastRunId": "",
+      "lastRunStatus": "Completed",
+      "lastRunAt": "Aug 27 at 9:00 AM",
+      "chatId": ""
+    }
+  ]
+}

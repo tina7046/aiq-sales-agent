@@ -4,8 +4,7 @@
 .memory-card {
   display: flex;
   flex-direction: column;
-  gap: var(--slds-g-spacing-4, 1rem), ;
-  border-radius: .75rem;
+  gap: var(--slds-g-spacing-4, 1rem);
   width: 800px;
   padding: var(--slds-g-spacing-3) var(--slds-g-spacing-4);
   border-radius: var(--slds-g-radius-border-3);
@@ -51,10 +50,9 @@
 }
 
 .memory-card-body {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  gap: var(--slds-g-spacing-5, 1.5rem);
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-4, 1rem);
   min-width: 0;
 }
 
@@ -67,6 +65,17 @@
   }
 }
 
-.memory-card-aside {
+.memory-card-sources {
   min-width: 0;
+
+  // Class `display: flex` on the Knowledge list would otherwise beat
+  // the UA `[hidden]` rule and flash every row before JS filters.
+  .seller-home__knowledge-doc-list[hidden] {
+    display: none;
+  }
+}
+
+.cal-cell.is-selected {
+  outline: 2px solid var(--color-blue-400, #0969da);
+  outline-offset: 1px;
 }

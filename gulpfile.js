@@ -15,6 +15,7 @@ const del = require('del')
 const browserSync = require('browser-sync')
 const JSON5 = require('json5')
 const nunjucks = require('nunjucks')
+const { SELLER_HTML, prefixAppUrl, redirectLocation } = require('./user-routes')
 
 const $ = require('gulp-load-plugins')({
   postRequireTransforms: {
@@ -43,14 +44,101 @@ gulp.task('favicon', () =>
 
 const getSharedData = () => JSON5.parse(fs.readFileSync('./src/views/data/shared.json', 'utf8'))
 
+const getUsersCatalog = () => {
+  try {
+    return JSON5.parse(fs.readFileSync('./src/views/data/users.json', 'utf8'))
+  } catch (e) {
+    return { defaultUserId: 'rohan', users: [] }
+  }
+}
+
+// Set for the duration of one Nunjucks compile pass so `appUrl`
+// prefixes in-app hrefs with `/u/<id>/`. Lab pages compile with
+// this null and emit today's unprefixed paths (then the static
+// server redirects leftover seller URLs to the default user).
+let compileUser = null
+
+function userById (catalog, id) {
+  const users = (catalog && catalog.users) || []
+  for (let i = 0; i < users.length; i++) {
+    if (users[i] && users[i].id === id) return users[i]
+  }
+  return users[0] || null
+}
+
+function defaultUser (catalog) {
+  return userById(catalog, catalog && catalog.defaultUserId) || (catalog.users && catalog.users[0]) || null
+}
+
+function readJson5File (filePath) {
+  try {
+    return JSON5.parse(fs.readFileSync(filePath, 'utf8'))
+  } catch (e) {
+    return null
+  }
+}
+
+// Overlay arrays replace; overlay objects merge key-by-key. That lets
+// `users/<id>/index.json` own `feed.items` without copying feed chrome
+// (headings, filter, outputTypes) into every persona pack.
+function deepMerge (base, overlay) {
+  if (overlay === undefined) return base
+  if (overlay === null || typeof overlay !== 'object' || Array.isArray(overlay)) {
+    return overlay
+  }
+  const out = (base && typeof base === 'object' && !Array.isArray(base))
+    ? Object.assign({}, base)
+    : {}
+  Object.keys(overlay).forEach((key) => {
+    out[key] = deepMerge(out[key], overlay[key])
+  })
+  return out
+}
+
+function pageDataPath (name) {
+  return path.resolve('./src/views/data/' + name + '.json')
+}
+
+function userOverlayPath (userId, name) {
+  return path.resolve('./src/views/data/users/' + userId + '/' + name + '.json')
+}
+
+// Shared chrome + the persona overlay for this compile.
+// A non-default user who authored `users/<id>/<name>.json` replaces
+// the default pack for that page (conversation maps are objects;
+// merging on top of Rohan would keep Rohan's ids). Missing overlay
+// files still fall back to the default user so a thin pack can omit
+// a page.
+function loadPageData (name, userId) {
+  const shared = readJson5File(pageDataPath(name))
+  if (!shared) return null
+  const catalog = getUsersCatalog()
+  const defaultId = catalog.defaultUserId
+  const overlayId = userId || defaultId
+  const defaultOverlay = defaultId ? readJson5File(userOverlayPath(defaultId, name)) : null
+  const userOverlay = (overlayId && defaultId && overlayId !== defaultId)
+    ? readJson5File(userOverlayPath(overlayId, name))
+    : null
+  const overlay = (overlayId !== defaultId && userOverlay)
+    ? userOverlay
+    : defaultOverlay
+  return overlay ? deepMerge(shared, overlay) : shared
+}
+
 // Get data from the corresponding filename
 // e.g. inject data/foo.json into foo.html
 const getData = (file) => {
-  const dataPath = path.resolve('./src/views/data/' + path.basename(file.path, '.html') + '.json')
-  let data = { shared: getSharedData() }
+  const catalog = getUsersCatalog()
+  const pageName = path.basename(file.path, '.html')
+  let data = {
+    shared: getSharedData(),
+    usersCatalog: catalog,
+    currentUser: compileUser || defaultUser(catalog)
+  }
 
   try {
-    data = Object.assign(data, JSON5.parse(fs.readFileSync(dataPath, 'utf8')))
+    const page = loadPageData(pageName, compileUser && compileUser.id)
+    if (page) data = Object.assign(data, page)
   } catch (e) {
     // Don't fail if the JSON is badly formed or the file doesn't exist
   } finally {
@@ -77,6 +165,8 @@ const nunjucksEnv = new nunjucks.Environment(
   new nunjucks.FileSystemLoader(path.join(__dirname, 'src/views'), { noCache: true })
 )
 nunjucksEnv.addFilter('tojson', (obj) => JSON.stringify(obj))
+nunjucksEnv.addFilter('appUrl', (href) => prefixAppUrl(compileUser && compileUser.id, href))
+nunjucksEnv.addGlobal('appUrl', (href) => prefixAppUrl(compileUser && compileUser.id, href))
 // `emphasis` — `**bold**` and `_italic_` in a JSON copy string become
 // `<strong>` and `<em>`. Copy in this project is often pasted from a
 // markdown draft, and a sentence written as prose is far easier to edit
@@ -132,15 +222,15 @@ nunjucksEnv.addFilter('distinctSources', (signals) => {
   }
   return out
 })
-// `readData("<name>")` — read src/views/data/<name>.json at build time so a
-// template can reach another page's data without copying keys into
-// shared.json (which loads on every page). Used by home_conversation.html to
-// pull the `conversations` registry out of index.json, keeping Seller Home
-// and the conversation drill-in on one source of truth. Returns null on any
-// error so callers can fall back with `{% if %}` instead of failing the build.
+// `readData("<name>")` — load src/views/data/<name>.json and deep-merge
+// src/views/data/users/<id>/<name>.json for the current compile user
+// (falling back to the default persona). Used by home_conversation.html
+// to pull conversations out of index without copying keys into
+// shared.json. Returns null on any error so callers can fall back with
+// `{% if %}` instead of failing the build.
 nunjucksEnv.addGlobal('readData', (name) => {
   try {
-    return JSON5.parse(fs.readFileSync(path.resolve('./src/views/data/' + name + '.json'), 'utf8'))
+    return loadPageData(name, compileUser && compileUser.id)
   } catch (e) {
     return null
   }
@@ -344,17 +434,51 @@ nunjucksEnv.addGlobal('inlineSvg', (name, attrs, idPrefix) => {
   return svg.replace(/<svg\b/, () => '<svg' + extra)
 })
 
-gulp.task('views', () =>
-  gulp
-    .src([
-      'src/views/**/*.html',
-      '!src/views/**/_*.html'
-    ], { base: 'src/views' })
+const SELLER_VIEW_GLOBS = SELLER_HTML.map((name) => 'src/views/' + name)
+const LAB_VIEW_GLOBS = [
+  'src/views/**/*.html',
+  '!src/views/**/_*.html'
+].concat(SELLER_VIEW_GLOBS.map((glob) => '!' + glob))
+
+function compileHtml (globs, dest, user) {
+  compileUser = user || null
+  return gulp
+    .src(globs, { base: 'src/views', allowEmpty: true })
     .pipe($.plumber())
     .pipe($.data(getData))
     .pipe($.nunjucks.compile(null, { env: nunjucksEnv }))
-    .pipe(gulp.dest('dist'))
-)
+    .pipe(gulp.dest(dest))
+}
+
+function compileLabViews () {
+  return compileHtml(LAB_VIEW_GLOBS, 'dist', null)
+}
+
+function compileSellerViews (user) {
+  const task = function compileOneUser () {
+    return compileHtml(SELLER_VIEW_GLOBS, 'dist/u/' + user.id, user)
+  }
+  task.displayName = 'views:u:' + user.id
+  return task
+}
+
+function sellerViewTasks () {
+  const catalog = getUsersCatalog()
+  const users = (catalog.users || []).filter((u) => u && u.id)
+  if (!users.length) {
+    return [compileSellerViews({ id: 'rohan', name: 'Rohan' })]
+  }
+  return users.map(compileSellerViews)
+}
+
+function removeRootSellerHtml (done) {
+  const leftovers = SELLER_HTML.map((name) => path.join('dist', name))
+  del(leftovers, { force: false }).then(function () { done() }, done)
+}
+
+gulp.task('views', function compileViews (done) {
+  gulp.series(compileLabViews, ...sellerViewTasks(), removeRootSellerHtml)(done)
+})
 
 gulp.task('scripts', () =>
   gulp
@@ -400,6 +524,16 @@ gulp.task('default',
         // page — and with it the previous ?v= asset references, so bumped
         // CSS/JS never gets fetched. Force documents to never be cached.
         middleware: [
+          function redirectSellerRoot (req, res, next) {
+            const catalog = getUsersCatalog()
+            const loc = redirectLocation(req.url, catalog.defaultUserId)
+            if (loc) {
+              res.writeHead(302, { Location: loc })
+              res.end()
+              return
+            }
+            next()
+          },
           function (req, res, next) {
             if (/\.html(\?|$)/.test(req.url) || req.url === '/' || !/\.[a-z0-9]+(\?|$)/i.test(req.url)) {
               res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
@@ -414,7 +548,7 @@ gulp.task('default',
     gulp.watch('src/styles/**/*.scss', gulp.series('styles'))
     gulp.watch([
       'src/views/**/*.html',
-      'src/views/data/*.json',
+      'src/views/data/**/*.json',
 
       // `inlineSvg` copies these into the markup at build time, so a
       // rebuilt illustration only reaches the page if the views rebuild

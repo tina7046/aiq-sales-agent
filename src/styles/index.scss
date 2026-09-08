@@ -101,6 +101,12 @@ $static-font-path: '/assets/fonts/webfonts';
   --modal-scale: 0.96;
   --modal-scale-close: 0.96;
   --modal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Menu dropdown — header user switcher */
+  --dropdown-open-dur: 250ms;
+  --dropdown-close-dur: 150ms;
+  --dropdown-pre-scale: 0.97;
+  --dropdown-closing-scale: 0.99;
+  --dropdown-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 // ── Icon swap ─────────────────────────────────────────────────────────
@@ -672,4 +678,78 @@ $static-font-path: '/assets/fonts/webfonts';
     animation: none !important;
   }
 }
+
+// ── Menu dropdown (transitions-dev 05-menu-dropdown) ───────────────────
+.t-dropdown {
+  transform-origin: top left;
+  transform: scale(var(--dropdown-pre-scale));
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--dropdown-open-dur) var(--dropdown-ease),
+    opacity   var(--dropdown-open-dur) var(--dropdown-ease);
+  will-change: transform, opacity;
+}
+.t-dropdown[data-origin="top-right"]     { transform-origin: top right; }
+.t-dropdown[data-origin="top-center"]    { transform-origin: top center; }
+.t-dropdown[data-origin="bottom-left"]   { transform-origin: bottom left; }
+.t-dropdown[data-origin="bottom-center"] { transform-origin: bottom center; }
+.t-dropdown[data-origin="bottom-right"] { transform-origin: bottom right; }
+
+.t-dropdown.is-open {
+  transform: scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+.t-dropdown.is-closing {
+  transform: scale(var(--dropdown-closing-scale));
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--dropdown-close-dur) var(--dropdown-ease),
+    opacity   var(--dropdown-close-dur) var(--dropdown-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-dropdown { transition: none !important; }
+}
+
+// Header person switcher — two tabs stay independent via /u/<id>/ URLs.
+.sh-user-switcher {
+  position: relative;
+}
+.sh-user-switcher__menu {
+  min-width: 16rem;
+  z-index: 50;
+}
+.sh-user-switcher__row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.sh-user-switcher__avatar {
+  flex: none;
+}
+.sh-user-switcher__copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+  line-height: 1.25;
+}
+.sh-user-switcher__title {
+  font-size: 0.75rem;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+.sh-user-switcher__check {
+  flex: none;
+  width: 0.875rem;
+  height: 0.875rem;
+  fill: currentColor;
+}
+.sh-user-switcher .slds-dropdown__item [aria-current="true"] {
+  font-weight: 600;
+}
+
 

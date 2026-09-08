@@ -19,6 +19,14 @@
   <link rel="stylesheet" href="/styles/gc.css" />
 
   {% block styles %}{% endblock %}
+
+  {# Identity + storageKey must exist before any in-body preload
+     (nav collapse, knowledge banner) reads localStorage. #}
+  <script>
+    window.SH_USERS = {{ (usersCatalog or { users: [] }) | tojson | safe }};
+    window.SH_USER = {{ currentUser | tojson | safe }};
+  </script>
+  <script src="/scripts/sh_user.js"></script>
 </head>
 <body>
 
@@ -33,7 +41,7 @@
                the way in (home.js `consumeResetFlag` acts on the flag and
                strips it from the address bar). Moved here from the Home
                context-bar tab, which is now a plain link. #}
-            <a href="/index.html?reset=1" title="Salesforce — restart demo">
+            <a href="{{ '/index.html?reset=1' | appUrl }}" title="Salesforce — restart demo">
               <img src="/assets/images/logo-noname.svg" style="width: 12.5rem;height: 1.75rem;background-size: contain;background-repeat: no-repeat;background-position: left center;"alt="Salesforce Logo" />
             </a>
           </div>
@@ -327,12 +335,73 @@
               </div>
             </li>
             <li class="slds-global-actions__item">
-              <div class="slds-dropdown-trigger slds-dropdown-trigger_click">
-                <button class="slds-button slds-global-actions__avatar slds-global-actions__item-action" title="person name" aria-haspopup="true">
+              {# Avatar opens a person switcher. Each seller lives at
+                 `/u/<id>/…` so two tabs can stay on different people.
+                 Catalog + current user are inlined below for the
+                 script; the button face is compiled per user. #}
+              {% set _user = currentUser or {} %}
+              {% set _users = (usersCatalog and usersCatalog.users) or [] %}
+              <div
+                class="slds-dropdown-trigger slds-dropdown-trigger_click sh-user-switcher"
+                data-sh-user-switcher
+              >
+                <button
+                  class="slds-button slds-global-actions__avatar slds-global-actions__item-action"
+                  type="button"
+                  title="{{ _user.name or 'Switch user' }}"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  aria-controls="sh-user-menu"
+                  data-sh-user-switcher-trigger
+                >
                   <span class="slds-avatar slds-avatar_circle slds-avatar_medium">
-                    <img alt="Person name" src="/assets/images/avatar2.jpg" title="User avatar" />
+                    <img
+                      alt="{{ _user.name or 'User' }}"
+                      src="{{ _user.avatar or '/assets/images/avatar2.jpg' }}"
+                      title="{{ _user.name or 'User avatar' }}"
+                    />
                   </span>
                 </button>
+                <div
+                  id="sh-user-menu"
+                  class="slds-dropdown slds-dropdown_right slds-dropdown_actions t-dropdown sh-user-switcher__menu"
+                  data-origin="top-right"
+                  data-sh-user-menu
+                  role="menu"
+                  aria-label="Switch user"
+                >
+                  <ul class="slds-dropdown__list" role="presentation">
+                    {% for person in _users %}
+                    {% set isCurrent = currentUser and (person.id == currentUser.id) %}
+                    <li class="slds-dropdown__item" role="presentation">
+                      <a
+                        href="/u/{{ person.id }}/index.html"
+                        role="menuitem"
+                        tabindex="-1"
+                        data-sh-user-switch="{{ person.id }}"
+                        {% if isCurrent %}aria-current="true"{% endif %}
+                      >
+                        <span class="sh-user-switcher__row">
+                          <span class="slds-avatar slds-avatar_circle slds-avatar_small sh-user-switcher__avatar">
+                            <img alt="" src="{{ person.avatar }}" />
+                          </span>
+                          <span class="sh-user-switcher__copy">
+                            <span class="slds-truncate" title="{{ person.name }}">{{ person.name }}</span>
+                            {% if person.title %}
+                            <span class="sh-user-switcher__title slds-truncate" title="{{ person.title }}">{{ person.title }}</span>
+                            {% endif %}
+                          </span>
+                          {% if isCurrent %}
+                          <svg class="sh-user-switcher__check" aria-hidden="true">
+                            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+                          </svg>
+                          {% endif %}
+                        </span>
+                      </a>
+                    </li>
+                    {% endfor %}
+                  </ul>
+                </div>
               </div>
             </li>
           </ul>
@@ -379,7 +448,7 @@
                WITHOUT the flag — starting a new chat shouldn't erase the
                ones before it. #}
             <li class="slds-context-bar__item slds-is-active">
-              <a href="/index.html" class="slds-context-bar__label-action" title="Home">
+              <a href="{{ '/index.html' | appUrl }}" class="slds-context-bar__label-action" title="Home">
                 <span class="slds-assistive-text">Current Page:</span>
                 <span class="slds-truncate" title="Home">Home</span>
               </a>
@@ -393,6 +462,7 @@
       <!-- Content from HTML files gets injected here -->
     {% endblock %}
   </main>
+  <script src="/scripts/user_switcher.js"></script>
   <script src="/scripts/app.js"></script>
   {# Shared pill tab bar (window.ShTabNav). Global rather than
      per-page: it auto-wires any [data-sh-tabnav] markup, and pages

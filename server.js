@@ -14,10 +14,21 @@ const fs = require('fs')
 const path = require('path')
 const express = require('express')
 const auth = require('http-auth')
+const JSON5 = require('json5')
+const { redirectLocation } = require('./user-routes')
 
 const app = express()
 const port = process.env.PORT || 3000
 const dist = path.join(__dirname, 'dist')
+
+function defaultUserId () {
+  try {
+    const catalog = JSON5.parse(fs.readFileSync(path.join(__dirname, 'src/views/data/users.json'), 'utf8'))
+    return catalog.defaultUserId
+  } catch (e) {
+    return 'rohan'
+  }
+}
 
 // Optional basic auth, on only when BOTH config vars are set — a
 // half-configured pair leaves the site open rather than locking
@@ -38,6 +49,12 @@ if (user && password) {
   })
   app.use(auth.connect(basic))
 }
+
+app.use((req, res, next) => {
+  const loc = redirectLocation(req.url, defaultUserId())
+  if (loc) return res.redirect(loc)
+  next()
+})
 
 app.use('/', express.static(dist))
 

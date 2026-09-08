@@ -140,23 +140,29 @@
     try { return JSON.parse(raw) } catch (_e) { return null }
   }
 
+  function scopedKey (key) {
+    return (window.SH && typeof window.SH.storageKey === 'function')
+      ? window.SH.storageKey(key)
+      : key
+  }
+
   function safeGet (key) {
     try {
-      return window.localStorage ? window.localStorage.getItem(key) : null
+      return window.localStorage ? window.localStorage.getItem(scopedKey(key)) : null
     } catch (_e) { return null }
   }
 
   function safeSet (key, value) {
     try {
       if (!window.localStorage) return
-      window.localStorage.setItem(key, value)
+      window.localStorage.setItem(scopedKey(key), value)
     } catch (_e) { /* quota / private-mode: no-op */ }
   }
 
   function safeRemove (key) {
     try {
       if (!window.localStorage) return
-      window.localStorage.removeItem(key)
+      window.localStorage.removeItem(scopedKey(key))
     } catch (_e) { /* no-op */ }
   }
 
@@ -363,7 +369,7 @@
     })
     return {
       convId:   envelope.id,
-      url:      '/home_conversation.html?id=' + encodeURIComponent(envelope.id),
+      url:      window.SH.userUrl('/home_conversation.html?id=' + encodeURIComponent(envelope.id)),
       envelope: envelope
     }
   }

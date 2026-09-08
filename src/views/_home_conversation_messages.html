@@ -351,7 +351,10 @@
        cadence?:  { … see _home_conversation_cadence.html },
        snapshot?: { … see _pipeline_snapshot.html },
        runId?:    String,  // the scheduled run this output came from
-       rowsFrom?: String   // id of the message owning the rows
+       rowsFrom?: String,  // id of the message owning the rows
+       actions?:  [ { id, label } ]  // optional brand buttons after
+                                     // the text. Visual only unless
+                                     // a page wires the id.
      }
 #}
 {% import "_home_conversation_cadence.html" as cadence %}
@@ -390,6 +393,18 @@
   #}
   {% if msg.cadence and _rows | length > 0 %}
   {{ cadence.cadenceMessage(msg.cadence, _rows) }}
+  {% endif %}
+
+  {% if msg.actions and msg.actions | length > 0 %}
+  <div class="seller-home__conv-msg-actions" role="group" aria-label="Plan actions">
+    {% for action in msg.actions %}
+    <button
+      type="button"
+      class="slds-button slds-button_brand"
+      data-sh-conv-action="{{ action.id }}"
+    >{{ action.label }}</button>
+    {% endfor %}
+  </div>
   {% endif %}
 </article>
 {% endmacro %}

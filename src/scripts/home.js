@@ -101,6 +101,14 @@
   // older Safari, sandboxed iframes) fail silently instead of throwing.
   var STORAGE_KEY = 'sh:navCollapsed'
 
+  // Scope every demo/preference key to the URL user (`sh:rohan:recents`).
+  // Two tabs on different /u/<id>/ paths share an origin otherwise.
+  function sk (key) {
+    return (window.SH && typeof window.SH.storageKey === 'function')
+      ? window.SH.storageKey(key)
+      : key
+  }
+
   // Longest typed message carried in the composer's `?q=` handoff.
   // Well inside every browser's URL limit, and far past anything a
   // seller types into a one-line box.
@@ -108,7 +116,7 @@
 
   function readCollapsed () {
     try {
-      return window.localStorage.getItem(STORAGE_KEY) === 'true'
+      return window.localStorage.getItem(sk(STORAGE_KEY)) === 'true'
     } catch (e) {
       return false
     }
@@ -116,7 +124,7 @@
 
   function writeCollapsed (isCollapsed) {
     try {
-      window.localStorage.setItem(STORAGE_KEY, isCollapsed ? 'true' : 'false')
+      window.localStorage.setItem(sk(STORAGE_KEY), isCollapsed ? 'true' : 'false')
     } catch (e) {
       // Silent — the toggle still works within the current tab.
     }
@@ -179,7 +187,7 @@
 
   function readKnowledgeBannerDismissed () {
     try {
-      return window.sessionStorage.getItem(KNOWLEDGE_BANNER_KEY) === 'true'
+      return window.sessionStorage.getItem(sk(KNOWLEDGE_BANNER_KEY)) === 'true'
     } catch (e) {
       return false
     }
@@ -187,7 +195,7 @@
 
   function writeKnowledgeBannerDismissed () {
     try {
-      window.sessionStorage.setItem(KNOWLEDGE_BANNER_KEY, 'true')
+      window.sessionStorage.setItem(sk(KNOWLEDGE_BANNER_KEY), 'true')
     } catch (e) {
       // Silent — the banner still stays gone for this page view.
     }
@@ -226,7 +234,7 @@
   function clearDemoState () {
     try {
       for (var i = 0; i < DEMO_SESSION_KEYS.length; i++) {
-        window.sessionStorage.removeItem(DEMO_SESSION_KEYS[i])
+        window.sessionStorage.removeItem(sk(DEMO_SESSION_KEYS[i]))
       }
     } catch (e) {
       // Storage unavailable — nothing accumulated, nothing to clear.
@@ -234,7 +242,7 @@
 
     try {
       for (var j = 0; j < DEMO_LOCAL_KEYS.length; j++) {
-        window.localStorage.removeItem(DEMO_LOCAL_KEYS[j])
+        window.localStorage.removeItem(sk(DEMO_LOCAL_KEYS[j]))
       }
       // The per-conversation records behind those lists. Collected first
       // and removed after: deleting while walking `key(i)` reindexes the
@@ -244,7 +252,7 @@
         var key = window.localStorage.key(k)
         if (!key) continue
         for (var p = 0; p < DEMO_LOCAL_PREFIXES.length; p++) {
-          if (key.indexOf(DEMO_LOCAL_PREFIXES[p]) === 0) {
+          if (key.indexOf(sk(DEMO_LOCAL_PREFIXES[p])) === 0) {
             doomed.push(key)
             break
           }
@@ -305,7 +313,7 @@
 
   function readRecents () {
     try {
-      var raw = window.sessionStorage.getItem(RECENTS_KEY)
+      var raw = window.sessionStorage.getItem(sk(RECENTS_KEY))
       if (!raw) return []
       var parsed = JSON.parse(raw)
       return Object.prototype.toString.call(parsed) === '[object Array]' ? parsed : []
@@ -318,7 +326,7 @@
 
   function writeRecents (list) {
     try {
-      window.sessionStorage.setItem(RECENTS_KEY, JSON.stringify(list))
+      window.sessionStorage.setItem(sk(RECENTS_KEY), JSON.stringify(list))
     } catch (e) {
       // Silent — the rail still renders for the current page.
     }
@@ -357,7 +365,7 @@
   // skill it schedules, not from anything typed into a composer.
   function readDraftRecents () {
     try {
-      var raw = window.localStorage.getItem(DRAFT_LIST_KEY)
+      var raw = window.localStorage.getItem(sk(DRAFT_LIST_KEY))
       if (!raw) return []
       var parsed = JSON.parse(raw)
       if (Object.prototype.toString.call(parsed) !== '[object Array]') return []
@@ -442,7 +450,7 @@
   function readConsumedConversations () {
     var out = {}
     try {
-      var raw = window.sessionStorage.getItem(FEED_CONSUMED_KEY)
+      var raw = window.sessionStorage.getItem(sk(FEED_CONSUMED_KEY))
       if (!raw) return out
       var parsed = JSON.parse(raw)
       if (Object.prototype.toString.call(parsed) !== '[object Array]') return out
@@ -460,14 +468,14 @@
   function markConversationConsumed (convId) {
     if (!convId) return
     try {
-      var raw = window.sessionStorage.getItem(FEED_CONSUMED_KEY)
+      var raw = window.sessionStorage.getItem(sk(FEED_CONSUMED_KEY))
       var list = raw ? JSON.parse(raw) : []
       if (Object.prototype.toString.call(list) !== '[object Array]') list = []
       for (var i = 0; i < list.length; i++) {
         if (list[i] === convId) return
       }
       list.push(convId)
-      window.sessionStorage.setItem(FEED_CONSUMED_KEY, JSON.stringify(list))
+      window.sessionStorage.setItem(sk(FEED_CONSUMED_KEY), JSON.stringify(list))
     } catch (e) {
       // Silent — worst case the dot lingers until the thread is reopened.
     }
@@ -484,7 +492,7 @@
     // Same gate the Home feed uses to unhide `ri-marcus-reply`. Reset
     // and refresh clear this key, so the Recents row leaves with it.
     if (session.demoGate === 'marcus-reply') {
-      try { return window.sessionStorage.getItem(MARCUS_REPLY_KEY) === '1' } catch (e) { return false }
+      try { return window.sessionStorage.getItem(sk(MARCUS_REPLY_KEY)) === '1' } catch (e) { return false }
     }
     return false
   }
@@ -656,8 +664,8 @@
         // seller's own bubble when `?q=` is present, so dropping it here
         // would reopen a row labelled with what they typed onto a thread
         // that starts on the agent.
-        a.href = '/home_conversation.html?id=' + encodeURIComponent(r.conversationId) +
-          (r.query ? '&q=' + encodeURIComponent(r.query) : '')
+        a.href = window.SH.userUrl('/home_conversation.html?id=' + encodeURIComponent(r.conversationId) +
+          (r.query ? '&q=' + encodeURIComponent(r.query) : ''))
         a.setAttribute('data-sh-recent-conv', r.conversationId)
       } else {
         // Workflow with no conversation yet — present but inert, matching
@@ -2634,7 +2642,7 @@
         else if (actionId === 'edit' && row) {
           var feedSkillId = row.getAttribute('data-sh-feed-skill')
           if (feedSkillId) {
-            window.location.href = '/skill_detail.html?id=' + encodeURIComponent(feedSkillId)
+            window.location.href = window.SH.userUrl('/skill_detail.html?id=' + encodeURIComponent(feedSkillId))
           }
         }
         return
@@ -2902,7 +2910,7 @@
 
   function revealGatedFeedItems (feedRoot) {
     var ready = false
-    try { ready = window.sessionStorage.getItem(MARCUS_REPLY_KEY) === '1' } catch (e) {}
+    try { ready = window.sessionStorage.getItem(sk(MARCUS_REPLY_KEY)) === '1' } catch (e) {}
     if (!ready) return
     toArray(feedRoot.querySelectorAll('[data-sh-feed-demo-gate="marcus-reply"]')).forEach(function (el) {
       el.removeAttribute('hidden')
@@ -3742,8 +3750,8 @@
       try { config = JSON.parse(configScript.textContent || '{}') || config } catch (err) { /* keep defaults */ }
     }
 
-    var CHAT_ROUTE = config.chatRoute || '/home_conversation.html'
-    var SKILL_ROUTE = config.skillRoute || '/skill_detail.html'
+    var CHAT_ROUTE = window.SH.userUrl(config.chatRoute || '/home_conversation.html')
+    var SKILL_ROUTE = window.SH.userUrl(config.skillRoute || '/skill_detail.html')
     var activeTrigger = null
     var editing = false
 
@@ -4507,7 +4515,7 @@
       if (actionId === 'edit') {
         var workflowSkillId = row ? row.getAttribute('data-sh-workflow-skill') : ''
         if (workflowSkillId) {
-          window.location.href = '/skill_detail.html?id=' + encodeURIComponent(workflowSkillId)
+          window.location.href = window.SH.userUrl('/skill_detail.html?id=' + encodeURIComponent(workflowSkillId))
           return
         }
       }

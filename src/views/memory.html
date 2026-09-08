@@ -1,10 +1,18 @@
 {% extends "_template.html" %}
 
 {# Grain-agnostic contribution calendar. Cells are generated from
-   `memory.json` + memory.js — day, week, or month buckets. #}
+   `memory.json` + memory.js — day, week, or month buckets. The Sources
+   list under the card is the Knowledge Sources tab, filtered by the
+   selected cell. #}
+
+{% set knowledge        = readData("knowledge") %}
+{% set knowledgeDocs    = knowledge.documents or [] %}
+{% set documentActions  = knowledge.documentActions or [] %}
+{% import "_home_knowledge_list.html" as knowledgeList %}
 
 {% block styles %}
 <link rel="stylesheet" href="/styles/memory.css" />
+<link rel="stylesheet" href="/styles/knowledge.css" />
 {% endblock %}
 
 {% block content %}
@@ -354,8 +362,28 @@
           </div>
           <!-- <div class="cal-legend" data-cal-legend></div> -->
         </div>
-        <div class="memory-card-aside" style="background: #fafafa; width:100%; height:100%">
-          {# Right column — content TBD #}
+        <div class="memory-card-sources" data-sh-memory-sources>
+          <ul
+            class="seller-home__knowledge-doc-list"
+            id="seller-home-memory-source-list"
+            data-sh-knowledge-doc-list
+            data-sh-memory-source-list
+            hidden
+          >
+            {% for doc in knowledgeDocs %}
+              {% if not (doc.hidden == true) and (doc.tab == 'sources') %}
+                {{ knowledgeList.renderKnowledgeDocRow(doc, documentActions) }}
+              {% endif %}
+            {% endfor %}
+          </ul>
+          <div
+            class="seller-home__knowledge-empty"
+            data-sh-memory-source-empty
+            hidden
+          >
+            <p class="seller-home__knowledge-empty-title">Nothing added</p>
+            <p class="seller-home__knowledge-empty-description">No sources were added on this day.</p>
+          </div>
         </div>
       </div>
     </div>
@@ -371,6 +399,13 @@
 {% block scripts_extra %}
 <script>
   window.MEMORY_CAL = {{ cal | tojson | safe }};
+  {%- set _memorySources = [] -%}
+  {%- for doc in knowledgeDocs -%}
+    {%- if not (doc.hidden == true) and (doc.tab == 'sources') and doc.learnedOn -%}
+      {%- set _ = _memorySources.push({ id: doc.id, learnedOn: doc.learnedOn }) -%}
+    {%- endif -%}
+  {%- endfor -%}
+  window.MEMORY_SOURCES = {{ _memorySources | tojson | safe }};
 </script>
 <script src="/scripts/memory.js"></script>
 {% endblock %}

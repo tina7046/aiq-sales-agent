@@ -74,7 +74,7 @@
 {% macro renderNavItem(item, activeId, badgeCount) %}
 {% set isActive = activeId == item.id %}
 <a
-  href="{{ item.href or '#' }}"
+  href="{{ (item.href or '#') | appUrl }}"
   class="seller-home__nav-item{% if isActive %} is-active{% endif %}"
   role="listitem"
   data-sh-nav="{{ item.id }}"
@@ -388,7 +388,11 @@
 
     var collapsed = false
     try {
-      collapsed = window.localStorage.getItem('sh:navCollapsed') === 'true'
+      collapsed = window.localStorage.getItem(
+        (window.SH && window.SH.storageKey)
+          ? window.SH.storageKey('sh:navCollapsed')
+          : 'sh:navCollapsed'
+      ) === 'true'
     } catch (e) {
       // Storage unavailable — fall through to the expanded default,
       // which is what the markup already renders.
@@ -493,7 +497,7 @@
            runtime and is the source of truth. #}
         {% if r.conversationId %}
         <a
-          href="/home_conversation.html?id={{ r.conversationId }}"
+          href="{{ ('/home_conversation.html?id=' ~ r.conversationId) | appUrl }}"
           class="seller-home__nav-recent seller-home__nav-recent--linked{% if r.status == 'running' %} seller-home__nav-recent--running{% endif %}"
           role="listitem"
           data-sh-recent="rec-{{ r.feedId }}"

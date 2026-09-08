@@ -3060,6 +3060,13 @@ $sh-feed-filter-hidden: (
   margin-inline: 0.375em;
 }
 
+// One-time rows omit next/last run. Hide the middot when the time
+// slot has nothing to show, so the subline is just the cadence.
+.seller-home__feed-item-desc:has(.seller-home__feed-item-desc-time:empty)
+  .seller-home__feed-item-desc-sep {
+  display: none;
+}
+
 // ── State cues ────────────────────────────────────────────────────────
 // There are none, deliberately. A paused row keeps the same surface,
 // title colour and subline treatment as every other row; the only things

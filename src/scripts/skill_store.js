@@ -59,7 +59,12 @@
   // frame with the spinner.
   var MOCK_LATENCY_MS = 120;
 
-  function keyFor(id) { return STORAGE_KEY_PREFIX + String(id); }
+  function keyFor(id) {
+    var logical = STORAGE_KEY_PREFIX + String(id);
+    return (global.SH && typeof global.SH.storageKey === 'function')
+      ? global.SH.storageKey(logical)
+      : logical;
+  }
 
   // Attempt a localStorage read. Never throws; returns null on any
   // failure so callers can fall back to their in-memory shipped

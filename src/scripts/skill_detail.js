@@ -472,7 +472,12 @@
   // ── Draft persistence (localStorage) ─────────────────────────────────
   // Envelope shape mirrors Knowledge's draft envelope so failures
   // degrade identically in blocked-storage / private-mode contexts.
-  function getDraftKey(id) { return DRAFT_KEY_PREFIX + String(id); }
+  function getDraftKey(id) {
+    var logical = DRAFT_KEY_PREFIX + String(id);
+    return (window.SH && typeof window.SH.storageKey === 'function')
+      ? window.SH.storageKey(logical)
+      : logical;
+  }
 
   function readDraft(id, currentBaseline) {
     if (!id) return null;
@@ -1246,7 +1251,7 @@
   }
 
   function enrichSupportingSkillLinks(articleEl, catalog) {
-    var anchors = articleEl.querySelectorAll('a[href^="/skill_detail.html?id="]');
+    var anchors = articleEl.querySelectorAll('a[href*="skill_detail.html?id="]');
     if (!anchors.length) return;
     for (var i = 0; i < anchors.length; i++) {
       var a = anchors[i];
@@ -1332,7 +1337,7 @@
       seen[s.id] = true;
       skillItems.push({
         label: s.name || s.id,
-        href:  '/skill_detail.html?id=' + encodeURIComponent(s.id),
+        href:  window.SH.userUrl('/skill_detail.html?id=' + encodeURIComponent(s.id)),
         // Self-contained circular indigo skill badge (white glyph baked in).
         iconSvg: SKILL_MENTION_ICON_SVG,
         iconBadge: 'skill'
@@ -1638,7 +1643,7 @@
         function proceedToScheduleConversation() {
           var draft = api.createDraftForSkill(skill);
           if (!draft || !draft.url) return;
-          window.location.href = draft.url;
+          window.location.href = window.SH.userUrl(draft.url);
         }
 
         // Read-only skill (canEdit === false) or no editor on
@@ -1711,7 +1716,7 @@
           var returnFocus = trigger || moreBtn;
           if (itemId === 'delete') {
             openDeleteDialog(returnFocus, function () {
-              window.location.href = '/skills.html';
+              window.location.href = window.SH.userUrl('/skills.html');
             });
             return;
           }
@@ -1876,7 +1881,7 @@
         var li = document.createElement('li');
         var a  = document.createElement('a');
         a.className = 'seller-home__skill-detail-switcher-link';
-        a.href = '/skill_detail.html?id=' + encodeURIComponent(skill.id);
+        a.href = window.SH.userUrl('/skill_detail.html?id=' + encodeURIComponent(skill.id));
         a.setAttribute('data-sh-skill-switcher-link', skill.id);
         if (activeSkill && skill.id === activeSkill.id) {
           a.setAttribute('aria-current', 'true');
@@ -2029,7 +2034,7 @@
             detail: { source: 'skill-switcher' }
           }));
         } catch (_e) { /* CustomEvent unsupported? Skip. */ }
-        window.location.href = '/skill_detail.html?new=1';
+        window.location.href = window.SH.userUrl('/skill_detail.html?new=1');
       });
     }
 
@@ -2414,7 +2419,7 @@
             window.history.replaceState(
               null,
               '',
-              '/skill_detail.html?id=' + encodeURIComponent(skillId)
+              window.SH.userUrl('/skill_detail.html?id=' + encodeURIComponent(skillId))
             );
           } catch (_e) { /* ignore */ }
         }
@@ -2622,7 +2627,7 @@
     }
 
     function leaveToSkills() {
-      window.location.href = (detail.back && detail.back.href) || '/skills.html';
+      window.location.href = window.SH.userUrl((detail.back && detail.back.href) || '/skills.html');
     }
 
     function revertCanvas() {
@@ -2788,15 +2793,18 @@
     return null;
   }
 
-  // Best-effort current-user resolver for the prototype. Real
-  // deployments swap this for a real identity lookup. Precedence:
-  //   1. `config.currentUserName` if the template inlines one.
-  //   2. `skill.updatedBy` (edits keep the last updater's name).
-  //   3. `skill.createdBy` (first-time edit uses the creator).
-  //   4. Static fallback (`"You"`).
+  // Best-effort current-user resolver for the prototype. Precedence:
+  //   1. `config.currentUserName` (inlined from the URL user's catalog).
+  //   2. `window.SH_USER.name` (same catalog, from the path prefix).
+  //   3. `skill.updatedBy` (edits keep the last updater's name).
+  //   4. `skill.createdBy` (first-time edit uses the creator).
+  //   5. Static fallback (`"You"`).
   function readCurrentUserName(config, skill) {
     if (config && typeof config.currentUserName === 'string' && config.currentUserName.trim()) {
       return config.currentUserName.trim();
+    }
+    if (window.SH_USER && typeof window.SH_USER.name === 'string' && window.SH_USER.name.trim()) {
+      return window.SH_USER.name.trim();
     }
     if (skill && typeof skill.updatedBy === 'string' && skill.updatedBy.trim()) {
       return skill.updatedBy.trim();

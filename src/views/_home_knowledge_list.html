@@ -117,11 +117,12 @@
     data-sh-knowledge-doc-name="{{ doc.name }}"
     data-sh-knowledge-doc-type="{{ doc.type }}"
     data-sh-knowledge-doc-tab="{{ doc.tab or 'learnings' }}"
+    {% if doc.learnedOn %}data-sh-memory-learned-on="{{ doc.learnedOn }}"{% endif %}
   >
     {% if isLinked %}
     <a
       class="seller-home__knowledge-doc-row"
-      href="{{ docHref }}"
+      href="{{ docHref | appUrl }}"
       title="{{ doc.name }}"
       {# The badge is appended to the accessible name because `aria-label`
          REPLACES the anchor's inner text for AT — without this the pill

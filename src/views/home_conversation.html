@@ -271,8 +271,10 @@
             var heading = query || (id && titles[id]) || fallback
             if (!query && id && !titles[id]) {
               try {
+                var draftKey = 'sh:convDraft:v1:' + id
+                if (window.SH && window.SH.storageKey) draftKey = window.SH.storageKey(draftKey)
                 var raw = window.localStorage &&
-                  window.localStorage.getItem('sh:convDraft:v1:' + id)
+                  window.localStorage.getItem(draftKey)
                 var draft = raw ? JSON.parse(raw) : null
                 if (draft && draft.title) heading = draft.title
               } catch (e) { /* keep fallback */ }
