@@ -276,13 +276,20 @@
   //   gapMs      — per-word cadence (defaults to --stream-gap)
   //   fadeMs     — table row / block fade duration (matches --stream-fade)
   //   rowStagger — per-row delay inside a table cascade
+  //   tailMs     — pause after a table/block before the next unit
+  //   speed      — multiplier (2 = twice as fast). Divides the resolved
+  //                timings so a conversation can retune without rewriting
+  //                the token defaults.
   function streamUnits (units, opts) {
     opts = opts || {}
     var scroll = typeof opts.scroll === 'function' ? opts.scroll : noop
     var onDone = typeof opts.onDone === 'function' ? opts.onDone : null
-    var rowStagger = num(opts.rowStagger, DEFAULTS.rowStagger)
-    var fade = num(opts.fadeMs, DEFAULTS.fadeMs)
-    var gap = num(opts.gapMs, gapMs())
+    var speed = num(opts.speed, 1)
+    if (!(speed > 0)) speed = 1
+    var rowStagger = num(opts.rowStagger, DEFAULTS.rowStagger) / speed
+    var fade = num(opts.fadeMs, DEFAULTS.fadeMs) / speed
+    var gap = num(opts.gapMs, gapMs()) / speed
+    var tail = num(opts.tailMs, DEFAULTS.tailMs) / speed
 
     var list = []
     for (var i = 0; i < (units || []).length; i++) {
@@ -295,6 +302,11 @@
       u.parents = parentsOf(u)
       if (u.kind === 'prose') u.spans = wrapWords(u.el, [])
       if (u.kind === 'table') u.rowCount = prepRows(u.el, rowStagger)
+      // Keep the CSS fade token in step with JS fadeMs/speed so word
+      // transitions and row animations don't linger at the 1× duration.
+      if (u.el && u.el.style && speed !== 1) {
+        u.el.style.setProperty('--stream-fade', fade + 'ms')
+      }
     })
 
     if (!list.length) { if (onDone) onDone(); return }
@@ -325,14 +337,14 @@
       scroll()
 
       if (u.kind === 'table') {
-        var hold = (u.rowCount ? (u.rowCount - 1) * rowStagger : 0) + fade + DEFAULTS.tailMs
+        var hold = (u.rowCount ? (u.rowCount - 1) * rowStagger : 0) + fade + tail
         window.setTimeout(function () { settle(u); nextUnit() }, hold)
         return
       }
 
       if (u.kind === 'block') {
         u.el.classList.add('sh-stream-block-in')
-        window.setTimeout(function () { settle(u); nextUnit() }, fade + DEFAULTS.tailMs)
+        window.setTimeout(function () { settle(u); nextUnit() }, fade + tail)
         return
       }
 

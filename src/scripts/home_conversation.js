@@ -1250,6 +1250,7 @@
         }
         appendTemplate(stages[i], convMap, {
           stream: true,
+          streamSpeed: openingCfg && openingCfg.stream && openingCfg.stream.speed,
           scroll: scrollToLatest,
           onDone: function () { revealStages(i + 1) }
         })
@@ -1333,10 +1334,12 @@
       }
 
       if (opts.stream && window.ShStream) {
-        window.ShStream.reveal(added, {
+        var revealOpts = {
           scroll: opts.scroll || scrollToLatest,
           onDone: finish
-        })
+        }
+        if (opts.streamSpeed) revealOpts.speed = opts.streamSpeed
+        window.ShStream.reveal(added, revealOpts)
         return
       }
 
