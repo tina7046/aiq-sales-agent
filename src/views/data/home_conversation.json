@@ -28,12 +28,11 @@
 {
   "pageTitle": "Conversation",
   "defaultConversationId": "conv-001",
-  // Same string as `conversations.conv-001.title` in index.json so the
-  // initial SSR paint already shows the right heading for the one
-  // seeded conversation. The client-side hydration in
-  // home_conversation.js re-applies the same string when a valid
-  // `?id=` is present (idempotent). For an unknown/missing id the
-  // fallback stays visible instead of flashing a stale title.
+  // Last-resort heading when `?id=` is missing or unknown. An inline
+  // boot script on the page rewrites the <h1> from the URL (and a
+  // compact id → title map) before first paint, so other threads no
+  // longer flash this string. home_conversation.js then re-applies
+  // the same heading (idempotent).
   "fallbackTitle": "Found new prospects",
   "composerPlaceholder": "Ask a follow up\u2026",
   "thinkingLabel": "Thinking\u2026"

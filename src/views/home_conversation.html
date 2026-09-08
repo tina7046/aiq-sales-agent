@@ -165,13 +165,13 @@
     >
       {# ── Header ─────────────────────────────────────────────────
          Fixed 48px band, always visible while the thread scrolls
-         below. Title is a placeholder for Phase 1 — home_conversation.js
-         swaps in the resolved conversation's title once the URL is
-         parsed (or the fallback stays if no id was in the URL).
-
-         `data-sh-conv-title` is the hydration target; keeping the
-         initial text as the fallback title means the shell renders
-         a sensible placeholder even before JS runs (SSR-friendly).
+         below. Title starts as `fallbackTitle` (conv-001) because this is a
+         static build and Nunjucks cannot read `?id=`. An inline boot
+         script at the end of this header rewrites it from the URL
+         before the rest of the page (and first paint) so other
+         threads do not flash "Found new prospects". home_conversation.js
+         then re-applies the same heading (idempotent), including
+         schedule drafts that only exist in localStorage.
 
          Sparkle glyph on the left uses `utility:einstein` to signal
          the agentic surface — matches the design intent of the Figma
@@ -214,11 +214,10 @@
         <div class="seller-home__conv-header-actions">
           {# ── Run history ────────────────────────────────────────
              One dropdown per conversation carrying a `runHistory`
-             block, all rendered here as siblings; only the one
-             matching the SSR default starts visible, and
-             `switchRunHistory` swaps `hidden` at boot once `?id=` is
-             known — the same arrangement the workflow side panels
-             use further down.
+             block, all rendered here as siblings and hidden until the
+             header boot script (and `switchRunHistory`) reveals the
+             one matching `?id=`. Starting them hidden avoids a flash
+             of conv-001's control on every other thread.
 
              A conversation without `runHistory` emits nothing, which
              is what keeps this header unchanged everywhere else. #}
@@ -226,7 +225,11 @@
             {% if conv.runHistory %}
               {% set runHistory = conv.runHistory %}
               {% set runConversationId = _cid %}
-              {% set runInitialHidden = _cid != defaultConversationId %}
+              {# Hidden until the header boot script (and later
+                 `switchRunHistory`) reveals the menu for `?id=`.
+                 Starting every menu hidden avoids a flash of
+                 conv-001's control on every other thread. #}
+              {% set runInitialHidden = true %}
               {% include "_run_history_menu.html" %}
             {% endif %}
           {% endfor %}
@@ -243,6 +246,51 @@
             Activity
           </button>
         </div>
+
+        {# Runs here, not at the end of the page, so the heading and
+           Run History menus are already correct before the (large)
+           per-conversation <template>s parse — and before first paint. #}
+        <script>
+          (function () {
+            var titles = {
+              {%- for cid, conv in conversations -%}
+              {{ cid | tojson | safe }}: {{ (conv.title or conv.recentLabel or '') | tojson | safe }}{% if not loop.last %},{% endif %}
+              {%- endfor -%}
+            }
+            var fallback = {{ fallbackTitle | tojson | safe }}
+            var defaultId = {{ defaultConversationId | tojson | safe }}
+            var titleEl = document.querySelector('[data-sh-conv-title]')
+            var id = null
+            var query = ''
+            try {
+              var params = new URLSearchParams(window.location.search)
+              id = params.get('id')
+              query = String(params.get('q') || '').trim().slice(0, 500)
+            } catch (e) { /* keep fallback */ }
+            if (!id) id = defaultId
+            var heading = query || (id && titles[id]) || fallback
+            if (!query && id && !titles[id]) {
+              try {
+                var raw = window.localStorage &&
+                  window.localStorage.getItem('sh:convDraft:v1:' + id)
+                var draft = raw ? JSON.parse(raw) : null
+                if (draft && draft.title) heading = draft.title
+              } catch (e) { /* keep fallback */ }
+            }
+            if (titleEl && heading) {
+              titleEl.textContent = heading
+              titleEl.setAttribute('title', heading)
+            }
+            var menus = document.querySelectorAll('[data-sh-run-menu]')
+            for (var i = 0; i < menus.length; i++) {
+              if (menus[i].getAttribute('data-sh-run-menu-conversation') === id) {
+                menus[i].removeAttribute('hidden')
+              } else {
+                menus[i].setAttribute('hidden', '')
+              }
+            }
+          })()
+        </script>
       </header>
 
       {# ── Thread ─────────────────────────────────────────────────
