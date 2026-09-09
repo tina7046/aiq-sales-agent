@@ -29,7 +29,7 @@ gulp.task('assets', () =>
   gulp
     .src([
       'node_modules/@salesforce-ux/design-system/assets/**/*.{woff,woff2,txt,jpg,png,gif,svg}',
-      'src/assets/**/*.{woff,woff2,txt,jpg,png,gif,svg}'
+      'src/assets/**/*.{woff,woff2,txt,jpg,png,gif,svg,mp4}'
     ])
     .pipe(gulp.dest('dist/assets'))
 )
@@ -556,7 +556,7 @@ gulp.task('default',
       // would otherwise leave the inlined copy stale.
       'src/assets/images/illustrations/*.svg'
     ], gulp.series('views'))
-    gulp.watch('src/assets/**/*.{woff,woff2,txt,jpg,png,gif,svg}', gulp.series('assets'))
+    gulp.watch('src/assets/**/*.{woff,woff2,txt,jpg,png,gif,svg,mp4}', gulp.series('assets'))
     gulp.watch('src/scripts/**/*.js', gulp.series('scripts'))
     gulp.watch([
       'dist/**/*.html',

@@ -170,9 +170,9 @@
 {# ES module. Mounts whichever background Home's gear last picked. #}
 <script type="module" src="/scripts/aaw_god_rays.js"></script>
 
-{# Global-header Setup (gear): pick the background shader and show/hide
-   the director. Same dropdown as Home; the panel toggle here is the
-   director, not Home's shader tuner. #}
+{# Global-header Setup (gear): pick the background shader, play/pause
+   the conveyor, and show/hide the director. Same dropdown as Home; the
+   panel toggle here is the director, not Home's shader tuner. #}
 <script>
 	(function () {
 		var SHADER_FORCE = 'simplex-2026-09-07';
@@ -224,6 +224,11 @@
 			shaderItem('simplex', 'Simplex') +
 			'<li class="slds-has-divider_top-space" role="separator"></li>' +
 			'<li class="slds-dropdown__item" role="presentation">' +
+			'<a href="#" role="menuitem" data-aaw-gear-play tabindex="0">' +
+			'<span class="slds-truncate" title="Play or pause the feed">' +
+			'<span data-aaw-gear-play-label>Pause</span>' +
+			'</span></a></li>' +
+			'<li class="slds-dropdown__item" role="presentation">' +
 			'<a href="#" role="menuitemcheckbox" aria-checked="' + (!panelHidden) + '" data-aaw-panel-toggle tabindex="0">' +
 			'<span class="slds-truncate" title="Show control panel">' +
 			'<span data-aaw-panel-check style="visibility:' + (panelHidden ? 'hidden' : 'visible') + '">' + check + '</span>Show control panel' +
@@ -231,7 +236,16 @@
 			'</ul>';
 		trigger.appendChild(dd);
 
-		function open() { trigger.classList.add('slds-is-open'); dd.style.display = 'block'; gearBtn.setAttribute('aria-expanded', 'true'); }
+		function playLabel() {
+			var root = document.querySelector('[data-aaw-director]');
+			return (root && root.getAttribute('data-aaw-director-state') === 'playing') ? 'Pause' : 'Play';
+		}
+		function syncPlayItem() {
+			var el = dd.querySelector('[data-aaw-gear-play-label]');
+			if (el) el.textContent = playLabel();
+		}
+
+		function open() { trigger.classList.add('slds-is-open'); dd.style.display = 'block'; gearBtn.setAttribute('aria-expanded', 'true'); syncPlayItem(); }
 		function close() { trigger.classList.remove('slds-is-open'); dd.style.display = 'none'; gearBtn.setAttribute('aria-expanded', 'false'); }
 
 		gearBtn.setAttribute('aria-haspopup', 'true');
@@ -252,6 +266,14 @@
 				if (choice === activeShader) { close(); return; }
 				lsSet(SHADER_KEY, choice);
 				location.assign(location.pathname);
+				return;
+			}
+			var playEl = e.target.closest('[data-aaw-gear-play]');
+			if (playEl) {
+				e.preventDefault();
+				var btn = document.querySelector('[data-aaw-play]');
+				if (btn) btn.click();
+				syncPlayItem();
 				return;
 			}
 			var panelEl = e.target.closest('[data-aaw-panel-toggle]');

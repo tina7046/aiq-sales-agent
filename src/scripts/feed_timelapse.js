@@ -57,15 +57,19 @@
   }
 
   function syncButtons () {
-    var play = document.querySelector('[data-aaw-play]')
-    if (!play) return
     var state = directorState()
     var isPlaying = state === 'playing'
-    play.textContent = isPlaying ? 'Pause' : 'Play'
-    play.disabled = state === 'error'
-    play.classList.toggle('slds-button_brand', !isPlaying)
-    play.classList.toggle('slds-button_neutral', isPlaying)
-    play.setAttribute('aria-pressed', isPlaying ? 'true' : 'false')
+    var label = isPlaying ? 'Pause' : 'Play'
+    var play = document.querySelector('[data-aaw-play]')
+    if (play) {
+      play.textContent = label
+      play.disabled = state === 'error'
+      play.classList.toggle('slds-button_brand', !isPlaying)
+      play.classList.toggle('slds-button_neutral', isPlaying)
+      play.setAttribute('aria-pressed', isPlaying ? 'true' : 'false')
+    }
+    var gear = document.querySelector('[data-aaw-gear-play-label]')
+    if (gear) gear.textContent = label
   }
 
   function persistSettings () {
