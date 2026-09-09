@@ -2183,6 +2183,12 @@
   }
 
   function applyFeedState (row, state) {
+    // One-shot Home rows (e.g. Nima's Hunter setup plan) stay in the
+    // Active/completed group. Opening the thread still consumes the
+    // Recents "New" dot; the row itself never moves to Scheduled.
+    if (state === 'scheduled' && row.hasAttribute('data-sh-feed-stay-home')) {
+      state = 'completed'
+    }
     var home = row.getAttribute('data-sh-feed-state-default') || 'scheduled'
     var toggle = row.querySelector('[data-sh-feed-run-toggle]')
     var title = row.querySelector('[data-sh-feed-item-title]')
@@ -2900,6 +2906,7 @@
 
     toArray(feedRoot.querySelectorAll('[data-sh-feed-item]')).forEach(function (row) {
       if (row.getAttribute('data-sh-feed-state') !== 'completed') return
+      if (row.hasAttribute('data-sh-feed-stay-home')) return
       var convId = convByFeed[row.getAttribute('data-sh-feed-item')]
       if (!convId || !consumed[convId]) return
       applyFeedState(row, 'scheduled')
