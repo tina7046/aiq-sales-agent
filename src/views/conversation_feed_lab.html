@@ -1,0 +1,154 @@
+{% extends "_template.html" %}
+
+{#
+  Conversation feed — lab page
+  =====================================================================
+  Served at /conversation_feed_lab.html. A standalone mock of a
+  thread with user pills, Hunter replies, header, and composer.
+  Isolated from Home: do not `{% include %}` conversation partials,
+  do not load `home.css` / `home_conversation.css` / `home.js`,
+  and do not use `data-sh-*` hooks.
+
+  Messages and the Hunter avatar slot are owned by
+  `scripts/conversation_feed_lab.js`. The avatar is a 32px
+  rounded square; the image src lives in that file.
+#}
+
+{% block styles %}
+<link rel="stylesheet" href="/styles/conversation_feed_lab.css" />
+{% endblock %}
+
+{% block content %}
+
+<div class="cf-lab">
+  <header class="cf-lab__header">
+    <div class="cf-lab__header-inner">
+      <span class="cf-lab__header-icon" aria-hidden="true">
+        <svg class="cf-lab__header-glyph" aria-hidden="true">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#sparkle"></use>
+        </svg>
+      </span>
+      <h1 class="cf-lab__header-title">Make my number</h1>
+    </div>
+  </header>
+
+  <ol class="cf-lab__thread" data-cf-lab-thread aria-label="Conversation"></ol>
+
+  <form class="cf-lab__composer" data-cf-lab-form novalidate>
+    <div class="cf-lab__composer-inner">
+      <div class="cf-lab__composer-editor">
+        <div class="cf-lab__composer-content">
+          <label for="cf-lab-composer-input" class="slds-assistive-text">Ask a follow up</label>
+          <textarea
+            id="cf-lab-composer-input"
+            class="cf-lab__composer-textarea"
+            data-cf-lab-input
+            placeholder="Ask a follow up…"
+            rows="1"
+            aria-label="Ask a follow up"
+          ></textarea>
+        </div>
+
+        <div class="cf-lab__composer-toolbar" role="toolbar" aria-label="Composer actions">
+          <div class="cf-lab__composer-slot cf-lab__composer-slot--start" role="group" aria-label="Attach and augment">
+            <button type="button" class="slds-button slds-button_icon slds-button_icon-bare cf-lab__composer-btn" title="Add" aria-label="Add">
+              <svg class="slds-button__icon" aria-hidden="true">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
+              </svg>
+              <span class="slds-assistive-text">Add</span>
+            </button>
+            <button type="button" class="slds-button slds-button_icon slds-button_icon-bare cf-lab__composer-btn" title="Skills" aria-label="Skills">
+              <span
+                class="slds-button__icon cf-lab__composer-btn-image"
+                style="--cf-lab-composer-icon-image: url('/assets/images/nav-icons/skills.png')"
+                aria-hidden="true"
+              ></span>
+              <span class="slds-assistive-text">Skills</span>
+            </button>
+            <button type="button" class="slds-button slds-button_icon slds-button_icon-bare cf-lab__composer-btn" title="All tools" aria-label="All tools">
+              <svg class="slds-button__icon" aria-hidden="true">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#all"></use>
+              </svg>
+              <span class="slds-assistive-text">All tools</span>
+            </button>
+            <button type="button" class="slds-badge slds-badge_lightest cf-lab__composer-badge" title="Agent" aria-label="Agent: Hunter Sales Agent">
+              <span class="slds-badge__icon slds-badge__icon_left">
+                <span class="cf-lab__composer-badge-icon-slot">
+                  <img
+                    class="cf-lab__composer-badge-icon cf-lab__composer-badge-icon--round"
+                    src="/assets/images/agent-icons/hunter.png"
+                    alt=""
+                  />
+                </span>
+              </span>
+              <span>Hunter</span>
+              <span class="slds-badge__icon slds-badge__icon_right">
+                <span class="slds-icon_container slds-icon-utility-chevrondown slds-current-color">
+                  <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevrondown"></use>
+                  </svg>
+                </span>
+              </span>
+            </button>
+          </div>
+
+          <div class="cf-lab__composer-slot cf-lab__composer-slot--end" role="group" aria-label="Voice and send">
+            <button type="button" class="slds-button slds-button_icon slds-button_icon-bare cf-lab__composer-btn" title="Start voice input" aria-label="Start voice input">
+              <svg class="slds-button__icon" aria-hidden="true">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#unmuted"></use>
+              </svg>
+              <span class="slds-assistive-text">Start voice input</span>
+            </button>
+            <button
+              type="submit"
+              class="slds-button slds-button_icon slds-button_icon-bare cf-lab__composer-btn cf-lab__composer-send"
+              title="Send message"
+              aria-label="Send message"
+              data-cf-lab-send
+              disabled
+            >
+              <svg class="slds-button__icon" aria-hidden="true">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#send"></use>
+              </svg>
+              <span class="slds-assistive-text">Send message</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="cf-lab__composer-footer">
+        <div class="cf-lab__connections">
+          <span class="cf-lab__connections-label">Connections</span>
+          <div class="cf-lab__connections-icons">
+            <ul class="cf-lab__source-icons" role="list">
+              <li class="cf-lab__source-icons-item">
+                <span class="cf-lab__source-icons-wrap" aria-label="Salesforce">
+                  <img class="cf-lab__source-icons-icon" src="/assets/images/source_icons/source_salesforce.svg" alt="Salesforce">
+                </span>
+              </li>
+              <li class="cf-lab__source-icons-item">
+                <span class="cf-lab__source-icons-wrap" aria-label="Gong">
+                  <img class="cf-lab__source-icons-icon" src="/assets/images/source_icons/source_gong.svg" alt="Gong">
+                </span>
+              </li>
+              <li class="cf-lab__source-icons-item">
+                <span class="cf-lab__source-icons-wrap" aria-label="ZoomInfo">
+                  <img class="cf-lab__source-icons-icon" src="/assets/images/source_icons/source_zoominfo.svg" alt="ZoomInfo">
+                </span>
+              </li>
+            </ul>
+            <button type="button" class="slds-button cf-lab__connections-view-all">View all</button>
+          </div>
+        </div>
+
+        <span class="cf-lab__composer-disclaimer">Generative AI can produce inaccurate responses. Review responses carefully.</span>
+
+        <button type="button" class="slds-button cf-lab__composer-feedback">Share Feedback</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script src="/scripts/conversation_feed_lab.js"></script>
+
+{% endblock %}

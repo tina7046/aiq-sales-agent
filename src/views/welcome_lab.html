@@ -178,7 +178,7 @@
 
   <div class="welcome-lab__main">
     <div class="welcome-lab__stage">
-      <div class="welcome-lab__avatar" aria-hidden="true">
+      <div class="welcome-lab__avatar" hidden aria-hidden="true">
         <video
           class="welcome-lab__avatar-video"
           src="/assets/videos/hunter-video-avatar.mp4"
@@ -192,7 +192,7 @@
       </div>
       <div class="welcome-lab__inner">
       <section class="welcome-lab__briefing" aria-label="Daily briefing">
-        <h1 class="welcome-lab__briefing-heading">You're 80% to goal, Rohan 🚀</h1>
+        <h1 class="welcome-lab__briefing-heading">How can I help, Rohan?</h1>
         <p class="welcome-lab__briefing-text">
           You’ve closed <button type="button" class="welcome-lab__briefing-link">$1.6M of your $2M quota</button> — President's Club is within reach. It looks like the top of funnel is light, so let's focus on increasing outreach to prospects.
         </p>
@@ -341,7 +341,8 @@
 <script>
 	(function () {
 		var video = document.querySelector('.welcome-lab__avatar-video');
-		if (video) {
+		var avatar = document.querySelector('.welcome-lab__avatar');
+		if (video && avatar && !avatar.hidden) {
 			video.muted = true;
 			var play = video.play();
 			if (play && play.catch) play.catch(function () {});
