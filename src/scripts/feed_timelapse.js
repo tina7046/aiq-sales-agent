@@ -17,7 +17,7 @@
   var TIMING = {
     rest: 0.5,             // hold before the swipe and after the pack lands
     enter: 0.4,            // pack settle: Completed collapse + new card rise (same clock)
-    packStart: 0.5,        // 0–1: when during the swipe the pack begins (0.5 = halfway)
+    packStart: 0,          // 0–1: when during the swipe the pack begins (0 = with the swipe)
     dateDays: 7            // calendar days that elapse during one conveyor cycle
   }
 
@@ -27,7 +27,7 @@
     'packStart',
     'dateDays'
   ]
-  var STORAGE_TIMING = 'aaw:feedTimelapseV7'
+  var STORAGE_TIMING = 'aaw:feedTimelapseV8'
   var STORAGE_AUTOPLAY = 'aaw:feedTimelapsePlay'
   var READY_VISIBLE = 1
   var RUNNING_VISIBLE = 4
@@ -346,6 +346,34 @@
     return WEEKDAYS[d.getDay()] + ' ' + MONTHS[d.getMonth()] + ' ' + d.getDate()
   }
 
+  function dateSizers (values) {
+    return values.map(function (v) {
+      return '<span class="aaw-lab__date-sizer" aria-hidden="true">' + v + '</span>'
+    }).join('')
+  }
+
+  // Weekday / month / day are separate slots. Invisible sizers hold the
+  // longest value in each column so "May" → "September" and "7" → "30"
+  // don't shove the heading or filter sideways as the conveyor ticks.
+  function wrapDateParts () {
+    var el = dateEl()
+    if (!el || el.querySelector('[data-aaw-date-weekday]')) return
+    el.classList.add('aaw-lab__feed-date')
+    el.innerHTML =
+      '<span class="aaw-lab__date-part aaw-lab__date-part--weekday">' +
+        dateSizers(WEEKDAYS) +
+        '<span class="aaw-lab__date-value" data-aaw-date-weekday></span>' +
+      '</span>' +
+      '<span class="aaw-lab__date-part aaw-lab__date-part--month">' +
+        dateSizers(MONTHS) +
+        '<span class="aaw-lab__date-value" data-aaw-date-month></span>' +
+      '</span>' +
+      '<span class="aaw-lab__date-part aaw-lab__date-part--day">' +
+        dateSizers(['31']) +
+        '<span class="aaw-lab__date-value" data-aaw-date-day></span>' +
+      '</span>'
+  }
+
   function addDays (d, n) {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)
   }
@@ -353,6 +381,19 @@
   function paintDate (d) {
     var el = dateEl()
     if (!el || !d) return
+    var weekday = WEEKDAYS[d.getDay()]
+    var month = MONTHS[d.getMonth()]
+    var day = String(d.getDate())
+    var weekdayEl = el.querySelector('[data-aaw-date-weekday]')
+    var monthEl = el.querySelector('[data-aaw-date-month]')
+    var dayEl = el.querySelector('[data-aaw-date-day]')
+    if (weekdayEl && monthEl && dayEl) {
+      if (weekdayEl.textContent !== weekday) weekdayEl.textContent = weekday
+      if (monthEl.textContent !== month) monthEl.textContent = month
+      if (dayEl.textContent !== day) dayEl.textContent = day
+      el.setAttribute('aria-label', formatFeedDate(d))
+      return
+    }
     var next = formatFeedDate(d)
     if (el.textContent !== next) el.textContent = next
   }
@@ -376,13 +417,21 @@
     paintDate(addDays(clock, elapsedDaysForTime(time)))
   }
 
-  // Quota in the Daily Briefing ticks with the same day clock as the
-  // feed date: each elapsed day is +1% and +$0.1M, so "80%" / "$1.6M"
-  // count up as the conveyor plays. Seeded from the markup; Replay
-  // reloads the page and starts over.
+  // Quota in the Daily Briefing lags the feed date. The conveyor still
+  // spends `dateDays` per cycle (and the date ticks each of those days),
+  // but the % / $ closed only move once every QUOTA_DAYS_PER_TICK
+  // simulated days — so they don't race the cards. Seeded from the
+  // markup; Replay reloads the page and starts over.
   var quotaClock = null
   var QUOTA_PCT_STEP = 1
   var QUOTA_CLOSED_STEP = 0.1
+  var QUOTA_DAYS_PER_TICK = 7
+
+  function quotaTicksForDays (days) {
+    var step = QUOTA_DAYS_PER_TICK
+    if (!isFinite(step) || step < 1) step = 1
+    return Math.floor(Math.max(0, days) / step)
+  }
 
   function wrapQuotaNodes () {
     var heading = document.querySelector('.aaw-lab .seller-home__briefing-heading')
@@ -403,7 +452,8 @@
     var closedEl = document.querySelector('[data-aaw-quota-closed]')
     quotaClock = {
       pct: pctEl ? parseFloat(pctEl.textContent) : 80,
-      closed: closedEl ? parseFloat(closedEl.textContent) : 1.6
+      closed: closedEl ? parseFloat(closedEl.textContent) : 1.6,
+      days: 0
     }
     if (!isFinite(quotaClock.pct)) quotaClock.pct = 80
     if (!isFinite(quotaClock.closed)) quotaClock.closed = 1.6
@@ -413,14 +463,14 @@
     if (!quotaClock) return
     var pctEl = document.querySelector('[data-aaw-quota-pct]')
     var closedEl = document.querySelector('[data-aaw-quota-closed]')
-    var days = isFinite(elapsed) ? elapsed : 0
+    var ticks = quotaTicksForDays(quotaClock.days + (isFinite(elapsed) ? elapsed : 0))
     if (pctEl) {
-      var pct = Math.min(100, Math.round(quotaClock.pct + days * QUOTA_PCT_STEP))
+      var pct = Math.min(100, Math.round(quotaClock.pct + ticks * QUOTA_PCT_STEP))
       var pctText = String(pct)
       if (pctEl.textContent !== pctText) pctEl.textContent = pctText
     }
     if (closedEl) {
-      var closed = quotaClock.closed + days * QUOTA_CLOSED_STEP
+      var closed = quotaClock.closed + ticks * QUOTA_CLOSED_STEP
       var closedText = closed.toFixed(1)
       if (closedEl.textContent !== closedText) closedEl.textContent = closedText
     }
@@ -447,8 +497,7 @@
       paintDate(clock)
     }
     if (quotaClock) {
-      quotaClock.pct += dateDaysCount() * QUOTA_PCT_STEP
-      quotaClock.closed += dateDaysCount() * QUOTA_CLOSED_STEP
+      quotaClock.days += dateDaysCount()
       paintQuota(0)
     }
     if (cycleCtx.readyLi && cycleCtx.readyLi.parentNode) {
@@ -493,7 +542,8 @@
     // New card rises with the pack: collapse is what slides everyone
     // else up, so the enter tween shares that start and duration and
     // they land together as five. Pack motion begins `packStart` of the
-    // way through the swipe (0.5 = halfway).
+    // way through the swipe (0 = the moment the Completed card starts
+    // sliding out).
     var at = t.rest
     var packStart = Math.max(0, Math.min(1, t.packStart))
     var collapseAt = at + DISMISS_SLIDE * packStart
@@ -718,6 +768,7 @@
     snapshotCatalog()
     applyVisibleStack()
     clock = parsePinnedDate(dateEl() && dateEl().textContent)
+    wrapDateParts()
     paintDate(clock)
     wrapQuotaNodes()
     paintQuota(0)

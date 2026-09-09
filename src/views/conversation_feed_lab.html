@@ -3,15 +3,18 @@
 {#
   Conversation feed — lab page
   =====================================================================
-  Served at /conversation_feed_lab.html. A standalone mock of a
-  thread with user pills, Hunter replies, header, and composer.
-  Isolated from Home: do not `{% include %}` conversation partials,
-  do not load `home.css` / `home_conversation.css` / `home.js`,
-  and do not use `data-sh-*` hooks.
+  Served at /conversation_feed_lab.html. A turn-by-turn mock:
+  the user's first bubble is on screen, Hunter's first reply
+  streams in, then anything sent from the composer echoes and
+  streams Hunter's table reply. Isolated from Home: do not
+  `{% include %}` conversation partials, do not load `home.css` /
+  `home_conversation.css` / `home.js`, and do not use `data-sh-*`
+  hooks.
 
-  Messages and the Hunter avatar slot are owned by
-  `scripts/conversation_feed_lab.js`. The avatar is a 32px
-  rounded square; the image src lives in that file.
+  Reveal uses the shared `conversation_stream.js` engine
+  (`window.ShStream`) — same word stream + table cascade as the
+  other conversation feeds. Messages and the Hunter avatar slot
+  are owned by `scripts/conversation_feed_lab.js`.
 #}
 
 {% block styles %}
@@ -19,6 +22,8 @@
 {% endblock %}
 
 {% block content %}
+
+{% import "_sparkle.html" as sparkle %}
 
 <div class="cf-lab">
   <header class="cf-lab__header">
@@ -149,6 +154,21 @@
   </form>
 </div>
 
+<template data-cf-lab-tpl="thinking">
+  <li class="cf-lab__msg cf-lab__msg--hunter cf-lab__msg--thinking">
+    <article aria-label="Hunter is thinking">
+      <div class="cf-lab__avatar" aria-hidden="true">
+        <img src="/assets/images/agent-icons/hunter-avatar.png" alt="">
+      </div>
+      <span class="sh-typing">
+        <span class="sh-typing__label">Thinking…</span>
+        {{ sparkle.sparkles() }}
+      </span>
+    </article>
+  </li>
+</template>
+
+<script src="/scripts/conversation_stream.js"></script>
 <script src="/scripts/conversation_feed_lab.js"></script>
 
 {% endblock %}

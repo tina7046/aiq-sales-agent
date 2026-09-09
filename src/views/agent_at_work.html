@@ -37,7 +37,7 @@
   + 4 Running conveyor — swipe the oldest Completed; as the remaining
   cards slide up, a new Running card rises with them so five land
   together. `packStart` (0–1) is how far through the swipe the pack
-  begins; 0.5 is halfway. Durations live in TIMING (and the inputs
+  begins; 0 is with the swipe. Durations live in TIMING (and the inputs
   bound to it). Play/Pause
   toggles the director; the scrubber seeks one cycle frame-by-frame
   (‹ › or Left/Right). Replay reloads the seed and plays. The conveyor
@@ -91,7 +91,7 @@
           </label>
           <label class="aaw-lab__timing-field">
             <span>packStart</span>
-            <input type="number" name="packStart" min="0" max="1" step="0.1" value="0.5" />
+            <input type="number" name="packStart" min="0" max="1" step="0.1" value="0" />
           </label>
           <label class="aaw-lab__timing-field">
             <span>dateDays</span>
@@ -198,9 +198,10 @@
 		function lsSet(key, val) { try { window.localStorage.setItem(key, val); } catch (e) { } }
 
 		var activeShader = new URLSearchParams(location.search).get('shader') || lsGet(SHADER_KEY) || DEFAULT_SHADER;
-		var panelHidden = lsGet(PANEL_KEY) !== 'shown';
+		var panelHidden = true;
 
-		if (panel) panel.classList.toggle('is-hidden', panelHidden);
+		if (panel) panel.classList.add('is-hidden');
+		lsSet(PANEL_KEY, 'hidden');
 
 		var check = '<svg class="slds-icon slds-icon_x-small slds-icon-text-default slds-m-right_x-small" aria-hidden="true"><use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use></svg>';
 		function shaderItem(id, label) {

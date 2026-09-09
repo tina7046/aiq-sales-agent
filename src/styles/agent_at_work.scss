@@ -88,6 +88,62 @@ $aaw-god-rays-overscan: 90px;
   font-variant-numeric: tabular-nums;
 }
 
+// Thinking sweep on "Your agent at work" — same paint as `.sh-typing__label`
+// on /feed_components.html (blue → violet, `sh-typing-sweep` in index.scss).
+// Lab-only; Seller Home keeps the solid heading.
+.aaw-lab .seller-home__feed-heading {
+  background: linear-gradient(
+    90deg,
+    var(--slds-g-color-brand-base-40, #0250d9) 0%,
+    var(--slds-g-color-palette-violet-40, #9602c7) 50%,
+    var(--slds-g-color-brand-base-40, #0250d9) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: sh-typing-sweep 1s cubic-bezier(0.61, 0.32, 0.41, 0.69) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aaw-lab .seller-home__feed-heading {
+    animation: none;
+    -webkit-text-fill-color: var(--slds-g-color-brand-base-40, #0250d9);
+    color: var(--slds-g-color-brand-base-40, #0250d9);
+  }
+}
+
+// Date slots — weekday / month / day. Each column is sized by a hidden
+// sizer of the longest value (Wed, September, 31) so ticks don't shift
+// the heading or the filter as the string width changes.
+.aaw-lab__feed-date {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35em;
+}
+
+.aaw-lab__date-part {
+  display: inline-grid;
+  justify-items: start;
+  align-items: baseline;
+}
+
+.aaw-lab__date-sizer,
+.aaw-lab__date-value {
+  grid-area: 1 / 1;
+  white-space: nowrap;
+}
+
+.aaw-lab__date-sizer {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.aaw-lab__date-part--day .aaw-lab__date-value {
+  font-variant-numeric: tabular-nums;
+}
+
 // ── Time-lapse director chrome ────────────────────────────────────────
 // Play / Pause / Replay + TIMING number inputs. Lab-only; must not restyle
 // `.seller-home__feed*`. Hidden by default; the header gear toggles
