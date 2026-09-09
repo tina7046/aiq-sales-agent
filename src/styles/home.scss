@@ -2546,12 +2546,8 @@ main.app-wrapper {
   --sh-status-size: 1.25rem;
   --sh-status-glyph: 1rem;
 
-  // The completed dot, sized on its own. `#circle` is a solid disc of
-  // radius 24 in a 52-unit viewBox, so it only fills 48/52 (~92%) of its
-  // box — a plain 0.5rem (8px) box renders the disc at ~7.4px. Inflate the
-  // box by 52/48 so the VISIBLE disc lands at a true 8px, matching the
-  // left-nav "New" dot (a plain 8px CSS circle). The box is transparent —
-  // only the disc paints — so the odd box size never shows.
+  // The completed check uses the shared glyph size. `--sh-status-dot` is
+  // leftover from the old filled-circle rest glyph.
   --sh-status-dot: calc(8px * 52 / 48);  // 8px visible disc
 
   position: relative; // lifts it above the row's stretched-link overlay
@@ -2738,7 +2734,7 @@ $sh-feed-states: completed, running, scheduled, paused, failed, archived;
 // state offers pause except the two where it isn't the obvious intent —
 // a paused row offers play, and a failed one offers retry.
 $sh-feed-status-rest: (
-  completed: "circle",
+  completed: "check",
   running:   "spinner",
   scheduled: "clock",
   paused:    "pause",
@@ -2765,11 +2761,11 @@ $sh-feed-status-action: (
 // the hover swap to pause or retry returns to the normal grey — by then
 // the button is describing an action, not a state.
 //
-// The dot is a palette green rather than the success token its meaning
+// The check is a palette green rather than the success token its meaning
 // would suggest: `success-base-*` resolves teal in the agentic theme,
 // which next to the running spinner's blue reads as another shade of the
 // same thing rather than "done".
-[data-sh-feed-state="completed"] .seller-home__feed-item-status-glyph--circle {
+[data-sh-feed-state="completed"] .seller-home__feed-item-status-glyph--check {
   fill: var(--slds-g-color-palette-green-70, #45c65a);
 }
 
@@ -2836,21 +2832,11 @@ $sh-feed-filter-hidden: (
   }
 }
 
-// Section headers belong to the Active view; the single-state views drop
-// them all.
+// Section headers belong to the non-filter Active/Paused grouping; the
+// single-state filter views drop them all if any are present.
 .seller-home__feed-list[data-sh-feed-filter="scheduled"] .seller-home__feed-group,
 .seller-home__feed-list[data-sh-feed-filter="archived"] .seller-home__feed-group {
   display: none;
-}
-
-// Within Active, a section header hides when its state has no rows. The
-// unscoped Paused rule further up already covers paused; these cover the
-// Ready and Running headers (whose group names aren't "paused"/"active").
-@each $state in ("completed", "running") {
-  .seller-home__feed-list[data-sh-feed-filter="active"]:not(:has([data-sh-feed-state="#{$state}"]))
-    .seller-home__feed-group[data-sh-feed-group-state="#{$state}"] {
-    display: none;
-  }
 }
 
 // Under the filter a scheduled row's action is Run (play), not Pause —
@@ -3786,7 +3772,7 @@ $sh-feed-filter-hidden: (
 // cell — one workflow reads and behaves the same on both surfaces.
 // Chrome + glyph come from the shared `sh-status-*` mixins; the rest /
 // action glyph maps are scheduled-local (below) but now mirror the feed
-// exactly, including "completed" resting on the same green filled circle.
+// exactly, including "completed" resting on the same green check.
 //
 // Absolutely positioned instead of laid out in the row, because it's a
 // `<button>` and the row body is an `<a>` on linked rows — so the
@@ -3850,7 +3836,7 @@ $sh-feed-filter-hidden: (
 
 // Rest = what the row IS; action = what a click WILL DO. Scheduled-local
 // (not the feed's `$sh-feed-status-*`), but the values now mirror the feed
-// exactly — "completed" rests on the same green filled circle the feed
+// exactly — "completed" rests on the same green check the feed
 // uses — so a workflow reads identically on both surfaces.
 $sh-scheduled-status-rest: (
   completed: "check",
@@ -3884,10 +3870,9 @@ $sh-scheduled-status-action: (
   }
 }
 
-// Completed rows rest on a green "done" dot — the same filled circle the
-// home feed uses — scoped to the resting glyph so the hover swap to the
-// Run-now arrow (play) returns to grey.
-[data-sh-workflow-status="completed"] .seller-home__scheduled-status-glyph--circle {
+// Completed rows rest on a green check — scoped to the resting glyph so
+// the hover swap to the Run-now arrow (play) returns to grey.
+[data-sh-workflow-status="completed"] .seller-home__scheduled-status-glyph--check {
   fill: var(--slds-g-color-palette-green-70, #45c65a);
 }
 

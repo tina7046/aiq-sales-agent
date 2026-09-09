@@ -34,11 +34,11 @@ $aaw-god-rays-overscan: 90px;
   overflow: clip; // contains the overscan
 }
 
-// ── God-rays shader canvas host ───────────────────────────────────────
-// scripts/aaw_god_rays.js mounts a <canvas> in here. Anchored to the top
-// and sized by height rather than pinned on all four sides: pinning both
-// edges would make the height fully determined by the page and leave
-// `min-height` nothing to clamp.
+// ── Shader canvas host ────────────────────────────────────────────────
+// scripts/aaw_god_rays.js mounts Home's simplex noise <canvas> in here.
+// Anchored to the top and sized by height rather than pinned on all four
+// sides: pinning both edges would make the height fully determined by
+// the page and leave `min-height` nothing to clamp.
 //
 // No left inset, unlike Seller Home — there's no nav to sit beside, so
 // the box and the content column already share a centre.
@@ -51,12 +51,17 @@ $aaw-god-rays-overscan: 90px;
   right: -$aaw-god-rays-overscan;
   height: calc(100% + #{$aaw-god-rays-overscan * 2});
 
-  // Floor on the box height, so a short window still gets a ray field
-  // long enough to reach the bottom instead of a squashed one.
   min-height: 50rem;
 
   pointer-events: none;
   z-index: 0;
+  will-change: filter;
+
+  > canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
 }
 
 .aaw-lab__inner {
@@ -65,31 +70,49 @@ $aaw-god-rays-overscan: 90px;
   position: relative;
   z-index: 1;
 
-  max-width: 50rem; // 800px — the Seller Home content column
+  max-width: 50rem; // 800px — briefing, composer and feed all cap here
   width: 100%;
   margin-inline: auto;
+
+  // Same stack as `.seller-home__main-inner`: briefing → composer → feed,
+  // 24px between. The director, when shown, sits above that stack.
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-6, 1.5rem);
 }
 
-.aaw-lab__note {
-  margin: 0 0 var(--slds-g-spacing-6, 2rem);
-  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
-  line-height: 1.4;
-  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+// Live quota ticks in the briefing (feed_timelapse.js). Tabular so the
+// heading and link don't shift as 80 → 81 and 1.6 → 1.7.
+[data-aaw-quota-pct],
+[data-aaw-quota-closed] {
+  font-variant-numeric: tabular-nums;
 }
 
 // ── Time-lapse director chrome ────────────────────────────────────────
-// Play / Replay + TIMING number inputs. Lab-only; must not restyle
-// `.seller-home__feed*`.
+// Play / Pause / Replay + TIMING number inputs. Lab-only; must not restyle
+// `.seller-home__feed*`. Hidden by default; the header gear toggles
+// `.is-hidden` (same pattern as Home's shader tuner).
 .aaw-lab__director {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-5, 1.25rem);
-  margin: 0 0 var(--slds-g-spacing-6, 2rem);
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+  margin: 0;
   padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
   background: #fff;
   border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
   border-radius: var(--slds-g-radius-border-2, 0.5rem);
+
+  &.is-hidden {
+    display: none;
+  }
+}
+
+.aaw-lab__director-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-5, 1.25rem);
 }
 
 .aaw-lab__director-actions {
@@ -120,4 +143,35 @@ $aaw-god-rays-overscan: 90px;
   border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
   border-radius: var(--slds-g-radius-border-1, 0.25rem);
   background: #fff;
+}
+
+.aaw-lab__scrubber {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  width: 100%;
+}
+
+.aaw-lab__scrubber-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.aaw-lab__scrubber-time {
+  margin-left: auto;
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-variant-numeric: tabular-nums;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+.aaw-lab__scrubber-track {
+  display: block;
+  width: 100%;
+}
+
+.aaw-lab__scrubber-track input[type="range"] {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--slds-g-color-palette-blue-50, #0176d3);
 }

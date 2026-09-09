@@ -1,241 +1,225 @@
 /* ══════════════════════════════════════════════════════════════════════
-   God-rays shader — PROTOTYPE mount
+   Background shader — /agent_at_work.html
    ----------------------------------------------------------------------
-   Puts the same animated background behind the "Your agent at work" lab
-   page that Seller Home runs, so the component is judged over the
-   surface it will actually sit on rather than flat grey.
-
-   Ported from the inline module at the bottom of views/index.html, with
-   the tuning panel and its sliders left behind — the prototype wants the
-   settled look, not the controls. Every number in DEFAULTS is copied
-   verbatim from there; changing one here changes only this page.
-
-   One real difference: Seller Home anchors the point where the rays
-   converge to the chat composer's measured position. There's no composer
-   on this page, so it falls back to `focalFallbackPx` measured from the
-   top of the shell — the same branch index.html takes on any page
-   without one.
+   Mounts whichever pick Home's header gear last saved (`sh:shader`),
+   falling back to simplex. Tuner panel stays on Home; this page just
+   wants the same settled look the feed sits on. Saved presets
+   (`sh:shaderState:<name>`) carry over so a Save on Home shows here.
 
    Fails soft. If WebGL is unavailable or the CDN is unreachable the
    canvas never mounts, and `.aaw-lab`'s own background colour is what
-   shows — which is why that colour matches the shader's `colorBack`.
+   shows.
    ══════════════════════════════════════════════════════════════════════ */
 
 import {
   ShaderMount,
   godRaysFragmentShader,
+  meshGradientFragmentShader,
+  staticRadialGradientFragmentShader,
+  simplexNoiseFragmentShader,
   getShaderColorFromString as toVec4,
   getShaderNoiseTexture,
   ShaderFitOptions
 } from 'https://cdn.jsdelivr.net/npm/@paper-design/shaders@0.0.77/+esm'
 
-const DEFAULTS = {
+const DEFAULT_SHADER = 'simplex'
+
+const loadSavedState = (shader) => {
+  try {
+    const raw = window.localStorage.getItem('sh:shaderState:' + shader)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+const MESH_DEFAULTS = {
+  colors: ['#e5edff', '#1f9eff', '#50c2f7', '#8097ff', '#ffc7eb', '#a28fff', '#5cecff', '#c7d2fe', '#e0e7ff', '#f0f9ff'],
+  colorsCount: 7,
+  distortion: 0.35, swirl: 0.32,
+  grainMixer: 0.03, grainOverlay: 0.07,
+  speed: 0.08, scale: 1.28, rotation: 32,
+  offsetX: -0.12, offsetY: 0.04
+}
+
+const RADIAL_DEFAULTS = {
+  colors: ['#c2efff85', '#6ac8e7', '#dbeafe', '#bae6fd', '#a5f3fc', '#c7d2fe', '#e0e7ff', '#f0f9ff', '#ecfeff', '#f5f3ff'],
+  colorsCount: 2,
+  colorBack: '#f0f9ffff',
+  radius: 0.75, focalDistance: 0.11, focalAngle: 0,
+  falloff: -0.1, mixing: 1,
+  distortion: 0, distortionShift: -1, distortionFreq: 9,
+  grainMixer: 0, grainOverlay: 0,
+  offsetX: 0, offsetY: -0.24
+}
+
+const SIMPLEX_DEFAULTS = {
+  colors: ['#ffffffff', '#e0edff12', '#fbe5ff12', '#dcb8ff12', '#3df2ff12', '#00aaff12', '#4d4dff12', '#ce6bff12', '#ff00aa12', '#ff52bf12'],
+  colorsCount: 10,
+  stepsPerColor: 10, softness: 1,
+  speed: 2.4, scale: 4, rotation: 0,
+  offsetX: 0, offsetY: 0
+}
+
+const GODRAYS_DEFAULTS = {
   colors: ['#148effa6', '#c3defebf', '#c380d1', '#33fff5', '#7ad8fa'],
   colorsCount: 5,
   colorBack: '#ffffff',
   colorBloom: '#ffa8f3',
   bloom: 0, intensity: 0, density: 0.06, spotty: 0.98,
   midSize: 0.51, midIntensity: 0.24,
-  scale: 0.71, rotation: 152, offsetX: 0,
-  // Signed distance from the top of the shell down to the convergence
-  // point. Seller Home measures from its composer instead and keeps this
-  // only as a no-composer fallback, where it sits at 415; here it's the
-  // only path, and negative parks the focal point above the page so the
-  // rays fan down across the list rather than converging inside it.
-  focalFallbackPx: -240,
-  speed: 1.09, blur: 5,
-  wedge: 90, feather: 22,   // angular mask, in degrees — CSS, not a uniform
-  hole: 0, holeFeather: 0,  // radial mask hole, in vmin — 0 disables it
-  north: true, east: false, south: false, west: false // cones cleared of rays
+  scale: 0.71, rotation: 152, offsetX: 0, offsetY: 0,
+  speed: 1.09, blur: 5
 }
 
-// Which state keys are shader uniforms, and under what name.
-const UNIFORMS = {
-  intensity: 'u_intensity',
-  density: 'u_density',
-  spotty: 'u_spotty',
-  midSize: 'u_midSize',
-  midIntensity: 'u_midIntensity',
-  bloom: 'u_bloom',
-  scale: 'u_scale',
-  rotation: 'u_rotation',
-  offsetX: 'u_offsetX'
+const padPalette = (state, n, fill = '#ffffffff') => {
+  while (state.colors.length < n) state.colors.push(fill)
+  state.colors.length = n
 }
 
-// Cone centres, in conic-gradient degrees (0 = 12 o'clock, clockwise).
-const CONES = [['north', 0], ['east', 90], ['south', 180], ['west', 270]]
-
-const state = DEFAULTS
 const bg = document.querySelector('[data-aaw-god-rays]')
-
-if (bg) {
-  const shell = bg.parentElement
+if (!bg) { /* page chrome missing — nothing to mount */ }
+else {
+  let storedShader = null
+  try { storedShader = window.localStorage.getItem('sh:shader') } catch { /* private mode */ }
+  const ACTIVE_SHADER = new URLSearchParams(location.search).get('shader') || storedShader || DEFAULT_SHADER
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)')
 
   try {
-    // ShaderMount rejects a texture that hasn't decoded, so wait for it.
-    let noise
-    try { noise = getShaderNoiseTexture(document) } catch { noise = getShaderNoiseTexture() }
-    if (!(noise.complete && noise.naturalWidth)) {
-      if (typeof noise.decode === 'function') await noise.decode()
-      else {
-        await new Promise((ok, no) => {
-          noise.addEventListener('load', ok, { once: true })
-          noise.addEventListener('error', no, { once: true })
-        })
-      }
-    }
-
-    // Solve for the shader offset that puts the focal point where
-    // `focalFallbackPx` asks, in the CURRENT box. Inverts
-    // `focalY = h / 2 + offsetY * max(w, h)`.
-    //
-    // Measured against the host's own rect rather than assumed, which
-    // spares this file a duplicated copy of the overscan constant from
-    // the stylesheet — the gap is read live.
-    const focalOffsetY = () => {
-      const host = bg.getBoundingClientRect()
-      if (!host.width || !host.height) return 0
-
-      const fromHostTop =
-        (shell.getBoundingClientRect().top - host.top) + state.focalFallbackPx
-
-      return (fromHostTop - host.height / 2) / Math.max(host.width, host.height)
-    }
-
-    let offsetY = focalOffsetY()
-
-    const uniformsFor = () => {
-      const u = {
-        u_noiseTexture: noise,
-        u_offsetY: offsetY,
-        // Always send all 5 slots (the shader declares vec4 u_colors[5]);
-        // u_colorsCount decides how many get used.
+    if (ACTIVE_SHADER === 'mesh') {
+      const state = { ...MESH_DEFAULTS, ...(loadSavedState('mesh') || {}) }
+      padPalette(state, 10)
+      const uniforms = () => ({
         u_colors: state.colors.map(toVec4),
         u_colorsCount: state.colorsCount,
-        u_colorBack: toVec4(state.colorBack),
-        u_colorBloom: toVec4(state.colorBloom),
+        u_distortion: state.distortion,
+        u_swirl: state.swirl,
+        u_grainMixer: state.grainMixer,
+        u_grainOverlay: state.grainOverlay,
+        u_scale: state.scale,
+        u_rotation: state.rotation,
+        u_offsetX: state.offsetX,
+        u_offsetY: state.offsetY,
         u_fit: ShaderFitOptions.cover,
         u_originX: 0.5, u_originY: 0.5,
         u_worldWidth: 0, u_worldHeight: 0
-      }
-      for (const key in UNIFORMS) u[UNIFORMS[key]] = state[key]
-      return u
-    }
-
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)')
-
-    const mount = new ShaderMount(
-      bg, godRaysFragmentShader, uniformsFor(), undefined,
-      reduce.matches ? 0 : state.speed, 0,
-      state.blur > 0 ? 1 : 2 // minPixelRatio
-    )
-
-    // Where the rays converge, as percentages of the host, so the mask
-    // can be pinned to the focal point instead of the box centre.
-    //
-    // The shader puts the focal point where its object UV hits zero, and
-    // `u_fit: cover` with a 1:1 world ratio makes the object box a square
-    // of the canvas's longer side. Both axes then land on the same tidy
-    // form: 0.5 + offset / S.
-    const focalPct = () => {
-      const { width: w, height: h } = bg.getBoundingClientRect()
-      if (!w || !h) return { x: 50, y: 50 }
-      const longest = Math.max(w, h)
-      return {
-        x: (0.5 + state.offsetX / (w / longest)) * 100,
-        y: (0.5 + offsetY / (h / longest)) * 100
-      }
-    }
-
-    // A conic mask CLEARS the enabled cones — each becomes a wedge with
-    // no rays, ±`wedge` degrees wide — while rays fill everything else.
-    // Masking beats overlaying white shapes: it stays transparent, so it
-    // works over any background and adds no layer to blur.
-    const applyMask = () => {
-      const layers = []
-      const on = CONES.filter(([k]) => state[k])
-      const { x: cx, y: cy } = focalPct()
-      const at = `${cx.toFixed(2)}% ${cy.toFixed(2)}%`
-
-      // Nothing cleared means the full circle of rays — no conic layer.
-      if (on.length) {
-        const centers = on.map(([, deg]) => deg).sort((a, b) => a - b)
-
-        const gapAfter = (i) => {
-          const next = centers[(i + 1) % centers.length]
-          return ((next - centers[i]) % 360 + 360) % 360 || 360
+      })
+      const mount = new ShaderMount(
+        bg, meshGradientFragmentShader, uniforms(), undefined,
+        reduce.matches ? 0 : state.speed, 0
+      )
+      reduce.addEventListener('change', () => {
+        mount.setUniforms(uniforms())
+        mount.setSpeed(reduce.matches ? 0 : state.speed)
+        if (state.speed === 0 || reduce.matches) {
+          try { mount.requestRender() } catch {}
         }
-
-        // Cleared cones must not merge, so cap the half-extent at half
-        // the tightest gap between neighbours.
-        let minGap = 360, seam = 0, widest = -1
-        for (let i = 0; i < centers.length; i++) {
-          const g = gapAfter(i)
-          minGap = Math.min(minGap, g)
-          if (g > widest) { widest = g; seam = centers[i] + g / 2 }
+      })
+    } else if (ACTIVE_SHADER === 'radial') {
+      const state = { ...RADIAL_DEFAULTS, ...(loadSavedState('radial') || {}) }
+      padPalette(state, 10)
+      const uniforms = () => ({
+        u_colorBack: toVec4(state.colorBack),
+        u_colors: state.colors.map(toVec4),
+        u_colorsCount: state.colorsCount,
+        u_radius: state.radius,
+        u_focalDistance: state.focalDistance,
+        u_focalAngle: state.focalAngle,
+        u_falloff: state.falloff,
+        u_mixing: state.mixing,
+        u_distortion: state.distortion,
+        u_distortionShift: state.distortionShift,
+        u_distortionFreq: state.distortionFreq,
+        u_grainMixer: state.grainMixer,
+        u_grainOverlay: state.grainOverlay,
+        u_fit: ShaderFitOptions.cover,
+        u_scale: 1, u_rotation: 0,
+        u_offsetX: state.offsetX, u_offsetY: state.offsetY,
+        u_originX: 0.5, u_originY: 0.5,
+        u_worldWidth: 0, u_worldHeight: 0
+      })
+      const mount = new ShaderMount(bg, staticRadialGradientFragmentShader, uniforms(), undefined, 0, 0)
+      try { mount.requestRender() } catch {}
+    } else if (ACTIVE_SHADER === 'simplex') {
+      const state = { ...SIMPLEX_DEFAULTS, ...(loadSavedState('simplex') || {}) }
+      padPalette(state, 10)
+      const uniforms = () => ({
+        u_colors: state.colors.map(toVec4),
+        u_colorsCount: state.colorsCount,
+        u_stepsPerColor: state.stepsPerColor,
+        u_softness: state.softness,
+        u_scale: state.scale,
+        u_rotation: state.rotation,
+        u_offsetX: state.offsetX,
+        u_offsetY: state.offsetY,
+        u_fit: ShaderFitOptions.cover,
+        u_originX: 0.5, u_originY: 0.5,
+        u_worldWidth: 0, u_worldHeight: 0
+      })
+      const mount = new ShaderMount(
+        bg, simplexNoiseFragmentShader, uniforms(), undefined,
+        reduce.matches ? 0 : state.speed, 0
+      )
+      reduce.addEventListener('change', () => {
+        mount.setUniforms(uniforms())
+        mount.setSpeed(reduce.matches ? 0 : state.speed)
+        if (state.speed === 0 || reduce.matches) {
+          try { mount.requestRender() } catch {}
         }
-        const limit = centers.length === 1 ? 179 : minGap / 2 - 0.5
-        const w = Math.min(state.wedge, limit)
-        const f = Math.min(state.feather, limit - w)
+      })
+    } else {
+      const state = { ...GODRAYS_DEFAULTS, ...(loadSavedState('godrays') || {}) }
+      padPalette(state, 5)
+      let noise
+      try { noise = getShaderNoiseTexture(document) } catch { noise = getShaderNoiseTexture() }
+      const wait = (!(noise.complete && noise.naturalWidth))
+        ? (typeof noise.decode === 'function'
+          ? noise.decode()
+          : new Promise((ok, no) => {
+            noise.addEventListener('load', ok, { once: true })
+            noise.addEventListener('error', no, { once: true })
+          }))
+        : Promise.resolve()
 
-        // Anchoring the seam in the widest gap means no cone straddles
-        // the 0/360 boundary, so the stops stay monotonic.
-        const stops = [[0, '#000']]
-        const rel = centers
-          .map((c) => ((c - seam) % 360 + 360) % 360)
-          .sort((a, b) => a - b)
-        for (const p of rel) {
-          stops.push([p - w - f, '#000'], [p - w, 'transparent'],
-            [p + w, 'transparent'], [p + w + f, '#000'])
-        }
-        stops.push([360, '#000'])
-
-        layers.push(`conic-gradient(from ${seam}deg at ${at}, ` +
-          stops.map(([d, c]) => `${c} ${d}deg`).join(', ') + ')')
-      }
-
-      if (state.hole > 0) {
-        const r = state.hole
-        const hf = Math.max(state.holeFeather, 0.1)
-        layers.push(`radial-gradient(circle at ${at}, transparent 0, transparent ${r}vmin, #000 ${r + hf}vmin)`)
-      }
-
-      const img = layers.length ? layers.join(', ') : 'none'
-      bg.style.maskImage = img
-      bg.style.webkitMaskImage = img
-      // Layers must intersect, not stack. Safari wants the legacy keyword.
-      bg.style.maskComposite = layers.length > 1 ? 'intersect' : 'add'
-      bg.style.webkitMaskComposite = layers.length > 1 ? 'source-in' : 'source-over'
-    }
-
-    bg.style.filter = `blur(${state.blur}px)`
-    applyMask()
-
-    // Re-solve the offset and re-place the mask on it. `setUniforms`
-    // renders immediately, so this works even while the animation loop is
-    // stopped for reduced motion.
-    const syncFocal = () => {
-      offsetY = focalOffsetY()
-      mount.setUniforms({ u_offsetY: offsetY })
-      applyMask()
-    }
-
-    reduce.addEventListener('change', () => {
-      mount.setSpeed(reduce.matches ? 0 : state.speed)
-      if (reduce.matches) { try { mount.requestRender() } catch {} }
-    })
-
-    // Re-solve whenever the box or the content column could have moved:
-    // a window resize changes the host, and anything that reflows the
-    // list changes where the focal point should land relative to it.
-    if (typeof ResizeObserver === 'function') {
-      const ro = new ResizeObserver(syncFocal)
-      ro.observe(bg)
-      const column = document.querySelector('.aaw-lab__inner')
-      if (column) ro.observe(column)
+      wait.then(() => {
+        const uniforms = () => ({
+          u_noiseTexture: noise,
+          u_offsetY: state.offsetY,
+          u_colors: state.colors.map(toVec4),
+          u_colorsCount: state.colorsCount,
+          u_colorBack: toVec4(state.colorBack),
+          u_colorBloom: toVec4(state.colorBloom),
+          u_intensity: state.intensity,
+          u_density: state.density,
+          u_spotty: state.spotty,
+          u_midSize: state.midSize,
+          u_midIntensity: state.midIntensity,
+          u_bloom: state.bloom,
+          u_scale: state.scale,
+          u_rotation: state.rotation,
+          u_offsetX: state.offsetX,
+          u_fit: ShaderFitOptions.cover,
+          u_originX: 0.5, u_originY: 0.5,
+          u_worldWidth: 0, u_worldHeight: 0
+        })
+        const mount = new ShaderMount(
+          bg, godRaysFragmentShader, uniforms(), undefined,
+          reduce.matches ? 0 : state.speed, 0,
+          state.blur > 0 ? 1 : 2
+        )
+        bg.style.filter = `blur(${state.blur}px)`
+        reduce.addEventListener('change', () => {
+          mount.setUniforms(uniforms())
+          mount.setSpeed(reduce.matches ? 0 : state.speed)
+          if (state.speed === 0 || reduce.matches) {
+            try { mount.requestRender() } catch {}
+          }
+        })
+      }).catch((error) => {
+        console.warn('[aaw] god-rays shader did not mount:', error)
+      })
     }
   } catch (error) {
-    // Leave the host empty; `.aaw-lab`'s background colour stands in.
-    console.warn('[aaw] god-rays shader did not mount:', error)
+    console.warn('[aaw] shader did not mount:', error)
   }
 }

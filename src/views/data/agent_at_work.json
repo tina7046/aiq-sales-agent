@@ -9,8 +9,9 @@
   //  there is one implementation and it cannot drift.
   //
   //  What forks is the content: this file is the time-lapse seed for
-  //  /agent_at_work.html — two running Rohan rows on a pinned Tuesday.
-  //  Markup, styles and behaviour stay shared with Seller Home.
+  //  /agent_at_work.html — 1 Completed + 8 Running Rohan rows on a
+  //  pinned Tuesday. Markup, styles and behaviour stay shared with
+  //  Seller Home.
   //
   //  Gulp injects this automatically — `getData` reads
   //  `data/<page>.json` for `<page>.html` — so defining `feed` here is
@@ -23,21 +24,21 @@
     // recomputed on every page load. Set a literal string ("Mon July 13")
     // to freeze it — useful when a screenshot has to match a deck.
     "date": "Tue September 8",
+    // The lab director ticks this pin forward `dateDays` calendar days
+    // each conveyor cycle (weekday Mon–Sun, day number, month on rollover).
     // ── The subline ───────────────────────────────────────────────────
     // Every row's second line is two slots: "<left> · <right>".
     //
-    //   completed   Weekly       · Next run in 3 days
-    //   running     2 of 5 steps · 4 min elapsed
-    //   scheduled   Daily        · Next run in 15 hours
-    //   paused      Paused       · Last run Thursday
-    //   failed      Failed       · Last run today at 6:00 AM
+    //   completed   Ready   · Weekly
+    //   running     Running · Weekly
+    //   scheduled   Daily   · Next run in 15 hours
+    //   paused      Paused  · Last run Thursday
+    //   failed      Failed  · Last run today at 6:00 AM
     //
-    // Ready (`completed`) and Scheduled both lead with cadence: the
-    // group header already names those states, so restating "Completed"
-    // is wasted. Running leads with step progress — remaining time is
-    // unknown; completed-of-total steps is the honest signal — and
-    // elapsed on the right. Paused / Failed / Archived still use a
-    // status word. Full contract: index.json `feed`.
+    // Ready and Running both lead with the status word. The right slot
+    // is cadence (`Weekly`) so a finish only swaps Ready / Running.
+    // Paused / Failed / Archived still use a status word on the left.
+    // Full contract: index.json `feed`.
     // ── Group headers ─────────────────────────────────────────────────
     // Labels above the runs of rows. Defining `groups` at all is what
     // turns them on, so a page can opt out by dropping the key.
@@ -57,10 +58,8 @@
     // `filter` block, so Seller Home is untouched until it's ported.
     //
     //   options   the three views, in menu order. `default` is the one
-    //             the list opens on.
-    //   sections  Active-view sub-groups: state -> heading. Active shows
-    //             completed (Ready) and running (Running); Scheduled and
-    //             Archived are single-state and get no sections.
+    //             the list opens on. Active is one flat list of Ready
+    //             and Running rows (no section headings).
     "filter": {
       "default": "active",
       "options": [
@@ -68,10 +67,6 @@
         { "id": "scheduled", "label": "Scheduled" },
         { "id": "archived",  "label": "Archived"  }
       ],
-      "sections": {
-        "completed": "Ready",
-        "running":   "Running"
-      },
       // A message per view for when it has no rows — the filter's
       // equivalent of `feed.empty`. home.scss shows the matching one when
       // that view's states are all absent.
@@ -82,13 +77,12 @@
       }
     },
 
-    // Left-slot words for states that still need one (Paused / Failed /
-    // Archived). Ready uses cadence and Running uses `stepProgress`;
-    // `completed` / `running` here are fallbacks if those fields are
-    // missing.
+    // Left-slot words. Ready and Running lead with these; cadence sits
+    // on the right. Paused / Failed / Archived still use a status word
+    // on the left.
     "statusLabels": {
-      "completed": "Completed",
-      "running":   "Running now",
+      "completed": "Ready",
+      "running":   "Running",
       "paused":    "Paused",
       "failed":    "Failed",
       "archived":  "Archived"
@@ -103,9 +97,9 @@
       "body": "New results appear here as your agent works."
     },
 
-    // What the right slot says the moment a run is started off-schedule
-    // (a failed row retried, or "Run now" from the kebab). There's no
-    // elapsed time to report yet, so it can't reuse `startedAt`.
+    // Unused by the feed subline (right slot is now Running / Completed
+    // from `statusLabels`). Kept so older callers of `feedItem` still
+    // have a value to pass.
     "retryTime": "Just started",
 
     // Row order. The template groups `items` by this sequence, so a new
@@ -184,31 +178,37 @@
       "pdf":      { "sprite": "pdf",    "spriteFamily": "doctype" },
       "doc-green": { "iconImage": "/assets/images/doctype-icons/Doc-green.svg" },
       "doc-blue":  { "iconImage": "/assets/images/doctype-icons/Doc-blue.svg" },
-      "doc-grey":  { "iconImage": "/assets/images/doctype-icons/Doc-grey.svg" }
+      "doc-grey":  { "iconImage": "/assets/images/doctype-icons/Doc-grey.svg" },
+      "doc-yellow": { "iconImage": "/assets/images/doctype-icons/Doc-yellow.svg" },
+      "doc-red": { "iconImage": "/assets/images/doctype-icons/Doc-red.svg" },
+      "doc-purple": { "iconImage": "/assets/images/doctype-icons/Doc-purple.svg" },
+      "doc-orange": { "iconImage": "/assets/images/doctype-icons/Doc-orange.svg" }
     },
-    // ── Time-lapse seed (slice 1) ────────────────────────────────────
-    // Two Rohan-flavored running rows on a pinned Tuesday. Scheduled /
-    // failed / paused / archived extras are out so the one-day loop is
-    // readable: Running → Ready → swipe-out. Later slices add stagger-in
-    // and date changes; this array is the known Replay seed.
+    // ── Time-lapse seed (infinite 1+4 loop) ──────────────────────────
+    // Nine Rohan-flavored rows on a pinned Tuesday. The first is
+    // already Completed; the rest start Running. The director shows
+    // 1 Completed + 4 Running; extras stay `hidden` as the insert
+    // pool. After the pool is empty, dismissed rows recycle from a
+    // boot-time HTML catalog so the loop can run forever.
     "items": [
       {
         "id": "run-01",
-        "title": "Researching target accounts",
+        "title": "Researched target accounts",
         "titles": {
           "running": "Researching target accounts",
+          "completed": "Researched target accounts",
           "neutral": "Research target accounts"
         },
         "cadence": "Weekly",
         "stepProgress": "4 of 5 steps",
         "startedAt": "12 min elapsed",
         "nextRun": "Next run Monday at 9:00 AM",
-        "lastRun": "Last run Monday",
-        "state": "running",
+        "lastRun": "Last run today",
+        "state": "completed",
         "outputs": [
           {
             "icon": "doc-green",
-            "label": "42 of 50 accounts",
+            "label": "50 accounts",
             "scheduledIcon": "doc-grey",
             "scheduledLabel": "Target accounts"
           }
@@ -220,6 +220,7 @@
         "title": "Drafting outreach for warm leads",
         "titles": {
           "running": "Drafting outreach for warm leads",
+          "completed": "Drafted outreach for warm leads",
           "neutral": "Draft outreach for warm leads"
         },
         "cadence": "Daily",
@@ -231,12 +232,186 @@
         "outputs": [
           {
             "icon": "doc-blue",
-            "label": "12 of 30 drafted",
+            "label": "30 drafted",
             "scheduledIcon": "doc-grey",
             "scheduledLabel": "Outreach drafts"
           }
         ],
         "workflow": { "id": "sk-write-sales-emails", "label": "" }
+      },
+      {
+        "id": "run-03",
+        "title": "Finding new prospects",
+        "titles": {
+          "running": "Finding new prospects",
+          "completed": "Found new prospects",
+          "neutral": "Find new prospects"
+        },
+        "cadence": "Weekly",
+        "stepProgress": "3 of 5 steps",
+        "startedAt": "8 min elapsed",
+        "nextRun": "Next run in 3 days",
+        "lastRun": "Last run Thursday",
+        "state": "running",
+        "outputs": [
+          {
+            "icon": "doc-green",
+            "label": "20 accounts",
+            "scheduledIcon": "doc-grey",
+            "scheduledLabel": "New accounts"
+          },
+          {
+            "icon": "doc-yellow",
+            "label": "40 prospects",
+            "scheduledIcon": "doc-grey",
+            "scheduledLabel": "Prospects"
+          }
+        ],
+        "workflow": { "id": "sk-find-prospects", "label": "" }
+      },
+      {
+        "id": "run-04",
+        "title": "Drafting proposals to send",
+        "titles": {
+          "running": "Drafting proposals to send",
+          "completed": "Drafted proposals to send",
+          "neutral": "Draft proposals to send"
+        },
+        "cadence": "Daily",
+        "stepProgress": "1 of 3 steps",
+        "startedAt": "2 min elapsed",
+        "nextRun": "Next run tomorrow at 6:00 AM",
+        "lastRun": "Last run today",
+        "state": "running",
+        "outputs": [
+          {
+            "icon": "doc-red",
+            "label": "10 proposals",
+            "scheduledIcon": "doc-grey",
+            "scheduledLabel": "Proposals"
+          }
+        ],
+        "workflow": { "id": "sk-draft-proposals", "label": "" }
+      },
+      {
+        "id": "run-05",
+        "title": "Preparing your executive brief",
+        "titles": {
+          "running": "Preparing your executive brief",
+          "completed": "Prepared your executive brief",
+          "neutral": "Executive Brief"
+        },
+        "cadence": "Weekly",
+        "stepProgress": "2 of 3 steps",
+        "startedAt": "6 min elapsed",
+        "nextRun": "Next run Friday at 5:00 AM",
+        "lastRun": "Last run Friday",
+        "state": "running",
+        "outputs": [
+          {
+            "icon": "doc-purple",
+            "label": "Quarterly Deal Pulse",
+            "scheduledIcon": "doc-grey",
+            "scheduledLabel": "Executive brief"
+          }
+        ],
+        "workflow": { "id": "sk-weekly-exec-brief", "label": "" }
+      },
+      {
+        "id": "run-06",
+        "title": "Preparing meeting next steps",
+        "titles": {
+          "running": "Preparing meeting next steps",
+          "completed": "Prepared meeting next steps",
+          "neutral": "Meeting next steps"
+        },
+        "cadence": "Daily",
+        "stepProgress": "1 of 3 steps",
+        "startedAt": "3 min elapsed",
+        "nextRun": "Next run Friday at 9:00 AM",
+        "lastRun": "Last run yesterday",
+        "state": "running",
+        "outputs": [
+          {
+            "icon": "doc-orange",
+            "label": "8 action items",
+            "scheduledIcon": "doc-grey",
+            "scheduledLabel": "Action items"
+          }
+        ],
+        "workflow": { "id": "sk-prepare-for-meetings", "label": "" }
+      },
+      {
+        "id": "run-07",
+        "title": "Preparing your quota health check",
+        "titles": {
+          "running": "Preparing your quota health check",
+          "completed": "Prepared your quota health check",
+          "neutral": "Quota Health Check"
+        },
+        "cadence": "Weekly",
+        "stepProgress": "2 of 4 steps",
+        "startedAt": "9 min elapsed",
+        "nextRun": "Next run Monday at 9:00 AM",
+        "lastRun": "Last run today",
+        "state": "running",
+        "outputs": [
+          {
+            "icon": "doc-yellow",
+            "label": "3 things to know",
+            "scheduledIcon": "doc-grey",
+            "scheduledLabel": "Quota notes"
+          }
+        ],
+        "workflow": { "id": "sk-weekly-top-3", "label": "" }
+      },
+      {
+        "id": "run-08",
+        "title": "Preparing the pipeline snapshot",
+        "titles": {
+          "running": "Preparing the pipeline snapshot",
+          "completed": "Prepared the pipeline snapshot",
+          "neutral": "Pipeline Snapshot"
+        },
+        "cadence": "Daily",
+        "stepProgress": "3 of 3 steps",
+        "startedAt": "15 min elapsed",
+        "nextRun": "Next run tomorrow at 9:00 AM",
+        "lastRun": "Last run today at 9:00 AM",
+        "state": "running",
+        "outputs": [
+          {
+            "icon": "doc-blue",
+            "label": "Pipeline snapshot",
+            "scheduledIcon": "doc-grey",
+            "scheduledLabel": "Pipeline snapshot"
+          }
+        ],
+        "workflow": { "id": "sk-daily-pipeline-snapshot", "label": "" }
+      },
+      {
+        "id": "run-09",
+        "title": "Refreshing account health scores",
+        "titles": {
+          "running": "Refreshing account health scores",
+          "completed": "Refreshed account health scores",
+          "neutral": "Refresh account health scores"
+        },
+        "cadence": "Monthly",
+        "stepProgress": "1 of 4 steps",
+        "startedAt": "1 min elapsed",
+        "nextRun": "Next run Monday at 6:00 AM",
+        "lastRun": "Last run Jul 20",
+        "state": "running",
+        "outputs": [
+          {
+            "icon": "doc-green",
+            "label": "1,240 accounts",
+            "scheduledIcon": "doc-grey",
+            "scheduledLabel": "Health scores"
+          }
+        ],
+        "workflow": { "id": "sk-account-research", "label": "" }
       }
     ],
     "itemsParked": [],

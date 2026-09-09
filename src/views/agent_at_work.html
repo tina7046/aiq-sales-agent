@@ -3,13 +3,15 @@
 {#
   "Your agent at work" — lab page
   =====================================================================
-  Served at /agent_at_work.html. A bare page that renders the REAL
-  Seller Home feed, so the component can be looked at and poked without
-  the nav, briefing and composer around it.
+  Served at /agent_at_work.html. The live Seller Home column — briefing,
+  composer and feed — without the left nav, so the conveyor can be
+  looked at in the same frame it ships in.
 
   The COMPONENT is not a copy. This page includes `_home_feed.html`,
-  loads `home.css` and boots `home.js` — one implementation, shared with
-  Seller Home, so markup, styles and behaviour can't drift.
+  `_home_composer.html` and the briefing markup from index.html, loads
+  `home.css` and boots `home.js` — one implementation, shared with
+  Seller Home, so markup, styles and behaviour can't drift. Briefing
+  and composer copy come from `readData("index")` (Rohan's overlay).
 
   The DATA does fork, on purpose. `data/agent_at_work.json` starts as a
   copy of index.json's `feed` block, and rows added there show up here
@@ -28,70 +30,117 @@
     .aaw-lab            page surface + positioning root
     .aaw-lab__god-rays  shader host (scripts/aaw_god_rays.js)
     .aaw-lab__inner     the 800px content column
-    .aaw-lab__note      the header note
-    .aaw-lab__director  Play / Replay + TIMING inputs
+    .aaw-lab__director  Play/Pause / Replay + TIMING inputs + scrubber
+                        (hidden by default; gear menu Show control panel)
 
-  Slice 1 time-lapse: `feed_timelapse.js` drives two running rows through
-  Home's Flip (Ready) and swipe-out dismiss. Durations live in TIMING
-  at the top of that file (and the inputs bound to it).
+  Slice 1 time-lapse: `feed_timelapse.js` runs an infinite 1 Completed
+  + 4 Running conveyor — swipe the oldest Completed; as the remaining
+  cards slide up, a new Running card rises with them so five land
+  together. `packStart` (0–1) is how far through the swipe the pack
+  begins; 0.5 is halfway. Durations live in TIMING (and the inputs
+  bound to it). Play/Pause
+  toggles the director; the scrubber seeks one cycle frame-by-frame
+  (‹ › or Left/Right). Replay reloads the seed and plays. The conveyor
+  starts on load.
 
-  The shader is the same one Seller Home runs, tuned to converge above
-  the page rather than on a composer that isn't here.
+  The shader follows Home's gear pick (`sh:shader`), defaulting to
+  simplex. The director is hidden unless the gear's "Show control panel"
+  is on (`aaw:directorControls`).
 #}
 
 {% block styles %}
 {# The real component's stylesheet, then the lab's page chrome. #}
 <link rel="stylesheet" href="/styles/home.css" />
+<link rel="stylesheet" href="/styles/tools.css" />
 <link rel="stylesheet" href="/styles/agent_at_work.css" />
 {% endblock %}
 
 {% block content %}
 
-{# `data-sh-root` is what home.js boots off. Every controller it owns
-   guards on its own elements, so the sections that aren't on this page
-   — nav, briefing, composer, knowledge, scheduled — no-op. #}
+{# `data-sh-root` is what home.js boots off. Briefing + composer + feed
+   wire up; nav / knowledge / scheduled still no-op. Copy for the
+   greeting and the composer comes from Home's page data so this column
+   matches `/u/rohan/index.html`. #}
+{% set _home = readData("index") or {} %}
+{% set briefing = _home.briefing or {} %}
+{% set composer = _home.composer or {} %}
 <div class="aaw-lab" data-sh-root>
-  {# God-rays shader canvas host. Empty and aria-hidden: decoration with
-     no content. Geometry and stacking come from `.aaw-lab__god-rays`. #}
+  {# Shader canvas host. Empty and aria-hidden: decoration with no
+     content. Geometry comes from `.aaw-lab__god-rays`; the mount is
+     Home's simplex noise. #}
   <div class="aaw-lab__god-rays" data-aaw-god-rays aria-hidden="true"></div>
 
   <div class="aaw-lab__inner">
-    <p class="aaw-lab__note">
-      Lab — the live Seller Home “Your agent at work” feed, on its own.
-      Markup <code>_home_feed.html</code> · styles <code>home.scss</code> ·
-      behaviour <code>home.js</code> · director <code>feed_timelapse.js</code> ·
-      data <code>data/agent_at_work.json</code>.
-      Feed motion edits here are edits to Seller Home.
-    </p>
-
-    <div class="aaw-lab__director" data-aaw-director>
-      <div class="aaw-lab__director-actions">
-        <button type="button" class="slds-button slds-button_brand" data-aaw-play>Play</button>
-        <button type="button" class="slds-button slds-button_neutral" data-aaw-replay>Replay</button>
+    {# Hidden until the header gear's "Show control panel" is on. The
+       class (not an inline style) is what the gear script toggles, same
+       pattern as Home's shader tuner. #}
+    <div class="aaw-lab__director is-hidden" data-aaw-director>
+      <div class="aaw-lab__director-row">
+        <div class="aaw-lab__director-actions">
+          <button type="button" class="slds-button slds-button_brand" data-aaw-play aria-pressed="false">Play</button>
+          <button type="button" class="slds-button slds-button_neutral" data-aaw-replay>Replay</button>
+        </div>
+        <form class="aaw-lab__timing" data-aaw-timing>
+          <label class="aaw-lab__timing-field">
+            <span>rest</span>
+            <input type="number" name="rest" min="0" step="0.1" value="0.5" />
+          </label>
+          <label class="aaw-lab__timing-field">
+            <span>enter</span>
+            <input type="number" name="enter" min="0" step="0.1" value="0.4" />
+          </label>
+          <label class="aaw-lab__timing-field">
+            <span>packStart</span>
+            <input type="number" name="packStart" min="0" max="1" step="0.1" value="0.5" />
+          </label>
+          <label class="aaw-lab__timing-field">
+            <span>dateDays</span>
+            <input type="number" name="dateDays" min="1" step="1" value="7" />
+          </label>
+        </form>
       </div>
-      <form class="aaw-lab__timing" data-aaw-timing>
-        <label class="aaw-lab__timing-field">
-          <span>holdRunning</span>
-          <input type="number" name="holdRunning" min="0" step="0.1" value="1.4" />
+      <div class="aaw-lab__scrubber" data-aaw-scrubber>
+        <div class="aaw-lab__scrubber-controls">
+          <button type="button" class="slds-button slds-button_neutral" data-aaw-frame-prev aria-label="Previous frame">‹ Frame</button>
+          <button type="button" class="slds-button slds-button_neutral" data-aaw-frame-next aria-label="Next frame">Frame ›</button>
+          <span class="aaw-lab__scrubber-time" data-aaw-time>0.00s / 0.00s</span>
+        </div>
+        <label class="aaw-lab__scrubber-track">
+          <span class="slds-assistive-text">Scrub animation</span>
+          <input type="range" data-aaw-scrub min="0" max="0" step="0.001" value="0" />
         </label>
-        <label class="aaw-lab__timing-field">
-          <span>betweenComplete</span>
-          <input type="number" name="betweenComplete" min="0" step="0.1" value="0.7" />
-        </label>
-        <label class="aaw-lab__timing-field">
-          <span>holdReady</span>
-          <input type="number" name="holdReady" min="0" step="0.1" value="1.6" />
-        </label>
-        <label class="aaw-lab__timing-field">
-          <span>betweenDismiss</span>
-          <input type="number" name="betweenDismiss" min="0" step="0.1" value="0.45" />
-        </label>
-        <label class="aaw-lab__timing-field">
-          <span>playDelay</span>
-          <input type="number" name="playDelay" min="0" step="0.1" value="0.5" />
-        </label>
-      </form>
+      </div>
     </div>
+
+    {% import "_home_briefing_insight_popover.html" as briefingPopover %}
+    <section
+      class="seller-home__briefing"
+      aria-label="Daily briefing"
+      data-sh-briefing-root
+    >
+      <h1 class="seller-home__briefing-heading">
+        {{ briefing.heading }}
+      </h1>
+      {# Same `linkPhrase` wrap as index.html — one editable string, the
+         phrase painted as the insight button. #}
+      <p class="seller-home__briefing-text">
+        {%- if briefing.linkPhrase -%}
+          {%- set _linked = '<button type="button" class="seller-home__briefing-link">' + briefing.linkPhrase + '</button>' -%}
+          {{ briefing.text | replace(briefing.linkPhrase, _linked) | safe }}
+        {%- else -%}
+          {{ briefing.text }}
+        {%- endif -%}
+      </p>
+      {% if briefing.popovers and briefing.popovers|length %}
+      <div class="seller-home__briefing-popovers" data-sh-briefing-popovers>
+        {% for pop in briefing.popovers %}
+          {{ briefingPopover.briefingInsightPopover(pop) }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </section>
+
+    {% include "_home_composer.html" %}
 
     {# `feed` comes from data/agent_at_work.json, which gulp injects for
        this page. That file is a copy of index.json's `feed` block plus
@@ -99,6 +148,12 @@
     {% include "_home_feed.html" %}
   </div>
 </div>
+
+{% include "_home_connections_modal.html" %}
+{% include "_tools_modal.html" %}
+<script type="application/json" id="sh-tools-config">
+  {{ { "tools": shared.toolsModal.tools } | tojson | safe }}
+</script>
 
 {# GSAP + the Flip plugin, vendored and pinned to the same 3.12.5 as the
    core. home.js uses GSAP for the row dismiss and Flip to re-sort the
@@ -108,11 +163,111 @@
 <script src="/scripts/vendor/gsap.min.js"></script>
 <script src="/scripts/vendor/Flip.min.js"></script>
 <script src="/scripts/home.js"></script>
+<script src="/scripts/tools_filter.js"></script>
+<script type="module" src="/scripts/tools_modal.js"></script>
 <script src="/scripts/feed_timelapse.js"></script>
 
-{# ES module, so it defers on its own and the shader mounts after the
-   list is in the DOM — it measures the content column to place the
-   focal point. #}
+{# ES module. Mounts whichever background Home's gear last picked. #}
 <script type="module" src="/scripts/aaw_god_rays.js"></script>
+
+{# Global-header Setup (gear): pick the background shader and show/hide
+   the director. Same dropdown as Home; the panel toggle here is the
+   director, not Home's shader tuner. #}
+<script>
+	(function () {
+		var SHADER_FORCE = 'simplex-2026-09-07';
+		try {
+			if (window.localStorage.getItem('sh:shaderForce') !== SHADER_FORCE) {
+				window.localStorage.removeItem('sh:shader');
+				window.localStorage.removeItem('sh:shaderControls');
+				window.localStorage.removeItem('sh:shaderState:simplex');
+				window.localStorage.setItem('sh:shaderForce', SHADER_FORCE);
+			}
+		} catch (e) { }
+
+		var panel = document.querySelector('[data-aaw-director]');
+		var gearBtn = document.querySelector('.slds-global-actions__setup');
+		if (!gearBtn) return;
+		var trigger = gearBtn.closest('.slds-dropdown-trigger') || gearBtn.parentElement;
+
+		var SHADER_KEY = 'sh:shader';
+		var PANEL_KEY = 'aaw:directorControls';
+		var DEFAULT_SHADER = 'simplex';
+
+		function lsGet(key) { try { return window.localStorage.getItem(key); } catch (e) { return null; } }
+		function lsSet(key, val) { try { window.localStorage.setItem(key, val); } catch (e) { } }
+
+		var activeShader = new URLSearchParams(location.search).get('shader') || lsGet(SHADER_KEY) || DEFAULT_SHADER;
+		var panelHidden = lsGet(PANEL_KEY) !== 'shown';
+
+		if (panel) panel.classList.toggle('is-hidden', panelHidden);
+
+		var check = '<svg class="slds-icon slds-icon_x-small slds-icon-text-default slds-m-right_x-small" aria-hidden="true"><use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use></svg>';
+		function shaderItem(id, label) {
+			var on = activeShader === id;
+			return '<li class="slds-dropdown__item" role="presentation">' +
+				'<a href="#" role="menuitemradio" aria-checked="' + on + '" data-sh-shader="' + id + '" tabindex="0">' +
+				'<span class="slds-truncate" title="' + label + '">' +
+				'<span data-sh-check style="visibility:' + (on ? 'visible' : 'hidden') + '">' + check + '</span>' + label +
+				'</span></a></li>';
+		}
+		var dd = document.createElement('div');
+		dd.className = 'slds-dropdown slds-dropdown_right slds-dropdown_small';
+		dd.setAttribute('role', 'menu');
+		dd.style.display = 'none';
+		dd.innerHTML =
+			'<ul class="slds-dropdown__list" role="presentation">' +
+			'<li class="slds-dropdown__header slds-truncate" role="separator"><span>Background shader</span></li>' +
+			shaderItem('godrays', 'God Rays') +
+			shaderItem('mesh', 'Mesh') +
+			shaderItem('radial', 'Radial') +
+			shaderItem('simplex', 'Simplex') +
+			'<li class="slds-has-divider_top-space" role="separator"></li>' +
+			'<li class="slds-dropdown__item" role="presentation">' +
+			'<a href="#" role="menuitemcheckbox" aria-checked="' + (!panelHidden) + '" data-aaw-panel-toggle tabindex="0">' +
+			'<span class="slds-truncate" title="Show control panel">' +
+			'<span data-aaw-panel-check style="visibility:' + (panelHidden ? 'hidden' : 'visible') + '">' + check + '</span>Show control panel' +
+			'</span></a></li>' +
+			'</ul>';
+		trigger.appendChild(dd);
+
+		function open() { trigger.classList.add('slds-is-open'); dd.style.display = 'block'; gearBtn.setAttribute('aria-expanded', 'true'); }
+		function close() { trigger.classList.remove('slds-is-open'); dd.style.display = 'none'; gearBtn.setAttribute('aria-expanded', 'false'); }
+
+		gearBtn.setAttribute('aria-haspopup', 'true');
+		gearBtn.setAttribute('aria-expanded', 'false');
+		gearBtn.setAttribute('title', 'Demo controls');
+		gearBtn.addEventListener('click', function (e) {
+			e.preventDefault(); e.stopPropagation();
+			dd.style.display === 'none' ? open() : close();
+		});
+		document.addEventListener('click', function (e) { if (!trigger.contains(e.target)) close(); });
+		document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+
+		dd.addEventListener('click', function (e) {
+			var shaderEl = e.target.closest('[data-sh-shader]');
+			if (shaderEl) {
+				e.preventDefault();
+				var choice = shaderEl.getAttribute('data-sh-shader');
+				if (choice === activeShader) { close(); return; }
+				lsSet(SHADER_KEY, choice);
+				location.assign(location.pathname);
+				return;
+			}
+			var panelEl = e.target.closest('[data-aaw-panel-toggle]');
+			if (panelEl) {
+				e.preventDefault();
+				if (!panel) return;
+				panelHidden = !panel.classList.contains('is-hidden');
+				panel.classList.toggle('is-hidden', panelHidden);
+				lsSet(PANEL_KEY, panelHidden ? 'hidden' : 'shown');
+				panelEl.setAttribute('aria-checked', String(!panelHidden));
+				var chk = dd.querySelector('[data-aaw-panel-check]');
+				if (chk) chk.style.visibility = panelHidden ? 'hidden' : 'visible';
+				return;
+			}
+		});
+	})();
+</script>
 
 {% endblock %}

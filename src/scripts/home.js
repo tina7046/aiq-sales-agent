@@ -2210,7 +2210,7 @@
     })
 
     // Output pills with an authored scheduled variant: a Stop moves the
-    // row into Scheduled, where a colored pill still reading "42 of 50"
+    // row into Scheduled, where a colored pill still reading a count
     // would claim progress the waiting run no longer has. Swap the glyph
     // to its grey scheduled art and the text to the generic label on
     // `scheduled`; restore the authored default on any other state. Pills
@@ -2933,10 +2933,15 @@
     // Narrow director hook. Labs (and later Home) drive Running → Ready
     // and swipe-out through the same Flip / dismiss timelines the kebab
     // already uses — they must not click hidden menu items or copy GSAP.
+    // `applyState` / `place` are the same helpers without Flip: a lab
+    // that recycles a dismissed row into Running can retitle it and
+    // drop it in the right group, then own the enter tween itself.
     window.SH = window.SH || {}
     window.SH.feed = {
       changeState: function (row, state) { changeFeedState(feedRoot, row, state) },
-      dismiss: function (li) { dismissListItem(li) }
+      dismiss: function (li) { dismissListItem(li) },
+      applyState: function (row, state) { applyFeedState(row, state) },
+      place: function (li) { placeFeedRow(feedRoot, li) }
     }
   }
 

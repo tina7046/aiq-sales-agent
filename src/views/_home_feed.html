@@ -11,16 +11,17 @@
     │  Your agent at work   Tue Aug 18                           ⋮ │
     │  ┌────────────────────────────────────────────────────────┐  │
     │  │ ✓  Found new prospects                     [badge]  ⋮  │  │
-    │  │    Weekly · Next run in 3 days                         │  │
+    │  │    Ready · Weekly                                      │  │
     │  │    ( ▨ 6 new accounts ) ( ▨ 10 prospects )             │  │
     │  └────────────────────────────────────────────────────────┘  │
     └──────────────────────────────────────────────────────────────┘
 
   Every row's second line is two slots — left · right — and the
   glyph on its left is a button: it shows what the row is doing and
-  pressing it pauses, resumes, or retries. The left slot is cadence
-  on Ready/Scheduled, step progress on Running, and a status word
-  on Paused/Failed/Archived (those aren't already named by a header).
+  pressing it pauses, resumes, or retries. The left slot is the
+  status word (`Ready` / `Running`) on those two active states, and
+  cadence on Scheduled. Paused / Failed / Archived still use a
+  status word. The right slot is cadence on Ready and Running.
 
   Data: `feed.*` in data/index.json (see that file for the row
   contract). Behaviour: `bindFeed` in scripts/home.js, which boots off
@@ -39,7 +40,7 @@
   progress count). When present, both variants are emitted as data-attrs
   and `applyFeedState` (home.js) swaps them in the moment a Stop moves the
   row into Scheduled — so a waiting run doesn't keep a colored pill that
-  still claims "42 of 50". Restored to the authored default on any other
+  still claims a progress count. Restored to the authored default on any other
   state. Pills without a variant carry no marker and are never touched.
 #}
 {% macro outputPill(output, outputTypes) %}
@@ -125,7 +126,7 @@
     class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--spinner sh-spinner"
     aria-hidden="true"
   ></span>
-  {% for glyph in ["circle", "clock", "pause", "play", "warning", "refresh", "stop", "ban"] %}
+  {% for glyph in ["check", "clock", "pause", "play", "warning", "refresh", "stop", "ban"] %}
   <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--{{ glyph }}" aria-hidden="true">
     <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ glyph }}"></use>
   </svg>
@@ -137,21 +138,15 @@
 {#
   Subline halves, resolved from the row's state.
 
-  Left is cadence on Ready (`completed`) and Scheduled — the group
-  header already names those states, so restating "Completed" /
-  "Running now" is wasted. Running shows step progress instead
-  (`2 of 5 steps`): elapsed time is knowable, remaining time is not.
-  Paused / Failed / Archived still use the status word; those states
-  aren't already labelled by a Ready/Running header.
+  Left is `Ready` / `Running` on those two active states, cadence on
+  Scheduled, and a status word on Paused / Failed / Archived.
 
-  Right is whichever time field that state actually has. They're
-  separate fields rather than one `time` string so a row can change
-  state without a data rewrite — pausing a running row needs its
-  `lastRun` to already be there.
+  Right is cadence on Ready and Running (`Weekly`), and the time
+  field otherwise (next run / last run).
 #}
-{% macro sublineStatus(item, statusLabels) %}{% if item.state == "completed" or item.state == "scheduled" %}{{ item.cadence }}{% elif item.state == "running" %}{{ item.stepProgress or statusLabels.running }}{% else %}{{ statusLabels[item.state] }}{% endif %}{% endmacro %}
+{% macro sublineStatus(item, statusLabels) %}{% if item.state == "scheduled" %}{{ item.cadence }}{% elif item.state == "running" %}{{ statusLabels.running }}{% elif item.state == "completed" %}{{ statusLabels.completed }}{% else %}{{ statusLabels[item.state] }}{% endif %}{% endmacro %}
 
-{% macro sublineTime(item) %}{% if item.state == "running" %}{{ item.startedAt }}{% elif item.state == "paused" or item.state == "failed" or item.state == "archived" %}{{ item.lastRun }}{% elif item.state == "completed" %}{{ item.nextRun or item.lastRun }}{% else %}{{ item.nextRun }}{% endif %}{% endmacro %}
+{% macro sublineTime(item) %}{% if item.state == "running" or item.state == "completed" %}{{ item.cadence }}{% elif item.state == "paused" or item.state == "failed" or item.state == "archived" %}{{ item.lastRun }}{% else %}{{ item.nextRun }}{% endif %}{% endmacro %}
 
 
 {#
@@ -343,9 +338,11 @@
    and needs the same room around it. #}
 {% set hasThirdLine = item.error or (item.outputs and item.outputs|length) %}
 {# The title is a subline slot like the two halves below it, so the same
-   mechanism swaps its tense when the row changes state. A row without
-   `titles` keeps one wording everywhere. #}
+   mechanism swaps its tense when the row changes state. `titles.completed`
+   is the past-tense label; a row without `titles` keeps one wording
+   everywhere. #}
 {% set runningTitle = item.titles.running if item.titles and item.titles.running else item.title %}
+{% set completedTitle = item.titles.completed if item.titles and item.titles.completed else item.title %}
 {% set neutralTitle = item.titles.neutral if item.titles and item.titles.neutral else item.title %}
 <article
   class="seller-home__feed-item{% if hasThirdLine %} seller-home__feed-item--has-outputs{% endif %}"
@@ -378,7 +375,7 @@
           data-sh-feed-slot-default="{{ item.title }}"
           data-sh-feed-slot-paused="{{ neutralTitle }}"
           data-sh-feed-slot-running="{{ runningTitle }}"
-          data-sh-feed-slot-completed="{{ item.title }}"
+          data-sh-feed-slot-completed="{{ completedTitle }}"
           data-sh-feed-slot-scheduled="{{ neutralTitle }}"
           data-sh-feed-slot-archived="{{ neutralTitle }}"
           {%- if hasWorkflow %}
@@ -396,7 +393,7 @@
           data-sh-feed-slot-default="{{ item.title }}"
           data-sh-feed-slot-paused="{{ neutralTitle }}"
           data-sh-feed-slot-running="{{ runningTitle }}"
-          data-sh-feed-slot-completed="{{ item.title }}"
+          data-sh-feed-slot-completed="{{ completedTitle }}"
           data-sh-feed-slot-scheduled="{{ neutralTitle }}"
           data-sh-feed-slot-archived="{{ neutralTitle }}"
           {%- if hasWorkflow %}
@@ -408,15 +405,14 @@
         {% endif %}
       </h3>
 
-      {# Subline — left · right. Left is cadence (Ready/Scheduled),
-         step progress (Running), or a status word (Paused/Failed/
-         Archived). The running slot is `stepProgress` so Run now
-         has copy; the completed slot is cadence so a finish from
-         the kebab doesn't put "Completed" back. #}
+      {# Subline — left · right. Left is Ready/Running on the active
+         states, cadence on Scheduled, or a status word (Paused/Failed/
+         Archived). Right is cadence on Ready and Running, so a Flip
+         from Running → Ready only swaps that word. #}
       <p class="seller-home__feed-item-desc" id="{{ descId }}">
-        {{ sublineSlot("status", "seller-home__feed-item-desc-status", sublineStatus(item, statusLabels), statusLabels.paused, item.stepProgress or statusLabels.running, item.cadence, item.cadence, statusLabels.archived) }}
+        {{ sublineSlot("status", "seller-home__feed-item-desc-status", sublineStatus(item, statusLabels), statusLabels.paused, statusLabels.running, statusLabels.completed, item.cadence, statusLabels.archived) }}
         <span class="seller-home__feed-item-desc-sep" aria-hidden="true">·</span>
-        {{ sublineSlot("time", "seller-home__feed-item-desc-time", sublineTime(item), item.lastRun, retryTime, item.nextRun or item.lastRun or item.startedAt, item.nextRun or item.lastRun or item.startedAt, item.lastRun or item.nextRun) }}
+        {{ sublineSlot("time", "seller-home__feed-item-desc-time", sublineTime(item), item.lastRun, item.cadence, item.cadence, item.nextRun or item.lastRun or item.startedAt, item.lastRun or item.nextRun) }}
       </p>
 
       {# Readable, not aria-hidden. These counts are the row's payload
@@ -608,15 +604,11 @@
     role="list"
     {% if feed.filter %}data-sh-feed-filter="{{ feed.filter.default }}"{% endif %}
   >
-    {#- Filter mode groups the Active view into Ready/Running/Paused via a
-        header before each of those states (labels from
-        `feed.filter.sections`); the view rules in home.scss show them
-        only under `data-sh-feed-filter="active"`. Otherwise the original
-        Active/Paused headers (`feed.groups`) render. -#}
+    {#- Filter mode is one flat list (no Ready/Running headings).
+        Without a filter, Active/Paused headers (`feed.groups`) render. -#}
     {% if not feed.filter and feed.groups %}{{ groupHeader("active", feed.groups.active, feed.stateOrder[0]) }}{% endif %}
     {% for state in feed.stateOrder %}
-      {% if feed.filter and feed.filter.sections[state] %}{{ groupHeader(state, feed.filter.sections[state], state) }}
-      {% elif not feed.filter and feed.groups and state == "paused" %}{{ groupHeader("paused", feed.groups.paused, "paused") }}{% endif %}
+      {% if not feed.filter and feed.groups and state == "paused" %}{{ groupHeader("paused", feed.groups.paused, "paused") }}{% endif %}
       {% for item in feed.items %}
         {% if item.state == state %}
           <li
