@@ -2546,8 +2546,7 @@ main.app-wrapper {
   --sh-status-size: 1.25rem;
   --sh-status-glyph: 1rem;
 
-  // The completed check uses the shared glyph size. `--sh-status-dot` is
-  // leftover from the old filled-circle rest glyph.
+  // The completed rest glyph is the filled circle, sized via `--sh-status-dot`.
   --sh-status-dot: calc(8px * 52 / 48);  // 8px visible disc
 
   position: relative; // lifts it above the row's stretched-link overlay
@@ -2734,7 +2733,7 @@ $sh-feed-states: completed, running, scheduled, paused, failed, archived;
 // state offers pause except the two where it isn't the obvious intent —
 // a paused row offers play, and a failed one offers retry.
 $sh-feed-status-rest: (
-  completed: "check",
+  completed: "circle",
   running:   "spinner",
   scheduled: "clock",
   paused:    "pause",
@@ -2761,11 +2760,11 @@ $sh-feed-status-action: (
 // the hover swap to pause or retry returns to the normal grey — by then
 // the button is describing an action, not a state.
 //
-// The check is a palette green rather than the success token its meaning
+// The circle is a palette green rather than the success token its meaning
 // would suggest: `success-base-*` resolves teal in the agentic theme,
 // which next to the running spinner's blue reads as another shade of the
 // same thing rather than "done".
-[data-sh-feed-state="completed"] .seller-home__feed-item-status-glyph--check {
+[data-sh-feed-state="completed"] .seller-home__feed-item-status-glyph--circle {
   fill: var(--slds-g-color-palette-green-70, #45c65a);
 }
 
