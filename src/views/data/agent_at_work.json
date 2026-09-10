@@ -9,9 +9,8 @@
   //  there is one implementation and it cannot drift.
   //
   //  What forks is the content: this file is the time-lapse seed for
-  //  /agent_at_work.html — 1 Completed + 8 Running Rohan rows on a
-  //  pinned Tuesday; the director shows 1 Completed + 2 Running.
-  //  Markup, styles and behaviour stay shared with Seller Home.
+  //  /agent_at_work.html — three story cards that drain 3 → 2 → 1 →
+  //  empty. Markup, styles and behaviour stay shared with Seller Home.
   //
   //  Gulp injects this automatically — `getData` reads
   //  `data/<page>.json` for `<page>.html` — so defining `feed` here is
@@ -23,7 +22,9 @@
     // Optional PIN for the date beside the heading. null = show today,
     // recomputed on every page load. Set a literal string ("Mon July 13")
     // to freeze it — useful when a screenshot has to match a deck.
-    "date": "Tue September 8",
+    // Lab conveyor starts from the real calendar day and paints
+    // `Tuesday, Sep 8` (full weekday, short month).
+    "date": null,
     // The lab director ticks this pin forward `dateDays` calendar days
     // each conveyor cycle (weekday Mon–Sun, day number, month on rollover).
     // ── The subline ───────────────────────────────────────────────────
@@ -189,15 +190,11 @@
       "doc-purple": { "iconImage": "/assets/images/doctype-icons/Doc-purple.svg" },
       "doc-orange": { "iconImage": "/assets/images/doctype-icons/Doc-orange.svg" }
     },
-    // ── Time-lapse seed (infinite 1+2 loop) ──────────────────────────
-    // Nine Rohan-flavored rows on a pinned Tuesday. The first is
-    // already Completed; the rest start Running. The director shows
-    // 1 Completed + 2 Running; extras stay `hidden` as the insert
-    // pool. After the pool is empty, dismissed rows recycle from a
-    // boot-time HTML catalog so the loop can run forever.
-    //
-    // Opening three tell the post-meeting story: transcript → follow-ups
-    // to multi-thread → proposal ready to close.
+    // ── Time-lapse seed (drain 3 → 2 → 1 → empty) ────────────────────
+    // Three story cards. First is Completed; the other two start
+    // Running. Left/Up swipes the Completed without inserting, so the
+    // list empties. Extras sit in `itemsParked` (not rendered) so the
+    // conveyor stack can be restored later.
     "items": [
       {
         "id": "run-01",
@@ -270,7 +267,9 @@
           }
         ],
         "workflow": { "id": "sk-draft-proposals", "label": "" }
-      },
+      }
+    ],
+    "itemsParked": [
       {
         "id": "run-04",
         "title": "Researching target accounts",
@@ -422,7 +421,6 @@
         "workflow": { "id": "sk-account-research", "label": "" }
       }
     ],
-    "itemsParked": [],
     "tasks": []
 
   },

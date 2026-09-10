@@ -2480,7 +2480,7 @@ main.app-wrapper {
   text-align: center;
 }
 
-.seller-home__feed:not(:has(.seller-home__feed-list-item)) .seller-home__feed-empty {
+.seller-home__feed:not(:has(.seller-home__feed-list-item)) .seller-home__feed-empty:not(.seller-home__feed-empty--filter) {
   display: flex;
   // Runs on reveal, since an element can't transition out of
   // `display: none` — the last row has just animated away, and popping
@@ -2518,9 +2518,9 @@ main.app-wrapper {
 // absent. The `~` combinator ties the message (a following sibling of the
 // list) to the list's current filter and contents; the `:not(:has(...))`
 // is a single `:has()`, never nested inside another.
-.seller-home__feed-list[data-sh-feed-filter="active"]:not(:has([data-sh-feed-state="completed"], [data-sh-feed-state="running"], [data-sh-feed-state="paused"])) ~ .seller-home__feed-empty[data-sh-feed-empty-view="active"],
-.seller-home__feed-list[data-sh-feed-filter="scheduled"]:not(:has([data-sh-feed-state="scheduled"])) ~ .seller-home__feed-empty[data-sh-feed-empty-view="scheduled"],
-.seller-home__feed-list[data-sh-feed-filter="archived"]:not(:has([data-sh-feed-state="archived"])) ~ .seller-home__feed-empty[data-sh-feed-empty-view="archived"] {
+.seller-home__feed-list[data-sh-feed-filter="active"]:has(.seller-home__feed-list-item):not(:has([data-sh-feed-state="completed"], [data-sh-feed-state="running"], [data-sh-feed-state="paused"])) ~ .seller-home__feed-empty[data-sh-feed-empty-view="active"],
+.seller-home__feed-list[data-sh-feed-filter="scheduled"]:has(.seller-home__feed-list-item):not(:has([data-sh-feed-state="scheduled"])) ~ .seller-home__feed-empty[data-sh-feed-empty-view="scheduled"],
+.seller-home__feed-list[data-sh-feed-filter="archived"]:has(.seller-home__feed-list-item):not(:has([data-sh-feed-state="archived"])) ~ .seller-home__feed-empty[data-sh-feed-empty-view="archived"] {
   display: flex;
 }
 
@@ -3403,7 +3403,7 @@ $sh-feed-filter-hidden: (
   // Dismiss and reshuffle opt out in home.js (`canAnimate`) rather than
   // here, since skipping them means not running the timeline at all.
 
-  .seller-home__feed:not(:has(.seller-home__feed-list-item)) .seller-home__feed-empty {
+  .seller-home__feed:not(:has(.seller-home__feed-list-item)) .seller-home__feed-empty:not(.seller-home__feed-empty--filter) {
     animation: none;
   }
 

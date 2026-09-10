@@ -1,15 +1,14 @@
 // ──────────────────────────────────────────────────────────────────────
 // Feed time-lapse director — lab only (/agent_at_work.html)
 // =====================================================================
-// Infinite 1 Completed + 2 Running conveyor. Each cycle swipes the
-// oldest Completed (slide left + fade). As that row collapses — the
-// remaining cards slide up — a new Running card rises with them so
-// the pack lands together as three. The oldest Running flips to
-// Completed at the same settle. One cycle is a single paused GSAP
-// timeline so Left/Up can play it once, and the lab scrubber can seek
-// frame-by-frame. Extra seed rows sit `[hidden]` as the first inserts;
-// after that, dismissed rows recycle from a boot-time HTML catalog.
-// This file is the only place durations get retuned.
+// Opening stack is the three story cards. Each Left/Up swipes the
+// Completed and does not insert a replacement, so the list drains
+// 3 → 2 → 1 → empty. The oldest remaining Running flips to Completed
+// at settle. Extra seed rows live in `feed.itemsParked` (not rendered).
+//
+// Infinite recycle (clone dismissed rows from a boot-time HTML catalog)
+// is commented out in `takeNextRunningLi`. Restore `return cloneNext()`
+// there, and move parked items back into `feed.items`, to loop again.
 //
 ;(function () {
   // Seconds, GSAP-native. Bind these from the lab chrome; persist so
@@ -48,8 +47,9 @@
   // Keep in step with home.js `FEED_MOTION` (Ready dismiss).
   var DISMISS_SLIDE = 0.4
   var DISMISS_OFFSET = -300
-  var WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+  var WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  var MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
   var clock = null
 
   function directorState () {
@@ -283,7 +283,9 @@
   function takeNextRunningLi () {
     var hidden = hiddenRunningItems()
     if (hidden.length) return hidden[0]
-    return cloneNext()
+    // Infinite recycle — uncomment to loop the catalog forever:
+    // return cloneNext()
+    return null
   }
 
   function scrubberEls () {
@@ -314,23 +316,28 @@
 
   function parsePinnedDate (text) {
     var fallback = new Date(2026, 8, 8)
-    var m = String(text || '').match(/[A-Za-z]+\s+([A-Za-z]+)\s+(\d+)/)
+    var m = String(text || '').match(/([A-Za-z]+),?\s+([A-Za-z]+)\s+(\d+)/)
     if (!m) return fallback
-    var month = -1
-    var i
-    for (i = 0; i < MONTHS.length; i++) {
-      if (MONTHS[i].toLowerCase() === m[1].toLowerCase()) {
-        month = i
-        break
-      }
-    }
-    var day = parseInt(m[2], 10)
+    var month = monthIndex(m[2])
+    var day = parseInt(m[3], 10)
     if (month < 0 || !isFinite(day) || day < 1) return fallback
     return new Date(2026, month, day)
   }
 
+  function monthIndex (name) {
+    var n = String(name || '').toLowerCase()
+    var i
+    for (i = 0; i < MONTHS.length; i++) {
+      if (MONTHS[i].toLowerCase() === n) return i
+    }
+    for (i = 0; i < MONTHS_LONG.length; i++) {
+      if (MONTHS_LONG[i].toLowerCase() === n) return i
+    }
+    return -1
+  }
+
   function formatFeedDate (d) {
-    return WEEKDAYS[d.getDay()] + ' ' + MONTHS[d.getMonth()] + ' ' + d.getDate()
+    return WEEKDAYS[d.getDay()] + ', ' + MONTHS[d.getMonth()] + ' ' + d.getDate()
   }
 
   // Weekday / month / day size to their text so May / 7 don't keep
@@ -384,7 +391,7 @@
   function paintDate (d, animate) {
     var el = dateEl()
     if (!el || !d) return
-    var weekday = WEEKDAYS[d.getDay()]
+    var weekday = WEEKDAYS[d.getDay()] + ','
     var month = MONTHS[d.getMonth()]
     var day = String(d.getDate())
     var weekdayEl = el.querySelector("[data-aaw-date-weekday]")
@@ -542,24 +549,27 @@
   function armCycle () {
     var readyItems = visibleCompletedItems()
     var running = visibleRunningRows()
-    if (!readyItems.length || !running.length) return false
+    // Drain: swipe the Completed even when nothing is left to insert
+    // (no cloneNext). Need at least one Completed to dismiss.
+    if (!readyItems.length) return false
 
     var enterLi = takeNextRunningLi()
-    if (!enterLi) return false
-
     var t = TIMING
     var readyLi = readyItems[0]
     var readyRow = rowOf(readyLi)
-    var runningRow = running[0]
-    var enterRow = rowOf(enterLi)
+    var runningRow = running[0] || null
+    var enterRow = enterLi ? rowOf(enterLi) : null
 
     if (director) director.kill()
 
-    enterLi.removeAttribute('hidden')
-    gsap.set(enterLi, { height: 'auto' })
-    var enterHeight = enterLi.offsetHeight
-    gsap.set(enterLi, { overflow: 'visible', height: 0 })
-    if (enterRow) gsap.set(enterRow, { y: ENTER_OFFSET, opacity: 0 })
+    var enterHeight = 0
+    if (enterLi) {
+      enterLi.removeAttribute('hidden')
+      gsap.set(enterLi, { height: 'auto' })
+      enterHeight = enterLi.offsetHeight
+      gsap.set(enterLi, { overflow: 'visible', height: 0 })
+      if (enterRow) gsap.set(enterRow, { y: ENTER_OFFSET, opacity: 0 })
+    }
 
     var readyHeight = readyLi.offsetHeight
     var readyMargin = parseFloat(window.getComputedStyle(readyLi).marginBottom) || 0
@@ -656,14 +666,16 @@
         immediateRender: false
       }, enterAt)
     }
-    director.fromTo(enterLi, {
-      height: 0
-    }, {
-      height: enterHeight,
-      duration: packDur,
-      ease: ENTER_EASE,
-      immediateRender: false
-    }, enterAt)
+    if (enterLi) {
+      director.fromTo(enterLi, {
+        height: 0
+      }, {
+        height: enterHeight,
+        duration: packDur,
+        ease: ENTER_EASE,
+        immediateRender: false
+      }, enterAt)
+    }
 
     var dur = landAt + t.rest
     if (director.duration() < dur) {
@@ -848,7 +860,9 @@
 
     snapshotCatalog()
     applyVisibleStack()
-    clock = parsePinnedDate(dateEl() && dateEl().textContent)
+    // Real today, not the JSON pin. Ticks still step one calendar day.
+    var now = new Date()
+    clock = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     wrapDateParts()
     paintDate(clock)
     wrapQuotaNodes()
