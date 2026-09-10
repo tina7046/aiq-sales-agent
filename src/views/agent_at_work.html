@@ -10,8 +10,10 @@
   The COMPONENT is not a copy. This page includes `_home_feed.html`,
   `_home_composer.html` and the briefing markup from index.html, loads
   `home.css` and boots `home.js` — one implementation, shared with
-  Seller Home, so markup, styles and behaviour can't drift. Briefing
-  and composer copy come from `readData("index")` (Rohan's overlay).
+  Seller Home, so markup, styles and behaviour can't drift. Composer
+  copy comes from `readData("index")` (Rohan's overlay). The briefing
+  heading and sentence are lab-only quota copy, not Home's Hunter
+  greeting, so the conveyor can still tick 80% / $1.6M.
 
   The DATA does fork, on purpose. `data/agent_at_work.json` starts as a
   copy of index.json's `feed` block, and rows added there show up here
@@ -58,12 +60,17 @@
 {% block content %}
 
 {# `data-sh-root` is what home.js boots off. Briefing + composer + feed
-   wire up; nav / knowledge / scheduled still no-op. Copy for the
-   greeting and the composer comes from Home's page data so this column
-   matches `/u/rohan/index.html`. #}
+   wire up; nav / knowledge / scheduled still no-op. Composer copy
+   comes from Home's page data. The greeting is the previous quota
+   lines, local to this page — Home keeps Rohan's Hunter greeting. #}
 {% set _home = readData("index") or {} %}
 {% set briefing = _home.briefing or {} %}
 {% set composer = _home.composer or {} %}
+{# Lab-only Daily Briefing — 80% / $1.6M so feed_timelapse.js can
+   wrap and tick the numbers. Home's overlay is Hunter's intro. #}
+{% set briefingHeading = "You're 80% to goal, Rohan 🚀" %}
+{% set briefingText = "You’ve closed $1.6M of your $2M quota — President's Club is within reach. It looks like the top of funnel is light, so let's focus on increasing outreach to prospects." %}
+{% set briefingLinkPhrase = "$1.6M of your $2M quota" %}
 {# Lab-only ghost text — matches /welcome_lab.html. Home keeps Rohan's. #}
 {% set composerPlaceholder = "Ask Hunter, what are the top 3 things I need to know to hit my number?" %}
 <div class="aaw-lab" data-sh-root>
@@ -121,17 +128,13 @@
       data-sh-briefing-root
     >
       <h1 class="seller-home__briefing-heading">
-        {{ briefing.heading }}
+        {{ briefingHeading }}
       </h1>
       {# Same `linkPhrase` wrap as index.html — one editable string, the
-         phrase painted as the insight button. #}
+         phrase painted as the insight button. Lab strings, not Home. #}
       <p class="seller-home__briefing-text">
-        {%- if briefing.linkPhrase -%}
-          {%- set _linked = '<button type="button" class="seller-home__briefing-link">' + briefing.linkPhrase + '</button>' -%}
-          {{ briefing.text | replace(briefing.linkPhrase, _linked) | safe }}
-        {%- else -%}
-          {{ briefing.text }}
-        {%- endif -%}
+        {%- set _linked = '<button type="button" class="seller-home__briefing-link">' + briefingLinkPhrase + '</button>' -%}
+        {{ briefingText | replace(briefingLinkPhrase, _linked) | safe }}
       </p>
       {% if briefing.popovers and briefing.popovers|length %}
       <div class="seller-home__briefing-popovers" data-sh-briefing-popovers>

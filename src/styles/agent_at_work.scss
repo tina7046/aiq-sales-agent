@@ -88,10 +88,14 @@ $aaw-god-rays-overscan: 90px;
   font-variant-numeric: tabular-nums;
 }
 
-// Thinking sweep on "Your agent at work" — same paint as `.sh-typing__label`
-// on /feed_components.html (blue → violet, `sh-typing-sweep` in index.scss).
-// Lab-only; Seller Home keeps the solid heading.
-.aaw-lab .seller-home__feed-heading {
+// Thinking sweep on "Hunter at work" and the briefing "80%" — same
+// paint as `.sh-typing__label` (blue → violet, `sh-typing-sweep` in
+// index.scss). Lab-only; Seller Home keeps the solid heading.
+// Digits clip their own fill so the pop-in (`.t-digit`) still shows
+// the gradient after the group is rebuilt.
+.aaw-lab .seller-home__feed-heading,
+.aaw-lab__quota-sweep .t-digit,
+.aaw-lab__quota-pct-mark {
   background: linear-gradient(
     90deg,
     var(--slds-g-color-brand-base-40, #0250d9) 0%,
@@ -106,8 +110,36 @@ $aaw-god-rays-overscan: 90px;
   animation: sh-typing-sweep 1s cubic-bezier(0.61, 0.32, 0.41, 0.69) infinite;
 }
 
+.aaw-lab__quota-sweep {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.aaw-lab__quota-sweep .t-digit-group {
+  overflow: visible;
+  font-variant-numeric: tabular-nums;
+}
+
+// Pop-in replaces `animation` on `.t-digit`; keep the sweep running
+// as a second layer so 80% doesn't go solid after the first tick.
+.aaw-lab__quota-sweep .t-digit-group.is-animating .t-digit {
+  animation:
+    t-digit-pop-in var(--digit-dur) var(--digit-ease) both,
+    sh-typing-sweep 1s cubic-bezier(0.61, 0.32, 0.41, 0.69) infinite;
+}
+
+.aaw-lab__quota-sweep .t-digit-group.is-animating .t-digit[data-stagger='1'] {
+  animation-delay: var(--digit-stagger), 0s;
+}
+
+.aaw-lab__quota-sweep .t-digit-group.is-animating .t-digit[data-stagger='2'] {
+  animation-delay: calc(var(--digit-stagger) * 2), 0s;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .aaw-lab .seller-home__feed-heading {
+  .aaw-lab .seller-home__feed-heading,
+  .aaw-lab__quota-sweep .t-digit,
+  .aaw-lab__quota-pct-mark {
     animation: none;
     -webkit-text-fill-color: var(--slds-g-color-brand-base-40, #0250d9);
     color: var(--slds-g-color-brand-base-40, #0250d9);

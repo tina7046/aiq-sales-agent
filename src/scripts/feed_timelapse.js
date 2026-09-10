@@ -433,15 +433,14 @@
     paintDate(addDays(clock, elapsedDaysForTime(time)), true)
   }
 
-  // Quota in the Daily Briefing lags the feed date. The conveyor still
-  // spends `dateDays` per cycle (and the date ticks each of those days),
-  // but the % / $ closed only move once every QUOTA_DAYS_PER_TICK
-  // simulated days — so they don't race the cards. Seeded from the
-  // markup; Replay reloads the page and starts over.
+  // Quota in the Daily Briefing. The % stays at 80 until the user
+  // starts the last card's dismiss (Left/Up). Then it pops once to
+  // 91 with the same `.t-digit` animation as the feed date.
   var quotaClock = null
-  var QUOTA_PCT_STEP = 1
   var QUOTA_CLOSED_STEP = 0.1
   var QUOTA_DAYS_PER_TICK = 7
+
+  var QUOTA_LAND_PCT = 91
 
   function quotaTicksForDays (days) {
     var step = QUOTA_DAYS_PER_TICK
@@ -455,7 +454,10 @@
     if (heading && !heading.querySelector('[data-aaw-quota-pct]')) {
       heading.innerHTML = heading.innerHTML.replace(
         /(\d+(?:\.\d+)?)(\s*%)/,
-        '<span data-aaw-quota-pct>$1</span>$2'
+        '<span class="aaw-lab__quota-sweep">' +
+          '<span class="t-digit-group" data-aaw-quota-pct>$1</span>' +
+          '<span class="aaw-lab__quota-pct-mark">$2</span>' +
+        '</span>'
       )
     }
     if (link && !link.querySelector('[data-aaw-quota-closed]')) {
@@ -469,35 +471,43 @@
     quotaClock = {
       pct: pctEl ? parseFloat(pctEl.textContent) : 80,
       closed: closedEl ? parseFloat(closedEl.textContent) : 1.6,
-      days: 0
+      days: 0,
+      landed: false
     }
     if (!isFinite(quotaClock.pct)) quotaClock.pct = 80
     if (!isFinite(quotaClock.closed)) quotaClock.closed = 1.6
   }
 
-  function paintQuota (elapsed) {
+  function paintQuota (animate, extraDays) {
     if (!quotaClock) return
     var pctEl = document.querySelector('[data-aaw-quota-pct]')
     var closedEl = document.querySelector('[data-aaw-quota-closed]')
-    var ticks = quotaTicksForDays(quotaClock.days + (isFinite(elapsed) ? elapsed : 0))
     if (pctEl) {
-      var pct = Math.min(100, Math.round(quotaClock.pct + ticks * QUOTA_PCT_STEP))
-      var pctText = String(pct)
-      if (pctEl.textContent !== pctText) pctEl.textContent = pctText
+      setDatePart(pctEl, String(Math.min(100, Math.round(quotaClock.pct))), !!animate)
     }
     if (closedEl) {
+      var extra = isFinite(extraDays) ? extraDays : 0
+      var ticks = quotaTicksForDays(quotaClock.days + extra)
       var closed = quotaClock.closed + ticks * QUOTA_CLOSED_STEP
       var closedText = closed.toFixed(1)
       if (closedEl.textContent !== closedText) closedEl.textContent = closedText
     }
   }
 
+  function landQuotaIfLastCard () {
+    if (!quotaClock || quotaClock.landed) return
+    if (feedListItems().length !== 1) return
+    quotaClock.landed = true
+    quotaClock.pct = QUOTA_LAND_PCT
+    paintQuota(true, 0)
+  }
+
   function applyQuotaForTime (time) {
     if (oneShot) {
-      paintQuota(0)
+      paintQuota(false, 0)
       return
     }
-    paintQuota(elapsedDaysForTime(time))
+    paintQuota(false, elapsedDaysForTime(time))
   }
 
   function applyStateForTime (time) {
@@ -515,10 +525,6 @@
       clock = addDays(clock, dateDaysCount())
       paintDate(clock, true)
     }
-    if (quotaClock) {
-      quotaClock.days += dateDaysCount()
-      paintQuota(0)
-    }
   }
 
   function commitCycle (skipClock) {
@@ -527,10 +533,6 @@
       if (clock) {
         clock = addDays(clock, dateDaysCount())
         paintDate(clock, true)
-      }
-      if (quotaClock) {
-        quotaClock.days += dateDaysCount()
-        paintQuota(0)
       }
     }
     if (cycleCtx.readyLi && cycleCtx.readyLi.parentNode) {
@@ -835,6 +837,7 @@
       }
 
       advanceClock()
+      landQuotaIfLastCard()
       playing = true
       setDirectorState('playing')
       // Skip the leading rest — the swipe should start on the key.
@@ -866,7 +869,7 @@
     wrapDateParts()
     paintDate(clock)
     wrapQuotaNodes()
-    paintQuota(0)
+    paintQuota(false, 0)
     fillTimingForm(form)
     syncScrubber()
 
