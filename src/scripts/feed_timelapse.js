@@ -15,8 +15,8 @@
   // Seconds, GSAP-native. Bind these from the lab chrome; persist so
   // Replay (a reload) keeps the last values you typed.
   var TIMING = {
-    rest: 0.5,             // hold before the swipe and after the pack lands
-    enter: 0.4,            // pack settle: Completed collapse + new card rise (same clock)
+    rest: 0.9,             // hold before the swipe and after the pack lands
+    enter: 0.7,            // pack settle: Completed collapse + new card rise (same clock)
     packStart: 0,          // 0–1: when during the swipe the pack begins (0 = with the swipe)
     dateDays: 7            // calendar days that elapse during one conveyor cycle
   }
@@ -27,7 +27,7 @@
     'packStart',
     'dateDays'
   ]
-  var STORAGE_TIMING = 'aaw:feedTimelapseV8'
+  var STORAGE_TIMING = 'aaw:feedTimelapseV9'
   var STORAGE_AUTOPLAY = 'aaw:feedTimelapsePlay'
   var READY_VISIBLE = 1
   var RUNNING_VISIBLE = 4
