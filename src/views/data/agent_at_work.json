@@ -9,8 +9,8 @@
   //  there is one implementation and it cannot drift.
   //
   //  What forks is the content: this file is the time-lapse seed for
-  //  /agent_at_work.html — three story cards that drain 3 → 2 → 1 →
-  //  empty. Markup, styles and behaviour stay shared with Seller Home.
+  //  /agent_at_work.html — three weekly waves (3, then 3, then 3
+  //  cards). Markup, styles and behaviour stay shared with Seller Home.
   //
   //  Gulp injects this automatically — `getData` reads
   //  `data/<page>.json` for `<page>.html` — so defining `feed` here is
@@ -190,19 +190,18 @@
       "doc-purple": { "iconImage": "/assets/images/doctype-icons/Doc-purple.svg" },
       "doc-orange": { "iconImage": "/assets/images/doctype-icons/Doc-orange.svg" }
     },
-    // ── Time-lapse seed (drain 3 → 2 → 1 → empty) ────────────────────
-    // Three story cards. First is Completed; the other two start
-    // Running. Left/Up swipes the Completed without inserting, so the
-    // list empties. Extras sit in `itemsParked` (not rendered) so the
-    // conveyor stack can be restored later.
+    // ── Time-lapse seed (weekly waves 3 → 3 → 3 → empty) ─────────────
+    // Wave 1 is visible on first paint. Waves 2–3 ship `hidden` so they
+    // don't flash before the director runs; they start all Running and
+    // flip Ready at 750 / 1000 / 1250ms after they land.
     "items": [
       {
         "id": "run-01",
-        "title": "Read the conversation transcript",
+        "title": "Drafted follow-up from meeting transcript",
         "titles": {
-          "running": "Reading the conversation transcript",
-          "completed": "Read the conversation transcript",
-          "neutral": "Read the conversation transcript"
+          "running": "Drafting follow-up from meeting transcript",
+          "completed": "Drafted follow-up from meeting transcript",
+          "neutral": "Draft follow-up from meeting transcript"
         },
         "cadence": "Daily",
         "stepProgress": "3 of 3 steps",
@@ -222,11 +221,11 @@
       },
       {
         "id": "run-02",
-        "title": "Drafting follow-ups to multi-thread the account",
+        "title": "Finding contacts to multi-thread into Cirrus",
         "titles": {
-          "running": "Drafting follow-ups to multi-thread the account",
-          "completed": "Drafted follow-ups to multi-thread the account",
-          "neutral": "Draft follow-ups to multi-thread the account"
+          "running": "Finding contacts to multi-thread into Cirrus",
+          "completed": "Found contacts to multi-thread into Cirrus",
+          "neutral": "Find contacts to multi-thread into Cirrus"
         },
         "cadence": "Daily",
         "stepProgress": "2 of 4 steps",
@@ -249,7 +248,7 @@
         "title": "Drafting the proposal",
         "titles": {
           "running": "Drafting the proposal",
-          "completed": "Proposal ready to go",
+          "completed": "Drafted the proposal",
           "neutral": "Draft the proposal"
         },
         "cadence": "Daily",
@@ -267,9 +266,7 @@
           }
         ],
         "workflow": { "id": "sk-draft-proposals", "label": "" }
-      }
-    ],
-    "itemsParked": [
+      },
       {
         "id": "run-04",
         "title": "Researching target accounts",
@@ -284,6 +281,7 @@
         "nextRun": "Next run Monday at 9:00 AM",
         "lastRun": "Last run today",
         "state": "running",
+        "hidden": true,
         "outputs": [
           {
             "icon": "doc-green",
@@ -308,6 +306,7 @@
         "nextRun": "Next run Friday at 5:00 AM",
         "lastRun": "Last run Friday",
         "state": "running",
+        "hidden": true,
         "outputs": [
           {
             "icon": "doc-purple",
@@ -317,6 +316,31 @@
           }
         ],
         "workflow": { "id": "sk-weekly-exec-brief", "label": "" }
+      },
+      {
+        "id": "run-09",
+        "title": "Refreshing account health scores",
+        "titles": {
+          "running": "Refreshing account health scores",
+          "completed": "Refreshed account health scores",
+          "neutral": "Refresh account health scores"
+        },
+        "cadence": "Monthly",
+        "stepProgress": "1 of 4 steps",
+        "startedAt": "1 min elapsed",
+        "nextRun": "Next run Monday at 6:00 AM",
+        "lastRun": "Last run Jul 20",
+        "state": "running",
+        "hidden": true,
+        "outputs": [
+          {
+            "icon": "doc-green",
+            "label": "1,240 accounts",
+            "scheduledIcon": "doc-grey",
+            "scheduledLabel": "Health scores"
+          }
+        ],
+        "workflow": { "id": "sk-account-research", "label": "" }
       },
       {
         "id": "run-06",
@@ -332,6 +356,7 @@
         "nextRun": "Next run in 3 days",
         "lastRun": "Last run Thursday",
         "state": "running",
+        "hidden": true,
         "outputs": [
           {
             "icon": "doc-green",
@@ -362,6 +387,7 @@
         "nextRun": "Next run Monday at 9:00 AM",
         "lastRun": "Last run today",
         "state": "running",
+        "hidden": true,
         "outputs": [
           {
             "icon": "doc-yellow",
@@ -386,6 +412,7 @@
         "nextRun": "Next run tomorrow at 9:00 AM",
         "lastRun": "Last run today at 9:00 AM",
         "state": "running",
+        "hidden": true,
         "outputs": [
           {
             "icon": "doc-blue",
@@ -395,32 +422,9 @@
           }
         ],
         "workflow": { "id": "sk-daily-pipeline-snapshot", "label": "" }
-      },
-      {
-        "id": "run-09",
-        "title": "Refreshing account health scores",
-        "titles": {
-          "running": "Refreshing account health scores",
-          "completed": "Refreshed account health scores",
-          "neutral": "Refresh account health scores"
-        },
-        "cadence": "Monthly",
-        "stepProgress": "1 of 4 steps",
-        "startedAt": "1 min elapsed",
-        "nextRun": "Next run Monday at 6:00 AM",
-        "lastRun": "Last run Jul 20",
-        "state": "running",
-        "outputs": [
-          {
-            "icon": "doc-green",
-            "label": "1,240 accounts",
-            "scheduledIcon": "doc-grey",
-            "scheduledLabel": "Health scores"
-          }
-        ],
-        "workflow": { "id": "sk-account-research", "label": "" }
       }
     ],
+    "itemsParked": [],
     "tasks": []
 
   },

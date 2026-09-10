@@ -1,37 +1,43 @@
 // ──────────────────────────────────────────────────────────────────────
 // Feed time-lapse director — lab only (/agent_at_work.html)
 // =====================================================================
-// Opening stack is the three story cards. Each Left/Up swipes the
-// Completed and does not insert a replacement, so the list drains
-// 3 → 2 → 1 → empty. The oldest remaining Running flips to Completed
-// at settle. Extra seed rows live in `feed.itemsParked` (not rendered).
-//
-// Infinite recycle (clone dismissed rows from a boot-time HTML catalog)
-// is commented out in `takeNextRunningLi`. Restore `return cloneNext()`
-// there, and move parked items back into `feed.items`, to loop again.
+// Opening stack is wave 1 (3 cards). Each Left/Up swipes the whole
+// visible pack, jumps to the next month (new weekday and day number)
+// and the quota ladder, then the next wave rises (3 cards, then 3).
+// the next wave rises (3 cards, then 3). The last beat has no enter —
+// empty state. cloneNext stays commented (no infinite recycle).
 //
 ;(function () {
   // Seconds, GSAP-native. Bind these from the lab chrome; persist so
   // Replay (a reload) keeps the last values you typed.
   var TIMING = {
     rest: 0.9,             // hold before the swipe and after the pack lands
-    enter: 0.7,            // pack settle: Completed collapse + new card rise (same clock)
-    packStart: 0,          // 0–1: when during the swipe the pack begins (0 = with the swipe)
-    dateDays: 1            // calendar days that elapse on each conveyor tick
+    enter: 0.7,            // pack settle: next wave rise + fade in
+    enterAt: 1.3,          // when the next wave starts (after the left swipe)
+    dateDays: 5            // Play interpolation only; Left/Up jumps a month
   }
 
   var TIMING_KEYS = [
     'rest',
     'enter',
-    'packStart',
+    'enterAt',
     'dateDays'
   ]
-  var STORAGE_TIMING = 'aaw:feedTimelapseV10'
-  var READY_VISIBLE = 1
-  var RUNNING_VISIBLE = 2
+  var STORAGE_TIMING = 'aaw:feedTimelapseV12'
+  var WAVES = [
+    ['run-01', 'run-02', 'run-03'],
+    ['run-04', 'run-05', 'run-09'],
+    ['run-06', 'run-07', 'run-08']
+  ]
+  var waveIndex = 0
   var ENTER_EASE = 'power2.inOut'
-  // How far below rest the new card starts (px). Ready dismiss uses 300
-  // on X; that much on Y reads as a fly-in, so this stays a short rise.
+  // Incoming pack starts this many card-heights below rest. 1.5 puts
+  // the first card at the middle of the outgoing stack.
+  var ENTER_RISE_CARDS = 1.5
+  // Tighter than the left-swipe stagger so the rise reads as one cascade.
+  var ENTER_STAGGER = 0.04
+  // How far below rest a recycled card starts (px). Ready dismiss uses
+  // 300 on X; that much on Y reads as a fly-in, so this stays a short rise.
   var ENTER_OFFSET = 40
 
   var playing = false
@@ -46,7 +52,11 @@
   var FRAME = 1 / 60
   // Keep in step with home.js `FEED_MOTION` (Ready dismiss).
   var DISMISS_SLIDE = 0.4
+  var DISMISS_STAGGER = 0.1
   var DISMISS_OFFSET = -300
+  var COMPLETE_DELAYS_FIRST = [500, 750]
+  var COMPLETE_DELAYS_LATER = [750, 1000, 1250]
+  var completeTimers = []
   var WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   var MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -89,7 +99,6 @@
       TIMING_KEYS.forEach(function (key) {
         var n = parseFloat(saved[key])
         if (!isFinite(n) || n < 0) return
-        if (key === 'packStart') n = Math.min(1, n)
         if (key === 'dateDays') n = Math.max(1, Math.round(n))
         TIMING[key] = n
       })
@@ -117,7 +126,6 @@
       if (!input) return
       var n = parseFloat(input.value)
       if (!isFinite(n) || n < 0) return
-      if (key === 'packStart') n = Math.min(1, n)
       if (key === 'dateDays') n = Math.max(1, Math.round(n))
       next[key] = n
     })
@@ -148,7 +156,8 @@
 
   function feedList () {
     var li = document.querySelector('[data-sh-feed-list-item]')
-    return li ? li.parentElement : null
+    if (li) return li.parentElement
+    return document.querySelector('.aaw-lab .seller-home__feed-list')
   }
 
   function rowOf (li) {
@@ -168,18 +177,52 @@
     return li && !li.hasAttribute('hidden')
   }
 
-  function visibleCompletedItems () {
+  function visibleItems () {
+    return feedListItems().filter(isVisible)
+  }
+
+  function itemIdOf (li) {
+    return rowId(rowOf(li))
+  }
+
+  function waveIds (index) {
+    return WAVES[index] || []
+  }
+
+  function lisForWave (index) {
+    var ids = waveIds(index)
     return feedListItems().filter(function (li) {
-      return isVisible(li) && rowState(li) === 'completed'
+      return ids.indexOf(itemIdOf(li)) !== -1
     })
   }
 
-  function visibleRunningRows () {
-    return Array.prototype.slice.call(
-      document.querySelectorAll('[data-sh-feed-item][data-sh-feed-state="running"]')
-    ).filter(function (row) {
-      var li = row.closest('[data-sh-feed-list-item]')
-      return isVisible(li)
+  function applyWaveVisibility () {
+    var show = {}
+    waveIds(waveIndex).forEach(function (id) { show[id] = true })
+    feedListItems().forEach(function (li) {
+      if (show[itemIdOf(li)]) li.removeAttribute('hidden')
+      else li.setAttribute('hidden', '')
+    })
+  }
+
+  function clearCompleteTimers () {
+    while (completeTimers.length) window.clearTimeout(completeTimers.pop())
+  }
+
+  function scheduleWaveCompletes () {
+    clearCompleteTimers()
+    var delays = waveIndex === 0 ? COMPLETE_DELAYS_FIRST : COMPLETE_DELAYS_LATER
+    var cards = lisForWave(waveIndex)
+    if (waveIndex === 0) {
+      cards = cards.filter(function (li) { return rowState(li) === 'running' })
+    }
+    cards.forEach(function (li, i) {
+      if (i >= delays.length) return
+      completeTimers.push(window.setTimeout(function () {
+        var row = rowOf(li)
+        if (!row || rowState(li) !== 'running') return
+        window.SH.feed.applyState(row, 'completed')
+      }, delays[i]))
     })
   }
 
@@ -220,24 +263,6 @@
     }).filter(function (entry) { return entry.id && entry.html })
     catalogCursor = 0
     nextOrder = maxFeedOrder() + 1
-  }
-
-  function applyVisibleStack () {
-    var ready = 0
-    var running = 0
-    feedListItems().forEach(function (li) {
-      var state = rowState(li)
-      var show = false
-      if (state === 'completed' && ready < READY_VISIBLE) {
-        show = true
-        ready += 1
-      } else if (state === 'running' && running < RUNNING_VISIBLE) {
-        show = true
-        running += 1
-      }
-      if (show) li.removeAttribute('hidden')
-      else li.setAttribute('hidden', '')
-    })
   }
 
   function parseListItem (html) {
@@ -362,6 +387,36 @@
     return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)
   }
 
+  function addBusinessDays (d, n) {
+    var out = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+    var step = n < 0 ? -1 : 1
+    var left = Math.abs(n)
+    while (left > 0) {
+      out.setDate(out.getDate() + step)
+      var day = out.getDay()
+      if (day !== 0 && day !== 6) left -= 1
+    }
+    return out
+  }
+
+  // Next conveyor date: always the following month, a different weekday
+  // name, and a different day number, on a weekday so the feed stays
+  // on a work day.
+  function nextTickDate (d) {
+    var prevWeekday = d.getDay()
+    var prevDate = d.getDate()
+    var out = new Date(d.getFullYear(), d.getMonth() + 1, 1)
+    var i
+    for (i = 0; i < 45; i++) {
+      var wd = out.getDay()
+      if (wd !== 0 && wd !== 6 && wd !== prevWeekday && out.getDate() !== prevDate) {
+        return out
+      }
+      out.setDate(out.getDate() + 1)
+    }
+    return out
+  }
+
   var reduceMotion =
     window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
@@ -430,23 +485,15 @@
       paintDate(clock)
       return
     }
-    paintDate(addDays(clock, elapsedDaysForTime(time)), true)
+    paintDate(addBusinessDays(clock, elapsedDaysForTime(time)), true)
   }
 
-  // Quota in the Daily Briefing. The % stays at 80 until the user
-  // starts the last card's dismiss (Left/Up). Then it pops once to
-  // 91 with the same `.t-digit` animation as the feed date.
+  // Quota in the Daily Briefing. Each Left/Up steps 80 → 87 → 95 → 102
+  // and $ closed tracks that share of the $2M quota (1.6 → 1.74 → 1.9
+  // → 2.04). Replay reloads the seed.
   var quotaClock = null
-  var QUOTA_CLOSED_STEP = 0.1
-  var QUOTA_DAYS_PER_TICK = 7
-
-  var QUOTA_LAND_PCT = 91
-
-  function quotaTicksForDays (days) {
-    var step = QUOTA_DAYS_PER_TICK
-    if (!isFinite(step) || step < 1) step = 1
-    return Math.floor(Math.max(0, days) / step)
-  }
+  var QUOTA_TARGET = 2
+  var QUOTA_LADDER = [87, 95, 102]
 
   function wrapQuotaNodes () {
     var heading = document.querySelector('.aaw-lab .seller-home__briefing-heading')
@@ -463,147 +510,207 @@
     if (link && !link.querySelector('[data-aaw-quota-closed]')) {
       link.innerHTML = link.innerHTML.replace(
         /\$(\d+(?:\.\d+)?)(M)/i,
-        '$$<span data-aaw-quota-closed>$1</span>$2'
+        '$$<span class="t-digit-group" data-aaw-quota-closed>$1</span>$2'
       )
     }
     var pctEl = document.querySelector('[data-aaw-quota-pct]')
-    var closedEl = document.querySelector('[data-aaw-quota-closed]')
     quotaClock = {
       pct: pctEl ? parseFloat(pctEl.textContent) : 80,
-      closed: closedEl ? parseFloat(closedEl.textContent) : 1.6,
-      days: 0,
-      landed: false
+      step: 0
     }
     if (!isFinite(quotaClock.pct)) quotaClock.pct = 80
-    if (!isFinite(quotaClock.closed)) quotaClock.closed = 1.6
   }
 
-  function paintQuota (animate, extraDays) {
+  function formatClosed (n) {
+    var t = Math.round(n * 100) / 100
+    var two = t.toFixed(2)
+    if (two.charAt(two.length - 1) === '0') return t.toFixed(1)
+    return two
+  }
+
+  function paintQuota (animate) {
     if (!quotaClock) return
     var pctEl = document.querySelector('[data-aaw-quota-pct]')
     var closedEl = document.querySelector('[data-aaw-quota-closed]')
     if (pctEl) {
-      setDatePart(pctEl, String(Math.min(100, Math.round(quotaClock.pct))), !!animate)
+      setDatePart(pctEl, String(Math.round(quotaClock.pct)), !!animate)
     }
     if (closedEl) {
-      var extra = isFinite(extraDays) ? extraDays : 0
-      var ticks = quotaTicksForDays(quotaClock.days + extra)
-      var closed = quotaClock.closed + ticks * QUOTA_CLOSED_STEP
-      var closedText = closed.toFixed(1)
-      if (closedEl.textContent !== closedText) closedEl.textContent = closedText
+      setDatePart(closedEl, formatClosed(QUOTA_TARGET * quotaClock.pct / 100), !!animate)
     }
   }
 
-  function landQuotaIfLastCard () {
-    if (!quotaClock || quotaClock.landed) return
-    if (feedListItems().length !== 1) return
-    quotaClock.landed = true
-    quotaClock.pct = QUOTA_LAND_PCT
-    paintQuota(true, 0)
+  function bumpQuotaLadder () {
+    if (!quotaClock) return
+    if (quotaClock.step >= QUOTA_LADDER.length) return
+    quotaClock.pct = QUOTA_LADDER[quotaClock.step]
+    quotaClock.step += 1
+    paintQuota(true)
   }
 
   function applyQuotaForTime (time) {
-    if (oneShot) {
-      paintQuota(false, 0)
-      return
-    }
-    paintQuota(false, elapsedDaysForTime(time))
+    paintQuota(false)
   }
 
   function applyStateForTime (time) {
     applyDateForTime(time)
     applyQuotaForTime(time)
-    if (!cycleCtx || !cycleCtx.runningRow || !window.SH || !window.SH.feed) return
-    var want = time >= cycleCtx.flipAt ? 'completed' : 'running'
-    if (cycleCtx.runningRow.getAttribute('data-sh-feed-state') !== want) {
-      window.SH.feed.applyState(cycleCtx.runningRow, want)
-    }
   }
 
   function advanceClock () {
     if (clock) {
-      clock = addDays(clock, dateDaysCount())
+      clock = nextTickDate(clock)
       paintDate(clock, true)
     }
   }
 
   function commitCycle (skipClock) {
+    clearCompleteTimers()
     if (!cycleCtx) return
     if (!skipClock) {
-      if (clock) {
-        clock = addDays(clock, dateDaysCount())
-        paintDate(clock, true)
+      advanceClock()
+      bumpQuotaLadder()
+    }
+    var i
+    var list = feedList()
+    if (!list && cycleCtx.dismissLis && cycleCtx.dismissLis[0]) {
+      list = cycleCtx.dismissLis[0].parentNode
+    }
+    if (cycleCtx.dismissLis) {
+      for (i = 0; i < cycleCtx.dismissLis.length; i++) {
+        var li = cycleCtx.dismissLis[i]
+        if (li && li.parentNode) li.parentNode.removeChild(li)
       }
     }
-    if (cycleCtx.readyLi && cycleCtx.readyLi.parentNode) {
-      cycleCtx.readyLi.parentNode.removeChild(cycleCtx.readyLi)
+    if (cycleCtx.enterLis) {
+      for (i = 0; i < cycleCtx.enterLis.length; i++) {
+        gsap.set(cycleCtx.enterLis[i], { clearProps: 'height,overflow,marginBottom' })
+      }
     }
-    if (cycleCtx.enterLi) gsap.set(cycleCtx.enterLi, { clearProps: 'height,overflow' })
-    if (cycleCtx.enterRow) gsap.set(cycleCtx.enterRow, { clearProps: 'y,opacity,transform' })
-    if (cycleCtx.runningRow) window.SH.feed.applyState(cycleCtx.runningRow, 'completed')
+    if (cycleCtx.enterRows) {
+      for (i = 0; i < cycleCtx.enterRows.length; i++) {
+        gsap.set(cycleCtx.enterRows[i], { clearProps: 'y,opacity,transform' })
+      }
+    }
+    if (list) gsap.set(list, { clearProps: 'minHeight' })
+    waveIndex += 1
     cycleCtx = null
     if (director) {
       director.kill()
       director = null
     }
+    if (list && !list.querySelector('[data-sh-feed-list-item]') && list.parentNode) {
+      list.parentNode.removeChild(list)
+    }
   }
 
   function armCycle () {
-    var readyItems = visibleCompletedItems()
-    var running = visibleRunningRows()
-    // Drain: swipe the Completed even when nothing is left to insert
-    // (no cloneNext). Need at least one Completed to dismiss.
-    if (!readyItems.length) return false
+    var dismissLis = lisForWave(waveIndex)
+    if (!dismissLis.length) return false
 
-    var enterLi = takeNextRunningLi()
+    var enterLis = lisForWave(waveIndex + 1)
     var t = TIMING
-    var readyLi = readyItems[0]
-    var readyRow = rowOf(readyLi)
-    var runningRow = running[0] || null
-    var enterRow = enterLi ? rowOf(enterLi) : null
+    var i
+    var row
+    var list = feedList()
 
     if (director) director.kill()
+    clearCompleteTimers()
 
-    var enterHeight = 0
-    if (enterLi) {
-      enterLi.removeAttribute('hidden')
-      gsap.set(enterLi, { height: 'auto' })
-      enterHeight = enterLi.offsetHeight
-      gsap.set(enterLi, { overflow: 'visible', height: 0 })
-      if (enterRow) gsap.set(enterRow, { y: ENTER_OFFSET, opacity: 0 })
+    var dismissRows = []
+    var dismissTops = []
+    var packH = 0
+    var listRect = list ? list.getBoundingClientRect() : null
+    for (i = 0; i < dismissLis.length; i++) {
+      row = rowOf(dismissLis[i])
+      dismissRows.push(row)
+      dismissTops.push(listRect ? dismissLis[i].getBoundingClientRect().top - listRect.top : packH)
+      packH += dismissLis[i].offsetHeight +
+        (parseFloat(window.getComputedStyle(dismissLis[i]).marginBottom) || 0)
+      if (row) gsap.set(row, { y: 0 })
+    }
+    var cardH = dismissLis.length ? packH / dismissLis.length : 0
+    var enterY = cardH * ENTER_RISE_CARDS
+
+    // Keep the next wave hidden until the swipe plays. Arming used to
+    // pin the current pack and unhide the next one immediately, so rest
+    // showed both stacks (5 cards instead of 3).
+    var enterRows = []
+    for (i = 0; i < enterLis.length; i++) {
+      enterRows.push(rowOf(enterLis[i]))
     }
 
-    var readyHeight = readyLi.offsetHeight
-    var readyMargin = parseFloat(window.getComputedStyle(readyLi).marginBottom) || 0
-    gsap.set(readyLi, { overflow: 'hidden' })
-
-    // New card rises with the pack: collapse is what slides everyone
-    // else up, so the enter tween shares that start and duration and
-    // they land together as three. Pack motion begins `packStart` of the
-    // way through the swipe (0 = the moment the Completed card starts
-    // sliding out).
     var at = t.rest
-    var packStart = Math.max(0, Math.min(1, t.packStart))
-    var collapseAt = at + DISMISS_SLIDE * packStart
+    var swipeLast = at + Math.max(0, dismissLis.length - 1) * DISMISS_STAGGER
+    var enterAt = isFinite(t.enterAt) ? t.enterAt : 1.3
+    if (enterAt < 0) enterAt = 0
+    var enterLast = enterAt + Math.max(0, enterLis.length - 1) * ENTER_STAGGER
     var packDur = t.enter
-    var landAt = collapseAt + packDur
-    var flipAt = landAt
-    var enterAt = collapseAt
+    var landAt = Math.max(swipeLast + DISMISS_SLIDE, enterLast + packDur)
 
     cycleCtx = {
-      readyLi: readyLi,
-      runningRow: runningRow,
-      enterLi: enterLi,
-      enterRow: enterRow,
+      dismissLis: dismissLis,
+      enterLis: enterLis,
+      enterRows: enterRows,
       swipeAt: at,
+      enterAt: enterAt,
       landAt: landAt,
-      flipAt: flipAt
+      flipAt: landAt,
+      pinned: false,
+      revealed: false,
+      pin: null,
+      reveal: null
     }
+
+    function pinDismiss () {
+      if (!cycleCtx || cycleCtx.pinned) return
+      cycleCtx.pinned = true
+      clearCompleteTimers()
+      var j
+      for (j = 0; j < dismissLis.length; j++) {
+        gsap.set(dismissLis[j], {
+          position: 'absolute',
+          top: dismissTops[j],
+          left: 0,
+          right: 0,
+          width: '100%',
+          zIndex: 3,
+          marginBottom: 0
+        })
+      }
+      if (list) gsap.set(list, { minHeight: packH })
+    }
+
+    function revealEnter () {
+      if (!cycleCtx || cycleCtx.revealed) return
+      cycleCtx.revealed = true
+      var j
+      var enterRow
+      var enterPackH = 0
+      for (j = 0; j < enterLis.length; j++) {
+        if (list) list.appendChild(enterLis[j])
+        enterLis[j].removeAttribute('hidden')
+        gsap.set(enterLis[j], { height: 'auto', overflow: 'visible', marginBottom: '' })
+        enterPackH += enterLis[j].offsetHeight +
+          (parseFloat(window.getComputedStyle(enterLis[j]).marginBottom) || 0)
+        enterRow = enterRows[j]
+        if (enterRow) gsap.set(enterRow, { y: enterY, opacity: 0 })
+      }
+      if (list) gsap.set(list, { minHeight: enterPackH + enterY })
+    }
+    cycleCtx.pin = pinDismiss
+    cycleCtx.reveal = revealEnter
 
     director = gsap.timeline({
       paused: true,
       onUpdate: function () {
         if (!director) return
+        if (cycleCtx && cycleCtx.pin && director.time() >= cycleCtx.swipeAt - 1e-6) {
+          cycleCtx.pin()
+        }
+        if (cycleCtx && cycleCtx.reveal && director.time() >= cycleCtx.enterAt - 1e-6) {
+          cycleCtx.reveal()
+        }
         applyStateForTime(director.time())
         if (!scrubbing) syncScrubber()
         if (oneShot && !oneShotClosing && cycleCtx && director.time() >= cycleCtx.landAt - 1e-6) {
@@ -633,32 +740,28 @@
       }
     })
 
-    if (readyRow) {
-      director.fromTo(readyRow, {
+    director.call(pinDismiss, null, at)
+    if (enterLis.length) director.call(revealEnter, null, enterAt)
+
+    for (i = 0; i < dismissRows.length; i++) {
+      if (!dismissRows[i]) continue
+      director.fromTo(dismissRows[i], {
         x: 0,
+        y: 0,
         opacity: 1
       }, {
         x: DISMISS_OFFSET,
+        y: 0,
         opacity: 0,
         duration: DISMISS_SLIDE,
         ease: ENTER_EASE,
         immediateRender: false
-      }, at)
+      }, at + i * DISMISS_STAGGER)
     }
-    director.fromTo(readyLi, {
-      height: readyHeight,
-      marginBottom: readyMargin
-    }, {
-      height: 0,
-      marginBottom: 0,
-      duration: packDur,
-      ease: ENTER_EASE,
-      immediateRender: false
-    }, collapseAt)
-
-    if (enterRow) {
-      director.fromTo(enterRow, {
-        y: ENTER_OFFSET,
+    for (i = 0; i < enterRows.length; i++) {
+      if (!enterRows[i]) continue
+      director.fromTo(enterRows[i], {
+        y: enterY,
         opacity: 0
       }, {
         y: 0,
@@ -666,17 +769,7 @@
         duration: packDur,
         ease: ENTER_EASE,
         immediateRender: false
-      }, enterAt)
-    }
-    if (enterLi) {
-      director.fromTo(enterLi, {
-        height: 0
-      }, {
-        height: enterHeight,
-        duration: packDur,
-        ease: ENTER_EASE,
-        immediateRender: false
-      }, enterAt)
+      }, enterAt + i * ENTER_STAGGER)
     }
 
     var dur = landAt + t.rest
@@ -687,6 +780,7 @@
     director.pause(0)
     applyStateForTime(0)
     syncScrubber()
+    scheduleWaveCompletes()
     return true
   }
 
@@ -801,7 +895,7 @@
 
       if (!director) {
         if (!armCycle()) {
-          setDirectorState(visibleCompletedItems().length && visibleRunningRows().length ? 'idle' : 'error')
+          setDirectorState(visibleItems().length ? 'idle' : 'error')
           syncScrubber()
           return
         }
@@ -830,19 +924,20 @@
       if (!director) {
         if (!armCycle()) {
           oneShot = false
-          setDirectorState(visibleCompletedItems().length && visibleRunningRows().length ? 'idle' : 'error')
+          setDirectorState(visibleItems().length ? 'idle' : 'error')
           syncScrubber()
           return
         }
       }
 
       advanceClock()
-      landQuotaIfLastCard()
+      bumpQuotaLadder()
       playing = true
       setDirectorState('playing')
       // Skip the leading rest — the swipe should start on the key.
       var swipe = cycleCtx && isFinite(cycleCtx.swipeAt) ? cycleCtx.swipeAt : 0
-      if (director.time() < swipe) director.play(swipe)
+      if (cycleCtx && cycleCtx.pin) cycleCtx.pin()
+      if (director.time() < swipe) director.play(swipe, false)
       else director.play()
     })
   }
@@ -862,14 +957,14 @@
     var next = document.querySelector('[data-aaw-frame-next]')
 
     snapshotCatalog()
-    applyVisibleStack()
-    // Real today, not the JSON pin. Ticks still step one calendar day.
+    applyWaveVisibility()
+    // Real today, not the JSON pin. Ticks still step business days.
     var now = new Date()
     clock = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     wrapDateParts()
     paintDate(clock)
     wrapQuotaNodes()
-    paintQuota(false, 0)
+    paintQuota(false)
     fillTimingForm(form)
     syncScrubber()
 
@@ -921,7 +1016,7 @@
     setDirectorState('idle')
     whenFeedReady(function () {
       if (armIfNeeded()) setDirectorState('paused')
-      else setDirectorState(visibleCompletedItems().length && visibleRunningRows().length ? 'idle' : 'error')
+      else setDirectorState(visibleItems().length ? 'idle' : 'error')
       syncScrubber()
     })
   }
