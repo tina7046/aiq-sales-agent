@@ -18,7 +18,7 @@
     rest: 0.9,             // hold before the swipe and after the pack lands
     enter: 0.7,            // pack settle: Completed collapse + new card rise (same clock)
     packStart: 0,          // 0–1: when during the swipe the pack begins (0 = with the swipe)
-    dateDays: 7            // calendar days that elapse during one conveyor cycle
+    dateDays: 1            // calendar days that elapse on each conveyor tick
   }
 
   var TIMING_KEYS = [
@@ -27,7 +27,7 @@
     'packStart',
     'dateDays'
   ]
-  var STORAGE_TIMING = 'aaw:feedTimelapseV9'
+  var STORAGE_TIMING = 'aaw:feedTimelapseV10'
   var READY_VISIBLE = 1
   var RUNNING_VISIBLE = 2
   var ENTER_EASE = 'power2.inOut'
@@ -333,31 +333,21 @@
     return WEEKDAYS[d.getDay()] + ' ' + MONTHS[d.getMonth()] + ' ' + d.getDate()
   }
 
-  function dateSizers (values) {
-    return values.map(function (v) {
-      return '<span class="aaw-lab__date-sizer" aria-hidden="true">' + v + '</span>'
-    }).join('')
-  }
-
-  // Weekday / month / day are separate slots. Invisible sizers hold the
-  // longest value in each column so "May" → "September" and "7" → "30"
-  // don't shove the heading or filter sideways as the conveyor ticks.
+  // Weekday / month / day size to their text so May / 7 don't keep
+  // September / 31's width.
   function wrapDateParts () {
     var el = dateEl()
     if (!el || el.querySelector('[data-aaw-date-weekday]')) return
     el.classList.add('aaw-lab__feed-date')
     el.innerHTML =
       '<span class="aaw-lab__date-part aaw-lab__date-part--weekday">' +
-        dateSizers(WEEKDAYS) +
-        '<span class="aaw-lab__date-value" data-aaw-date-weekday></span>' +
+        '<span class="aaw-lab__date-value t-digit-group" data-aaw-date-weekday></span>' +
       '</span>' +
       '<span class="aaw-lab__date-part aaw-lab__date-part--month">' +
-        dateSizers(MONTHS) +
-        '<span class="aaw-lab__date-value" data-aaw-date-month></span>' +
+        '<span class="aaw-lab__date-value t-digit-group" data-aaw-date-month></span>' +
       '</span>' +
       '<span class="aaw-lab__date-part aaw-lab__date-part--day">' +
-        dateSizers(['31']) +
-        '<span class="aaw-lab__date-value" data-aaw-date-day></span>' +
+        '<span class="aaw-lab__date-value t-digit-group" data-aaw-date-day></span>' +
       '</span>'
   }
 
@@ -365,20 +355,46 @@
     return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)
   }
 
-  function paintDate (d) {
+  var reduceMotion =
+    window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+
+  // Rebuild a date slot as `.t-digit` spans and replay number pop-in
+  // (index.css). Last two characters stagger, matching the skill's setDigits.
+  function setDatePart (group, str, animate) {
+    if (!group) return
+    var next = String(str == null ? "" : str)
+    if (group.textContent === next && group.querySelector(".t-digit")) return
+    group.classList.remove("is-animating")
+    while (group.firstChild) group.removeChild(group.firstChild)
+    var chars = next.split("")
+    var i
+    for (i = 0; i < chars.length; i++) {
+      var span = document.createElement("span")
+      span.className = "t-digit"
+      span.textContent = chars[i]
+      if (i === chars.length - 2) span.setAttribute("data-stagger", "1")
+      else if (i === chars.length - 1) span.setAttribute("data-stagger", "2")
+      group.appendChild(span)
+    }
+    if (!animate || reduceMotion) return
+    void group.offsetWidth
+    group.classList.add("is-animating")
+  }
+
+  function paintDate (d, animate) {
     var el = dateEl()
     if (!el || !d) return
     var weekday = WEEKDAYS[d.getDay()]
     var month = MONTHS[d.getMonth()]
     var day = String(d.getDate())
-    var weekdayEl = el.querySelector('[data-aaw-date-weekday]')
-    var monthEl = el.querySelector('[data-aaw-date-month]')
-    var dayEl = el.querySelector('[data-aaw-date-day]')
+    var weekdayEl = el.querySelector("[data-aaw-date-weekday]")
+    var monthEl = el.querySelector("[data-aaw-date-month]")
+    var dayEl = el.querySelector("[data-aaw-date-day]")
     if (weekdayEl && monthEl && dayEl) {
-      if (weekdayEl.textContent !== weekday) weekdayEl.textContent = weekday
-      if (monthEl.textContent !== month) monthEl.textContent = month
-      if (dayEl.textContent !== day) dayEl.textContent = day
-      el.setAttribute('aria-label', formatFeedDate(d))
+      setDatePart(weekdayEl, weekday, animate)
+      setDatePart(monthEl, month, animate)
+      setDatePart(dayEl, day, animate)
+      el.setAttribute("aria-label", formatFeedDate(d))
       return
     }
     var next = formatFeedDate(d)
@@ -407,7 +423,7 @@
       paintDate(clock)
       return
     }
-    paintDate(addDays(clock, elapsedDaysForTime(time)))
+    paintDate(addDays(clock, elapsedDaysForTime(time)), true)
   }
 
   // Quota in the Daily Briefing lags the feed date. The conveyor still
@@ -490,7 +506,7 @@
   function advanceClock () {
     if (clock) {
       clock = addDays(clock, dateDaysCount())
-      paintDate(clock)
+      paintDate(clock, true)
     }
     if (quotaClock) {
       quotaClock.days += dateDaysCount()
@@ -503,7 +519,7 @@
     if (!skipClock) {
       if (clock) {
         clock = addDays(clock, dateDaysCount())
-        paintDate(clock)
+        paintDate(clock, true)
       }
       if (quotaClock) {
         quotaClock.days += dateDaysCount()

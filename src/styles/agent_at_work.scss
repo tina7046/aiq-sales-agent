@@ -114,9 +114,7 @@ $aaw-god-rays-overscan: 90px;
   }
 }
 
-// Date slots — weekday / month / day. Each column is sized by a hidden
-// sizer of the longest value (Wed, September, 31) so ticks don't shift
-// the heading or the filter as the string width changes.
+// Date slots — weekday / month / day, each sized to its current text.
 .aaw-lab__feed-date {
   display: inline-flex;
   align-items: baseline;
@@ -124,20 +122,16 @@ $aaw-god-rays-overscan: 90px;
 }
 
 .aaw-lab__date-part {
-  display: inline-grid;
-  justify-items: start;
+  display: inline-flex;
   align-items: baseline;
 }
 
-.aaw-lab__date-sizer,
 .aaw-lab__date-value {
-  grid-area: 1 / 1;
   white-space: nowrap;
 }
 
-.aaw-lab__date-sizer {
-  visibility: hidden;
-  pointer-events: none;
+.aaw-lab__date-value.t-digit-group {
+  overflow: visible;
 }
 
 .aaw-lab__date-part--day .aaw-lab__date-value {
