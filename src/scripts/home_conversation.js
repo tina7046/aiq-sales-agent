@@ -169,6 +169,10 @@
   // demo restarts (the Home tab's reset, or a refresh) — so a restart
   // genuinely replays every conversation from scratch.
   var CONV_SEEN_KEY = 'sh:convSeen'
+  // Conversations that paused after the first opening stage and then
+  // resumed (Marcus reply: Send on the draft). Separate from convSeen so
+  // a return before Send still holds the rest of the feed.
+  var CONV_CONTINUED_KEY = 'sh:convOpeningContinued'
 
   function sk (key) {
     return (window.SH && typeof window.SH.storageKey === 'function')
@@ -210,6 +214,38 @@
     } catch (e) {
       // Silent — worst case the thread replays its opening next time.
     }
+  }
+
+  function readContinuedConversations () {
+    try {
+      var raw = window.sessionStorage.getItem(sk(CONV_CONTINUED_KEY))
+      if (!raw) return []
+      var parsed = JSON.parse(raw)
+      return Object.prototype.toString.call(parsed) === '[object Array]' ? parsed : []
+    } catch (e) {
+      return []
+    }
+  }
+
+  function hasContinuedOpening (convId) {
+    if (!convId) return false
+    var list = readContinuedConversations()
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] === convId) return true
+    }
+    return false
+  }
+
+  function markOpeningContinued (convId) {
+    if (!convId) return
+    try {
+      var list = readContinuedConversations()
+      for (var i = 0; i < list.length; i++) {
+        if (list[i] === convId) return
+      }
+      list.push(convId)
+      window.sessionStorage.setItem(sk(CONV_CONTINUED_KEY), JSON.stringify(list))
+    } catch (e) { /* silent */ }
   }
 
   // Class the review section toggles when the confirmation dialog
@@ -1174,8 +1210,31 @@
         appendUserMessage(query)
       }
 
+      var openingCfg = (convMap && convMap[convId] && convMap[convId].opening) || null
+      // Found new prospects (conv-001) stays pinned at the top of the
+      // thread. Other feeds still follow the newest message so a long
+      // history lands on the latest run.
+      var stayAtTop = !!(openingCfg && openingCfg.stayAtTop)
+      function openingScroll () {
+        if (stayAtTop) thread.scrollTop = 0
+        else scrollToLatest()
+      }
+
+      // Drafted reply to Marcus Chen plays the thread, then waits for
+      // Send before the records. Other conversations have
+      // no pause, so `limit` is every stage.
+      var pauseAfter = openingCfg && openingCfg.resumeOnSend
+        ? parseInt(openingCfg.pauseAfter, 10)
+        : NaN
+      if (!isFinite(pauseAfter) || pauseAfter < 0) pauseAfter = 0
+      var waitingOnSend = !!(openingCfg && openingCfg.resumeOnSend &&
+        pauseAfter > 0 && pauseAfter < stages.length &&
+        !hasContinuedOpening(convId))
+      var limit = waitingOnSend ? pauseAfter : stages.length
+
       if (!stages.length) {
-        jumpToLatest()
+        if (stayAtTop) thread.scrollTop = 0
+        else jumpToLatest()
         return
       }
 
@@ -1193,36 +1252,24 @@
       markOpeningPlayed(convId)
 
       if (!live) {
-        for (var i = 0; i < stages.length; i++) {
+        for (var i = 0; i < limit; i++) {
           appendTemplate(stages[i], convMap)
         }
-        jumpToLatest()
+        if (stayAtTop) thread.scrollTop = 0
+        else jumpToLatest()
+        waitForSendResume(limit)
         return
       }
 
       setBusy(true)
 
       // A conversation whose opening carries a `trace` plays the reusable
-      // ThinkingTrace as its single thinking phase (connect tools, then load
-      // skills, then fold into a completed header). Once it collapses the
-      // answer streams in stage by stage, with no per-stage thinking rows.
-      var openingCfg = (convMap && convMap[convId] && convMap[convId].opening) || null
+      // ThinkingTrace as its thinking phase, then streams the answer.
+      // With resumeOnSend the trace waits for Send instead of playing
+      // on load, so the draft can sit still until the user acts.
       var traceCfg = openingCfg && openingCfg.trace
-      if (traceCfg && window.ThinkingTrace && typeof window.ThinkingTrace.mount === 'function') {
-        var traceLi = document.createElement('li')
-        traceLi.className = 'seller-home__conv-thread-item'
-        var traceHost = document.createElement('div')
-        traceLi.appendChild(traceHost)
-        threadInner.appendChild(traceLi)
-        scrollToLatest()
-        window.ThinkingTrace.mount(traceHost, {
-          completedLabel: traceCfg.completedLabel,
-          steps: traceCfg.steps,
-          timings: traceCfg.timings,
-          controls: false,
-          autoCollapse: true,
-          onComplete: function () { revealStages(0) }
-        })
+      if (!waitingOnSend && canMountTrace()) {
+        mountTrace(openingScroll, function () { revealStages(0) })
         return
       }
 
@@ -1235,8 +1282,9 @@
 
       // Normal path: each stage thinks, then drops its messages.
       function next (i) {
-        if (i >= stages.length) {
+        if (i >= limit) {
           setBusy(false)
+          waitForSendResume(limit)
           return
         }
         playBeat(stages[i], function () { next(i + 1) })
@@ -1244,15 +1292,74 @@
 
       // skipThinking streams the same way, with no thinking row in front.
       function revealStages (i) {
+        if (i >= limit) {
+          if (stayAtTop) thread.scrollTop = 0
+          setBusy(false)
+          waitForSendResume(limit)
+          return
+        }
+        appendTemplate(stages[i], convMap, {
+          stream: true,
+          streamSpeed: openingCfg && openingCfg.stream && openingCfg.stream.speed,
+          scroll: openingScroll,
+          onDone: function () { revealStages(i + 1) }
+        })
+      }
+
+      function canMountTrace () {
+        return !!(traceCfg && window.ThinkingTrace &&
+          typeof window.ThinkingTrace.mount === 'function')
+      }
+
+      function mountTrace (scroll, done) {
+        var traceLi = document.createElement('li')
+        traceLi.className = 'seller-home__conv-thread-item'
+        var traceHost = document.createElement('div')
+        traceLi.appendChild(traceHost)
+        threadInner.appendChild(traceLi)
+        if (typeof scroll === 'function') scroll()
+        window.ThinkingTrace.mount(traceHost, {
+          completedLabel: traceCfg.completedLabel,
+          finalSummary: traceCfg.finalSummary,
+          steps: traceCfg.steps,
+          timings: traceCfg.timings,
+          controls: false,
+          autoCollapse: true,
+          onComplete: function () { done() }
+        })
+      }
+
+      function waitForSendResume (from) {
+        if (!waitingOnSend || from >= stages.length) return
+        function onSent (event) {
+          var d = event.detail || {}
+          if (d.decision !== 'approve') return
+          var src = event.target
+          if (!src || !src.closest || !src.closest('[data-sh-cadence-thread]')) return
+          document.removeEventListener(EVT_DECISION, onSent)
+          waitingOnSend = false
+          markOpeningContinued(convId)
+          setBusy(true)
+          if (canMountTrace()) {
+            mountTrace(scrollToLatest, function () { revealRest(from) })
+            return
+          }
+          revealRest(from)
+        }
+        document.addEventListener(EVT_DECISION, onSent)
+      }
+
+      function revealRest (i) {
         if (i >= stages.length) {
           setBusy(false)
+          scrollToLatest()
           return
         }
         appendTemplate(stages[i], convMap, {
           stream: true,
           streamSpeed: openingCfg && openingCfg.stream && openingCfg.stream.speed,
           scroll: scrollToLatest,
-          onDone: function () { revealStages(i + 1) }
+          onDone: function () { revealRest(i + 1) }
         })
       }
     }
@@ -1666,9 +1773,10 @@
     // question they just asked keeps it on screen and lets the answer
     // fill in underneath, from the top.
     //
-    // The opening sequence deliberately keeps scrollToLatest: its last
-    // stage ends on the suggested next steps, and those are meant to be
-    // what's on screen once the thread finishes loading.
+    // The opening sequence keeps scrollToLatest on every feed except
+    // Found new prospects, which sets `opening.stayAtTop` so the
+    // prospect table stays in view instead of chasing the cadence and
+    // next-steps that land below the fold.
     function scrollAnchorToTop (anchor) {
       if (!anchor || typeof anchor.getBoundingClientRect !== 'function') {
         return scrollToLatest()

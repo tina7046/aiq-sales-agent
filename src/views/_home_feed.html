@@ -138,15 +138,18 @@
 {#
   Subline halves, resolved from the row's state.
 
-  Left is `Ready` / `Running` on those two active states, cadence on
-  Scheduled, and a status word on Paused / Failed / Archived.
+  When `namedByHeader` is set (Seller Home: Ready/Running section
+  headings from `feed.filter.sections`), the left slot is cadence on
+  Ready/Scheduled and step progress on Running — the header already
+  names those states. Without headings (agent_at_work omits `sections`)
+  the left slot is the status word so the row still reads Ready/Running.
 
-  Right is cadence on Ready and Running (`Weekly`), and the time
-  field otherwise (next run / last run).
+  Right is a time field when headings name the state, and cadence on
+  Ready/Running when they don't.
 #}
-{% macro sublineStatus(item, statusLabels) %}{% if item.state == "scheduled" %}{{ item.cadence }}{% elif item.state == "running" %}{{ statusLabels.running }}{% elif item.state == "completed" %}{{ statusLabels.completed }}{% else %}{{ statusLabels[item.state] }}{% endif %}{% endmacro %}
+{% macro sublineStatus(item, statusLabels, namedByHeader) %}{% if namedByHeader %}{% if item.state == "completed" or item.state == "scheduled" %}{{ item.cadence }}{% elif item.state == "running" %}{{ item.stepProgress or statusLabels.running }}{% else %}{{ statusLabels[item.state] }}{% endif %}{% elif item.state == "scheduled" %}{{ item.cadence }}{% elif item.state == "running" %}{{ statusLabels.running }}{% elif item.state == "completed" %}{{ statusLabels.completed }}{% else %}{{ statusLabels[item.state] }}{% endif %}{% endmacro %}
 
-{% macro sublineTime(item) %}{% if item.state == "running" or item.state == "completed" %}{{ item.cadence }}{% elif item.state == "paused" or item.state == "failed" or item.state == "archived" %}{{ item.lastRun }}{% else %}{{ item.nextRun }}{% endif %}{% endmacro %}
+{% macro sublineTime(item, namedByHeader, retryTime) %}{% if namedByHeader %}{% if item.state == "running" %}{{ item.startedAt }}{% elif item.state == "paused" or item.state == "failed" or item.state == "archived" %}{{ item.lastRun }}{% elif item.state == "completed" %}{{ item.nextRun or item.lastRun }}{% else %}{{ item.nextRun }}{% endif %}{% elif item.state == "running" or item.state == "completed" %}{{ item.cadence }}{% elif item.state == "paused" or item.state == "failed" or item.state == "archived" %}{{ item.lastRun }}{% else %}{{ item.nextRun }}{% endif %}{% endmacro %}
 
 
 {#
@@ -321,7 +324,8 @@
   `<a href="#">`, which announced a link, sat in the tab order as a
   link, and then had its navigation cancelled in JS.
 #}
-{% macro feedItem(item, outputTypes, rowActions, statusLabels, retryTime, filtered) %}
+{% macro feedItem(item, outputTypes, rowActions, statusLabels, retryTime, filtered, sections) %}
+{% set namedByHeader = sections %}
 {% set descId = "seller-home-feed-" ~ item.id ~ "-desc" %}
 {% set menuId = "seller-home-feed-" ~ item.id ~ "-menu" %}
 {% set isPaused = item.state == "paused" %}
@@ -408,14 +412,18 @@
         {% endif %}
       </h3>
 
-      {# Subline — left · right. Left is Ready/Running on the active
-         states, cadence on Scheduled, or a status word (Paused/Failed/
-         Archived). Right is cadence on Ready and Running, so a Flip
-         from Running → Ready only swaps that word. #}
+      {# Subline — left · right. With section headings the left slot is
+         cadence / step progress; without them it is Ready / Running. #}
       <p class="seller-home__feed-item-desc" id="{{ descId }}">
-        {{ sublineSlot("status", "seller-home__feed-item-desc-status", sublineStatus(item, statusLabels), statusLabels.paused, statusLabels.running, statusLabels.completed, item.cadence, statusLabels.archived) }}
+        {% if namedByHeader %}
+        {{ sublineSlot("status", "seller-home__feed-item-desc-status", sublineStatus(item, statusLabels, namedByHeader), statusLabels.paused, item.stepProgress or statusLabels.running, item.cadence, item.cadence, statusLabels.archived) }}
         <span class="seller-home__feed-item-desc-sep" aria-hidden="true">·</span>
-        {{ sublineSlot("time", "seller-home__feed-item-desc-time", sublineTime(item), item.lastRun, item.cadence, item.cadence, item.nextRun or item.lastRun or item.startedAt, item.lastRun or item.nextRun) }}
+        {{ sublineSlot("time", "seller-home__feed-item-desc-time", sublineTime(item, namedByHeader, retryTime), item.lastRun, retryTime, item.nextRun or item.lastRun or item.startedAt, item.nextRun or item.lastRun or item.startedAt, item.lastRun or item.nextRun) }}
+        {% else %}
+        {{ sublineSlot("status", "seller-home__feed-item-desc-status", sublineStatus(item, statusLabels, namedByHeader), statusLabels.paused, statusLabels.running, statusLabels.completed, item.cadence, statusLabels.archived) }}
+        <span class="seller-home__feed-item-desc-sep" aria-hidden="true">·</span>
+        {{ sublineSlot("time", "seller-home__feed-item-desc-time", sublineTime(item, namedByHeader, retryTime), item.lastRun, item.cadence, item.cadence, item.nextRun or item.lastRun or item.startedAt, item.lastRun or item.nextRun) }}
+        {% endif %}
       </p>
 
       {# Readable, not aria-hidden. These counts are the row's payload
@@ -600,18 +608,22 @@
 
      `feed.itemsParked` is NOT rendered — see index.json.
 
-     Group headers are opt-in: they render only where the data defines
-     `feed.groups`, which today is the lab page and not Seller Home. #}
+     Group headers are opt-in. Seller Home names Ready/Running via
+     `feed.filter.sections`. agent_at_work omits that key so its
+     conveyor stays a flat list. #}
   <ul
     class="seller-home__feed-list"
     role="list"
     {% if feed.filter %}data-sh-feed-filter="{{ feed.filter.default }}"{% endif %}
   >
-    {#- Filter mode is one flat list (no Ready/Running headings).
-        Without a filter, Active/Paused headers (`feed.groups`) render. -#}
+    {#- Ready/Running headings render only when `feed.filter.sections`
+        names them (Seller Home). The lab omits `sections`, so this
+        stays a flat list. Without a filter, Active/Paused headers
+        (`feed.groups`) render. -#}
     {% if not feed.filter and feed.groups %}{{ groupHeader("active", feed.groups.active, feed.stateOrder[0]) }}{% endif %}
     {% for state in feed.stateOrder %}
-      {% if not feed.filter and feed.groups and state == "paused" %}{{ groupHeader("paused", feed.groups.paused, "paused") }}{% endif %}
+      {% if feed.filter and feed.filter.sections and feed.filter.sections[state] %}{{ groupHeader(state, feed.filter.sections[state], state) }}
+      {% elif not feed.filter and feed.groups and state == "paused" %}{{ groupHeader("paused", feed.groups.paused, "paused") }}{% endif %}
       {% for item in feed.items %}
         {% if item.state == state %}
           <li
@@ -622,7 +634,7 @@
             hidden
             {%- endif %}
           >
-            {{ feedItem(item, feed.outputTypes, feed.rowActions, feed.statusLabels, feed.retryTime, feed.filter) }}
+            {{ feedItem(item, feed.outputTypes, feed.rowActions, feed.statusLabels, feed.retryTime, feed.filter, feed.filter.sections if feed.filter else none) }}
           </li>
         {% endif %}
       {% endfor %}

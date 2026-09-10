@@ -1567,11 +1567,14 @@ $sh-conv-table-rows: 5.5;
 // where it currently lives, and nothing has to be cleaned up if a move
 // back is ever interrupted.
 .seller-home__conv-table-modal {
-  // Nothing here sizes the dialog: `slds-modal_large` already lays its
-  // container out as a full-height flex column (close, header, content,
-  // footer) inset 90% of the viewport, and the content row is the one
-  // that grows. That's what the table needs — a box with a definite
-  // height — so this block only has to say how the table fills it.
+  // SLDS's large dialog is a full-overlay flex column (`height: 100%`
+  // on the container, content `flex: 1`). That stretched the table to
+  // the viewport even after the column cut left fewer, shorter rows.
+  // Center a content-sized box instead; `max-height: 100%` + inner
+  // overflow still clips a long roster to the overlay.
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   // The container inside owns all the visible motion now (see the
   // `.t-modal` block above), and opacity multiplies down the tree — so
@@ -1582,6 +1585,13 @@ $sh-conv-table-rows: 5.5;
   // sequences it.
   transition: none;
 
+  .slds-modal__container {
+    height: auto;
+    max-height: 100%;
+    min-height: 0;
+    justify-content: flex-start;
+  }
+
   // Under the heading, the chip's own count ("37 prospects · …").
   .seller-home__conv-table-modal-status {
     margin-top: var(--slds-g-spacing-1, 0.25rem);
@@ -1590,24 +1600,43 @@ $sh-conv-table-rows: 5.5;
     color: var(--slds-g-color-on-surface-1, #5c5c5c);
   }
 
-  // The one row of that column that grows, which is what gives the
-  // table a definite height to take 100% of. Scrolling stays the
-  // table's job (SLDS gives this `overflow-y: auto`, which would
-  // otherwise scroll the padding box and take the frozen header out of
-  // view with it), and `min-height: 0` lets the box be shorter than the
-  // 37 rows inside it instead of growing to fit them.
+  // Scrolling stays the table's job (SLDS gives this `overflow-y: auto`,
+  // which would otherwise scroll the padding box and take the frozen
+  // header out of view with it). `min-height: 0` lets the box shrink
+  // when the container hits the viewport cap.
   .slds-modal__content {
     flex: 1 1 auto;
     display: flex;
+    flex-direction: column;
+    align-items: stretch;
     overflow: hidden;
     min-height: 0;
   }
 
   .seller-home__conv-prospect-table {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
+    align-self: stretch;
+    width: 100%;
     min-height: 0;
+    height: auto;
     max-height: 100%;
     max-width: none;
+  }
+
+  // Thread table is `width: max-content` so the column floors can
+  // overflow the 800px column. In the dialog that would leave a gap
+  // beside the five remaining columns; 100% fills the padded content
+  // box. Percents match the thread's rem ratios so leftover width is
+  // shared instead of landing in Prospect (no `width` of its own).
+  .seller-home__conv-prospect-table-el {
+    width: 100%;
+    table-layout: fixed;
+
+    th[data-sh-conv-col="prospect"]    { width: 17%; }
+    th[data-sh-conv-col="company"]     { width: 23%; }
+    th[data-sh-conv-col="whyProspect"] { width: 17%; }
+    th[data-sh-conv-col="signal"]      { width: 20%; }
+    th[data-sh-conv-col="pitch"]       { width: 23%; }
   }
 }
 
@@ -1677,15 +1706,6 @@ $sh-conv-table-rows: 5.5;
     width: 18rem;                                             // 288px
     min-width: 18rem;
   }
-  th[data-sh-conv-col="source"]      { min-width: 9.5rem; }   // 152px — badge + optional badges
-  th[data-sh-conv-col="icpFit"] {
-    width: 14rem;                                             // 224px
-    min-width: 14rem;
-  }
-  th[data-sh-conv-col="crm"] {
-    width: 16rem;                                             // 256px
-    min-width: 16rem;
-  }
   th[data-sh-conv-col="pitch"] {
     width: 20rem;                                             // 320px — the longest field
     min-width: 20rem;
@@ -1695,6 +1715,9 @@ $sh-conv-table-rows: 5.5;
   // with the column. Restoring one means removing its id from `_hidden`
   // in _home_conversation_messages.html and un-commenting its line.
   //
+  //   th[data-sh-conv-col="source"]      { min-width: 9.5rem; }   // 152px — badge + optional badges
+  //   th[data-sh-conv-col="icpFit"]      { width: 14rem; min-width: 14rem; } // 224px
+  //   th[data-sh-conv-col="crm"]         { width: 16rem; min-width: 16rem; } // 256px
   //   th[data-sh-conv-col="actions"]     { min-width: 7.5rem; }   // 120px — two icon buttons
   //   th[data-sh-conv-col="tier"]        { min-width: 7.5rem; }   // 120px — "Red Hot" badge
   //   th[data-sh-conv-col="rank"]        { min-width: 4.5rem; }   // 72px  — two digits

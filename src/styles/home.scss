@@ -2838,6 +2838,16 @@ $sh-feed-filter-hidden: (
   display: none;
 }
 
+// Within Active, a section header hides when its state has no rows. The
+// unscoped Paused rule further up already covers paused; these cover the
+// Ready and Running headers (whose group names aren't "paused"/"active").
+@each $state in ("completed", "running") {
+  .seller-home__feed-list[data-sh-feed-filter="active"]:not(:has([data-sh-feed-state="#{$state}"]))
+    .seller-home__feed-group[data-sh-feed-group-state="#{$state}"] {
+    display: none;
+  }
+}
+
 // Under the filter a scheduled row's action is Run (play), not Pause —
 // starting a waiting run is the obvious intent. The extra
 // `[data-sh-feed-filter]` ancestor outweighs the base action rule.

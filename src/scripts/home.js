@@ -227,7 +227,7 @@
   // already played their opening. It belongs in this list or a restart
   // would clear the rail but still treat every conversation as read,
   // painting them instantly instead of replaying them.
-  var DEMO_SESSION_KEYS = [RECENTS_KEY, KNOWLEDGE_BANNER_KEY, 'sh:convSeen', FEED_CONSUMED_KEY, MARCUS_REPLY_KEY]
+  var DEMO_SESSION_KEYS = [RECENTS_KEY, KNOWLEDGE_BANNER_KEY, 'sh:convSeen', 'sh:convOpeningContinued', FEED_CONSUMED_KEY, MARCUS_REPLY_KEY]
   var DEMO_LOCAL_KEYS = [DRAFT_LIST_KEY, 'sh:scheduledWorkflows:v1']
   var DEMO_LOCAL_PREFIXES = ['sh:convDraft:v1:', 'sh:convSched:v1:']
 

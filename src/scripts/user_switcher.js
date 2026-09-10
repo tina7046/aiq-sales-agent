@@ -1,9 +1,9 @@
 // ──────────────────────────────────────────────────────────────────────
 // Seller Home — header avatar user switcher
 // =====================================================================
-// Opens the global-header avatar menu and navigates to the same page
-// under `/u/<otherId>/`. Does not write a shared cookie: each tab's
-// address bar is the source of truth.
+// Opens the global-header avatar menu and lands on that person's
+// Seller Home (`/u/<otherId>/index.html`). Does not write a shared
+// cookie: each tab's address bar is the source of truth.
 //
 ;(function () {
   var CLOSE_MS = 150
@@ -72,12 +72,14 @@
       var id = link.getAttribute('data-sh-user-switch')
       if (!id) return
       event.preventDefault()
-      if (typeof window.SH === 'undefined' || !window.SH.urlForUser) return
-      if (window.SH.currentUserId && window.SH.currentUserId() === id) {
+      if (window.SH && window.SH.currentUserId && window.SH.currentUserId() === id) {
         close()
         return
       }
-      window.location.assign(window.SH.urlForUser(id))
+      var home = (window.SH && typeof window.SH.userUrl === 'function')
+        ? window.SH.userUrl('/index.html', id)
+        : (link.getAttribute('href') || ('/u/' + encodeURIComponent(id) + '/index.html'))
+      window.location.assign(home)
     })
 
     document.addEventListener('click', function (event) {
