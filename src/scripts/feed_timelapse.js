@@ -1,15 +1,15 @@
 // ──────────────────────────────────────────────────────────────────────
 // Feed time-lapse director — lab only (/agent_at_work.html)
 // =====================================================================
-// Infinite 1 Completed + 4 Running conveyor. Each cycle swipes the
+// Infinite 1 Completed + 2 Running conveyor. Each cycle swipes the
 // oldest Completed (slide left + fade). As that row collapses — the
 // remaining cards slide up — a new Running card rises with them so
-// the pack lands together as five. The oldest Running flips to
-// Completed at the same settle. One cycle is a single paused GSAP timeline so the lab
-// scrubber can seek and step frame-by-frame. Extra seed rows sit
-// `[hidden]` as the first inserts; after that, dismissed rows recycle
-// from a boot-time HTML catalog. This file is the only place durations
-// get retuned.
+// the pack lands together as three. The oldest Running flips to
+// Completed at the same settle. One cycle is a single paused GSAP
+// timeline so Left/Up can play it once, and the lab scrubber can seek
+// frame-by-frame. Extra seed rows sit `[hidden]` as the first inserts;
+// after that, dismissed rows recycle from a boot-time HTML catalog.
+// This file is the only place durations get retuned.
 //
 ;(function () {
   // Seconds, GSAP-native. Bind these from the lab chrome; persist so
@@ -28,15 +28,16 @@
     'dateDays'
   ]
   var STORAGE_TIMING = 'aaw:feedTimelapseV9'
-  var STORAGE_AUTOPLAY = 'aaw:feedTimelapsePlay'
   var READY_VISIBLE = 1
-  var RUNNING_VISIBLE = 4
+  var RUNNING_VISIBLE = 2
   var ENTER_EASE = 'power2.inOut'
   // How far below rest the new card starts (px). Ready dismiss uses 300
   // on X; that much on Y reads as a fly-in, so this stays a short rise.
   var ENTER_OFFSET = 40
 
   var playing = false
+  var oneShot = false
+  var oneShotClosing = false
   var director = null
   var cycleCtx = null
   var scrubbing = false
@@ -93,20 +94,6 @@
         TIMING[key] = n
       })
     } catch (e) {}
-  }
-
-  function consumeAutoplay () {
-    try {
-      if (window.sessionStorage.getItem(STORAGE_AUTOPLAY) !== '1') return false
-      window.sessionStorage.removeItem(STORAGE_AUTOPLAY)
-      return true
-    } catch (e) {
-      return false
-    }
-  }
-
-  function requestAutoplay () {
-    try { window.sessionStorage.setItem(STORAGE_AUTOPLAY, '1') } catch (e) {}
   }
 
   function timingForm () {
@@ -414,6 +401,12 @@
 
   function applyDateForTime (time) {
     if (!clock) return
+    // One-shot already jumped the pin on the key; don't interpolate
+    // extra days across the swipe.
+    if (oneShot) {
+      paintDate(clock)
+      return
+    }
     paintDate(addDays(clock, elapsedDaysForTime(time)))
   }
 
@@ -477,6 +470,10 @@
   }
 
   function applyQuotaForTime (time) {
+    if (oneShot) {
+      paintQuota(0)
+      return
+    }
     paintQuota(elapsedDaysForTime(time))
   }
 
@@ -490,8 +487,7 @@
     }
   }
 
-  function commitCycle () {
-    if (!cycleCtx) return
+  function advanceClock () {
     if (clock) {
       clock = addDays(clock, dateDaysCount())
       paintDate(clock)
@@ -499,6 +495,20 @@
     if (quotaClock) {
       quotaClock.days += dateDaysCount()
       paintQuota(0)
+    }
+  }
+
+  function commitCycle (skipClock) {
+    if (!cycleCtx) return
+    if (!skipClock) {
+      if (clock) {
+        clock = addDays(clock, dateDaysCount())
+        paintDate(clock)
+      }
+      if (quotaClock) {
+        quotaClock.days += dateDaysCount()
+        paintQuota(0)
+      }
     }
     if (cycleCtx.readyLi && cycleCtx.readyLi.parentNode) {
       cycleCtx.readyLi.parentNode.removeChild(cycleCtx.readyLi)
@@ -541,7 +551,7 @@
 
     // New card rises with the pack: collapse is what slides everyone
     // else up, so the enter tween shares that start and duration and
-    // they land together as five. Pack motion begins `packStart` of the
+    // they land together as three. Pack motion begins `packStart` of the
     // way through the swipe (0 = the moment the Completed card starts
     // sliding out).
     var at = t.rest
@@ -557,6 +567,8 @@
       runningRow: runningRow,
       enterLi: enterLi,
       enterRow: enterRow,
+      swipeAt: at,
+      landAt: landAt,
       flipAt: flipAt
     }
 
@@ -566,9 +578,18 @@
         if (!director) return
         applyStateForTime(director.time())
         if (!scrubbing) syncScrubber()
+        if (oneShot && !oneShotClosing && cycleCtx && director.time() >= cycleCtx.landAt - 1e-6) {
+          oneShotClosing = true
+          director.pause(cycleCtx.landAt)
+          window.requestAnimationFrame(finishOneShot)
+        }
       },
       onComplete: function () {
         syncScrubber()
+        if (oneShot) {
+          finishOneShot()
+          return
+        }
         if (playing && directorState() === 'playing') {
           commitCycle()
           if (armCycle()) director.play(0)
@@ -719,8 +740,20 @@
     }, 25)
   }
 
+  function finishOneShot () {
+    if (!oneShot && !oneShotClosing) return
+    oneShot = false
+    oneShotClosing = false
+    playing = false
+    commitCycle(true)
+    if (armCycle()) setDirectorState('paused')
+    else setDirectorState('idle')
+    syncScrubber()
+  }
+
   function play () {
     whenFeedReady(function () {
+      oneShot = false
       if (director && directorState() === 'paused' && director.progress() < 1) {
         resume()
         return
@@ -750,10 +783,42 @@
     })
   }
 
+  function advanceOneCycle () {
+    whenFeedReady(function () {
+      if (directorState() === 'playing') {
+        if (!(cycleCtx && director && director.time() >= cycleCtx.landAt - 1e-6)) return
+        finishOneShot()
+      }
+
+      applyTiming(readTimingFromForm(timingForm()))
+      fillTimingForm(timingForm())
+      gsap.config({ autoSleep: 0 })
+      gsap.ticker.lagSmoothing(0)
+
+      oneShot = true
+      if (director && director.progress() === 1) commitCycle(true)
+      if (!director) {
+        if (!armCycle()) {
+          oneShot = false
+          setDirectorState(visibleCompletedItems().length && visibleRunningRows().length ? 'idle' : 'error')
+          syncScrubber()
+          return
+        }
+      }
+
+      advanceClock()
+      playing = true
+      setDirectorState('playing')
+      // Skip the leading rest — the swipe should start on the key.
+      var swipe = cycleCtx && isFinite(cycleCtx.swipeAt) ? cycleCtx.swipeAt : 0
+      if (director.time() < swipe) director.play(swipe)
+      else director.play()
+    })
+  }
+
   function replay () {
     applyTiming(readTimingFromForm(timingForm()))
     persistSettings()
-    requestAutoplay()
     window.location.reload()
   }
 
@@ -781,16 +846,17 @@
 
     document.addEventListener('keydown', function (event) {
       var tag = (event.target && event.target.tagName) || ''
-      var inField = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+      var inField = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' ||
+        !!(event.target && event.target.isContentEditable)
       if ((event.code === 'Space' || event.key === ' ') && tag !== 'BUTTON' && !inField) {
         event.preventDefault()
         togglePlayPause()
         return
       }
-      if (inField && event.target && event.target.type === 'number') return
-      if (event.key === 'ArrowLeft') {
+      if (inField) return
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
         event.preventDefault()
-        stepFrame(-1)
+        if (!event.repeat) advanceOneCycle()
       } else if (event.key === 'ArrowRight') {
         event.preventDefault()
         stepFrame(1)
@@ -820,7 +886,11 @@
     loadTiming()
     bindChrome()
     setDirectorState('idle')
-    play()
+    whenFeedReady(function () {
+      if (armIfNeeded()) setDirectorState('paused')
+      else setDirectorState(visibleCompletedItems().length && visibleRunningRows().length ? 'idle' : 'error')
+      syncScrubber()
+    })
   }
 
   if (document.readyState === 'loading') {

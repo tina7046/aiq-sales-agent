@@ -10,8 +10,8 @@
   //
   //  What forks is the content: this file is the time-lapse seed for
   //  /agent_at_work.html — 1 Completed + 8 Running Rohan rows on a
-  //  pinned Tuesday. Markup, styles and behaviour stay shared with
-  //  Seller Home.
+  //  pinned Tuesday; the director shows 1 Completed + 2 Running.
+  //  Markup, styles and behaviour stay shared with Seller Home.
   //
   //  Gulp injects this automatically — `getData` reads
   //  `data/<page>.json` for `<page>.html` — so defining `feed` here is
@@ -189,44 +189,47 @@
       "doc-purple": { "iconImage": "/assets/images/doctype-icons/Doc-purple.svg" },
       "doc-orange": { "iconImage": "/assets/images/doctype-icons/Doc-orange.svg" }
     },
-    // ── Time-lapse seed (infinite 1+4 loop) ──────────────────────────
+    // ── Time-lapse seed (infinite 1+2 loop) ──────────────────────────
     // Nine Rohan-flavored rows on a pinned Tuesday. The first is
     // already Completed; the rest start Running. The director shows
-    // 1 Completed + 4 Running; extras stay `hidden` as the insert
+    // 1 Completed + 2 Running; extras stay `hidden` as the insert
     // pool. After the pool is empty, dismissed rows recycle from a
     // boot-time HTML catalog so the loop can run forever.
+    //
+    // Opening three tell the post-meeting story: transcript → follow-ups
+    // to multi-thread → proposal ready to close.
     "items": [
       {
         "id": "run-01",
-        "title": "Researched target accounts",
+        "title": "Read the conversation transcript",
         "titles": {
-          "running": "Researching target accounts",
-          "completed": "Researched target accounts",
-          "neutral": "Research target accounts"
+          "running": "Reading the conversation transcript",
+          "completed": "Read the conversation transcript",
+          "neutral": "Read the conversation transcript"
         },
-        "cadence": "Weekly",
-        "stepProgress": "4 of 5 steps",
-        "startedAt": "12 min elapsed",
-        "nextRun": "Next run Monday at 9:00 AM",
+        "cadence": "Daily",
+        "stepProgress": "3 of 3 steps",
+        "startedAt": "1 min elapsed",
+        "nextRun": "Next run Friday at 9:00 AM",
         "lastRun": "Last run today",
         "state": "completed",
         "outputs": [
           {
-            "icon": "doc-green",
-            "label": "50 accounts",
+            "icon": "doc-orange",
+            "label": "1 transcript",
             "scheduledIcon": "doc-grey",
-            "scheduledLabel": "Target accounts"
+            "scheduledLabel": "Meeting transcript"
           }
         ],
-        "workflow": { "id": "sk-account-research", "label": "" }
+        "workflow": { "id": "sk-prepare-for-meetings", "label": "" }
       },
       {
         "id": "run-02",
-        "title": "Drafting outreach for warm leads",
+        "title": "Drafting follow-ups to multi-thread the account",
         "titles": {
-          "running": "Drafting outreach for warm leads",
-          "completed": "Drafted outreach for warm leads",
-          "neutral": "Draft outreach for warm leads"
+          "running": "Drafting follow-ups to multi-thread the account",
+          "completed": "Drafted follow-ups to multi-thread the account",
+          "neutral": "Draft follow-ups to multi-thread the account"
         },
         "cadence": "Daily",
         "stepProgress": "2 of 4 steps",
@@ -237,50 +240,20 @@
         "outputs": [
           {
             "icon": "doc-blue",
-            "label": "30 drafted",
+            "label": "4 follow-ups",
             "scheduledIcon": "doc-grey",
-            "scheduledLabel": "Outreach drafts"
+            "scheduledLabel": "Follow-up drafts"
           }
         ],
         "workflow": { "id": "sk-write-sales-emails", "label": "" }
       },
       {
         "id": "run-03",
-        "title": "Finding new prospects",
+        "title": "Drafting the proposal",
         "titles": {
-          "running": "Finding new prospects",
-          "completed": "Found new prospects",
-          "neutral": "Find new prospects"
-        },
-        "cadence": "Weekly",
-        "stepProgress": "3 of 5 steps",
-        "startedAt": "8 min elapsed",
-        "nextRun": "Next run in 3 days",
-        "lastRun": "Last run Thursday",
-        "state": "running",
-        "outputs": [
-          {
-            "icon": "doc-green",
-            "label": "20 accounts",
-            "scheduledIcon": "doc-grey",
-            "scheduledLabel": "New accounts"
-          },
-          {
-            "icon": "doc-yellow",
-            "label": "40 prospects",
-            "scheduledIcon": "doc-grey",
-            "scheduledLabel": "Prospects"
-          }
-        ],
-        "workflow": { "id": "sk-find-prospects", "label": "" }
-      },
-      {
-        "id": "run-04",
-        "title": "Drafting proposals to send",
-        "titles": {
-          "running": "Drafting proposals to send",
-          "completed": "Drafted proposals to send",
-          "neutral": "Draft proposals to send"
+          "running": "Drafting the proposal",
+          "completed": "Proposal ready to go",
+          "neutral": "Draft the proposal"
         },
         "cadence": "Daily",
         "stepProgress": "1 of 3 steps",
@@ -291,12 +264,36 @@
         "outputs": [
           {
             "icon": "doc-red",
-            "label": "10 proposals",
+            "label": "1 proposal",
             "scheduledIcon": "doc-grey",
-            "scheduledLabel": "Proposals"
+            "scheduledLabel": "Proposal"
           }
         ],
         "workflow": { "id": "sk-draft-proposals", "label": "" }
+      },
+      {
+        "id": "run-04",
+        "title": "Researching target accounts",
+        "titles": {
+          "running": "Researching target accounts",
+          "completed": "Researched target accounts",
+          "neutral": "Research target accounts"
+        },
+        "cadence": "Weekly",
+        "stepProgress": "4 of 5 steps",
+        "startedAt": "12 min elapsed",
+        "nextRun": "Next run Monday at 9:00 AM",
+        "lastRun": "Last run today",
+        "state": "running",
+        "outputs": [
+          {
+            "icon": "doc-green",
+            "label": "50 accounts",
+            "scheduledIcon": "doc-grey",
+            "scheduledLabel": "Target accounts"
+          }
+        ],
+        "workflow": { "id": "sk-account-research", "label": "" }
       },
       {
         "id": "run-05",
@@ -324,27 +321,33 @@
       },
       {
         "id": "run-06",
-        "title": "Preparing meeting next steps",
+        "title": "Finding new prospects",
         "titles": {
-          "running": "Preparing meeting next steps",
-          "completed": "Prepared meeting next steps",
-          "neutral": "Meeting next steps"
+          "running": "Finding new prospects",
+          "completed": "Found new prospects",
+          "neutral": "Find new prospects"
         },
-        "cadence": "Daily",
-        "stepProgress": "1 of 3 steps",
-        "startedAt": "3 min elapsed",
-        "nextRun": "Next run Friday at 9:00 AM",
-        "lastRun": "Last run yesterday",
+        "cadence": "Weekly",
+        "stepProgress": "3 of 5 steps",
+        "startedAt": "8 min elapsed",
+        "nextRun": "Next run in 3 days",
+        "lastRun": "Last run Thursday",
         "state": "running",
         "outputs": [
           {
-            "icon": "doc-orange",
-            "label": "8 action items",
+            "icon": "doc-green",
+            "label": "20 accounts",
             "scheduledIcon": "doc-grey",
-            "scheduledLabel": "Action items"
+            "scheduledLabel": "New accounts"
+          },
+          {
+            "icon": "doc-yellow",
+            "label": "40 prospects",
+            "scheduledIcon": "doc-grey",
+            "scheduledLabel": "Prospects"
           }
         ],
-        "workflow": { "id": "sk-prepare-for-meetings", "label": "" }
+        "workflow": { "id": "sk-find-prospects", "label": "" }
       },
       {
         "id": "run-07",

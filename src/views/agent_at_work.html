@@ -34,14 +34,14 @@
                         (hidden by default; gear menu Show control panel)
 
   Slice 1 time-lapse: `feed_timelapse.js` runs an infinite 1 Completed
-  + 4 Running conveyor — swipe the oldest Completed; as the remaining
-  cards slide up, a new Running card rises with them so five land
+  + 2 Running conveyor — swipe the oldest Completed; as the remaining
+  cards slide up, a new Running card rises with them so three land
   together. `packStart` (0–1) is how far through the swipe the pack
   begins; 0 is with the swipe. Durations live in TIMING (and the inputs
-  bound to it). Play/Pause
-  toggles the director; the scrubber seeks one cycle frame-by-frame
-  (‹ › or Left/Right). Replay reloads the seed and plays. The conveyor
-  starts on load.
+  bound to it). The conveyor waits on load. Left or Up plays one
+  cycle and stops; Play/Pause still loops. The scrubber seeks one
+  cycle frame-by-frame (‹ › or Right). Replay reloads the seed and
+  waits.
 
   The shader follows Home's gear pick (`sh:shader`), defaulting to
   simplex. The director is hidden unless the gear's "Show control panel"
@@ -229,7 +229,7 @@
 			'<li class="slds-dropdown__item" role="presentation">' +
 			'<a href="#" role="menuitem" data-aaw-gear-play tabindex="0">' +
 			'<span class="slds-truncate" title="Play or pause the feed">' +
-			'<span data-aaw-gear-play-label>Pause</span>' +
+			'<span data-aaw-gear-play-label>Play</span>' +
 			'</span></a></li>' +
 			'<li class="slds-dropdown__item" role="presentation">' +
 			'<a href="#" role="menuitemcheckbox" aria-checked="' + (!panelHidden) + '" data-aaw-panel-toggle tabindex="0">' +
