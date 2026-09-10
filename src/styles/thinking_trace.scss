@@ -205,6 +205,7 @@
 }
 
 .thinking-trace__step-head .thinking-trace__icon--swap > .thinking-trace__spinner,
+.thinking-trace__step-head .thinking-trace__icon--swap > .thinking-trace__pending,
 .thinking-trace__step-head .thinking-trace__icon--swap > .thinking-trace__mark,
 .thinking-trace__step-head .thinking-trace__icon--swap > .thinking-trace__step-chevron {
   grid-area: 1 / 1;
@@ -243,6 +244,7 @@
 
 // Resting: active → spinner; done → check; hover(done) / expanded → chevron.
 .thinking-trace__step-head .thinking-trace__mark,
+.thinking-trace__step-head .thinking-trace__pending,
 .thinking-trace__step-head .thinking-trace__step-chevron {
   opacity: 0;
 }
@@ -274,6 +276,30 @@
 
 .thinking-trace.is-paused .thinking-trace__steps .thinking-trace__spinner.sh-spinner {
   animation-play-state: paused;
+}
+
+// Overview layout (opt-in): upcoming rows are visible from the start,
+// muted, so the full job is readable while a few steps run at once.
+// Narrative uses the same replace-model stream as serial traces.
+
+.thinking-trace__pending {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--slds-g-color-palette-neutral-80, #c9c9c9);
+}
+
+.thinking-trace__step.is-upcoming .thinking-trace__pending {
+  opacity: 1;
+}
+
+.thinking-trace__step.is-upcoming .thinking-trace__spinner {
+  opacity: 0;
+  animation: none;
+}
+
+.thinking-trace__step.is-upcoming .thinking-trace__step-head .thinking-trace__label {
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
 }
 
 // Active step label — the blue → violet shimmer sweep (same as the app's

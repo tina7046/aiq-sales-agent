@@ -352,9 +352,10 @@
        snapshot?: { … see _pipeline_snapshot.html },
        runId?:    String,  // the scheduled run this output came from
        rowsFrom?: String,  // id of the message owning the rows
-       actions?:  [ { id, label } ]  // optional brand buttons after
-                                     // the text. Visual only unless
-                                     // a page wires the id.
+       actions?:  [ { id, label, toast?, trace?, activity? } ]
+                                     // brand buttons after the text.
+                                     // `toast` + `trace` are played by
+                                     // home_conversation.js on click.
      }
 #}
 {% import "_home_conversation_cadence.html" as cadence %}

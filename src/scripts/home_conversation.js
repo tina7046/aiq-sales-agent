@@ -133,6 +133,8 @@
     composerMic:       '[data-sh-conv-composer-mic]',
     composerRecording: '[data-sh-conv-composer-recording]',
     composerWaveform:  '[data-sh-conv-composer-waveform]',
+    // In-thread action (e.g. Approve & start on a drafted plan).
+    convAction:       '[data-sh-conv-action]',
     composerMicStop:   '[data-sh-conv-composer-mic-stop]',
     composerMicConfirm: '[data-sh-conv-composer-mic-confirm]',
     userTemplate:     '[data-sh-conv-user-template]',
@@ -1268,8 +1270,8 @@
       // With resumeOnSend the trace waits for Send instead of playing
       // on load, so the draft can sit still until the user acts.
       var traceCfg = openingCfg && openingCfg.trace
-      if (!waitingOnSend && canMountTrace()) {
-        mountTrace(openingScroll, function () { revealStages(0) })
+      if (!waitingOnSend && canMountTrace(traceCfg)) {
+        appendTrace(traceCfg, openingScroll, function () { revealStages(0) })
         return
       }
 
@@ -1306,29 +1308,6 @@
         })
       }
 
-      function canMountTrace () {
-        return !!(traceCfg && window.ThinkingTrace &&
-          typeof window.ThinkingTrace.mount === 'function')
-      }
-
-      function mountTrace (scroll, done) {
-        var traceLi = document.createElement('li')
-        traceLi.className = 'seller-home__conv-thread-item'
-        var traceHost = document.createElement('div')
-        traceLi.appendChild(traceHost)
-        threadInner.appendChild(traceLi)
-        if (typeof scroll === 'function') scroll()
-        window.ThinkingTrace.mount(traceHost, {
-          completedLabel: traceCfg.completedLabel,
-          finalSummary: traceCfg.finalSummary,
-          steps: traceCfg.steps,
-          timings: traceCfg.timings,
-          controls: false,
-          autoCollapse: true,
-          onComplete: function () { done() }
-        })
-      }
-
       function waitForSendResume (from) {
         if (!waitingOnSend || from >= stages.length) return
         function onSent (event) {
@@ -1340,8 +1319,8 @@
           waitingOnSend = false
           markOpeningContinued(convId)
           setBusy(true)
-          if (canMountTrace()) {
-            mountTrace(scrollToLatest, function () { revealRest(from) })
+          if (canMountTrace(traceCfg)) {
+            appendTrace(traceCfg, scrollToLatest, function () { revealRest(from) })
             return
           }
           revealRest(from)
@@ -1795,6 +1774,88 @@
 
       scrollThreadTo(top)
     }
+
+    function canMountTrace (cfg) {
+      return !!(cfg && window.ThinkingTrace &&
+        typeof window.ThinkingTrace.mount === 'function')
+    }
+
+    function appendTrace (cfg, scroll, done) {
+      if (!canMountTrace(cfg)) {
+        if (done) done()
+        return
+      }
+      var traceLi = document.createElement('li')
+      traceLi.className = 'seller-home__conv-thread-item'
+      var traceHost = document.createElement('div')
+      traceLi.appendChild(traceHost)
+      threadInner.appendChild(traceLi)
+      if (typeof scroll === 'function') scroll()
+      window.ThinkingTrace.mount(traceHost, {
+        completedLabel: cfg.completedLabel,
+        finalSummary: cfg.finalSummary,
+        steps: cfg.steps,
+        timings: cfg.timings,
+        controls: cfg.controls === true,
+        autoCollapse: cfg.autoCollapse !== false,
+        showUpcoming: !!cfg.showUpcoming,
+        maxConcurrent: cfg.maxConcurrent,
+        thoughtLead: cfg.thoughtLead,
+        onComplete: function () { if (done) done() }
+      })
+    }
+
+    function findMessageAction (actionId) {
+      if (!actionId || !convEntry) return null
+      var msgs = convEntry.messages || []
+      for (var i = 0; i < msgs.length; i++) {
+        var actions = msgs[i].actions || []
+        for (var a = 0; a < actions.length; a++) {
+          if (actions[a] && actions[a].id === actionId) return actions[a]
+        }
+      }
+      return null
+    }
+
+    function applyActivityPatch (patch) {
+      if (!patch || !patch.messageId) return
+      var el = threadInner.querySelector('[data-sh-conv-msg="' + patch.messageId + '"]')
+      if (!el) return
+      if (patch.workflowLabel) {
+        var label = el.querySelector('.seller-home__conv-msg-activity-label')
+        if (label) label.textContent = patch.workflowLabel
+        el.setAttribute('aria-label', patch.workflowLabel)
+      }
+      if (patch.statusText) {
+        var status = el.querySelector('.seller-home__conv-msg-activity-status')
+        if (status) status.textContent = patch.statusText
+      }
+    }
+
+    // Approve & start (and any later in-thread action): toast, lock
+    // the button, then play the action's thinking trace. Data lives
+    // on the message's `actions[]` entry so other conversations can
+    // reuse the hook without a new code path.
+    thread.addEventListener('click', function (event) {
+      var btn = event.target && event.target.closest
+        ? event.target.closest(SELECTORS.convAction)
+        : null
+      if (!btn || !thread.contains(btn) || btn.disabled) return
+      var action = findMessageAction(btn.getAttribute('data-sh-conv-action'))
+      if (!action) return
+      event.preventDefault()
+      btn.disabled = true
+      btn.setAttribute('aria-pressed', 'true')
+      if (action.approvedLabel) btn.textContent = action.approvedLabel
+      if (action.toast) showToast(action.toast)
+      applyActivityPatch(action.activity)
+      if (!canMountTrace(action.trace)) return
+      setBusy(true)
+      appendTrace(action.trace, scrollToLatest, function () {
+        setBusy(false)
+        scrollToLatest()
+      })
+    })
 
     return { playOpening: playOpening }
   }

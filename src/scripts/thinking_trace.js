@@ -14,9 +14,13 @@
  *       { narrative, icon, label, count, cycle:[…],
  *         substeps: [ { img|source|icon, label }, … ] }, …
  *     ],
- *     timings: { leadMs, stepGapMs, totalMs /* or stepMs *\/ },
+ *     timings: { leadMs, stepGapMs, totalMs /* or stepMs *\/, staggerMs,
+ *                stepMinMs, stepMaxMs },
  *     controls: true,        // render skip / pause / restart (default true)
  *     autoCollapse: true,    // fold into completed header on finish (default true)
+ *     showUpcoming: false,   // paint every step up front (pending rows)
+ *     maxConcurrent: 1,      // how many steps can be active at once
+ *     thoughtLead: String,   // overview opener, streamed into the shared narrative
  *     onComplete: function (api) { … reveal page-owned result … },
  *   });
  *   // api => { restart, skip, pause, resume, destroy, el }
@@ -126,9 +130,17 @@
     var stepGapMs = timings.stepGapMs != null ? timings.stepGapMs : 200;
     var leadMs = timings.leadMs != null ? timings.leadMs : 500;
     var totalMs = timings.totalMs || 40000;
+    var showUpcoming = !!config.showUpcoming;
+    var maxConcurrent = parseInt(config.maxConcurrent, 10);
+    if (!isFinite(maxConcurrent) || maxConcurrent < 1) maxConcurrent = 1;
+    var overviewMode = showUpcoming || maxConcurrent > 1;
+    var staggerMs = timings.staggerMs != null ? timings.staggerMs : 280;
+    var waveCount = overviewMode && maxConcurrent > 1
+      ? Math.ceil(steps.length / maxConcurrent)
+      : steps.length;
     var stepDurMs = timings.stepMs
       ? timings.stepMs
-      : Math.max(1200, Math.round((totalMs - leadMs) / steps.length - stepGapMs));
+      : Math.max(1200, Math.round((totalMs - leadMs) / waveCount - stepGapMs));
 
     var clamp = function (v, lo, hi) {
       return v < lo ? lo : v > hi ? hi : v;
@@ -164,6 +176,7 @@
       "</div>";
 
     var box = container.querySelector("[data-tt-root]");
+    if (overviewMode && box) box.classList.add("thinking-trace--overview");
     var headEl = container.querySelector("[data-tt-head]");
     var statusEl = container.querySelector("[data-tt-status]");
     var narrativeEl = container.querySelector("[data-tt-narrative]");
@@ -332,17 +345,58 @@
       revealNextWord();
     };
 
+    // Overview chain-of-thought: same replace-model narrative as serial
+    // playback — one `<p class="thinking-trace__narrative">`, word stream,
+    // each new thought replaces the last. Serial `playTask` never queues.
+    var thoughtQueue = [];
+    var thoughtBusy = false;
+    var thoughtFor = function (step, done) {
+      if (!step) return "";
+      if (done) {
+        if (step.thoughtDone) return step.thoughtDone;
+        var cyc = step.cycle;
+        if (cyc && cyc.length) return String(cyc[cyc.length - 1]).replace(/\.*$/, "") + ".";
+        return "Finished " + (step.label || "this step") + ".";
+      }
+      if (step.thought) return step.thought;
+      if (step.narrative) return step.narrative;
+      var sub = step.substeps && step.substeps[0];
+      var via = sub && (sub.source || sub.label);
+      return via
+        ? "Starting " + String(step.label || "the next step").toLowerCase() + " — " + via + "."
+        : "Starting " + String(step.label || "the next step").toLowerCase() + ".";
+    };
+    var pumpThoughts = function () {
+      if (thoughtBusy || paused || !thoughtQueue.length) return;
+      thoughtBusy = true;
+      streamNarrative(thoughtQueue.shift(), function () {
+        thoughtBusy = false;
+        pumpThoughts();
+      });
+    };
+    var enqueueThought = function (text) {
+      var t = text == null ? "" : String(text).trim();
+      if (!t) return;
+      thoughtQueue.push(t);
+      pumpThoughts();
+    };
+
     // ── Step row rendering ─────────────────────────────────────────
-    var renderStep = function (stepData) {
+    var renderStep = function (stepData, opts) {
       if (!stepsEl) return null;
+      opts = opts || {};
+      var upcoming = opts.state === "upcoming";
       var count = parseCount(stepData.count);
       var cyc = stepData.cycle && stepData.cycle.length ? stepData.cycle : null;
-      var firstLabel = cyc ? cyc[0] : stepData.label || "";
+      var firstLabel = upcoming
+        ? (stepData.label || "")
+        : (cyc ? cyc[0] : stepData.label || "");
       var wrap = document.createElement("div");
-      wrap.className = "thinking-trace__step is-active";
+      wrap.className = "thinking-trace__step " + (upcoming ? "is-upcoming" : "is-active");
       wrap.innerHTML =
         '<div class="thinking-trace__step-head" role="status" aria-expanded="false">' +
           '<span class="thinking-trace__icon thinking-trace__icon--swap" title="' + esc(stepData.label) + '">' +
+            '<span class="thinking-trace__pending" aria-hidden="true"></span>' +
             '<span class="thinking-trace__spinner sh-spinner" aria-hidden="true"></span>' +
             '<span class="thinking-trace__mark" aria-hidden="true">' + CHECK_SVG + "</span>" +
             '<span class="thinking-trace__step-chevron" aria-hidden="true">' + CHEVRON_SVG + "</span>" +
@@ -352,7 +406,7 @@
         "</div>" +
         '<div class="thinking-trace__step-body">' + substepsHtml(stepData.substeps) + "</div>";
       stepsEl.appendChild(wrap);
-      if (!reduceMotion) {
+      if (!reduceMotion && opts.fade !== false) {
         wrap.style.opacity = "0";
         window.requestAnimationFrame(function () {
           wrap.style.transition = "opacity 260ms ease";
@@ -416,6 +470,154 @@
       curStep = null;
     };
 
+    // Overview layout (opt-in): paint upcoming rows and/or run more
+    // than one step at a time. Default playback never enters this
+    // path — `showUpcoming` and `maxConcurrent` stay off.
+    var overviewRows = [];
+    var overviewLive = [];
+    var overviewJobs = [];
+    var overviewRemaining = [];
+    var overviewInFlight = 0;
+    var overviewTicker = null;
+    var finished = false;
+    var overviewMinMs = timings.stepMinMs != null
+      ? timings.stepMinMs
+      : Math.max(1800, Math.round(stepDurMs * 0.4));
+    var overviewMaxMs = timings.stepMaxMs != null
+      ? timings.stepMaxMs
+      : Math.max(overviewMinMs + 400, Math.round(stepDurMs * 1.7));
+
+    var randInt = function (lo, hi) {
+      return lo + Math.floor(Math.random() * (hi - lo + 1));
+    };
+    var takeRandomRemaining = function () {
+      if (!overviewRemaining.length) return -1;
+      var i = randInt(0, overviewRemaining.length - 1);
+      return overviewRemaining.splice(i, 1)[0];
+    };
+    var randomOverviewDur = function () {
+      return randInt(overviewMinMs, overviewMaxMs);
+    };
+
+    var scheduleOverview = function (fn, ms) {
+      var rec = { fn: fn, ms: ms, start: Date.now(), id: null, remaining: ms };
+      rec.id = setTimeout(function () {
+        overviewJobs = overviewJobs.filter(function (j) {
+          return j !== rec;
+        });
+        rec.id = null;
+        fn();
+      }, ms);
+      overviewJobs.push(rec);
+      return rec;
+    };
+    var clearOverviewJobs = function () {
+      overviewJobs.forEach(function (j) {
+        if (j.id) clearTimeout(j.id);
+      });
+      overviewJobs = [];
+    };
+    var tickOverview = function () {
+      var now = runElapsedMs();
+      for (var i = 0; i < overviewLive.length; i++) {
+        var item = overviewLive[i];
+        var p = clamp((now - item.startMs) / item.dur, 0, 1);
+        if (item.refs.cycle && item.refs.cycle.length && item.refs.labelEl) {
+          var ci = Math.min(
+            Math.floor(p * item.refs.cycle.length),
+            item.refs.cycle.length - 1
+          );
+          if (ci !== item.refs._i) {
+            item.refs._i = ci;
+            swapText(item.refs.labelEl, item.refs.cycle[ci]);
+          }
+        }
+      }
+    };
+    var startOverviewTicker = function () {
+      if (overviewTicker) return;
+      tickOverview();
+      overviewTicker = setInterval(tickOverview, 50);
+    };
+    var stopOverviewTicker = function () {
+      if (overviewTicker) {
+        clearInterval(overviewTicker);
+        overviewTicker = null;
+      }
+    };
+    var paintUpcoming = function () {
+      overviewRows = [];
+      overviewRemaining = [];
+      for (var i = 0; i < steps.length; i++) {
+        overviewRows[i] = renderStep(steps[i], { state: "upcoming", fade: false });
+        overviewRemaining.push(i);
+      }
+    };
+    var markOverviewDone = function (refs) {
+      if (!refs) return;
+      if (refs.labelEl) {
+        cancelSwap(refs.labelEl);
+        applyLabel(refs.labelEl, refs.label || "");
+      }
+      if (refs.wrap) {
+        refs.wrap.classList.remove("is-upcoming", "is-active");
+        refs.wrap.classList.add("is-done");
+      }
+    };
+    var settleOverviewItem = function (item) {
+      markOverviewDone(item.refs);
+      overviewLive = overviewLive.filter(function (x) {
+        return x !== item;
+      });
+      overviewInFlight = Math.max(0, overviewInFlight - 1);
+      if (!overviewLive.length) stopOverviewTicker();
+      enqueueThought(thoughtFor(item.data, true));
+      fillOverviewSlots();
+    };
+    var activateOverviewIndex = function (index) {
+      var t = steps[index];
+      if (!t) return;
+      var refs = overviewRows[index];
+      if (!refs) {
+        refs = renderStep(t, { fade: !showUpcoming });
+        overviewRows[index] = refs;
+      }
+      if (refs.wrap) {
+        refs.wrap.classList.remove("is-upcoming");
+        refs.wrap.classList.add("is-active");
+      }
+      if (refs.cycle && refs.cycle.length && refs.labelEl) {
+        refs._i = 0;
+        applyLabel(refs.labelEl, refs.cycle[0]);
+      }
+      enqueueThought(thoughtFor(t, false));
+      var dur = randomOverviewDur();
+      var item = { refs: refs, startMs: runElapsedMs(), dur: dur, data: t };
+      overviewLive.push(item);
+      startOverviewTicker();
+      scheduleOverview(function () {
+        settleOverviewItem(item);
+      }, dur);
+    };
+    var fillOverviewSlots = function () {
+      if (paused || finished) return;
+      var started = 0;
+      var seeding = overviewLive.length === 0 && overviewInFlight === 0;
+      while (overviewInFlight < maxConcurrent && overviewRemaining.length) {
+        (function (idx, delay) {
+          overviewInFlight += 1;
+          scheduleOverview(function () {
+            activateOverviewIndex(idx);
+          }, delay);
+        })(
+          takeRandomRemaining(),
+          seeding ? started * staggerMs : randInt(0, staggerMs + 120)
+        );
+        started += 1;
+      }
+      if (!overviewRemaining.length && overviewInFlight === 0) finish();
+    };
+
     // ── Pause / Resume ─────────────────────────────────────────────
     var paused = false;
     var pausedElapsed = 0;
@@ -438,12 +640,20 @@
       stopTimer();
       clearNarrativeTimer();
       clearStepTicker();
+      stopOverviewTicker();
       pausedElapsed = timerStart ? Date.now() - timerStart : 0;
       if (step && step.id) {
         clearTimeout(step.id);
         step.remaining = Math.max(0, step.ms - (Date.now() - step.start));
         step.id = null;
       }
+      overviewJobs.forEach(function (j) {
+        if (j.id) {
+          clearTimeout(j.id);
+          j.remaining = Math.max(0, j.ms - (Date.now() - j.start));
+          j.id = null;
+        }
+      });
       if (box) box.classList.add("is-paused");
       updatePauseBtn();
     };
@@ -453,18 +663,74 @@
       timerStart = Date.now() - pausedElapsed;
       startInterval();
       if (narrativeIdx < narrativeSpans.length) revealNextWord();
+      else pumpThoughts();
       if (curStep) startStepTicker();
+      if (overviewLive.length) startOverviewTicker();
       if (step && step.fn && step.id === null) {
         schedule(step.fn, step.remaining);
       }
+      overviewJobs.forEach(function (j) {
+        if (j.fn && j.id === null) {
+          j.ms = j.remaining;
+          j.start = Date.now();
+          j.id = setTimeout(function () {
+            overviewJobs = overviewJobs.filter(function (x) {
+              return x !== j;
+            });
+            j.id = null;
+            j.fn();
+          }, j.remaining);
+        }
+      });
       if (box) box.classList.remove("is-paused");
       updatePauseBtn();
     };
 
     // ── Header collapse toggle + step expand delegation ────────────
+    // Expanding a collapsed overview (or any long trace) grows a
+    // tall body under the header. If the header was pinned at the
+    // bottom of the thread, that body lands below the fold — scroll
+    // the nearest scroller so the header sits at the top and the
+    // opened content is on screen.
+    var nearestScroller = function (el) {
+      var node = el && el.parentElement;
+      while (node && node !== document.body && node !== document.documentElement) {
+        var style = window.getComputedStyle(node);
+        var oy = style.overflowY;
+        if ((oy === "auto" || oy === "scroll") && node.scrollHeight > node.clientHeight + 1) {
+          return node;
+        }
+        node = node.parentElement;
+      }
+      return null;
+    };
+    var revealExpanded = function () {
+      var scroller = nearestScroller(box);
+      if (!scroller || !headEl) return;
+      var gutter = 12;
+      var sRect = scroller.getBoundingClientRect();
+      var hRect = headEl.getBoundingClientRect();
+      var next = scroller.scrollTop + (hRect.top - sRect.top) - gutter;
+      if (next < 0) next = 0;
+      var max = scroller.scrollHeight - scroller.clientHeight;
+      if (next > max) next = max;
+      if (typeof scroller.scrollTo === "function") {
+        scroller.scrollTo({
+          top: next,
+          behavior: reduceMotion ? "auto" : "smooth",
+        });
+      } else {
+        scroller.scrollTop = next;
+      }
+    };
     var onHeadClick = function () {
       var collapsed = box.classList.toggle("is-collapsed");
       headEl.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      if (!collapsed) {
+        window.requestAnimationFrame(function () {
+          window.requestAnimationFrame(revealExpanded);
+        });
+      }
     };
     if (headEl) headEl.addEventListener("click", onHeadClick);
 
@@ -507,12 +773,20 @@
     };
 
     var finish = function () {
+      if (finished) return;
+      finished = true;
       clearStep();
       clearStepTicker();
+      clearOverviewJobs();
+      stopOverviewTicker();
       stopTimer();
       clearNarrativeTimer();
       narrativeDone = null;
       if (curStep) settleStep();
+      overviewLive.forEach(function (item) {
+        markOverviewDone(item.refs);
+      });
+      overviewLive = [];
       paused = false;
       if (box) box.classList.remove("is-paused", "is-collapsed");
       if (statusEl) statusEl.textContent = completedLabel || ("Worked for " + fmt(runElapsedSec()));
@@ -564,31 +838,32 @@
     var skipToComplete = function () {
       clearStep();
       clearStepTicker();
+      clearOverviewJobs();
+      stopOverviewTicker();
       clearNarrativeTimer();
       narrativeDone = null;
       stopTimer();
       curStep = null;
+      overviewLive = [];
+      overviewInFlight = 0;
+      overviewRemaining = [];
       paused = false;
       pausedElapsed = 0;
 
-      if (stepsEl) stepsEl.innerHTML = "";
-      steps.forEach(function (t) {
-        var refs = renderStep(t);
-        if (!refs) return;
-        if (refs.labelEl) {
-          cancelSwap(refs.labelEl);
-          applyLabel(refs.labelEl, refs.label || "");
-        }
-        if (refs.countEl) {
-          refs.countEl.textContent =
-            refs.count.target != null
-              ? refs.count.target + refs.count.suffix
-              : refs.count.raw || "";
-        }
-        refs.wrap.classList.remove("is-active");
-        refs.wrap.classList.add("is-done");
-      });
+      if (overviewMode && overviewRows.length) {
+        overviewRows.forEach(markOverviewDone);
+      } else {
+        if (stepsEl) stepsEl.innerHTML = "";
+        overviewRows = [];
+        steps.forEach(function (t) {
+          var refs = renderStep(t, { fade: false });
+          if (!refs) return;
+          markOverviewDone(refs);
+        });
+      }
       if (narrativeEl) narrativeEl.textContent = "";
+      thoughtQueue = [];
+      thoughtBusy = false;
       narrativeSpans = [];
       narrativeIdx = 0;
 
@@ -601,16 +876,25 @@
     var resetRun = function () {
       clearStep();
       clearStepTicker();
+      clearOverviewJobs();
+      stopOverviewTicker();
       clearNarrativeTimer();
       clearFinishTimers();
       narrativeDone = null;
       stopTimer();
       curStep = null;
+      overviewLive = [];
+      overviewRows = [];
+      overviewRemaining = [];
+      overviewInFlight = 0;
+      finished = false;
       paused = false;
       pausedElapsed = 0;
 
       if (stepsEl) stepsEl.innerHTML = "";
       if (narrativeEl) narrativeEl.textContent = "";
+      thoughtQueue = [];
+      thoughtBusy = false;
       narrativeSpans = [];
       narrativeIdx = 0;
       if (statusEl) statusEl.textContent = "Working for " + fmt(0);
@@ -633,7 +917,17 @@
     var startRun = function () {
       resetRun();
       startTimer();
-      schedule(playTask, leadMs);
+      if (overviewMode) {
+        if (config.thoughtLead) enqueueThought(config.thoughtLead);
+        if (showUpcoming) paintUpcoming();
+        else {
+          overviewRemaining = [];
+          for (var r = 0; r < steps.length; r++) overviewRemaining.push(r);
+        }
+        scheduleOverview(fillOverviewSlots, leadMs);
+      } else {
+        schedule(playTask, leadMs);
+      }
     };
 
     // ── Controls wiring ────────────────────────────────────────────
@@ -661,6 +955,8 @@
     var destroy = function () {
       clearStep();
       clearStepTicker();
+      clearOverviewJobs();
+      stopOverviewTicker();
       clearNarrativeTimer();
       clearFinishTimers();
       stopTimer();

@@ -411,7 +411,119 @@
           "actions": [
             {
               "id": "approve-start",
-              "label": "Approve & start"
+              "label": "Approve & start",
+              "approvedLabel": "Approved",
+              "toast": "Approved plan",
+              "activity": {
+                "messageId": "hs-activity",
+                "workflowLabel": "Learning started",
+                "statusText": "Phase 1 in progress"
+              },
+              "trace": {
+                "showUpcoming": true,
+                "maxConcurrent": 3,
+                "thoughtLead": "The plan is approved. I'll snapshot it as the org config, then learn from the corpus in parallel — traces don't have to wait on each other.",
+                "finalSummary": "Learning is underway. I'll DM you when Phase 1 completes, then again when Phase 2 is ready to review.",
+                "timings": {
+                  "leadMs": 400,
+                  "stepGapMs": 200,
+                  "staggerMs": 280,
+                  "totalMs": 180000
+                },
+                "steps": [
+                  {
+                    "label": "Snapshot the plan",
+                    "thought": "First, lock the approved plan as Hunter's configuration record so learning has a snapshot to work from.",
+                    "thoughtDone": "Configuration is snapshotted.",
+                    "cycle": ["Snapshotting the plan", "Writing the configuration", "Plan saved"],
+                    "substeps": [{ "source": "Salesforce", "label": "Salesforce" }]
+                  },
+                  {
+                    "label": "Trace CRM history",
+                    "thought": "Pulling 24 months of CRM — 3,412 opps and 18k activities — so traces come from how deals actually moved.",
+                    "thoughtDone": "CRM traces are in.",
+                    "cycle": ["Reading opportunities", "Reading activities", "CRM traces ready"],
+                    "substeps": [{ "source": "Salesforce", "label": "Salesforce" }]
+                  },
+                  {
+                    "label": "Trace email",
+                    "thought": "Reading 12 months of mailbox history across 172 inboxes. Customer-facing threads are where house voice and follow-up SLA show up.",
+                    "thoughtDone": "Email traces are in.",
+                    "cycle": ["Reading mailboxes", "Threading conversations", "Email traces ready"],
+                    "substeps": [{ "source": "Gmail", "label": "Gmail" }]
+                  },
+                  {
+                    "label": "Trace call recordings",
+                    "thought": "Gong calls are the decision layer — discovery quality, objections, and why-now that never land in CRM fields.",
+                    "thoughtDone": "Call traces are in.",
+                    "cycle": ["Reading Gong calls", "Extracting decisions", "Call traces ready"],
+                    "substeps": [{ "source": "Gong", "label": "Gong" }]
+                  },
+                  {
+                    "label": "Build decision traces",
+                    "thought": "Joining call, email, note, CRM, and seller actions on the 430-opp learning set so each deal is one trace, not five silos.",
+                    "thoughtDone": "430 decision traces are built.",
+                    "cycle": ["Joining signals", "Scoring seller actions", "430 traces built"],
+                    "substeps": [{ "source": "Salesforce", "label": "Salesforce" }]
+                  },
+                  {
+                    "label": "Sales taxonomy",
+                    "thought": "From those traces I'll map stages, motions, and deal shapes — the org's actual taxonomy, not the one on the slide.",
+                    "thoughtDone": "Sales taxonomy is ready.",
+                    "cycle": ["Mapping stages", "Segmenting motions", "Taxonomy ready"],
+                    "substeps": [{ "img": "/assets/images/nav-icons/skills.png", "label": "Org learning" }]
+                  },
+                  {
+                    "label": "Win / loss patterns",
+                    "thought": "Comparing Closed Won to Closed Lost for the moves and messaging that actually separate the two.",
+                    "thoughtDone": "Win/loss patterns are ready.",
+                    "cycle": ["Comparing Closed Won", "Comparing Closed Lost", "Patterns ready"],
+                    "substeps": [{ "img": "/assets/images/nav-icons/skills.png", "label": "Org learning" }]
+                  },
+                  {
+                    "label": "What customers buy",
+                    "thought": "Discovery on Closed Won is the source of record for problem, why-now, product, value prop, and ICP.",
+                    "thoughtDone": "What customers buy is extracted.",
+                    "cycle": ["Reading discovery", "Extracting ICP", "Value props ready"],
+                    "substeps": [{ "img": "/assets/images/nav-icons/skills.png", "label": "Org learning" }]
+                  },
+                  {
+                    "label": "Meeting rhythm",
+                    "thought": "Cadence per stage, discovery depth, and executive engagement — the working rhythm the org already runs.",
+                    "thoughtDone": "Meeting rhythm is ready.",
+                    "cycle": ["Cadence per stage", "Discovery quality", "Rhythm ready"],
+                    "substeps": [{ "img": "/assets/images/nav-icons/skills.png", "label": "Org learning" }]
+                  },
+                  {
+                    "label": "Org voice",
+                    "thought": "House tone from customer-facing email and top-performer style, so drafts later sound like this org, not a generic SDR.",
+                    "thoughtDone": "Org voice is ready.",
+                    "cycle": ["Reading house tone", "Top-performer style", "Voice ready"],
+                    "substeps": [{ "img": "/assets/images/nav-icons/skills.png", "label": "Org learning" }]
+                  },
+                  {
+                    "label": "Per-rep voice profiles",
+                    "thought": "Phase 2 queues a voice profile per rep — tone, structure, sign-off — after org patterns land.",
+                    "thoughtDone": "Voice profiles are queued.",
+                    "cycle": ["Queuing voice profiles", "Tone and sign-off", "Profiles queued"],
+                    "substeps": [{ "img": "/assets/images/nav-icons/skills.png", "label": "Per-rep configuration" }]
+                  },
+                  {
+                    "label": "Per-rep selling styles",
+                    "thought": "Selling style and follow-up SLA per rep, so Hunter doesn't flatten everyone to the same playbook.",
+                    "thoughtDone": "Selling styles are queued.",
+                    "cycle": ["Queuing selling styles", "Follow-up SLA", "Styles queued"],
+                    "substeps": [{ "img": "/assets/images/nav-icons/skills.png", "label": "Per-rep configuration" }]
+                  },
+                  {
+                    "label": "Workflow suggestions",
+                    "thought": "Last, queue the Home workflows — burndown, meeting prep, pipeline review — pauseable globally or per rep.",
+                    "thoughtDone": "Workflow suggestions are queued.",
+                    "cycle": ["Burndown list", "Meeting prep", "Pipeline review"],
+                    "substeps": [{ "img": "/assets/images/nav-icons/skills.png", "label": "Per-rep configuration" }]
+                  }
+                ]
+              }
             }
           ]
         }
