@@ -39,11 +39,18 @@
             {# The Salesforce cloud logo doubles as the demo's start-over
                button: `?reset=1` clears the Recents rail + demo state on
                the way in (home.js `consumeResetFlag` acts on the flag and
-               strips it from the address bar). Moved here from the Home
-               context-bar tab, which is now a plain link. #}
-            <a href="{{ '/index.html?reset=1' | appUrl }}" title="Salesforce — restart demo">
-              <img src="/assets/images/logo-noname.svg" style="width: 12.5rem;height: 1.75rem;background-size: contain;background-repeat: no-repeat;background-position: left center;"alt="Salesforce Logo" />
-            </a>
+               strips it from the address bar). Rendered as a `<button>`
+               so hover never shows a URL preview; destination lives on
+               `data-sh-nav-href` and user_switcher.js follows it. #}
+            <button
+              type="button"
+              class="sh-header-logo"
+              data-sh-header-logo
+              data-sh-nav-href="{{ '/index.html?reset=1' | appUrl }}"
+              title="Salesforce — restart demo"
+            >
+              <img src="/assets/images/logo-noname.svg" style="width: 12.5rem;height: 1.75rem;background-size: contain;background-repeat: no-repeat;background-position: left center;" alt="Salesforce Logo" />
+            </button>
           </div>
         </div>
         <div class="slds-global-header__item slds-global-header__item_search">
@@ -374,11 +381,12 @@
                     {% for person in _users %}
                     {% set isCurrent = currentUser and (person.id == currentUser.id) %}
                     <li class="slds-dropdown__item" role="presentation">
-                      <a
-                        href="/u/{{ person.id }}/index.html"
+                      <button
+                        type="button"
                         role="menuitem"
                         tabindex="-1"
                         data-sh-user-switch="{{ person.id }}"
+                        data-sh-nav-href="/u/{{ person.id }}/index.html"
                         {% if isCurrent %}aria-current="true"{% endif %}
                       >
                         <span class="sh-user-switcher__row">
@@ -397,7 +405,7 @@
                           </svg>
                           {% endif %}
                         </span>
-                      </a>
+                      </button>
                     </li>
                     {% endfor %}
                   </ul>

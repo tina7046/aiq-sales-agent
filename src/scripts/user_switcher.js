@@ -67,9 +67,9 @@
     })
 
     menu.addEventListener('click', function (event) {
-      var link = event.target.closest('[data-sh-user-switch]')
-      if (!link) return
-      var id = link.getAttribute('data-sh-user-switch')
+      var item = event.target.closest('[data-sh-user-switch]')
+      if (!item) return
+      var id = item.getAttribute('data-sh-user-switch')
       if (!id) return
       event.preventDefault()
       if (window.SH && window.SH.currentUserId && window.SH.currentUserId() === id) {
@@ -78,8 +78,25 @@
       }
       var home = (window.SH && typeof window.SH.userUrl === 'function')
         ? window.SH.userUrl('/index.html', id)
-        : (link.getAttribute('href') || ('/u/' + encodeURIComponent(id) + '/index.html'))
+        : (item.getAttribute('data-sh-nav-href') || ('/u/' + encodeURIComponent(id) + '/index.html'))
+      if (event.metaKey || event.ctrlKey || event.shiftKey) {
+        window.open(home, '_blank')
+        return
+      }
       window.location.assign(home)
+    })
+
+    menu.addEventListener('auxclick', function (event) {
+      if (event.button !== 1) return
+      var item = event.target.closest('[data-sh-user-switch]')
+      if (!item) return
+      var id = item.getAttribute('data-sh-user-switch')
+      if (!id) return
+      event.preventDefault()
+      var home = (window.SH && typeof window.SH.userUrl === 'function')
+        ? window.SH.userUrl('/index.html', id)
+        : (item.getAttribute('data-sh-nav-href') || ('/u/' + encodeURIComponent(id) + '/index.html'))
+      window.open(home, '_blank')
     })
 
     document.addEventListener('click', function (event) {
@@ -105,9 +122,40 @@
     }, true)
   }
 
+  function followNavHref (href, newTab) {
+    if (!href) return
+    if (newTab) {
+      window.open(href, '_blank')
+      return
+    }
+    window.location.assign(href)
+  }
+
+  // Cloud logo in the global header. Button (no URL preview) that still
+  // lands on `/index.html?reset=1` so home.js can wipe demo state.
+  function bindHeaderLogo () {
+    var logo = document.querySelector('[data-sh-header-logo]')
+    if (!logo) return
+
+    logo.addEventListener('click', function (event) {
+      var href = logo.getAttribute('data-sh-nav-href')
+      if (!href) return
+      followNavHref(href, event.metaKey || event.ctrlKey || event.shiftKey)
+    })
+
+    logo.addEventListener('auxclick', function (event) {
+      if (event.button !== 1) return
+      var href = logo.getAttribute('data-sh-nav-href')
+      if (!href) return
+      event.preventDefault()
+      followNavHref(href, true)
+    })
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     var roots = document.querySelectorAll('[data-sh-user-switcher]')
     for (var i = 0; i < roots.length; i++) bindSwitcher(roots[i])
+    bindHeaderLogo()
     rewriteUnscopedSellerLinks()
   })
 })()

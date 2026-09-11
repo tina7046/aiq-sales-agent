@@ -4,7 +4,8 @@
 // Opening stack is wave 1 (3 cards). Each Left/Up swipes the whole
 // visible pack, jumps the date ladder (Sep 16 → Oct 1 → Oct 28,
 // weekdays only) and the quota ladder, then the next wave rises
-// (3 cards). The last beat has no enter — empty state.
+// (3 cards). Stack 2 keeps its last two cards Running. The last beat
+// has no enter — empty state.
 // cloneNext stays commented (no infinite recycle).
 //
 ;(function () {
@@ -290,6 +291,10 @@
     var cards = lisForWave(waveIndex)
     if (waveIndex === 0) {
       cards = cards.filter(function (li) { return rowState(li) === 'running' })
+    }
+    // Stack 2: the last two cards stay Running for the whole beat.
+    if (waveIndex === 1) {
+      cards = cards.slice(0, Math.max(0, cards.length - 2))
     }
     cards.forEach(function (li, i) {
       if (i >= delays.length) return

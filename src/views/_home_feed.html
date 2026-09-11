@@ -313,16 +313,15 @@
 
   The interactive element sits INSIDE the `<h3>` and stretches to fill
   the card via an ::after overlay, which is what keeps the row to a
-  single announcement ("heading level 3, <title>, link") instead of a
+  single announcement ("heading level 3, <title>, button") instead of a
   heading followed by a separate whole-row button saying the same
   words.
 
-  Which element it is depends on the row, not the component: a row with
-  a `conversationId` goes somewhere, so it's an `<a>` and keeps
-  command-click, "copy link address" and the status-bar preview. A row
-  with nowhere to go is a `<button>` — these used to render as
-  `<a href="#">`, which announced a link, sat in the tab order as a
-  link, and then had its navigation cancelled in JS.
+  Every title is a `<button>` so hover never shows a URL preview.
+  Rows with a `conversationId` store the destination on
+  `data-sh-nav-href`; home.js follows it on click (including Cmd/Ctrl/
+  Shift-click and middle-click). Rows with nowhere to go have no
+  destination and stay put.
 #}
 {% macro feedItem(item, outputTypes, rowActions, statusLabels, retryTime, filtered, sections) %}
 {% set namedByHeader = sections %}
@@ -372,30 +371,14 @@
          voice-control users the ability to say what they can see, and
          would need re-syncing every time the title's tense changes. #}
       <h3 class="seller-home__feed-item-title">
-        {% if item.conversationId %}
-        <a
-          href="{{ ('/home_conversation.html?id=' ~ item.conversationId) | appUrl }}"
-          class="seller-home__feed-item-title-action"
-          data-sh-feed-item-link="{{ item.id }}"
-          data-sh-feed-item-title
-          data-sh-feed-slot="title"
-          data-sh-feed-slot-default="{{ item.title }}"
-          data-sh-feed-slot-paused="{{ neutralTitle }}"
-          data-sh-feed-slot-running="{{ runningTitle }}"
-          data-sh-feed-slot-completed="{{ completedTitle }}"
-          data-sh-feed-slot-scheduled="{{ neutralTitle }}"
-          data-sh-feed-slot-archived="{{ neutralTitle }}"
-          {%- if hasWorkflow %}
-          aria-label="{{ linkName }}"
-          data-sh-feed-item-name-suffix="{{ ', workflow: ' ~ item.workflow.label }}"
-          {%- endif %}
-          aria-describedby="{{ descId }}"
-        >{{ item.title }}</a>
-        {% else %}
         <button
           type="button"
           class="seller-home__feed-item-title-action"
           data-sh-feed-item-title
+          {%- if item.conversationId %}
+          data-sh-feed-item-link="{{ item.id }}"
+          data-sh-nav-href="{{ ('/home_conversation.html?id=' ~ item.conversationId) | appUrl }}"
+          {%- endif %}
           data-sh-feed-slot="title"
           data-sh-feed-slot-default="{{ item.title }}"
           data-sh-feed-slot-paused="{{ neutralTitle }}"
@@ -409,7 +392,6 @@
           {%- endif %}
           aria-describedby="{{ descId }}"
         >{{ item.title }}</button>
-        {% endif %}
       </h3>
 
       {# Subline — left · right. With section headings the left slot is

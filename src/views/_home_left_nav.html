@@ -48,9 +48,11 @@
 #}
 
 {# Reusable nav-item macro. Kept parallel to the Hunter Builder
-   `renderNavItem` shape — same {id,label,icon} contract, same `<a>`
-   markup, same aria-current-on-active convention — so anyone who
-   knows one knows the other. Two intentional differences:
+   `renderNavItem` shape — same {id,label,icon} contract, same
+   aria-current-on-active convention — so anyone who knows one knows
+   the other. Every row is a `<button type="button">` so the browser
+   never shows a URL preview on hover. Destinations live on
+   `data-sh-nav-href`; home.js navigates on click. Two intentional differences:
      • Icons live under a dedicated wrapper (`.seller-home__nav-icon`)
        so collapse-state styling can size/center them without
        reaching into `<svg>` selectors.
@@ -73,17 +75,17 @@
 #}
 {% macro renderNavItem(item, activeId, badgeCount) %}
 {% set isActive = activeId == item.id %}
-<a
-  href="{{ (item.href or '#') | appUrl }}"
+<button
+  type="button"
   class="seller-home__nav-item{% if isActive %} is-active{% endif %}"
   role="listitem"
   data-sh-nav="{{ item.id }}"
+  {% if item.href %}data-sh-nav-href="{{ item.href | appUrl }}"{% else %}data-sh-nav-noroute{% endif %}
   {% if item.hidden %}hidden{% endif %}
-  {% if not item.href %}data-sh-nav-noroute{% endif %}
   {# Opt this item into the shared Tools modal. tools_modal.js binds any
      `[data-sh-tools-open]` (preventDefault + openToolsModal), so on a
-     page carrying the modal this opens it instead of following `href`;
-     `href` stays as the no-JS / no-modal fallback route. #}
+     page carrying the modal this opens it instead of following the
+     stored destination. `data-sh-nav-href` stays as the no-modal fallback. #}
   {% if item.opensToolsModal %}data-sh-tools-open{% endif %}
   {% if isActive %}aria-current="page"{% endif %}
   title="{{ item.label }}"
@@ -98,7 +100,7 @@
          stylesheet owns everything else about how it renders.
 
          No `alt` to lose here: the wrapper is aria-hidden and the
-         sibling `.nav-label` (or `title` on the anchor when collapsed)
+         sibling `.nav-label` (or `title` on the button when collapsed)
          carries the accessible name. #}
       <span
         class="seller-home__nav-icon-image"
@@ -129,7 +131,7 @@
     <span class="slds-assistive-text"> connections available</span>
   </span>
   {% endif %}
-</a>
+</button>
 {% endmacro %}
 
 {# ── renderRunningRing(r) ─────────────────────────────────────────
@@ -482,15 +484,15 @@
            label is not a second icon: it only renders in the collapsed
            rail, where the label doesn't. See `recentMonogram` above.
 
-           Two variants:
-             • Linked   (`r.conversationId` set) — anchor points at the
-                        conversation route; JS applies `.is-active` +
+           Two variants, both `<button>` so hover never shows a URL:
+             • Linked   (`r.conversationId` set) — destination on
+                        `data-sh-nav-href`; JS applies `.is-active` +
                         `aria-current="page"` when the URL's `?id=`
                         matches this row's `conversationId`.
              • Unlinked (no `conversationId`)    — the workflow has no
-                        conversation yet, so the row is present but inert
-                        (`href="#"`), keyboard-reachable, and still shows
-                        its state indicator.
+                        conversation yet, so the row is inert, still
+                        keyboard-reachable, and still shows its
+                        state indicator.
 
            `data-sh-recent-feed` carries the feed item id so home.js can
            flip this row's indicator live when the matching feed row
@@ -498,37 +500,25 @@
            the user's CSS. This whole pass is a first-paint seed —
            `renderRecents` in home.js re-renders the same markup at
            runtime and is the source of truth. #}
-        {% if r.conversationId %}
-        <a
-          href="{{ ('/home_conversation.html?id=' ~ r.conversationId) | appUrl }}"
-          class="seller-home__nav-recent seller-home__nav-recent--linked{% if r.status == 'running' %} seller-home__nav-recent--running{% endif %}"
+        <button
+          type="button"
+          class="seller-home__nav-recent{% if r.conversationId %} seller-home__nav-recent--linked{% endif %}{% if r.status == 'running' %} seller-home__nav-recent--running{% endif %}"
           role="listitem"
           data-sh-recent="rec-{{ r.feedId }}"
           data-sh-recent-feed="{{ r.feedId }}"
+          {% if r.conversationId %}
           data-sh-recent-conv="{{ r.conversationId }}"
-          data-sh-recent-status="{{ r.status }}"
-          title="{{ r.label }}"
-        >
-          {{ recentMonogram(r.label) }}
-          <span class="seller-home__nav-recent-label">{{ r.label }}</span>
-          {{ renderRecentStatus(r) }}
-        </a>
-        {% else %}
-        <a
-          href="#"
-          class="seller-home__nav-recent{% if r.status == 'running' %} seller-home__nav-recent--running{% endif %}"
-          role="listitem"
-          data-sh-recent="rec-{{ r.feedId }}"
-          data-sh-recent-feed="{{ r.feedId }}"
+          data-sh-nav-href="{{ ('/home_conversation.html?id=' ~ r.conversationId) | appUrl }}"
+          {% else %}
           data-sh-nav-noroute
+          {% endif %}
           data-sh-recent-status="{{ r.status }}"
           title="{{ r.label }}"
         >
           {{ recentMonogram(r.label) }}
           <span class="seller-home__nav-recent-label">{{ r.label }}</span>
           {{ renderRecentStatus(r) }}
-        </a>
-        {% endif %}
+        </button>
         {% endfor %}
       </div>
     </div>

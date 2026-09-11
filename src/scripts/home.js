@@ -27,9 +27,9 @@
 //     Flip re-sort. Also an inline overflow menu (Escape /
 //     click-outside close, Arrow-Up/Down within menu) and delegated
 //     row-click handling. The visible interactive element is the title
-//     inside each row's heading — an `<a>` where the row leads
-//     somewhere, a `<button>` where it doesn't — stretched over the
-//     row in CSS, so the browser owns navigation. Rows dispatch
+//     inside each row's heading — a `<button>` stretched over the row
+//     in CSS so hover never shows a URL preview. Destinations live on
+//     `data-sh-nav-href`; the click handler follows them. Rows dispatch
 //     `sh:feed-item-select`; menu items dispatch
 //     `sh:feed-item-action` / `sh:feed-overflow-action`; the status
 //     button dispatches `sh:feed-run-toggle`.
@@ -654,7 +654,8 @@
       if (!r.conversationId && !r.feedId) continue
 
       var hasConv = !!r.conversationId
-      var a = document.createElement('a')
+      var a = document.createElement('button')
+      a.type = 'button'
       a.className = 'seller-home__nav-recent' +
         (hasConv ? ' seller-home__nav-recent--linked' : '') +
         (r.status === 'running' ? ' seller-home__nav-recent--running' : '')
@@ -663,14 +664,14 @@
         // Carry the original query back. The thread only renders the
         // seller's own bubble when `?q=` is present, so dropping it here
         // would reopen a row labelled with what they typed onto a thread
-        // that starts on the agent.
-        a.href = window.SH.userUrl('/home_conversation.html?id=' + encodeURIComponent(r.conversationId) +
-          (r.query ? '&q=' + encodeURIComponent(r.query) : ''))
+        // that starts on the agent. Destination lives on data-sh-nav-href
+        // (not href) so hover never shows a URL preview.
+        a.setAttribute('data-sh-nav-href', window.SH.userUrl('/home_conversation.html?id=' + encodeURIComponent(r.conversationId) +
+          (r.query ? '&q=' + encodeURIComponent(r.query) : '')))
         a.setAttribute('data-sh-recent-conv', r.conversationId)
       } else {
         // Workflow with no conversation yet — present but inert, matching
         // the template's unlinked branch.
-        a.href = '#'
         a.setAttribute('data-sh-nav-noroute', '')
       }
       a.setAttribute('role', 'listitem')
@@ -935,15 +936,46 @@
       })
     }
 
-    // Nav rows with no destination yet (Skills, Tools, Feedback and
-    // Settings) render as `href="#"` so they stay real links — focusable,
-    // and styled by the same rules as routed rows. The macro tags them
-    // `data-sh-nav-noroute`; swallow the click so the URL doesn't collect
-    // a hash and the page doesn't jump to the top.
+    // Every left-nav row is a `<button>` so hover never shows a URL
+    // preview. Destinations live on `data-sh-nav-href`; this handler
+    // follows them. Cmd/Ctrl/Shift-click and middle-click open a new
+    // tab, matching what an `<a>` would do. `[data-sh-tools-open]` is
+    // left alone so tools_modal.js can open the modal instead.
     if (nav) {
+      function navHrefFrom (el) {
+        return el && el.getAttribute('data-sh-nav-href')
+      }
+
+      function followNavHref (href, newTab) {
+        if (!href) return
+        if (newTab) {
+          window.open(href, '_blank')
+          return
+        }
+        window.location.assign(href)
+      }
+
       nav.addEventListener('click', function (event) {
         var placeholder = closest(event.target, '[data-sh-nav-noroute]')
-        if (placeholder) event.preventDefault()
+        if (placeholder) {
+          event.preventDefault()
+          return
+        }
+        var row = closest(event.target, '[data-sh-nav-href]')
+        if (!row || row.hasAttribute('data-sh-tools-open')) return
+        var href = navHrefFrom(row)
+        if (!href) return
+        followNavHref(href, event.metaKey || event.ctrlKey || event.shiftKey)
+      })
+
+      nav.addEventListener('auxclick', function (event) {
+        if (event.button !== 1) return
+        var row = closest(event.target, '[data-sh-nav-href]')
+        if (!row || row.hasAttribute('data-sh-tools-open')) return
+        var href = navHrefFrom(row)
+        if (!href) return
+        event.preventDefault()
+        followNavHref(href, true)
       })
     }
 
@@ -2763,26 +2795,56 @@
   }
 
   // ── Whole-row click ───────────────────────────────────────────────
-  // Reporting only. Every row's title is a real control stretched over
-  // the row by CSS, so navigation is the browser's job — which is what
-  // keeps command-click and "open in new tab" working on the rows that
-  // lead somewhere.
+  // Every row's title is a `<button>` stretched over the card by CSS,
+  // so hover never shows a URL preview. Destinations live on
+  // `data-sh-nav-href`; this handler follows them. Cmd/Ctrl/Shift-click
+  // and middle-click open a new tab, matching what an `<a>` would do.
   function bindFeedRowClicks (feedRoot) {
+    function feedHrefFrom (row) {
+      var link = row && row.querySelector('[data-sh-feed-item-link]')
+      return link
+        ? (link.getAttribute('data-sh-nav-href') || link.getAttribute('href'))
+        : null
+    }
+
+    function followFeedHref (href, newTab) {
+      if (!href) return
+      if (newTab) {
+        window.open(href, '_blank')
+        return
+      }
+      window.location.assign(href)
+    }
+
     feedRoot.addEventListener('click', function (event) {
       if (closest(event.target, '[data-sh-feed-item-stop]')) return
 
       var row = closest(event.target, '[data-sh-feed-item]')
       if (!row) return
 
-      var link = row.querySelector('[data-sh-feed-item-link]')
+      var href = feedHrefFrom(row)
 
       document.dispatchEvent(new CustomEvent('sh:feed-item-select', {
         detail: {
           rowId: row.getAttribute('data-sh-feed-item'),
-          href: link ? link.getAttribute('href') : null,
+          href: href,
           source: 'feed'
         }
       }))
+
+      if (!href) return
+      followFeedHref(href, event.metaKey || event.ctrlKey || event.shiftKey)
+    })
+
+    feedRoot.addEventListener('auxclick', function (event) {
+      if (event.button !== 1) return
+      if (closest(event.target, '[data-sh-feed-item-stop]')) return
+      var row = closest(event.target, '[data-sh-feed-item]')
+      if (!row) return
+      var href = feedHrefFrom(row)
+      if (!href) return
+      event.preventDefault()
+      followFeedHref(href, true)
     })
   }
 

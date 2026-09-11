@@ -616,8 +616,9 @@ main.app-wrapper {
 }
 
 // Every nav row that's clickable (primary items + footer items).
-// Kept as an `<a>` (not a `<button>`) because these route to different
-// surfaces; `data-sh-nav-noroute` marks placeholder ones.
+// All rows are `<button>`. Destinations live on `data-sh-nav-href`.
+// `appearance` / `width` / `text-align` keep the button UA chrome
+// from shrinking or centering the row.
 .seller-home__nav-item {
   display: flex;
   align-items: center;
@@ -635,6 +636,10 @@ main.app-wrapper {
   cursor: pointer;
   border: 0;
   background: transparent;
+  appearance: none;
+  width: 100%;
+  text-align: inherit;
+  box-sizing: border-box;
 
   // `display: flex` outranks the UA `[hidden] { display: none }`.
   &[hidden] {
@@ -777,6 +782,12 @@ main.app-wrapper {
 
   text-decoration: none;
   cursor: pointer;
+  border: 0;
+  background: transparent;
+  appearance: none;
+  width: 100%;
+  text-align: inherit;
+  box-sizing: border-box;
   // `padding` rides along for the same reason it does on
   // `.seller-home__nav-item`: it's what walks this row's content from the
   // label column (48px in) to the icon column (16px) as the rail
