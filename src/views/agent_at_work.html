@@ -4,8 +4,9 @@
   "Your agent at work" — lab page
   =====================================================================
   Served at /agent_at_work.html. The live Seller Home column — briefing,
-  composer and feed — without the left nav, so the conveyor can be
-  looked at in the same frame it ships in.
+  composer and feed — with the shared left nav collapsed on first paint
+  (`data-sh-nav-default-collapsed`), so the conveyor still reads in the
+  same frame it ships in.
 
   The COMPONENT is not a copy. This page includes `_home_feed.html`,
   `_home_composer.html` and the briefing markup from index.html, loads
@@ -29,9 +30,9 @@
 
   What's still lab-only, and lives in agent_at_work.scss:
 
-    .aaw-lab            page surface + positioning root
-    .aaw-lab__god-rays  shader host (scripts/aaw_god_rays.js)
-    .aaw-lab__inner     the 800px content column
+    .aaw-lab            page surface + positioning root (also `.seller-home`
+                        so the shared left-nav flex layout applies)
+    .aaw-lab__inner     the 800px content column inside `.seller-home__main`
     .aaw-lab__director  Play/Pause / Replay + TIMING inputs + scrubber
                         (hidden by default; gear menu Show control panel)
 
@@ -61,12 +62,20 @@
 {% block content %}
 
 {# `data-sh-root` is what home.js boots off. Briefing + composer + feed
-   wire up; nav / knowledge / scheduled still no-op. Composer copy
-   comes from Home's page data. The greeting is the previous quota
-   lines, local to this page — Home keeps Rohan's Hunter greeting. #}
+   wire up; nav collapse is shared with Home. Composer copy comes from
+   Home's page data. The greeting is the previous quota lines, local to
+   this page — Home keeps Rohan's Hunter greeting.
+
+   Left-nav content is the same source Seller Home reads, so one edit
+   to index.json moves both. `navActive` stays `new_chat` — this lab
+   is the Home feed analog. #}
 {% set _home = readData("index") or {} %}
 {% set briefing = _home.briefing or {} %}
 {% set composer = _home.composer or {} %}
+{% set navPrimary = _home.navPrimary %}
+{% set navFooter  = _home.navFooter %}
+{% set recents    = _home.recents %}
+{% set navActive  = "new_chat" %}
 {# Lab-only Daily Briefing — 80% / $1.6M so feed_timelapse.js can
    wrap and tick the numbers. Home's overlay is Hunter's intro. #}
 {% set briefingHeading = "You're 80% to goal, Rohan 🚀" %}
@@ -74,12 +83,23 @@
 {% set briefingLinkPhrase = "$1.6M of your $2M quota" %}
 {# Lab-only ghost text — matches /welcome_lab.html. Home keeps Rohan's. #}
 {% set composerPlaceholder = "Ask Hunter, what are the top 3 things I need to know to hit my number?" %}
-<div class="aaw-lab" data-sh-root>
-  {# Shader canvas host. Empty and aria-hidden: decoration with no
-     content. Geometry comes from `.aaw-lab__god-rays`; the mount is
-     Home's simplex noise. #}
-  <div class="aaw-lab__god-rays" data-aaw-god-rays aria-hidden="true"></div>
+<div
+  class="aaw-lab seller-home seller-home--nav-collapsed"
+  data-sh-root
+  data-sh-nav-default-collapsed
+>
+  {# Same left nav as Seller Home. Collapsed on first paint — the
+     preload script in the partial honors `data-sh-nav-default-collapsed`
+     so a stored expanded preference from Home does not sweep this
+     lab open. #}
+  {% include "_home_left_nav.html" %}
 
+  {# Shader canvas host. Empty and aria-hidden: decoration with no
+     content. `.seller-home__god-rays` insets past the rail (including
+     the collapsed width) so the focal point stays under the composer. #}
+  <div class="seller-home__god-rays" data-aaw-god-rays data-sh-god-rays aria-hidden="true"></div>
+
+  <div class="seller-home__main">
   <div class="aaw-lab__inner">
     {# Hidden until the header gear's "Show control panel" is on. The
        class (not an inline style) is what the gear script toggles, same
@@ -152,6 +172,7 @@
        this page. That file is a copy of index.json's `feed` block plus
        whatever is being tried out here — the one thing that forks. #}
     {% include "_home_feed.html" %}
+  </div>
   </div>
 </div>
 

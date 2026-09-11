@@ -397,6 +397,9 @@
       // Storage unavailable — fall through to the expanded default,
       // which is what the markup already renders.
     }
+    // Lab pages can opt into a collapsed first paint without rewriting
+    // the shared Home preference. Toggle still works after load.
+    if (root.hasAttribute('data-sh-nav-default-collapsed')) collapsed = true
 
     root.classList.add('seller-home--nav-preload')
     root.classList.toggle('seller-home--nav-collapsed', collapsed)

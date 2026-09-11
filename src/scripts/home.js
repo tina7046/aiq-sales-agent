@@ -874,7 +874,13 @@
       // the classes the inline script set. Idempotent by design — the
       // classes are already correct, so this changes nothing visually
       // and no transition fires even before the thaw above lands.
-      applyState(root, toggle, readCollapsed())
+      // `data-sh-nav-default-collapsed` forces a closed first paint
+      // (agent-at-work lab) without reading Home's stored preference.
+      applyState(
+        root,
+        toggle,
+        root.hasAttribute('data-sh-nav-default-collapsed') ? true : readCollapsed()
+      )
 
       toggle.addEventListener('click', function (event) {
         event.preventDefault()

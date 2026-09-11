@@ -15,15 +15,11 @@
 //  repeatedly, so the copy is gone and the page renders the original.
 // ══════════════════════════════════════════════════════════════════════
 
-// How far the shader canvas hangs outside the page box on every side, so
-// its blur halo falls off past the edges instead of tapering to
-// transparent inside the visible area. Same 90px as home.scss.
-$aaw-god-rays-overscan: 90px;
-
 .aaw-lab {
   position: relative; // positioning root for the shader host
   min-height: 100%;
-  padding: var(--slds-g-spacing-8, 3rem) var(--slds-g-spacing-6, 2rem);
+  // Padding lives on `.seller-home__main` now that the shared left nav
+  // is in the row — padding here would inset the rail off the chrome.
 
   // Fallback surface, and the thing that actually fills the cleared cone
   // at 12 o'clock — the shader canvas is fully transparent there. Also
@@ -34,35 +30,8 @@ $aaw-god-rays-overscan: 90px;
   overflow: clip; // contains the overscan
 }
 
-// ── Shader canvas host ────────────────────────────────────────────────
-// scripts/aaw_god_rays.js mounts Home's simplex noise <canvas> in here.
-// Anchored to the top and sized by height rather than pinned on all four
-// sides: pinning both edges would make the height fully determined by
-// the page and leave `min-height` nothing to clamp.
-//
-// No left inset, unlike Seller Home — there's no nav to sit beside, so
-// the box and the content column already share a centre.
-//
-// Inert: clicks and hovers pass through to the list above it.
-.aaw-lab__god-rays {
-  position: absolute;
-  top: -$aaw-god-rays-overscan;
-  left: -$aaw-god-rays-overscan;
-  right: -$aaw-god-rays-overscan;
-  height: calc(100% + #{$aaw-god-rays-overscan * 2});
-
-  min-height: 50rem;
-
-  pointer-events: none;
-  z-index: 0;
-  will-change: filter;
-
-  > canvas {
-    display: block;
-    width: 100%;
-    height: 100%;
-  }
-}
+// Shader host is `.seller-home__god-rays` so the rail's collapsed /
+// expanded left inset applies. Canvas fill is that rule's `> canvas`.
 
 .aaw-lab__inner {
   // Promoted above the shader host, which is absolutely positioned and
