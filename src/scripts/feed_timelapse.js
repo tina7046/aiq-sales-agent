@@ -25,9 +25,9 @@
   ]
   var STORAGE_TIMING = 'aaw:feedTimelapseV12'
   var WAVES = [
-    ['run-01', 'run-02', 'run-03'],
-    ['run-04', 'run-05', 'run-09'],
-    ['run-06', 'run-07', 'run-08']
+    ['run-10', 'run-01', 'run-02'],
+    ['run-03', 'run-04', 'run-05'],
+    ['run-09', 'run-07', 'run-08']
   ]
   var waveIndex = 0
   var ENTER_EASE = 'power2.inOut'
