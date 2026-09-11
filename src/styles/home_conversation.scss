@@ -1875,8 +1875,8 @@ $sh-conv-table-rows: 5.5;
   .slds-line-clamp_medium {
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
     white-space: pre-line;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1993,7 +1993,7 @@ $sh-conv-table-rows: 5.5;
   }
 
   // Signals — one SLDS badge per signal, as many as fit, with the rest
-  // collapsed into a trailing "+N more".
+  // collapsed into a trailing "+N".
   //
   // They flow as a group rather than stacking. The list they replaced
   // spent a 16px hanging indent on every line and still broke after
@@ -2089,10 +2089,30 @@ $sh-conv-table-rows: 5.5;
     white-space: normal;
     text-align: left;
 
-    // SLDS centers the icon on the whole badge. A two-line label then
-    // drops the mark to the midpoint of both lines, so it jumps vs the
-    // one-line badges beside it. Pin it to the start of the first line.
-    align-items: flex-start;
+    // One-line badges keep SLDS's `align-items: center` so the 14px
+    // mark sits on the label. A wrapped label gets `.is-multiline`
+    // from the fitter and pins the mark to the first line instead,
+    // so it doesn't drop to the midpoint of both.
+    &.is-multiline {
+      align-items: flex-start;
+
+      .ptl-signal-badge__icon {
+        // 14px mark vs ~18px first-line box — a hair of top offset
+        // keeps it on the type, not sitting on the padding edge.
+        margin-top: 0.125rem;
+      }
+    }
+
+    // The fitter marks the last visible badge when "+N" is
+    // showing, and pinches it by the counter's measured width so the
+    // counter shares this line instead of wrapping onto a new one.
+    // Without that, a two-line last badge plus a counter-only line
+    // blows the 80px budget and the cell collapses to one pill.
+    &.is-last-shown {
+      max-width: calc(
+        100% - var(--ptl-more-slot, 0px) - var(--slds-g-spacing-1, 0.25rem)
+      );
+    }
   }
 
   // The mark of the system the signal came from, leading the badge.
@@ -2112,9 +2132,6 @@ $sh-conv-table-rows: 5.5;
     display: inline-flex;
     flex: none;
     margin-right: var(--slds-g-spacing-1, 0.25rem);
-    // 14px mark vs ~18px first-line box — a hair of top offset keeps
-    // it on the type, not sitting on the badge's padding edge.
-    margin-top: 0.125rem;
 
     svg {
       display: block;
@@ -2141,7 +2158,7 @@ $sh-conv-table-rows: 5.5;
     margin-left: 0;
   }
 
-  // "+2 more". Muted, and not a control: there's nowhere to expand to,
+  // "+2". Muted, and not a control: there's nowhere to expand to,
   // and the full list is on the cell's `title` — the same reveal every
   // other truncated cell here uses. Give it a real affordance the
   // moment it has somewhere to go.
@@ -2150,6 +2167,13 @@ $sh-conv-table-rows: 5.5;
   // instead of sitting on its own line; the indent and top margin that
   // used to line it up under the bullets went with them.
   .ptl-signal-more {
+    flex: none;
+    white-space: nowrap;
+    // Against the flex line, which is the last badge. A wrapping
+    // last-shown pill is ~38px and this counter is ~20px; without
+    // this it sits on the first line instead of the middle of the
+    // badge. One-line last badges center in that shorter line.
+    align-self: center;
     font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
     color: var(--slds-g-color-neutral-base-50, #747474);
   }

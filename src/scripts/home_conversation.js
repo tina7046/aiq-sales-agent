@@ -99,7 +99,7 @@
     convReject:   '[data-sh-conv-reject]',
     // Signal cells. The template renders every signal as a badge and
     // `fitSignalBadges` decides how many survive; `signalMore` is the
-    // "+N more" that reports the rest.
+    // "+N" that reports the rest.
     signalCell:   '[data-sh-signal-fit]',
     signalBadge:  '.ptl-signal-badge',
     signalMore:   '[data-sh-signal-more]',
@@ -1946,7 +1946,7 @@
 
   // ── Signal badges ───────────────────────────────────────────────
   // Shows as many signal badges as the cell's line budget allows and
-  // collapses the rest into "+N more".
+  // collapses the rest into "+N".
   //
   // Runtime rather than template because it's a question about rendered
   // width: "290+ SDRs" and "New Head of Enterprise Americas (Katie
@@ -1980,10 +1980,18 @@
 
     // Start from everything showing, so a re-fit isn't biased by what
     // the last one hid — on a re-fit the cell may have got wider, and
-    // a badge hidden at the old width has to be allowed back.
+    // a badge hidden at the old width has to be allowed back. The last-
+    // shown slot is the same: a previous pass may have pinched the
+    // trailing badge to leave room for a counter that this pass doesn't
+    // need.
     var i
-    for (i = 0; i < badges.length; i++) badges[i].hidden = false
+    for (i = 0; i < badges.length; i++) {
+      badges[i].hidden = false
+      badges[i].classList.remove('is-last-shown')
+      badges[i].classList.remove('is-multiline')
+    }
     if (more) more.hidden = true
+    cell.style.removeProperty('--ptl-more-slot')
 
     // Put the clip back, because the budget is read off it below and a
     // re-fit arrives with `is-fitted` already set from the first pass —
@@ -2000,7 +2008,11 @@
     var budget = parseFloat(window.getComputedStyle(cell).maxHeight)
     // The clip is missing or `none`: nothing to fit against, so show
     // everything rather than guess at a height and hide good content.
-    if (!budget) { cell.classList.add('is-fitted'); return }
+    if (!budget) {
+      cell.classList.add('is-fitted')
+      markMultilineBadges(badges)
+      return
+    }
 
     // Drops the clip. From here the fitter is what bounds the height,
     // and it does it by hiding whole badges — the clip would cut one
@@ -2012,31 +2024,99 @@
     // own pill: three such badges are three lines by any count and
     // twice the height they're supposed to be. Measuring the box is
     // the only reading that can't be fooled by that.
-    if (cell.getBoundingClientRect().height <= budget) return
-
-    // Over budget, so a counter is coming and it takes room on the last
-    // line. Reveal it BEFORE choosing what to drop, or the last badge
-    // kept would be one the counter then pushes over the edge.
-    //
-    // Reserve it at its widest — every badge but one hidden — so the
-    // width can only shrink as the real count is settled. Sizing it
-    // from a placeholder and growing later would re-wrap the line the
-    // fitter just finished measuring.
-    if (more) {
-      more.hidden = false
-      more.textContent = '+' + (badges.length - 1) + ' more'
+    if (cell.getBoundingClientRect().height <= budget) {
+      markMultilineBadges(badges)
+      return
     }
+
+    // Paints "+N" and pinches the last visible badge so the
+    // counter shares that badge's line instead of wrapping onto a new
+    // one. A two-line last badge plus a counter-only line is what used
+    // to blow the 80px budget and collapse the cell to a single pill
+    // with empty width beside it.
+    //
+    // `reserveAt` is the label to paint when we're still hiding — the
+    // widest count, every badge but one dropped — so the slot can only
+    // shrink once the real remainder is known. Growing it later would
+    // re-wrap the line we just finished measuring.
+    function setOverflow (shownCount, reserveAt) {
+      for (var b = 0; b < badges.length; b++) {
+        badges[b].classList.remove('is-last-shown')
+      }
+      var hiddenCount = badges.length - shownCount
+      var labelCount = reserveAt != null ? reserveAt : hiddenCount
+      if (!more || (hiddenCount <= 0 && reserveAt == null)) {
+        if (more) {
+          more.hidden = true
+          more.textContent = ''
+        }
+        cell.style.removeProperty('--ptl-more-slot')
+        return
+      }
+      more.hidden = false
+      more.textContent = '+' + labelCount
+      cell.style.setProperty(
+        '--ptl-more-slot',
+        more.getBoundingClientRect().width + 'px'
+      )
+      badges[shownCount - 1].classList.add('is-last-shown')
+    }
+
+    // Over budget, so a counter is coming. Reveal it at its widest and
+    // slot it onto the last badge BEFORE choosing what to drop, or the
+    // last badge kept would be one the counter then pushes over.
+    var shown = badges.length
+    setOverflow(shown, badges.length - 1)
 
     // Hide from the end until it fits. Re-measured each time rather
     // than computed, because removing one badge can pull the next line
     // up whole and change the answer by more than one item.
-    var shown = badges.length
     while (shown > 1 && cell.getBoundingClientRect().height > budget) {
       shown--
       badges[shown].hidden = true
+      setOverflow(shown, badges.length - 1)
     }
 
-    if (more) more.textContent = '+' + (badges.length - shown) + ' more'
+    // Real remainder, which is never wider than the reservation. The
+    // last badge may unwrap a line now that its slot shrank, and that
+    // leftover is what the refill below spends.
+    setOverflow(shown)
+
+    // Pack leftover width: try hidden badges back, in order, now that
+    // the counter is its real size and sitting on the last occupied
+    // line. Stop at the first one that doesn't fit — skipping it to
+    // reach a later shorter one would reorder the signals.
+    while (shown < badges.length) {
+      badges[shown].hidden = false
+      shown++
+      setOverflow(shown)
+      if (cell.getBoundingClientRect().height <= budget) continue
+      shown--
+      badges[shown].hidden = true
+      setOverflow(shown)
+      break
+    }
+
+    markMultilineBadges(badges)
+  }
+
+  // One-line badges keep SLDS's `align-items: center`. A wrapped
+  // label is ~38px against ~26px for a single line; above that split
+  // the mark pins to the first line so it doesn't sit in the middle
+  // of both. Hidden badges drop the class so a re-fit that unwraps
+  // them doesn't inherit the last pass.
+  function markMultilineBadges (badges) {
+    for (var i = 0; i < badges.length; i++) {
+      var badge = badges[i]
+      if (badge.hidden) {
+        badge.classList.remove('is-multiline')
+        continue
+      }
+      badge.classList.toggle(
+        'is-multiline',
+        badge.getBoundingClientRect().height > 32
+      )
+    }
   }
 
   // ── Row decisions ───────────────────────────────────────────────
@@ -2191,12 +2271,6 @@
         if (t && t.closest) handleDecisionClick(t, clone)
       })
 
-      // The Signal column is a fixed 18rem in both places, so the fit
-      // the clone copied from the thread still holds. Re-run anyway: one
-      // pass over 37 cells, and the dialog can't then be where a future
-      // width change first clips a badge.
-      fitSignalBadges(clone)
-
       lastFocused = button
 
       // Reveal first, animate second. Both surfaces come out of
@@ -2216,6 +2290,13 @@
       modal.classList.add(MODAL_OPEN_CLASS)
       backdrop.classList.add(BACKDROP_OPEN_CLASS)
       if (container) container.classList.add('is-open')
+
+      // After the dialog has a width. The clone copied the thread's
+      // `hidden` badges, but the Signal column is 20% of a fixed table
+      // here, not the thread's 18rem — so leftover width (and which
+      // labels wrap) is a different answer, and the fitter has to run
+      // against this layout rather than the one it cloned.
+      fitSignalBadges(clone)
 
       // setTimeout(0) so the browser's own default focus (the dialog
       // becoming visible) doesn't land after ours — same reason the
