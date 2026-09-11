@@ -9,8 +9,8 @@
   //  there is one implementation and it cannot drift.
   //
   //  What forks is the content: this file is the time-lapse seed for
-  //  /agent_at_work.html — three weekly waves (3, then 3, then 2
-  //  cards). Markup, styles and behaviour stay shared with Seller Home.
+  //  /agent_at_work.html — two weekly waves (3, then 3 cards). Markup,
+  //  styles and behaviour stay shared with Seller Home.
   //
   //  Gulp injects this automatically — `getData` reads
   //  `data/<page>.json` for `<page>.html` — so defining `feed` here is
@@ -20,7 +20,7 @@
   "feed": {
     "heading": "Hunter at work",
     // Lab conveyor date ladder (weekdays only):
-    // Wednesday, Sep 16 → Thursday, Oct 1 → Tuesday, Oct 13 → Wednesday, Oct 28.
+    // Wednesday, Sep 16 → Thursday, Oct 1 → Wednesday, Oct 28.
     // Pin so home.js does not overwrite with the live calendar day.
     "date": "Wednesday, Sep 16",
     // ── The subline ───────────────────────────────────────────────────
@@ -186,10 +186,10 @@
       "doc-purple": { "iconImage": "/assets/images/doctype-icons/Doc-purple.svg" },
       "doc-orange": { "iconImage": "/assets/images/doctype-icons/Doc-orange.svg" }
     },
-    // ── Time-lapse seed (weekly waves 3 → 3 → 2 → empty) ─────────────
-    // Wave 1 is visible on first paint. Waves 2–3 ship `hidden` so they
-    // don't flash before the director runs. Wave 2 keeps its last two
-    // cards Running; wave 3 lands those same two already Ready.
+    // ── Time-lapse seed (weekly waves 3 → 3 → empty) ─────────────────
+    // Wave 1 is visible on first paint. Wave 2 ships `hidden` so it
+    // doesn't flash before the director runs. Both waves complete
+    // during rest; the next beat swipes the pack to empty.
     "items": [
       {
         "id": "run-10",
@@ -333,56 +333,6 @@
         "nextRun": "Next run Friday at 5:00 AM",
         "lastRun": "Last run Friday",
         "state": "running",
-        "hidden": true,
-        "outputs": [
-          {
-            "icon": "doc-purple",
-            "label": "Quarterly Deal Pulse",
-            "scheduledIcon": "doc-grey",
-            "scheduledLabel": "Executive brief"
-          }
-        ],
-        "workflow": { "id": "sk-weekly-exec-brief", "label": "" }
-      },
-      {
-        "id": "run-09",
-        "title": "Researched target accounts",
-        "titles": {
-          "running": "Researching target accounts",
-          "completed": "Researched target accounts",
-          "neutral": "Research target accounts"
-        },
-        "cadence": "Weekly",
-        "stepProgress": "5 of 5 steps",
-        "startedAt": "12 min elapsed",
-        "nextRun": "Next run Monday at 9:00 AM",
-        "lastRun": "Last run today",
-        "state": "completed",
-        "hidden": true,
-        "outputs": [
-          {
-            "icon": "doc-green",
-            "label": "50 accounts",
-            "scheduledIcon": "doc-grey",
-            "scheduledLabel": "Target accounts"
-          }
-        ],
-        "workflow": { "id": "sk-account-research", "label": "" }
-      },
-      {
-        "id": "run-07",
-        "title": "Prepared your executive brief",
-        "titles": {
-          "running": "Preparing your executive brief",
-          "completed": "Prepared your executive brief",
-          "neutral": "Executive Brief"
-        },
-        "cadence": "Weekly",
-        "stepProgress": "3 of 3 steps",
-        "startedAt": "6 min elapsed",
-        "nextRun": "Next run Friday at 5:00 AM",
-        "lastRun": "Last run Friday",
-        "state": "completed",
         "hidden": true,
         "outputs": [
           {

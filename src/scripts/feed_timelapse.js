@@ -2,9 +2,9 @@
 // Feed time-lapse director — lab only (/agent_at_work.html)
 // =====================================================================
 // Opening stack is wave 1 (3 cards). Each Left/Up swipes the whole
-// visible pack, jumps the date ladder (Sep 16 → Oct 1 → Oct 13 →
-// Oct 28, weekdays only) and the quota ladder, then the next wave
-// rises (3 cards, then 2). The last beat has no enter — empty state.
+// visible pack, jumps the date ladder (Sep 16 → Oct 1 → Oct 28,
+// weekdays only) and the quota ladder, then the next wave rises
+// (3 cards). The last beat has no enter — empty state.
 // cloneNext stays commented (no infinite recycle).
 //
 ;(function () {
@@ -26,8 +26,7 @@
   var STORAGE_TIMING = 'aaw:feedTimelapseV12'
   var WAVES = [
     ['run-10', 'run-01', 'run-02'],
-    ['run-03', 'run-04', 'run-05'],
-    ['run-09', 'run-07']
+    ['run-03', 'run-04', 'run-05']
   ]
   var waveIndex = 0
   var ENTER_EASE = 'power2.inOut'
@@ -69,7 +68,6 @@
   var DATE_LADDER = [
     new Date(2026, 8, 16),
     new Date(2026, 9, 1),
-    new Date(2026, 9, 13),
     new Date(2026, 9, 28)
   ]
 
@@ -293,10 +291,6 @@
     if (waveIndex === 0) {
       cards = cards.filter(function (li) { return rowState(li) === 'running' })
     }
-    // Stack 2: the last two cards stay Running for the whole beat.
-    if (waveIndex === 1) {
-      cards = cards.slice(0, Math.max(0, cards.length - 2))
-    }
     cards.forEach(function (li, i) {
       if (i >= delays.length) return
       completeTimers.push(window.setTimeout(function () {
@@ -493,12 +487,12 @@
     paintDate(clock)
   }
 
-  // Quota in the Daily Briefing. Each Left/Up steps 80 → 87 → 95 → 102
-  // and $ closed tracks that share of the $2M quota (1.6 → 1.74 → 1.9
-  // → 2.04). Replay reloads the seed.
+  // Quota in the Daily Briefing. Each Left/Up steps 80 → 87 → 102
+  // and $ closed tracks that share of the $2M quota (1.6 → 1.74 →
+  // 2.04). Replay reloads the seed.
   var quotaClock = null
   var QUOTA_TARGET = 2
-  var QUOTA_LADDER = [87, 95, 102]
+  var QUOTA_LADDER = [87, 102]
 
   function wrapQuotaNodes () {
     var heading = document.querySelector('.aaw-lab .seller-home__briefing-heading')
