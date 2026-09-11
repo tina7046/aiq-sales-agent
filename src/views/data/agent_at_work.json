@@ -19,14 +19,10 @@
   // ══════════════════════════════════════════════════════════════════
   "feed": {
     "heading": "Hunter at work",
-    // Optional PIN for the date beside the heading. null = show today,
-    // recomputed on every page load. Set a literal string ("Mon July 13")
-    // to freeze it — useful when a screenshot has to match a deck.
-    // Lab conveyor starts from the real calendar day and paints
-    // `Tuesday, Sep 8` (full weekday, short month).
-    "date": null,
-    // The lab director ticks this pin forward `dateDays` calendar days
-    // each conveyor cycle (weekday Mon–Sun, day number, month on rollover).
+    // Lab conveyor date ladder (weekdays only):
+    // Wednesday, Sep 16 → Thursday, Oct 8 → Tuesday, Nov 17 → Friday, Dec 4.
+    // Pin so home.js does not overwrite with the live calendar day.
+    "date": "Wednesday, Sep 16",
     // ── The subline ───────────────────────────────────────────────────
     // Every row's second line is two slots: "<left> · <right>".
     //
@@ -100,7 +96,7 @@
     // rows are left, so it also covers a page that loads with none.
     "empty": {
       "heading": "You're all caught up",
-      "body": "New results appear here as your agent works."
+      "body": "New results appear here as Hunter works."
     },
 
     // Unused by the feed subline (right slot is now Running / Completed

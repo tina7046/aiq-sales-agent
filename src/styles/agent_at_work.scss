@@ -279,3 +279,146 @@ $aaw-god-rays-overscan: 90px;
   margin: 0;
   accent-color: var(--slds-g-color-palette-blue-50, #0176d3);
 }
+
+// Empty-state check. Sits above "You're all caught up"; spinning until
+// the empty block's nestle (`sh-feed-empty-in`, 220ms) finishes.
+.aaw-lab .seller-home__feed-empty:not(.seller-home__feed-empty--filter) > .aaw-ok {
+  margin-bottom: var(--slds-g-spacing-2, 0.5rem);
+}
+
+// Tokens and from/to match the source spinning → done glyph: disc fade,
+// scale pop to 1.09, Y hop, then delayed check draw.
+.aaw-ok {
+  --pv4h: 2;
+  --pv4v: #35ba00;
+  --pv3e: 250ms;
+  --pv32: cubic-bezier(0.22, 1, 0.36, 1);
+  --pv3u: 1.09;
+  --pv4i: 350ms;
+  --pv47: cubic-bezier(0.34, 1.96, 0.94, 1);
+  --pv45: 350ms;
+  --pv3t: cubic-bezier(0.34, 1.35, 0.64, 1);
+  --pv44: 600ms;
+  --pv3s: cubic-bezier(0.22, 1, 0.36, 1);
+  --pv3d: 80ms;
+  --pv4q: 250ms;
+  --pv4j: cubic-bezier(0.34, 1.35, 0.64, 1);
+  --pv43: 300ms;
+  --pv3r: cubic-bezier(0.14, 2.56, 0.94, 1);
+  --pv5i: 3px;
+  display: inline-flex;
+  filter: blur(0);
+  transition: filter var(--pv3e) var(--pv32);
+  will-change: filter;
+}
+
+.aaw-ok__mark {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  scale: 1;
+  transition: scale var(--pv3e) var(--pv32);
+  will-change: scale, transform;
+}
+
+.aaw-ok__mark[data-state="done"] {
+  scale: var(--pv3u);
+  transition: scale var(--pv4i) var(--pv47);
+  animation-name: aaw-ok-hop-up, aaw-ok-hop-down;
+  animation-duration: var(--pv4q), var(--pv43);
+  animation-timing-function: var(--pv4j), var(--pv3r);
+  animation-delay: 0ms, var(--pv4q);
+  animation-fill-mode: forwards, forwards;
+}
+
+.aaw-ok__disc {
+  position: absolute;
+  inset: -1px;
+  border-radius: 50%;
+  background: var(--pv4v);
+  box-shadow:
+    0 0 0 0.504px rgba(0, 0, 0, 0.05) inset,
+    0 0.504px 0.504px 0 rgba(0, 0, 0, 0.1),
+    0 0.504px 2.016px 0 rgba(0, 0, 0, 0.08),
+    0 -0.504px 0.504px 0 rgba(0, 0, 0, 0.09) inset;
+  opacity: 0;
+  transition: opacity var(--pv3e) var(--pv32);
+  will-change: opacity;
+}
+
+.aaw-ok__mark[data-state="done"] .aaw-ok__disc {
+  opacity: 1;
+  transition: opacity var(--pv45) var(--pv3t);
+}
+
+.aaw-ok__check {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.aaw-ok__check svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.aaw-ok__check path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: var(--pv4h);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: var(--pv3q, 20);
+  stroke-dashoffset: var(--pv3q, 20);
+  transition: stroke-dashoffset var(--pv3e) var(--pv32);
+}
+
+.aaw-ok__mark[data-state="done"] .aaw-ok__check path {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset var(--pv44) var(--pv3s)
+    calc(var(--pv45) + var(--pv3d) - 200ms);
+}
+
+.aaw-ok__mark.is-resetting,
+.aaw-ok__mark.is-resetting .aaw-ok__disc,
+.aaw-ok__mark.is-resetting .aaw-ok__check path {
+  transition: none;
+  animation: none;
+}
+
+@keyframes aaw-ok-hop-up {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(calc(var(--pv5i, 3px) * -1)); }
+}
+
+@keyframes aaw-ok-hop-down {
+  0% { transform: translateY(calc(var(--pv5i, 3px) * -1)); }
+  100% { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aaw-ok,
+  .aaw-ok__mark,
+  .aaw-ok__disc,
+  .aaw-ok__check path {
+    transition: none;
+    animation: none;
+  }
+
+  .aaw-ok__mark[data-state="done"] {
+    scale: var(--pv3u);
+    animation: none;
+  }
+
+  .aaw-ok__mark[data-state="done"] .aaw-ok__disc {
+    opacity: 1;
+  }
+
+  .aaw-ok__mark[data-state="done"] .aaw-ok__check path {
+    stroke-dashoffset: 0;
+  }
+}

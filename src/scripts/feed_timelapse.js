@@ -2,10 +2,10 @@
 // Feed time-lapse director — lab only (/agent_at_work.html)
 // =====================================================================
 // Opening stack is wave 1 (3 cards). Each Left/Up swipes the whole
-// visible pack, jumps to the next month (new weekday and day number)
-// and the quota ladder, then the next wave rises (3 cards, then 3).
-// the next wave rises (3 cards, then 3). The last beat has no enter —
-// empty state. cloneNext stays commented (no infinite recycle).
+// visible pack, jumps the date ladder (Sep 16 → Oct 8 → Nov 17 →
+// Dec 4, weekdays only) and the quota ladder, then the next wave
+// rises (3 cards, then 3). The last beat has no enter — empty state.
+// cloneNext stays commented (no infinite recycle).
 //
 ;(function () {
   // Seconds, GSAP-native. Bind these from the lab chrome; persist so
@@ -14,7 +14,7 @@
     rest: 0.9,             // hold before the swipe and after the pack lands
     enter: 0.7,            // pack settle: next wave rise + fade in
     enterAt: 1.3,          // when the next wave starts (after the left swipe)
-    dateDays: 5            // Play interpolation only; Left/Up jumps a month
+    dateDays: 5            // unused; dates are the hardcoded ladder
   }
 
   var TIMING_KEYS = [
@@ -57,10 +57,20 @@
   var COMPLETE_DELAYS_FIRST = [500, 750]
   var COMPLETE_DELAYS_LATER = [750, 1000, 1250]
   var completeTimers = []
+  var EMPTY_NESTLE_MS = 220
+  var emptyCheckPlayed = false
   var WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  var MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
   var clock = null
+  var dateIndex = 0
+  // Demo pin: Wednesday Sep 16, then Oct / Nov / Dec. All weekdays,
+  // different day numbers. One step per conveyor tick.
+  var DATE_LADDER = [
+    new Date(2026, 8, 16),
+    new Date(2026, 9, 8),
+    new Date(2026, 10, 17),
+    new Date(2026, 11, 4)
+  ]
 
   function directorState () {
     var root = document.querySelector('[data-aaw-director]')
@@ -152,6 +162,72 @@
     return Array.prototype.slice.call(
       document.querySelectorAll('[data-sh-feed-list-item]')
     )
+  }
+
+  function emptyStateEl () {
+    return document.querySelector(
+      '.aaw-lab .seller-home__feed-empty:not(.seller-home__feed-empty--filter)'
+    )
+  }
+
+  function ensureEmptyCheck () {
+    var empty = emptyStateEl()
+    if (!empty) return null
+    var mark = empty.querySelector('.aaw-ok__mark')
+    if (mark) return mark
+    var wrap = document.createElement('span')
+    wrap.className = 'aaw-ok'
+    wrap.setAttribute('aria-hidden', 'true')
+    wrap.innerHTML =
+      '<span class="aaw-ok__mark" data-state="spinning" style="--pv3q: 13;">' +
+        '<span class="aaw-ok__disc"></span>' +
+        '<span class="aaw-ok__check">' +
+          '<svg viewBox="0 0 24 24">' +
+            '<path d="M8 12.5L10.8 15.5L16.4 9.5"></path>' +
+          '</svg>' +
+        '</span>' +
+      '</span>'
+    empty.insertBefore(wrap, empty.firstChild)
+    return wrap.querySelector('.aaw-ok__mark')
+  }
+
+  function playEmptyCheck () {
+    var mark = ensureEmptyCheck()
+    if (!mark || mark.getAttribute('data-state') === 'done') return
+    mark.classList.add('is-resetting')
+    mark.setAttribute('data-state', 'spinning')
+    void mark.offsetWidth
+    mark.classList.remove('is-resetting')
+    void mark.offsetWidth
+    mark.setAttribute('data-state', 'done')
+  }
+
+  // Empty-state check waits until `.seller-home__feed-empty` has played
+  // `sh-feed-empty-in` (220ms fade/rise). Reduced motion skips nestle.
+  function playEmptyCheckAfterNestle () {
+    if (emptyCheckPlayed) return
+    emptyCheckPlayed = true
+    var empty = emptyStateEl()
+    ensureEmptyCheck()
+    if (!empty || reduceMotion) {
+      playEmptyCheck()
+      return
+    }
+    var settled = false
+    function settle () {
+      if (settled) return
+      settled = true
+      empty.removeEventListener('animationend', onEnd)
+      playEmptyCheck()
+    }
+    function onEnd (event) {
+      if (event.target !== empty) return
+      var name = event.animationName || ''
+      if (name.indexOf('sh-feed-empty-in') === -1) return
+      settle()
+    }
+    empty.addEventListener('animationend', onEnd)
+    window.setTimeout(settle, EMPTY_NESTLE_MS + 40)
   }
 
   function feedList () {
@@ -339,28 +415,6 @@
     return document.querySelector('.aaw-lab .seller-home__feed-date')
   }
 
-  function parsePinnedDate (text) {
-    var fallback = new Date(2026, 8, 8)
-    var m = String(text || '').match(/([A-Za-z]+),?\s+([A-Za-z]+)\s+(\d+)/)
-    if (!m) return fallback
-    var month = monthIndex(m[2])
-    var day = parseInt(m[3], 10)
-    if (month < 0 || !isFinite(day) || day < 1) return fallback
-    return new Date(2026, month, day)
-  }
-
-  function monthIndex (name) {
-    var n = String(name || '').toLowerCase()
-    var i
-    for (i = 0; i < MONTHS.length; i++) {
-      if (MONTHS[i].toLowerCase() === n) return i
-    }
-    for (i = 0; i < MONTHS_LONG.length; i++) {
-      if (MONTHS_LONG[i].toLowerCase() === n) return i
-    }
-    return -1
-  }
-
   function formatFeedDate (d) {
     return WEEKDAYS[d.getDay()] + ', ' + MONTHS[d.getMonth()] + ' ' + d.getDate()
   }
@@ -381,40 +435,6 @@
       '<span class="aaw-lab__date-part aaw-lab__date-part--day">' +
         '<span class="aaw-lab__date-value t-digit-group" data-aaw-date-day></span>' +
       '</span>'
-  }
-
-  function addDays (d, n) {
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)
-  }
-
-  function addBusinessDays (d, n) {
-    var out = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-    var step = n < 0 ? -1 : 1
-    var left = Math.abs(n)
-    while (left > 0) {
-      out.setDate(out.getDate() + step)
-      var day = out.getDay()
-      if (day !== 0 && day !== 6) left -= 1
-    }
-    return out
-  }
-
-  // Next conveyor date: always the following month, a different weekday
-  // name, and a different day number, on a weekday so the feed stays
-  // on a work day.
-  function nextTickDate (d) {
-    var prevWeekday = d.getDay()
-    var prevDate = d.getDate()
-    var out = new Date(d.getFullYear(), d.getMonth() + 1, 1)
-    var i
-    for (i = 0; i < 45; i++) {
-      var wd = out.getDay()
-      if (wd !== 0 && wd !== 6 && wd !== prevWeekday && out.getDate() !== prevDate) {
-        return out
-      }
-      out.setDate(out.getDate() + 1)
-    }
-    return out
   }
 
   var reduceMotion =
@@ -463,29 +483,9 @@
     if (el.textContent !== next) el.textContent = next
   }
 
-  function dateDaysCount () {
-    var n = TIMING.dateDays
-    if (!isFinite(n) || n < 1) return 1
-    return Math.round(n)
-  }
-
-  function elapsedDaysForTime (time) {
-    var days = dateDaysCount()
-    var dur = director ? director.duration() : 0
-    if (dur <= 0) return 0
-    var p = Math.max(0, Math.min(1, time / dur))
-    return Math.min(days, Math.floor(p * days + 1e-9))
-  }
-
   function applyDateForTime (time) {
     if (!clock) return
-    // One-shot already jumped the pin on the key; don't interpolate
-    // extra days across the swipe.
-    if (oneShot) {
-      paintDate(clock)
-      return
-    }
-    paintDate(addBusinessDays(clock, elapsedDaysForTime(time)), true)
+    paintDate(clock)
   }
 
   // Quota in the Daily Briefing. Each Left/Up steps 80 → 87 → 95 → 102
@@ -558,10 +558,10 @@
   }
 
   function advanceClock () {
-    if (clock) {
-      clock = nextTickDate(clock)
-      paintDate(clock, true)
-    }
+    if (dateIndex >= DATE_LADDER.length - 1) return
+    dateIndex += 1
+    clock = DATE_LADDER[dateIndex]
+    paintDate(clock, true)
   }
 
   function commitCycle (skipClock) {
@@ -600,6 +600,7 @@
       director = null
     }
     if (list && !list.querySelector('[data-sh-feed-list-item]') && list.parentNode) {
+      playEmptyCheckAfterNestle()
       list.parentNode.removeChild(list)
     }
   }
@@ -958,9 +959,9 @@
 
     snapshotCatalog()
     applyWaveVisibility()
-    // Real today, not the JSON pin. Ticks still step business days.
-    var now = new Date()
-    clock = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    ensureEmptyCheck()
+    dateIndex = 0
+    clock = DATE_LADDER[0]
     wrapDateParts()
     paintDate(clock)
     wrapQuotaNodes()
