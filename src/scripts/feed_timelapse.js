@@ -2,9 +2,9 @@
 // Feed time-lapse director — lab only (/agent_at_work.html)
 // =====================================================================
 // Opening stack is wave 1 (3 cards). Each Left/Up swipes the whole
-// visible pack, jumps the date ladder (Sep 16 → Oct 8 → Nov 17 →
-// Dec 4, weekdays only) and the quota ladder, then the next wave
-// rises (3 cards, then 3). The last beat has no enter — empty state.
+// visible pack, jumps the date ladder (Sep 16 → Oct 1 → Oct 13 →
+// Oct 28, weekdays only) and the quota ladder, then the next wave
+// rises (3 cards, then 2). The last beat has no enter — empty state.
 // cloneNext stays commented (no infinite recycle).
 //
 ;(function () {
@@ -27,7 +27,7 @@
   var WAVES = [
     ['run-10', 'run-01', 'run-02'],
     ['run-03', 'run-04', 'run-05'],
-    ['run-09', 'run-07', 'run-08']
+    ['run-09', 'run-07']
   ]
   var waveIndex = 0
   var ENTER_EASE = 'power2.inOut'
@@ -63,13 +63,14 @@
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   var clock = null
   var dateIndex = 0
-  // Demo pin: Wednesday Sep 16, then Oct / Nov / Dec. All weekdays,
-  // different day numbers. One step per conveyor tick.
+  // Demo pin: Wednesday Sep 16 through Wednesday Oct 28. All weekdays,
+  // different day numbers. One step per conveyor tick; last date is
+  // the empty "You're all caught up" beat.
   var DATE_LADDER = [
     new Date(2026, 8, 16),
-    new Date(2026, 9, 8),
-    new Date(2026, 10, 17),
-    new Date(2026, 11, 4)
+    new Date(2026, 9, 1),
+    new Date(2026, 9, 13),
+    new Date(2026, 9, 28)
   ]
 
   function directorState () {
@@ -291,6 +292,10 @@
     var cards = lisForWave(waveIndex)
     if (waveIndex === 0) {
       cards = cards.filter(function (li) { return rowState(li) === 'running' })
+    }
+    // Stack 2: the last two cards stay Running for the whole beat.
+    if (waveIndex === 1) {
+      cards = cards.slice(0, Math.max(0, cards.length - 2))
     }
     cards.forEach(function (li, i) {
       if (i >= delays.length) return

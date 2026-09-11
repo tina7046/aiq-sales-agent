@@ -9,7 +9,7 @@
   //  there is one implementation and it cannot drift.
   //
   //  What forks is the content: this file is the time-lapse seed for
-  //  /agent_at_work.html — three weekly waves (3, then 3, then 3
+  //  /agent_at_work.html — three weekly waves (3, then 3, then 2
   //  cards). Markup, styles and behaviour stay shared with Seller Home.
   //
   //  Gulp injects this automatically — `getData` reads
@@ -20,7 +20,7 @@
   "feed": {
     "heading": "Hunter at work",
     // Lab conveyor date ladder (weekdays only):
-    // Wednesday, Sep 16 → Thursday, Oct 8 → Tuesday, Nov 17 → Friday, Dec 4.
+    // Wednesday, Sep 16 → Thursday, Oct 1 → Tuesday, Oct 13 → Wednesday, Oct 28.
     // Pin so home.js does not overwrite with the live calendar day.
     "date": "Wednesday, Sep 16",
     // ── The subline ───────────────────────────────────────────────────
@@ -186,10 +186,10 @@
       "doc-purple": { "iconImage": "/assets/images/doctype-icons/Doc-purple.svg" },
       "doc-orange": { "iconImage": "/assets/images/doctype-icons/Doc-orange.svg" }
     },
-    // ── Time-lapse seed (weekly waves 3 → 3 → 3 → empty) ─────────────
+    // ── Time-lapse seed (weekly waves 3 → 3 → 2 → empty) ─────────────
     // Wave 1 is visible on first paint. Waves 2–3 ship `hidden` so they
-    // don't flash before the director runs; they start all Running and
-    // flip Ready at 750 / 1000 / 1250ms after they land.
+    // don't flash before the director runs. Wave 2 keeps its last two
+    // cards Running; wave 3 lands those same two already Ready.
     "items": [
       {
         "id": "run-10",
@@ -346,78 +346,53 @@
       },
       {
         "id": "run-09",
-        "title": "Refreshing account health scores",
+        "title": "Researched target accounts",
         "titles": {
-          "running": "Refreshing account health scores",
-          "completed": "Refreshed account health scores",
-          "neutral": "Refresh account health scores"
+          "running": "Researching target accounts",
+          "completed": "Researched target accounts",
+          "neutral": "Research target accounts"
         },
-        "cadence": "Monthly",
-        "stepProgress": "1 of 4 steps",
-        "startedAt": "1 min elapsed",
-        "nextRun": "Next run Monday at 6:00 AM",
-        "lastRun": "Last run Jul 20",
-        "state": "running",
+        "cadence": "Weekly",
+        "stepProgress": "5 of 5 steps",
+        "startedAt": "12 min elapsed",
+        "nextRun": "Next run Monday at 9:00 AM",
+        "lastRun": "Last run today",
+        "state": "completed",
         "hidden": true,
         "outputs": [
           {
             "icon": "doc-green",
-            "label": "1,240 accounts",
+            "label": "50 accounts",
             "scheduledIcon": "doc-grey",
-            "scheduledLabel": "Health scores"
+            "scheduledLabel": "Target accounts"
           }
         ],
         "workflow": { "id": "sk-account-research", "label": "" }
       },
       {
         "id": "run-07",
-        "title": "Preparing your quota health check",
+        "title": "Prepared your executive brief",
         "titles": {
-          "running": "Preparing your quota health check",
-          "completed": "Prepared your quota health check",
-          "neutral": "Quota Health Check"
+          "running": "Preparing your executive brief",
+          "completed": "Prepared your executive brief",
+          "neutral": "Executive Brief"
         },
         "cadence": "Weekly",
-        "stepProgress": "2 of 4 steps",
-        "startedAt": "9 min elapsed",
-        "nextRun": "Next run Monday at 9:00 AM",
-        "lastRun": "Last run today",
-        "state": "running",
-        "hidden": true,
-        "outputs": [
-          {
-            "icon": "doc-yellow",
-            "label": "3 things to know",
-            "scheduledIcon": "doc-grey",
-            "scheduledLabel": "Quota notes"
-          }
-        ],
-        "workflow": { "id": "sk-weekly-top-3", "label": "" }
-      },
-      {
-        "id": "run-08",
-        "title": "Preparing the pipeline snapshot",
-        "titles": {
-          "running": "Preparing the pipeline snapshot",
-          "completed": "Prepared the pipeline snapshot",
-          "neutral": "Pipeline Snapshot"
-        },
-        "cadence": "Daily",
         "stepProgress": "3 of 3 steps",
-        "startedAt": "15 min elapsed",
-        "nextRun": "Next run tomorrow at 9:00 AM",
-        "lastRun": "Last run today at 9:00 AM",
-        "state": "running",
+        "startedAt": "6 min elapsed",
+        "nextRun": "Next run Friday at 5:00 AM",
+        "lastRun": "Last run Friday",
+        "state": "completed",
         "hidden": true,
         "outputs": [
           {
-            "icon": "doc-blue",
-            "label": "Pipeline snapshot",
+            "icon": "doc-purple",
+            "label": "Quarterly Deal Pulse",
             "scheduledIcon": "doc-grey",
-            "scheduledLabel": "Pipeline snapshot"
+            "scheduledLabel": "Executive brief"
           }
         ],
-        "workflow": { "id": "sk-daily-pipeline-snapshot", "label": "" }
+        "workflow": { "id": "sk-weekly-exec-brief", "label": "" }
       }
     ],
     "itemsParked": [],
