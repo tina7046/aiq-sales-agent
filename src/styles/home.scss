@@ -2938,9 +2938,12 @@ $sh-feed-filter-hidden: (
   transition: box-shadow 120ms ease;
 
   // Same lift for pointer hover and keyboard focus, so both input modes
-  // get the same "this is interactive" signal.
+  // get the same "this is interactive" signal. `:has(:focus-visible)`
+  // rather than `:focus-within`: a mouse click focuses the title
+  // button, and `:focus-within` would keep the lift after the pointer
+  // left until the next click elsewhere.
   &:hover,
-  &:focus-within {
+  &:has(:focus-visible) {
     --shadow-color: 0deg 0% 73%;
     --shadow-elevation-medium:
       0px 0.7px 0.6px hsl(var(--shadow-color) / 0.4),
@@ -3205,7 +3208,7 @@ $sh-feed-filter-hidden: (
 }
 
 .seller-home__feed-item:hover .seller-home__feed-item-workflow,
-.seller-home__feed-item:focus-within .seller-home__feed-item-workflow {
+.seller-home__feed-item:has(:focus-visible) .seller-home__feed-item-workflow {
   opacity: 1;
   visibility: visible;
 }
@@ -3285,7 +3288,7 @@ $sh-feed-filter-hidden: (
 }
 
 .seller-home__feed-item:hover .seller-home__feed-item-menu-trigger,
-.seller-home__feed-item:focus-within .seller-home__feed-item-menu-trigger,
+.seller-home__feed-item:has(:focus-visible) .seller-home__feed-item-menu-trigger,
 .seller-home__feed-item-menu-trigger[aria-expanded="true"] {
   opacity: 1;
   pointer-events: auto;

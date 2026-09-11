@@ -2088,6 +2088,11 @@ $sh-conv-table-rows: 5.5;
     // block, not as a stretched lozenge.
     white-space: normal;
     text-align: left;
+
+    // SLDS centers the icon on the whole badge. A two-line label then
+    // drops the mark to the midpoint of both lines, so it jumps vs the
+    // one-line badges beside it. Pin it to the start of the first line.
+    align-items: flex-start;
   }
 
   // The mark of the system the signal came from, leading the badge.
@@ -2107,6 +2112,9 @@ $sh-conv-table-rows: 5.5;
     display: inline-flex;
     flex: none;
     margin-right: var(--slds-g-spacing-1, 0.25rem);
+    // 14px mark vs ~18px first-line box — a hair of top offset keeps
+    // it on the type, not sitting on the badge's padding edge.
+    margin-top: 0.125rem;
 
     svg {
       display: block;
