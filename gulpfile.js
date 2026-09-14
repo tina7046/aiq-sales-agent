@@ -202,6 +202,7 @@ nunjucksEnv.addGlobal('SOURCE_ICONS', {
   'Demandbase': 'source_demandbase.svg',
   'G2': 'source_g2.svg',
   'Gong': 'source_gong.svg',
+  'Momentum': 'source_momentum.svg',
   'Moody’s': 'source_moodys.svg',
   'Salesforce': 'source_salesforce.svg',
   'SalesIntel': 'source_salesintel.svg',

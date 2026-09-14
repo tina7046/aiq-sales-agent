@@ -271,7 +271,7 @@
   var RECORDING_CLASS = 'is-recording'
   // Hardcoded transcript inserted when the seller confirms a recording.
   // Overridden per conversation by `voiceInput.transcript`.
-  var DEFAULT_VOICE_TRANSCRIPT = 'Hunter, I actually met Maya who\'s a coworker of Marcus at Dreamforce, and she wanted to stay close to this evaluation. Can we mention her in the email?'
+  var DEFAULT_VOICE_TRANSCRIPT = 'Hey Hunter, I actually met their new CRO, Maya, at Dreamforce. She wanted to stay close to this evaluation. Can we mention her in the email?'
   // Short beat after a confirmed voice send, before the cadence card
   // starts its own regenerating stencil.
   var VOICE_THINKING_MS = 1200

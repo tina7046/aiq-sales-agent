@@ -40,6 +40,7 @@
     G2: "source_g2.svg",
     Gmail: "source_gmail.svg",
     Gong: "source_gong.svg",
+    Momentum: "source_momentum.svg",
     LinkedIn: "conn_linkedin.png",
     "Moody\u2019s": "source_moodys.svg",
     Salesforce: "source_salesforce.svg",
