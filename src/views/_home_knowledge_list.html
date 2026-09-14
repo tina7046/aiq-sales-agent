@@ -71,7 +71,7 @@
       rows, only prose + the persistent search field / header.
 #}
 
-{% macro renderKnowledgeDocRow(doc, actions) %}
+{% macro renderKnowledgeDocRow(doc, actions, defaultTabId) %}
   {#
     One doc row. Positioned wrapper (`.seller-home__knowledge-doc-item`)
     owns the absolute-positioning coordinate space for the overflow
@@ -111,13 +111,19 @@
      rather than using `!== false` / `sameas` because this Nunjucks
      build doesn't parse those tests. #}
   {% set isLinked = not (doc.linked == false) %}
+  {% set rowTab = doc.tab or 'learnings' %}
   <li
     class="seller-home__knowledge-doc-item"
     data-sh-knowledge-doc-item
     data-sh-knowledge-doc-name="{{ doc.name }}"
     data-sh-knowledge-doc-type="{{ doc.type }}"
-    data-sh-knowledge-doc-tab="{{ doc.tab or 'learnings' }}"
+    data-sh-knowledge-doc-tab="{{ rowTab }}"
     {% if doc.learnedOn %}data-sh-memory-learned-on="{{ doc.learnedOn }}"{% endif %}
+    {# First paint matches the active tab. CSS also hides the inactive
+       tab via `:has(aria-checked)`, but stamping `hidden` here covers
+       no-`:has()` browsers and matches what bindKnowledgeSearch writes.
+       Callers that omit `defaultTabId` (memory.html) never hide. #}
+    {% if defaultTabId and not (rowTab == defaultTabId) %}hidden{% endif %}
   >
     {% if isLinked %}
     <a
@@ -192,21 +198,18 @@
            visible. The optional badge is a sibling of `.doc-primary`
            so the row centers it against the card, not this line. #}
         <span class="seller-home__knowledge-doc-name">{{ doc.name }}</span>
-        {# Meta line — "<type> · <size> · Updated <date>". The doc-type
-           label ("Document") is dropped on Learnings tiles (redundant
-           there) but kept on Sources tiles, where it names the file
-           format (PDF, Presentation, …). The "Updated" label lives here
-           rather than in the data so `updatedAt` stays a pure date — the
-           detail page reuses that field in its own "Last edited by …"
-           caption. Separators render only between parts that are present. #}
+        {# Meta line — "<type> · Updated <date>". The doc-type label
+           is dropped on Learnings tiles (redundant there) but kept on
+           Sources tiles, where it names the file format (PDF,
+           Presentation, …). File size is not shown on tiles. The
+           "Updated" label lives here rather than in the data so
+           `updatedAt` stays a pure date — the detail page reuses that
+           field in its own "Last edited by …" caption. Separators
+           render only between parts that are present. #}
         {% set showType = (doc.tab or 'learnings') != 'learnings' %}
         <span class="seller-home__knowledge-doc-meta">
-          {% if showType %}{{ doc.type }}{% endif %}
-          {% if showType and doc.size %}
-          <span class="seller-home__knowledge-doc-meta-sep" aria-hidden="true">·</span>
-          {% endif %}
-          {% if doc.size %}{{ doc.size }}{% endif %}
-          {% if showType or doc.size %}
+          {% if showType %}
+          {{ doc.type }}
           <span class="seller-home__knowledge-doc-meta-sep" aria-hidden="true">·</span>
           {% endif %}
           Updated {{ doc.updatedAt }}
@@ -349,9 +352,13 @@
     Nunjucks `== true` vs `is sameas true`: the plain equality is
     tolerated by the older Nunjucks build this project uses.
   #}
+  {% set knowledgeDefaultTab = "learnings" %}
+  {% if tabs and tabs.defaultTabId %}
+    {% set knowledgeDefaultTab = tabs.defaultTabId %}
+  {% endif %}
   {% for doc in documents %}
     {% if not (doc.hidden == true) %}
-      {{ renderKnowledgeDocRow(doc, documentActions) }}
+      {{ renderKnowledgeDocRow(doc, documentActions, knowledgeDefaultTab) }}
     {% endif %}
   {% endfor %}
 </ul>

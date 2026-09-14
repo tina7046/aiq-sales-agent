@@ -786,6 +786,30 @@
   gap: var(--slds-g-spacing-2, 0.5rem); // 8px between rows — Figma
 }
 
+// Hide the inactive tab's rows from first paint. Tabs share one list;
+// JS used to stamp `hidden` after DOMContentLoaded, so Sources (~137
+// files) flashed inside the Learnings grid before the filter ran.
+// `:has()` keys off the same `aria-checked` the radios already have
+// from the server, so the inactive tab never paints.
+.seller-home__knowledge-body-inner:has([data-sh-knowledge-tab="learnings"][aria-checked="true"]) {
+  .seller-home__knowledge-doc-item[data-sh-knowledge-doc-tab="sources"] {
+    display: none;
+  }
+}
+
+.seller-home__knowledge-body-inner:has([data-sh-knowledge-tab="sources"][aria-checked="true"]) {
+  .seller-home__knowledge-doc-item[data-sh-knowledge-doc-tab="learnings"] {
+    display: none;
+  }
+}
+
+// Search (and JS tab sync) still use the `hidden` attribute. Spell
+// `display: none` here so a grid item cannot leave an empty cell —
+// UA `[hidden]` is not always enough inside `display: grid`.
+.seller-home__knowledge-doc-item[hidden] {
+  display: none;
+}
+
 // ── Learnings tab only: 2-column tile grid ──────────────────────────
 // Sources stays a single column (the default flex above). Scoped with
 // `:has()` on `.knowledge-body-inner`, which contains BOTH the tab radios
@@ -805,10 +829,6 @@
   .seller-home__knowledge-doc-item {
     min-width: 0;
     height: 100%;
-  }
-  // A filtered-out tile must leave no empty grid cell.
-  .seller-home__knowledge-doc-item[hidden] {
-    display: none;
   }
   .seller-home__knowledge-doc-row {
     height: 100%;

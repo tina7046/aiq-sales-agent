@@ -5136,8 +5136,9 @@
       activate(tabs[next].getAttribute('data-sh-knowledge-tab'), true)
     })
 
-    // Apply the default (server-active) tab's filter on load so the
-    // non-active tab's rows start hidden.
+    // Sync `hidden` with the server-active tab. CSS already hides the
+    // other tab from first paint (`:has(aria-checked)`); this keeps
+    // search-within-tab and the `hidden` attribute in agreement.
     reFilter()
   }
 
