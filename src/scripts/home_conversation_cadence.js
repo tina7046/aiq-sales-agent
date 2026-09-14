@@ -603,7 +603,7 @@
       try { window.sessionStorage.setItem(key, '1') } catch (e) {}
     }
 
-    // Found New Prospects Approve flips Home's feed date Wed 16 → Thu 17.
+    // Found New Prospects Approve flips Home's feed date Wed 2 → Thu 3.
     // Thread cadences (the Marcus reply) must not bump it again.
     function advanceDemoDay () {
       if (root.hasAttribute('data-sh-cadence-thread')) return

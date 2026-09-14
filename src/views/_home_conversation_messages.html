@@ -533,17 +533,12 @@
    first column renders as `<th scope="row">`, so each row is announced
    by its own name rather than as a bare list of values.
 
-   That name is a real `<a>`, so hover / focus / active come from the
-   browser's own link machinery instead of being approximated on a
-   `<span>` — and it's a tab stop, which is the only way a keyboard user
-   ever sees the focus state. It carries `cell_text_link`, the same
-   record-name class the prospect table uses, so a record looks the same
-   wherever it appears.
-
-   `href="#"` with the click preventDefaulted: there's no deal record to
-   open in the prototype. Same arrangement as an unlinked Ready to
-   Review card — see the thread's anchor delegate in
-   home_conversation.js, which keeps the URL free of a phantom hash.
+   That name is a `<button>`, so hover / focus / active are styled and
+   it's a tab stop — the only way a keyboard user ever sees the focus
+   state. It carries `cell_text_link`, the same record-name class the
+   prospect table uses, so a record looks the same wherever it appears.
+   A button rather than `href="#"` so the browser never paints a URL
+   tooltip; there's no deal record to open in the prototype.
 
    A cell can be a plain value or `{ value, tone }`, where `tone`
    ('critical' | 'warning' | 'positive') colors just that cell — for
@@ -585,7 +580,7 @@
                 (' seller-home__conv-data-cell--' + _tone if _tone else '') -%}
           {% if loop.first %}
           <th scope="row" class="{{ _class }}">
-            <a href="#" class="cell_text_link" data-sh-conv-record-link>{{ _value }}</a>
+            <button type="button" class="cell_text_link" data-sh-conv-record-link>{{ _value }}</button>
           </th>
           {% else %}
           <td class="{{ _class }}">{{ _value }}</td>
@@ -834,7 +829,7 @@
 
 {# ── Record cards ─────────────────────────────────────────────────
    Compact CRM result cards inside an agent message: standard-object
-   icon + title + subtitle, the whole card a link. Markup matches the
+   icon + title + subtitle, the whole card a button. Markup matches the
    kitchen-sink demo on feed_components.html, restyled under
    `.seller-home__conv-record-*` so conversation density (800 px
    thread, 8 px item gap) owns the spacing.
@@ -843,11 +838,13 @@
      {
        id: String, type: 'record_cards',
        text?: String,
-       records: [ { object, icon, title, subtitle, href } ]
+       records: [ { object, icon, title, subtitle } ]
      }
    `icon` is an SLDS standard-sprite symbol id (`account`,
-   `opportunity`). `href` of `#` is swallowed by the existing
-   `[data-sh-conv-record-link]` click handler in home_conversation.js.
+   `opportunity`). Buttons rather than `href="#"` anchors, so the
+   browser never paints a URL tooltip on hover — there is no record
+   page to open in the prototype. Inner body is a `<span>` because a
+   `<button>` may only contain phrasing content.
 #}
 {% macro recordCards(msg) %}
 <article
@@ -865,9 +862,9 @@
     {% for rec in msg.records %}
     <li>
       <article class="seller-home__conv-record-card">
-        <a
+        <button
+          type="button"
           class="seller-home__conv-record-link"
-          href="{{ rec.href or '#' }}"
           data-sh-conv-record-link
         >
           <span class="slds-icon_container slds-icon-standard-{{ rec.object or rec.icon }} seller-home__conv-record-icon">
@@ -875,13 +872,13 @@
               <use xlink:href="/assets/icons/standard-sprite/svg/symbols.svg#{{ rec.icon or rec.object }}"></use>
             </svg>
           </span>
-          <div class="seller-home__conv-record-body">
+          <span class="seller-home__conv-record-body">
             <span class="seller-home__conv-record-title" title="{{ rec.title }}">{{ rec.title }}</span>
             {% if rec.subtitle %}
             <span class="seller-home__conv-record-subtitle" title="{{ rec.subtitle }}">{{ rec.subtitle }}</span>
             {% endif %}
-          </div>
-        </a>
+          </span>
+        </button>
       </article>
     </li>
     {% endfor %}

@@ -160,10 +160,11 @@
   var MARCUS_REPLY_KEY = 'sh:marcusReplyReady'
 
   // Feed header calendar. Pinned for the demo — not the browser clock.
-  // Starts Wed Sep 16; Approve on Found New Prospects advances to Thu 17.
+  // Starts Wed Sep 2 so the feed reads as already happened. Approve on
+  // Found New Prospects advances to Thu Sep 3.
   var DEMO_DAY_KEY = 'sh:demoDay'
-  var DEMO_DAY_START = new Date(2026, 8, 16)
-  var DEMO_DAY_NEXT = new Date(2026, 8, 17)
+  var DEMO_DAY_START = new Date(2026, 8, 2)
+  var DEMO_DAY_NEXT = new Date(2026, 8, 3)
 
   // Cap the rail so a long session can't scroll forever. Oldest fall
   // off the bottom.
@@ -774,8 +775,8 @@
   // ── Today's date ────────────────────────────────────────────────
   // Re-stamp every `[data-sh-today]` element from the demo calendar.
   //
-  // Home always opens on Wed Sep 16. Approving a cadence in Found New
-  // Prospects writes `sh:demoDay` so the next Home load paints Thu 17.
+  // Home always opens on Wed Sep 2. Approving a cadence in Found New
+  // Prospects writes `sh:demoDay` so the next Home load paints Thu 3.
   // `?reset=1` / a reload start-over clears that with the other demo
   // keys. Pages that pin `feed.date` omit `data-sh-today` and stay put
   // (agent_at_work.html owns its own ladder).

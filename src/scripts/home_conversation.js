@@ -782,12 +782,9 @@
       }
     })
 
-    // Record names in a data table are real anchors so they get the
-    // browser's own hover / focus / active states and a tab stop. They
-    // have nowhere to go, though — there's no deal record in the
-    // prototype — so their click is swallowed here rather than letting
-    // `href="#"` push a hash onto the URL and jump the thread to the
-    // top. Same arrangement home.js uses for an unlinked review card.
+    // Record names used to be `href="#"` anchors. They're buttons now
+    // so the browser never paints a URL tooltip. Keep this swallow for
+    // any leftover hash link in a scripted reply.
     //
     // Delegated from the thread so a table that arrives inside a stage
     // or a scripted reply is covered without re-binding.
@@ -795,7 +792,7 @@
       var link = event.target && event.target.closest
         ? event.target.closest('[data-sh-conv-record-link]')
         : null
-      if (link && (link.getAttribute('href') || '#') === '#') {
+      if (link && link.tagName === 'A' && (link.getAttribute('href') || '#') === '#') {
         event.preventDefault()
       }
     })

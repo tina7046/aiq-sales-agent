@@ -1270,11 +1270,9 @@
     white-space: nowrap;
   }
 
-  // The record name itself is an anchor, so every interaction state is
-  // the browser's rather than a simulation.
-  //
-  // Colors come from the accent ramp, which is what this theme actually
-  // paints links with — a bare <a> here already computes to accent-2.
+  // The record name is a button styled as a link. Buttons so the
+  // browser never paints a URL tooltip; colors still follow the
+  // accent ramp, which is what this theme paints links with.
   // NOT `--slds-g-link-color`: that's the SLDS 1 link blue (#0b5cab),
   // still defined but no longer what the agentic theme uses, so keying
   // off it would drift a few degrees away from every other link on the
@@ -1284,6 +1282,13 @@
   // accent-2 → accent-3 on hover is the ramp's own darker step, the same
   // direction SLDS moves a link when you point at it.
   .cell_text_link {
+    appearance: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    text-align: inherit;
     color: var(--slds-g-color-accent-2, #0250d9);
     font-weight: inherit;
     text-decoration: none;
@@ -5895,10 +5900,17 @@ $sh-linkedin-brand: #0a66c2;
   gap: var(--slds-g-spacing-2, 0.5rem);
   padding: var(--slds-g-spacing-1, 0.25rem) var(--slds-g-spacing-3, 0.75rem);
   border-radius: inherit;
-  text-decoration: none;
   color: inherit;
+  cursor: pointer;
 
-  &:hover { text-decoration: none; }
+  appearance: none;
+  width: 100%;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  box-sizing: border-box;
 
   &:focus-visible {
     outline: 2px solid var(--slds-g-color-accent-2, #0176d3);
