@@ -603,12 +603,22 @@
       try { window.sessionStorage.setItem(key, '1') } catch (e) {}
     }
 
+    // Found New Prospects Approve flips Home's feed date Wed 16 → Thu 17.
+    // Thread cadences (the Marcus reply) must not bump it again.
+    function advanceDemoDay () {
+      if (root.hasAttribute('data-sh-cadence-thread')) return
+      if (window.SH && typeof window.SH.advanceDemoDay === 'function') {
+        window.SH.advanceDemoDay()
+      }
+    }
+
     function setReview (id, status) {
       if (ids.indexOf(id) < 0) return
       state.reviews[id] = { status: status }
       render()
       if (status === 'approved' && !root.hasAttribute('data-sh-cadence-thread')) {
         unlockMarcusReplyFeed(id)
+        advanceDemoDay()
       }
       dispatch(root, EVT_DECISION, {
         rowId: id,
@@ -623,6 +633,7 @@
       state.completed = true
       render()
       unlockMarcusReplyFeed('acct-05-p06')
+      advanceDemoDay()
       dispatch(root, EVT_DECISION, { decision: 'approve_all' })
     }
 

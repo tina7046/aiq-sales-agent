@@ -325,25 +325,22 @@ nunjucksEnv.addGlobal('expandRuns', (conv) => {
   }
   return out
 })
-// `today()` — the current date as "Mon July 13", the shape the Seller Home
-// review header has always shown. A function rather than a value so a
-// dev watcher left running overnight re-renders it, and so a `dist` built
-// on Monday isn't stamped Monday forever.
-//
-// Build time is only half the story: `dist` is a static bundle, so a
-// deploy from last week would still serve last week's date. home.js
-// re-stamps any `[data-sh-today]` element on load, which is what makes it
-// genuinely live. This global exists so the markup ships with the right
-// date already in it instead of flashing a stale one.
+// `today()` — demo calendar as "Wed September 16", the shape the Seller
+// Home feed header has always shown. Pinned to Wed Sep 16, 2026 so a
+// rebuild or overnight watcher cannot drift off the script. home.js
+// re-stamps `[data-sh-today]` from the same pin (and advances to Thu 17
+// after Found New Prospects Approve). Keep this Date in step with
+// `DEMO_DAY_START` in home.js.
 //
 // `formatToParts` + filter rather than `format`, because en-US puts a
-// comma after the weekday ("Mon, July 13") and the design doesn't have
-// one. The same formatter is duplicated in home.js — six lines in two
-// languages beats a build step to share them.
+// comma after the weekday ("Wed, September 16") and the design doesn't
+// have one. The same formatter is duplicated in home.js — six lines in
+// two languages beats a build step to share them.
+const DEMO_TODAY = new Date(2026, 8, 16)
 nunjucksEnv.addGlobal('today', () => {
   const parts = new Intl.DateTimeFormat('en-US', {
     weekday: 'short', month: 'long', day: 'numeric'
-  }).formatToParts(new Date())
+  }).formatToParts(DEMO_TODAY)
   return parts
     .filter((p) => p.type === 'weekday' || p.type === 'month' || p.type === 'day')
     .map((p) => p.value)
@@ -352,7 +349,7 @@ nunjucksEnv.addGlobal('today', () => {
 nunjucksEnv.addGlobal('todayShort', () => {
   const parts = new Intl.DateTimeFormat('en-US', {
     month: 'short', day: 'numeric'
-  }).formatToParts(new Date())
+  }).formatToParts(DEMO_TODAY)
   return parts
     .filter((p) => p.type === 'month' || p.type === 'day')
     .map((p) => p.value)

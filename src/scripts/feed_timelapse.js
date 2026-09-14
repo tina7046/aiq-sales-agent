@@ -2,7 +2,7 @@
 // Feed time-lapse director — lab only (/agent_at_work.html)
 // =====================================================================
 // Opening stack is wave 1 (3 cards). Each Left/Up swipes the whole
-// visible pack, jumps the date ladder (Sep 16 → Oct 1 → Oct 28,
+// visible pack, jumps the date ladder (Sep 17 → Oct 1 → Oct 28,
 // weekdays only) and the quota ladder, then the next wave rises
 // (3 cards). Stack 2 keeps its last two cards Running. The last beat
 // has no enter — empty state.
@@ -63,11 +63,11 @@
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   var clock = null
   var dateIndex = 0
-  // Demo pin: Wednesday Sep 16 through Wednesday Oct 28. All weekdays,
+  // Demo pin: Thursday Sep 17 through Wednesday Oct 28. All weekdays,
   // different day numbers. One step per conveyor tick; last date is
   // the empty "You're all caught up" beat.
   var DATE_LADDER = [
-    new Date(2026, 8, 16),
+    new Date(2026, 8, 17),
     new Date(2026, 9, 1),
     new Date(2026, 9, 28)
   ]

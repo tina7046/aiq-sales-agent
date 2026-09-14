@@ -159,6 +159,12 @@
   // on Marcus's cadence in conv-001. Same session lifecycle as Recents.
   var MARCUS_REPLY_KEY = 'sh:marcusReplyReady'
 
+  // Feed header calendar. Pinned for the demo — not the browser clock.
+  // Starts Wed Sep 16; Approve on Found New Prospects advances to Thu 17.
+  var DEMO_DAY_KEY = 'sh:demoDay'
+  var DEMO_DAY_START = new Date(2026, 8, 16)
+  var DEMO_DAY_NEXT = new Date(2026, 8, 17)
+
   // Cap the rail so a long session can't scroll forever. Oldest fall
   // off the bottom.
   var RECENTS_MAX = 12
@@ -227,7 +233,7 @@
   // already played their opening. It belongs in this list or a restart
   // would clear the rail but still treat every conversation as read,
   // painting them instantly instead of replaying them.
-  var DEMO_SESSION_KEYS = [RECENTS_KEY, KNOWLEDGE_BANNER_KEY, 'sh:convSeen', 'sh:convOpeningContinued', FEED_CONSUMED_KEY, MARCUS_REPLY_KEY]
+  var DEMO_SESSION_KEYS = [RECENTS_KEY, KNOWLEDGE_BANNER_KEY, 'sh:convSeen', 'sh:convOpeningContinued', FEED_CONSUMED_KEY, MARCUS_REPLY_KEY, DEMO_DAY_KEY]
   var DEMO_LOCAL_KEYS = [DRAFT_LIST_KEY, 'sh:scheduledWorkflows:v1']
   var DEMO_LOCAL_PREFIXES = ['sh:convDraft:v1:', 'sh:convSched:v1:']
 
@@ -766,21 +772,19 @@
   }
 
   // ── Today's date ────────────────────────────────────────────────
-  // Re-stamp every `[data-sh-today]` element from the browser's clock.
+  // Re-stamp every `[data-sh-today]` element from the demo calendar.
   //
-  // The build already wrote today's date into the markup (see the
-  // `today()` global in gulpfile.js), but `dist` is a static bundle —
-  // a deploy from last week would keep serving last week's date. This
-  // is the half that makes it live.
+  // Home always opens on Wed Sep 16. Approving a cadence in Found New
+  // Prospects writes `sh:demoDay` so the next Home load paints Thu 17.
+  // `?reset=1` / a reload start-over clears that with the other demo
+  // keys. Pages that pin `feed.date` omit `data-sh-today` and stay put
+  // (agent_at_work.html owns its own ladder).
   //
   // Format is "Mon July 13", matching the review header's design.
   // `formatToParts` rather than `format` because en-US inserts a comma
   // after the weekday. Deliberately duplicated from the gulpfile: the
   // build and the browser each need their own copy, and six lines is
   // cheaper than a shared-module build step in a no-bundler project.
-  //
-  // Elements the author pinned to a fixed date aren't tagged, so
-  // there's nothing here to opt them out of.
   function formatToday (date) {
     if (!window.Intl || typeof window.Intl.DateTimeFormat !== 'function') return null
     try {
@@ -801,8 +805,23 @@
     }
   }
 
+  function readDemoDay () {
+    try {
+      if (window.sessionStorage.getItem(sk(DEMO_DAY_KEY)) === '17') return DEMO_DAY_NEXT
+    } catch (e) {}
+    return DEMO_DAY_START
+  }
+
+  function advanceDemoDay () {
+    try { window.sessionStorage.setItem(sk(DEMO_DAY_KEY), '17') } catch (e) {}
+  }
+
+  window.SH = window.SH || {}
+  window.SH.advanceDemoDay = advanceDemoDay
+
   function stampToday (root) {
-    var text = formatToday(new Date())
+    var day = readDemoDay()
+    var text = formatToday(day)
     if (!text) return
     var nodes = root.querySelectorAll('[data-sh-today]')
     for (var i = 0; i < nodes.length; i++) {
@@ -811,7 +830,7 @@
 
     // Short date prefix — "Aug 10" style, for output pills that
     // carry `data-sh-today-short`.
-    var shortDate = formatTodayShort(new Date())
+    var shortDate = formatTodayShort(day)
     if (!shortDate) return
     var shortNodes = root.querySelectorAll('[data-sh-today-short]')
     for (var j = 0; j < shortNodes.length; j++) {
@@ -866,7 +885,7 @@
     // restore animate.
     releasePreload(root)
 
-    // Correct any build-time date stamp to the browser's today.
+    // Correct any build-time date stamp to the demo calendar day.
     stampToday(root)
 
     var toggle = root.querySelector('[data-sh-nav-toggle]')
