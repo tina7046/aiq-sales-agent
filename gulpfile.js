@@ -325,22 +325,19 @@ nunjucksEnv.addGlobal('expandRuns', (conv) => {
   }
   return out
 })
-// `today()` — demo calendar as "Wed September 2", the shape the Seller
-// Home feed header has always shown. Pinned to Wed Sep 2, 2026 so a
-// rebuild or overnight watcher cannot drift off the script, and so the
-// feed reads as already happened. home.js re-stamps `[data-sh-today]`
-// from the same pin (and advances to Thu 3 after Found New Prospects
-// Approve). Keep this Date in step with `DEMO_DAY_START` in home.js.
+// `today()` — live calendar as "Mon September 21", the shape the Seller
+// Home feed header has always shown. Build-time stamp is a fallback;
+// home.js re-stamps `[data-sh-today]` from the browser clock on load.
+// Pages that pin `feed.date` omit that attribute and stay put.
 //
 // `formatToParts` + filter rather than `format`, because en-US puts a
-// comma after the weekday ("Wed, September 2") and the design doesn't
+// comma after the weekday ("Mon, September 21") and the design doesn't
 // have one. The same formatter is duplicated in home.js — six lines in
 // two languages beats a build step to share them.
-const DEMO_TODAY = new Date(2026, 8, 2)
 nunjucksEnv.addGlobal('today', () => {
   const parts = new Intl.DateTimeFormat('en-US', {
     weekday: 'short', month: 'long', day: 'numeric'
-  }).formatToParts(DEMO_TODAY)
+  }).formatToParts(new Date())
   return parts
     .filter((p) => p.type === 'weekday' || p.type === 'month' || p.type === 'day')
     .map((p) => p.value)
@@ -349,7 +346,7 @@ nunjucksEnv.addGlobal('today', () => {
 nunjucksEnv.addGlobal('todayShort', () => {
   const parts = new Intl.DateTimeFormat('en-US', {
     month: 'short', day: 'numeric'
-  }).formatToParts(DEMO_TODAY)
+  }).formatToParts(new Date())
   return parts
     .filter((p) => p.type === 'month' || p.type === 'day')
     .map((p) => p.value)

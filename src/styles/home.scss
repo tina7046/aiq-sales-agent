@@ -37,10 +37,9 @@
 //     --slds-g-color-border-1 (#c9c9c9).
 //
 // Not in Figma / assumed:
-//   • Page background: subtle aurora gradient using existing project
-//     tokens. Figma-selected node was the nav in isolation, so the
-//     page-level treatment is a project-consistent assumption (matches
-//     the earlier reference image the user shared for Seller Home).
+//   • Page background: the shader canvas, with a solid
+//     fallback on `.seller-home` if the shader does not mount.
+//     Figma-selected node was the nav in isolation.
 //   • Hover / focus / selected states: SLDS-standard treatments
 //     (surface-container-2 hover, brand focus ring, accent-1 selection).
 //     Figma didn't call out active/hover states for this frame.
@@ -66,12 +65,12 @@ $sh-nav-width-expanded: 18.75rem; // 300px — Figma frame width
 // expanded — 16px + 24px + 16px. Any other width rests the icons
 // somewhere else, and the rail can't change width without also sliding
 // every icon sideways. It was 4rem/64px, which put them 4px apart.
-$sh-nav-width-collapsed: 3.5rem;
+$sh-nav-width-collapsed: var(--slds-g-spacing-9, 3.5rem);
 $sh-nav-row-height: 2.25rem;     // 36px — nav row height
-$sh-nav-row-padding-x: 1rem;      // 16px
-$sh-nav-icon-box: 1.5rem;         // 24px wrapper (icon 20px + slack)
+$sh-nav-row-padding-x: var(--slds-g-spacing-4, 1rem);      // 16px
+$sh-nav-icon-box: var(--slds-g-sizing-7, 1.5rem);         // 24px wrapper (icon 20px + slack)
 $sh-nav-icon-size: 14px;       // 14px
-$sh-nav-icon-gap: 0.5rem;         // 8px — --slds-g-spacing-2
+$sh-nav-icon-gap: var(--slds-g-spacing-2, 0.5rem);         // 8px
 // Row inline padding in the collapsed rail — the value that leaves the
 // icon box centred: (56 - 24) / 2, which by the rail width above lands
 // on 16px, the same gutter the expanded rows use. Derived rather than
@@ -82,7 +81,7 @@ $sh-nav-icon-gap: 0.5rem;         // 8px — --slds-g-spacing-2
 // `.seller-home--nav-collapsed`.
 $sh-nav-row-padding-x-collapsed: calc((#{$sh-nav-width-collapsed} - #{$sh-nav-icon-box}) / 2);
 
-// God-rays shader host geometry (`.seller-home__god-rays`).
+// Shader host geometry (`.seller-home__shader`).
 //
 // Overscan: how far the canvas hangs outside the shell on every side, so
 // the blur halo falls off past the edges instead of tapering to
@@ -90,12 +89,12 @@ $sh-nav-row-padding-x-collapsed: calc((#{$sh-nav-width-collapsed} - #{$sh-nav-ic
 // blur radius you'd tune to (blur is 5px today, so there's plenty of
 // headroom here).
 //
-// Min height: the floor for the canvas box — raise it to freeze the ray
+// Min height: the floor for the canvas box — raise it to hold the
 // focal point higher up on short windows, lower it to let the shader keep
 // fitting the shell further down. See the `min-height` comment on the
 // rule itself for why this exists.
-$sh-god-rays-overscan: 90px;
-$sh-god-rays-min-height: 50rem;   // 800px
+$sh-shader-overscan: 90px;
+$sh-shader-min-height: 50rem;   // 800px
 
 // ──────────────────────────────────────────────────────────────────────
 // Zero-out `main.app-wrapper`'s SLDS default padding on this page only.
@@ -125,15 +124,15 @@ main.app-wrapper {
   min-height: 100%;
   height: 100%;
 
-  // Positioning root for the god-rays shader canvas
-  // (`.seller-home__god-rays`), which paints as an absolutely-
+  // Positioning root for the shader canvas
+  // (`.seller-home__shader`), which paints as an absolutely-
   // positioned sibling of the nav + main, oversized past the box
   // so its blur halo falls off-screen instead of tapering into
   // transparent at the edges.
   position: relative;
 
   // Safe fallback surface — solid white, shows through only if:
-  //   • the god-rays shader fails to boot (WebGL error, CDN
+  //   • the shader fails to boot (WebGL error, CDN
   //     outage, unsupported browser), in which case this is the
   //     permanent surface, OR
   //   • the seller opens Home in the brief window before the
@@ -144,7 +143,7 @@ main.app-wrapper {
   //     actually fills those areas.
   // Set to `#FFFFFF` so it matches the shader's own `colorBack`
   // (see the DEFAULTS block in index.html) — same value on both
-  // means no visible seam between the ray field and the masked-out
+  // means no visible seam between the shader and the masked-out
   // regions.
   background-color: #f7fbff;;
 
@@ -155,149 +154,13 @@ main.app-wrapper {
   overflow: clip;
 }
 
-// ══════════════════════════════════════════════════════════════════════
-// LEGACY: pastel-aurora gradient background (opt-in modifier)
-// ----------------------------------------------------------------------
-// Retired 2026-07-30 in favor of the god-rays shader canvas
-// (`.seller-home__god-rays`). Kept behind an opt-in modifier so a
-// revert is a two-line change:
-//
-//   1. Remove the `<div class="seller-home__god-rays">` in index.html
-//      (or set `display: none` on it),
-//   2. Add `seller-home--legacy-aurora` to the outer
-//      `.seller-home` element in index.html.
-//
-// The layer stack, comments, and exact hex/alpha values below are
-// preserved verbatim from the pre-2026-07-30 build so the aurora
-// re-appears byte-identical to what it looked like before this
-// change.
-// ══════════════════════════════════════════════════════════════════════
-.seller-home--legacy-aurora {
-  // Page-level background — pure CSS gradient stack, reproducing the
-  // pastel-aurora reference at infinite DPI with zero image bytes over
-  // the wire. Six radial gradients paint the color regions we
-  // identified in the reference image; a linear-gradient at the
-  // deepest layer fills the ambient warm-white base so nothing thin
-  // enough shows through to reveal the fallback color.
-  //
-  // Layer order (CSS paints TOP-first, so the first layer here
-  // appears in front of the ones below it):
-  //
-  //   1. 5% white wash        — softens every color region below by
-  //                             one dial's worth. Bump the alpha to
-  //                             0.08 / 0.12 for "more faded"; drop to
-  //                             0.02 / 0 for "more saturated".
-  //   2. Top-left pink        — soft magenta arc from the top-left
-  //                             corner, ~30% × 40% of the surface.
-  //   3. Blue "tongue"        — the most distinctive feature of the
-  //                             reference: a cool sky-blue nebula
-  //                             sweep centered mid-right.
-  //   4. Right lavender wash  — tall/narrow gradient anchored at the
-  //                             right edge.
-  //   5. Center-left purple   — muted purple-lavender infill so the
-  //                             left half isn't just pink.
-  //   6. Bottom soft pink     — subtle wide lift on the lower band,
-  //                             mirrors the pink motif on the left.
-  //   7. Bottom-right accent  — deeper lavender pooling in the corner.
-  //   8. Ambient base tone    — pale warm lavender-white,
-  //                             diagonal 0-100%.
-  //
-  // Fallback `background-color: #F3F3F3` shows only if
-  // `background-image` fails to parse entirely — extremely unlikely
-  // for pure gradient syntax, but preserved from your prior ask.
-  background-color: #F3F3F3;
-  background-image:
-    // 1. 10% white wash — "faded" dial. Bumped from 0.05 → 0.10 for
-    //    a softer, more diffuse feel; drop to 0.05 or bump to 0.15
-    //    to tune.
-    linear-gradient(rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.10)),
-
-    // 2. Top-left pink accent — restored to the reference hue
-    //    (#E8BAD6) but at 0.35 alpha (down from the original 0.55)
-    //    so the corner reads as a warm accent inside an otherwise
-    //    cool composition, rather than the dominant color region
-    //    it used to be. To dial pink up or down, only touch this
-    //    alpha — everything else in the stack stays cool.
-    radial-gradient(
-      ellipse 70% 60% at 8% 5%,
-      rgba(232, 186, 218, 0.35) 0%,
-      rgba(232, 186, 218, 0)    60%
-    ),
-
-    // 3. Blue "tongue" — signature nebula sweep. Slightly more
-    //    saturated (#A5CDF0 vs original #B4D6F0) and a touch more
-    //    opaque (0.65 vs 0.60) so the coolest feature carries more
-    //    of the visual weight now that pink is dialed back.
-    radial-gradient(
-      ellipse 80% 65% at 70% 55%,
-      rgba(165, 205, 240, 0.65) 0%,
-      rgba(165, 205, 240, 0)    55%
-    ),
-
-    // 4. Right-edge cool-lavender wash. Shifted from #CEC7EA →
-    //    #BFC9E5 — same value, more blue channel.
-    radial-gradient(
-      ellipse 50% 90% at 100% 40%,
-      rgba(191, 201, 229, 0.55) 0%,
-      rgba(191, 201, 229, 0)    55%
-    ),
-
-    // 5. Mid-left blue-lavender infill. Shifted from #DAC5E4
-    //    (warm purple) → #B8C4E2 (cool blue-lavender). This layer
-    //    used to make the left half feel warm; it now supports the
-    //    cool palette instead.
-    radial-gradient(
-      ellipse 60% 70% at 22% 50%,
-      rgba(184, 196, 226, 0.45) 0%,
-      rgba(184, 196, 226, 0)    55%
-    ),
-
-    // 6. Bottom pink lift. Warmed back up from the cool-blue mist
-    //    into a soft pink-lavender (#E8D0E0) with slightly higher
-    //    alpha (0.35 → 0.40) so the pink is unmistakable in the
-    //    bottom-left band without overwhelming the composition.
-    //    This mirrors the top-left pink accent so both diagonals
-    //    of the frame carry a warm note.
-    radial-gradient(
-      ellipse 90% 50% at 30% 100%,
-      rgba(232, 208, 224, 0.40) 0%,
-      rgba(232, 208, 224, 0)    55%
-    ),
-
-    // 7. Bottom-right lavender accent. Warmed from cool-lavender
-    //    (#B8C3E1) → soft warm lavender (#CFC3E4) with the alpha
-    //    nudged from 0.40 → 0.45, so the bottom-right complements
-    //    the pink at bottom-left with a matched-intensity lavender.
-    radial-gradient(
-      ellipse 50% 60% at 90% 95%,
-      rgba(207, 195, 228, 0.45) 0%,
-      rgba(207, 195, 228, 0)    55%
-    ),
-
-    // 8. Ambient base tone (opaque bottom layer — fills corners
-    //    where the radial gradients don't reach). Was warm pale
-    //    lavender (#f3ebf5 → #eee5f0); now a cool pale blue-white
-    //    (#eaeef4 → #e0e6ee) — the biggest single lever that pulls
-    //    the whole composition toward blue.
-    linear-gradient(
-      to bottom right,
-      #eaeef4 0%,
-      #e0e6ee 100%
-    );
-
-  // While the legacy aurora is active, hide the god-rays shader
-  // so the two backgrounds never composite on top of each other.
-  // The shader canvas continues to mount + tick in JS (harmless
-  // paint-only cost, easy to un-hide via toggling this modifier).
-  .seller-home__god-rays { display: none; }
-}
-
-// ── God-rays shader canvas host ────────────────────────────────────
-// Owner: index.html's `<div class="seller-home__god-rays">` sibling
+// ── Shader canvas host ─────────────────────────────────────────────
+// Owner: index.html's `<div class="seller-home__shader">` sibling
 // of the left nav + main. The `@paper-design/shaders` runtime mounts
-// a `<canvas>` inside this element and animates god-ray beams
-// against a masked silhouette: rays everywhere except a wide
-// cleared cone at 12 o'clock, its apex on the convergence point.
+// a `<canvas>` here for whichever background shader is selected.
+// God Rays paints beams against a masked silhouette: rays everywhere
+// except a wide cleared cone at 12 o'clock, its apex on the
+// convergence point.
 // The animation loop is stopped when `prefers-reduced-motion:
 // reduce` matches (see the module script at the bottom of
 // index.html).
@@ -316,7 +179,7 @@ main.app-wrapper {
 //   z-index: 1            → nav + main (in-flow siblings promoted
 //                           to positioned so they paint above the
 //                           absolute-positioned shader host)
-.seller-home__god-rays {
+.seller-home__shader {
   position: absolute;
 
   // Anchored to the top and sized with height, rather than pinned on all
@@ -324,9 +187,9 @@ main.app-wrapper {
   // fully determined by the shell, which leaves `min-height` nothing to
   // clamp; growing downward from a fixed top edge is what lets the floor
   // below take effect.
-  top: -$sh-god-rays-overscan;
-  right: -$sh-god-rays-overscan;
-  height: calc(100% + #{$sh-god-rays-overscan * 2});
+  top: -$sh-shader-overscan;
+  right: -$sh-shader-overscan;
+  height: calc(100% + #{$sh-shader-overscan * 2});
 
   // Left edge starts where the content column starts, not where the row
   // does. The shader converges on the centre of its own box (`u_originX:
@@ -339,9 +202,9 @@ main.app-wrapper {
   // The host can't simply be parented to `.seller-home__main` instead —
   // that element owns `overflow-y: auto`, so an absolutely-positioned
   // child would scroll away with the briefing.
-  left: calc(#{$sh-nav-width-expanded} - #{$sh-god-rays-overscan});
+  left: calc(#{$sh-nav-width-expanded} - #{$sh-shader-overscan});
 
-  // Matches the nav's own width transition so the rays glide to their new
+  // Matches the nav's own width transition so the host glides to its new
   // centre with the rail instead of snapping ahead of it.
   transition: left 180ms ease;
 
@@ -349,7 +212,7 @@ main.app-wrapper {
     transition: none;
   }
 
-  // Floor on the box height, so a short window still gets a ray field long
+  // Floor on the box height, so a short window still gets a shader field long
   // enough to reach the bottom of the shell instead of a squashed one. Below
   // this height the box stops shrinking and the surplus hangs off the bottom,
   // clipped by `.seller-home`'s `overflow: hidden`.
@@ -359,7 +222,7 @@ main.app-wrapper {
   // which anchors the convergence point to the composer and re-solves the
   // shader's offset on resize — a floor on the box could only ever influence
   // the focal point indirectly.
-  min-height: $sh-god-rays-min-height;
+  min-height: $sh-shader-min-height;
 
   z-index: 0;
   pointer-events: none;
@@ -391,8 +254,8 @@ main.app-wrapper {
                  // container's height (default is `auto`, which fights
                  // flex sizing).
 
-  // Positioned above the god-rays shader canvas
-  // (`.seller-home__god-rays` at z-index 0). Without an explicit
+  // Positioned above the shader canvas
+  // (`.seller-home__shader` at z-index 0). Without an explicit
   // stacking context, the absolutely-positioned shader would paint
   // ON TOP of this in-flow sibling and cover the nav's white
   // surface. `position: relative` + a positive z-index keeps the nav
@@ -446,7 +309,7 @@ main.app-wrapper {
 // the rules they override, and come later in the file so they win.
 .seller-home--nav-preload {
   .seller-home__nav,
-  .seller-home__god-rays {
+  .seller-home__shader {
     transition: none;
   }
 }
@@ -521,7 +384,7 @@ main.app-wrapper {
   }
 
   &:focus-visible {
-    outline: 2px solid var(--slds-g-color-accent-2, #0176d3);
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0176d3);
     outline-offset: 2px;
   }
 }
@@ -553,7 +416,7 @@ main.app-wrapper {
   &::-webkit-scrollbar-track { background: transparent; }
   &::-webkit-scrollbar-thumb {
     background: var(--slds-g-color-border-1, #c9c9c9);
-    border-radius: 999px;
+    border-radius: var(--slds-g-radius-border-pill, 15rem);
   }
 }
 
@@ -603,7 +466,7 @@ main.app-wrapper {
 // the recents list scrolls past its bottom fade.
 .seller-home__nav-footer {
   flex: 0 0 auto;
-  border-top: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-top: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
   padding: var(--slds-g-spacing-2, 0.5rem) 0;
 }
 
@@ -673,7 +536,7 @@ main.app-wrapper {
   }
 
   &:focus-visible {
-    outline: 2px solid var(--slds-g-color-accent-2, #0176d3);
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0176d3);
     outline-offset: -2px; // inset so the ring stays inside the row
   }
 
@@ -694,7 +557,7 @@ main.app-wrapper {
   &:hover,
   &.is-active {
     background: var(--slds-g-color-brand-base-90, #D6E6FF);
-    box-shadow: inset 2px 0 0 var(--slds-g-color-border-accent-1, #066AFE);
+    box-shadow: inset var(--slds-g-sizing-border-2, 2px) 0 0 var(--slds-g-color-border-accent-1, #066AFE);
     color: var(--slds-g-color-on-surface-3, #001e5b);
   }
 }
@@ -809,7 +672,7 @@ main.app-wrapper {
   }
 
   &:focus-visible {
-    outline: 2px solid var(--slds-g-color-accent-2, #0176d3);
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0176d3);
     outline-offset: -2px;
   }
 
@@ -838,7 +701,7 @@ main.app-wrapper {
   &:hover,
   &.is-active {
     background: var(--slds-g-color-brand-base-90, #D6E6FF);
-    box-shadow: inset 2px 0 0 var(--slds-g-color-border-accent-1, #066AFE);
+    box-shadow: inset var(--slds-g-sizing-border-2, 2px) 0 0 var(--slds-g-color-border-accent-1, #066AFE);
   }
 }
 
@@ -889,10 +752,10 @@ main.app-wrapper {
   justify-content: center;
 
   color: var(--slds-g-color-on-surface-1, #5c5c5c);
-  font-size: 0.75rem; // 12px
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
   font-weight: var(--slds-g-font-weight-6, 590);
   letter-spacing: 0.02em;
-  line-height: 1;
+  line-height: var(--slds-g-font-lineheight-1, 1);
   user-select: none;
 }
 
@@ -955,8 +818,8 @@ main.app-wrapper {
   // column and the convergence point stays under the composer. Same
   // transition as the nav width, otherwise the rays would snap to their
   // new centre while the rail was still sliding.
-  .seller-home__god-rays {
-    left: calc(#{$sh-nav-width-collapsed} - #{$sh-god-rays-overscan});
+  .seller-home__shader {
+    left: calc(#{$sh-nav-width-collapsed} - #{$sh-shader-overscan});
   }
 
   .seller-home__nav-topbar {
@@ -1066,8 +929,8 @@ main.app-wrapper {
   display: flex;
   flex-direction: column;
 
-  // Positioned above the god-rays shader canvas
-  // (`.seller-home__god-rays` at z-index 0). Same rationale as
+  // Positioned above the shader canvas
+  // (`.seller-home__shader` at z-index 0). Same rationale as
   // `.seller-home__nav`: without a stacking context the absolute-
   // positioned shader would render on top of this in-flow region
   // and cover the briefing / composer / review content.
@@ -1167,8 +1030,8 @@ main.app-wrapper {
 .seller-home__briefing-heading {
   letter-spacing: 0;
   // font-size: var(--slds-g-font-scale-3, 1.25rem);
-  font-size: 32px;
-  font-weight: 400;
+  font-size: var(--slds-g-font-scale-6, 2rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
   line-height: var(--slds-g-font-line-height-2, 1.25);
   color: var(--slds-g-color-on-surface-3, #03234d);
   display: block;
@@ -1236,7 +1099,7 @@ main.app-wrapper {
   // offset). `:focus-visible` (not `:focus`) so mouse clicks don't
   // leave a stray ring after activation.
   &:focus-visible {
-    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0250d9);
     outline-offset: 2px;
     border-radius: 2px; // softens the outline against text glyphs
   }
@@ -1277,11 +1140,11 @@ main.app-wrapper {
 
   // Width per Figma: 318 px. Cap on very narrow viewports so the
   // popover never overshoots the 16 px page margin on either side.
-  width: 20rem;                                                    // 320px
+  width: var(--slds-g-sizing-15, 20rem);                           // 320px
   max-width: calc(100vw - 2rem);
 
   background: var(--slds-g-color-surface-container-1, #ffffff);
-  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
   border-radius: var(--slds-g-radius-border-3, 0.75rem);           // 12px
 
   // Three-layer shadow per Figma "Shadow/Elevation/4":
@@ -1324,8 +1187,8 @@ main.app-wrapper {
   width: 0.625rem;                                                 // 10px
   height: 0.625rem;                                                // 10px
   background: var(--slds-g-color-surface-container-1, #ffffff);
-  border-top: 1px solid var(--slds-g-color-border-1, #c9c9c9);
-  border-left: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-top: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+  border-left: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
   transform: rotate(45deg);
 
   // Above the popover's own drop-shadow so the nub reads as part
@@ -1358,7 +1221,7 @@ main.app-wrapper {
   margin: 0;
   color: var(--slds-g-color-on-surface-2, #2e2e2e);
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: 0.8125rem;                                             // 13px per Figma
+  font-size: var(--slds-g-font-size-base, 0.8125rem);                                             // 13px per Figma
   font-weight: var(--slds-g-font-weight-4, 400);
   line-height: 1.125rem;                                            // 18px
 }
@@ -1373,7 +1236,7 @@ main.app-wrapper {
   list-style: disc outside;
   color: var(--slds-g-color-on-surface-1, #5c5c5c);
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: 0.75rem;                                               // 12px — detail text (Figma Display/1/Regular)
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);                                               // 12px — detail text (Figma Display/1/Regular)
   font-weight: var(--slds-g-font-weight-4, 400);
   line-height: 1.3;
 }
@@ -1388,14 +1251,14 @@ main.app-wrapper {
 // safe).
 .seller-home__briefing-popover-item-name {
   color: var(--slds-g-color-on-surface-2, #2e2e2e);
-  font-size: 0.8125rem;                                             // 13px
+  font-size: var(--slds-g-font-size-base, 0.8125rem);                                             // 13px
   font-weight: var(--slds-g-font-weight-6, 590);
   line-height: 1.125rem;                                            // 18px
 }
 
 .seller-home__briefing-popover-item-detail {
   color: var(--slds-g-color-on-surface-1, #5c5c5c);
-  font-size: 0.75rem;                                               // 12px
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);                                               // 12px
   line-height: 1.3;
 }
 
@@ -1404,8 +1267,8 @@ main.app-wrapper {
 // value on a narrow viewport.
 .seller-home__briefing-popover-close {
   flex-shrink: 0;
-  width: 2rem;                                                      // 32px
-  height: 2rem;                                                     // 32px
+  width: var(--slds-g-sizing-9, 2rem);                              // 32px
+  height: var(--slds-g-sizing-9, 2rem);                             // 32px
 
   .slds-button__icon {
     fill: var(--slds-g-color-on-surface-1, #5c5c5c);
@@ -1421,7 +1284,7 @@ main.app-wrapper {
   justify-content: flex-end;
   gap: var(--slds-g-spacing-3, 0.75rem);                            // 12px between the two actions
   padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
-  border-top: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-top: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
   border-radius: 0 0
     var(--slds-g-radius-border-3, 0.75rem)
     var(--slds-g-radius-border-3, 0.75rem);
@@ -1451,7 +1314,7 @@ main.app-wrapper {
               box-shadow 120ms ease;
 
   &:focus-visible {
-    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0250d9);
     outline-offset: 2px;
   }
 }
@@ -1477,8 +1340,8 @@ main.app-wrapper {
   padding: 0.375rem var(--slds-g-spacing-4, 1rem);                  // 6 / 16
   min-height: 2rem;                                                 // 32px
   background: var(--slds-g-color-accent-2, #0250d9);
-  color: #ffffff;
-  border-radius: 9999px;
+  color: var(--slds-g-color-on-accent-1, #ffffff);
+  border-radius: var(--slds-g-radius-border-pill, 15rem);
 
   &:hover {
     background: #01429c;                                            // ~12% darker
@@ -1544,7 +1407,7 @@ main.app-wrapper {
   position: relative;
 
   background: var(--slds-g-color-surface-container-1, #ffffff);
-  border: 1px solid var(--slds-g-color-neutral-base-60, #939393);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-neutral-base-60, #939393);
   border-radius: 1rem;
   overflow: visible;
 
@@ -1830,7 +1693,7 @@ main.app-wrapper {
   }
 
   &:focus-visible {
-    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0250d9);
     outline-offset: 2px;
   }
 }
@@ -1873,7 +1736,7 @@ main.app-wrapper {
   padding: var(--slds-g-spacing-1, 0.25rem);
 
   background: var(--slds-g-color-surface-container-1, #ffffff);
-  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
   border-radius: var(--slds-g-radius-border-3, 0.75rem);
   box-shadow:
     0 10px 15px -3px rgb(0 0 0 / 0.1),
@@ -1928,7 +1791,7 @@ main.app-wrapper {
   }
 
   &:focus-visible {
-    box-shadow: inset 3px 0 0 var(--slds-g-color-accent-2, #0250d9);
+    box-shadow: inset var(--slds-g-sizing-border-3, 3px) 0 0 var(--slds-g-color-accent-2, #0250d9);
   }
 }
 
@@ -2016,7 +1879,7 @@ main.app-wrapper {
   width: 24rem;
 
   background: var(--slds-g-color-surface-container-1, #ffffff);
-  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
   border-radius: var(--slds-g-radius-border-3, 0.75rem);
   box-shadow:
     0 10px 15px -3px rgb(0 0 0 / 0.1),
@@ -2126,7 +1989,7 @@ main.app-wrapper {
 
 .seller-home__composer-feedback {
   white-space: nowrap;
-  font-weight: 400;
+  font-weight: var(--slds-g-font-weight-4, 400);
 }
 
 // ── Connected sources ──
@@ -2176,8 +2039,8 @@ main.app-wrapper {
   height: var(--slds-g-sizing-5, 1rem);
   min-width: var(--slds-g-sizing-5, 1rem);
   background-color: var(--slds-g-color-surface-1, #fff);
-  border: 1px solid var(--slds-g-color-neutral-base-90, #e0e0e0);
-  border-radius: 4px;
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-neutral-base-90, #e0e0e0);
+  border-radius: var(--slds-g-radius-border-1, 0.25rem);
   box-sizing: border-box;
   cursor: pointer;
 
@@ -2232,7 +2095,7 @@ main.app-wrapper {
   align-self: stretch;
   align-items: flex-start;
   justify-content: center;
-  border-left: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-left: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
   padding-inline-start: var(--slds-g-spacing-4, 1rem);
 }
 
@@ -2240,12 +2103,12 @@ main.app-wrapper {
   color: var(--slds-g-color-on-surface-1, #5c5c5c);
   font-size: var(--slds-g-font-scale-1, 0.875rem);
   font-weight: var(--slds-g-font-weight-6, 590);
-  line-height: 1;
+  line-height: var(--slds-g-font-lineheight-1, 1);
 }
 
 .connected-sources__view-all {
   font-size: var(--slds-g-font-scale-neg-2, 0.625rem);
-  font-weight: 400;
+  font-weight: var(--slds-g-font-weight-4, 400);
   white-space: nowrap;
 }
 
@@ -2283,7 +2146,7 @@ main.app-wrapper {
 }
 
 // Subtle top-to-bottom fade: rgba(255,255,255,0.8) at 7% → 0% at 48%.
-// Sits over the god-rays shader so the section reads as a
+// Sits over the shader so the section reads as a
 // slightly-more-opaque surface without a hard border.
 //
 // On its own element rather than as the section's background, because a
@@ -2370,7 +2233,7 @@ main.app-wrapper {
 
 .seller-home__feed-date {
   flex-shrink: 0;
-  font-size: 0.75rem;
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
   line-height: 1.3;
   color: var(--slds-g-color-on-surface-2, #2e2e2e);
 }
@@ -2578,7 +2441,7 @@ main.app-wrapper {
   cursor: pointer;
 
   &:focus-visible {
-    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0250d9);
     outline-offset: 2px;
   }
 }
@@ -2683,7 +2546,7 @@ main.app-wrapper {
   cursor: pointer;
 
   &:focus-visible {
-    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0250d9);
     outline-offset: 2px;
   }
 }
@@ -2931,7 +2794,7 @@ $sh-feed-filter-hidden: (
   padding-inline: var(--slds-g-spacing-4, 1rem);
 
   background: #ffffffa1;
-  border: 1px solid #9d5bff1f;
+  border: var(--slds-g-sizing-border-1, 1px) solid #9d5bff1f;
   border-radius: var(--slds-g-radius-border-3, 0.75rem);
 
   cursor: pointer;
@@ -3040,7 +2903,7 @@ $sh-feed-filter-hidden: (
   }
 
   &:focus-visible {
-    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0250d9);
     outline-offset: 2px;
     border-radius: 2px;
   }
@@ -3150,7 +3013,7 @@ $sh-feed-filter-hidden: (
   border-radius: var(--slds-g-radius-border-1, 0.25rem);
   background: var(--slds-g-color-neutral-base-95, #f3f3f3);
 
-  font-size: 0.75rem;
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
   font-weight: var(--slds-g-font-weight-4, 400);
   line-height: 1rem;
   color: #2e2e2e;
@@ -3199,7 +3062,7 @@ $sh-feed-filter-hidden: (
   border-radius: var(--slds-g-radius-border-pill, 15rem);
   background: #d8e6fe;
   color: #0250d9;
-  font-size: 0.75rem;
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
   line-height: 1.125rem;
 
   opacity: 0;
@@ -3275,7 +3138,7 @@ $sh-feed-filter-hidden: (
 
 // Same size and colour as the header date beside the heading.
 .seller-home__feed-filter-label {
-  font-size: 0.75rem;
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
   line-height: 1.3;
   color: var(--slds-g-color-on-surface-2, #2e2e2e);
 }
@@ -3307,7 +3170,7 @@ $sh-feed-filter-hidden: (
   // run-history treatment (`.seller-home__composer-menu-list`).
   padding: var(--slds-g-spacing-1, 0.25rem);
   background: var(--slds-g-color-surface-container-1, #fff);
-  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
   border-radius: var(--slds-g-radius-border-3);
   box-shadow:
     0 4px 12px 0 rgba(0, 0, 0, 0.12),
@@ -3377,7 +3240,7 @@ $sh-feed-filter-hidden: (
   }
 
   &:focus-visible {
-    box-shadow: inset 3px 0 0 var(--slds-g-color-accent-2, #0250d9);
+    box-shadow: inset var(--slds-g-sizing-border-3, 3px) 0 0 var(--slds-g-color-accent-2, #0250d9);
   }
 }
 
@@ -3546,7 +3409,7 @@ $sh-feed-filter-hidden: (
   // border, forming the classic "tab-under-a-line" look without
   // requiring the tab to negative-margin over its parent. A tab that
   // ISN'T active leaves the toolbar's own border visible in its slot.
-  border-bottom: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-bottom: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
 }
 
 .seller-home__scheduled-tabs {
@@ -3604,7 +3467,7 @@ $sh-feed-filter-hidden: (
   // matches the resting tab's own active color — one focus
   // vocabulary across the page.
   &:focus-visible {
-    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0250d9);
     outline-offset: -2px;
     border-radius: 2px;
   }
@@ -3635,14 +3498,14 @@ $sh-feed-filter-hidden: (
   min-width: 1.25rem;      // 20px — single digit still reads as a pill
   padding-inline: 0.375rem;
   height: 1.125rem;        // 18px
-  border-radius: 999px;
+  border-radius: var(--slds-g-radius-border-pill, 15rem);
 
   background: var(--slds-g-color-surface-container-3, #e5e5e5);
   color: var(--slds-g-color-on-surface-1, #5c5c5c);
   font-family: inherit;
   font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
   font-weight: var(--slds-g-font-weight-6, 590);
-  line-height: 1;
+  line-height: var(--slds-g-font-lineheight-1, 1);
 
   transition: background-color 120ms ease, color 120ms ease;
 }
@@ -3959,7 +3822,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 .seller-home__scheduled-workflow-title {
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
   font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
-  font-weight: 600; // Semibold
+  font-weight: var(--slds-g-font-weight-6, 600); // Semibold
   line-height: 1.1875rem; // 19px — Figma Body/font-scale-1/Semibold
   color: var(--slds-g-color-on-surface-2, #2e2e2e);
 
@@ -3971,8 +3834,8 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 
 .seller-home__scheduled-workflow-meta {
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: 0.75rem; // 12px — Figma Display/1/Regular
-  font-weight: 400;
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px — Figma Display/1/Regular
+  font-weight: var(--slds-g-font-weight-4, 400);
   line-height: 1.3; // Figma "leading-[1.3]"
   color: var(--slds-g-color-on-surface-1, #5c5c5c);
 
@@ -4088,7 +3951,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 
   min-width: 10rem; // 160px
   background: var(--slds-g-color-surface-container-1, #ffffff);
-  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
   border-radius: var(--slds-g-radius-border-2, 0.5rem); // 8px
   box-shadow:
     0 4px 12px 0 rgba(0, 0, 0, 0.12),
@@ -4135,7 +3998,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   }
 
   &:focus-visible {
-    box-shadow: inset 3px 0 0 var(--slds-g-color-accent-2, #0250d9);
+    box-shadow: inset var(--slds-g-sizing-border-3, 3px) 0 0 var(--slds-g-color-accent-2, #0250d9);
   }
 
   // Disabled — e.g. Run now while a blocking issue remains. Muted, no
@@ -4182,7 +4045,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   margin: 0 0 var(--slds-g-spacing-1, 0.25rem);
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
   font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
-  font-weight: 600;
+  font-weight: var(--slds-g-font-weight-6, 600);
   line-height: 1.1875rem; // 19px
   color: var(--slds-g-color-on-surface-2, #2e2e2e);
 }
@@ -4190,8 +4053,8 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 .seller-home__scheduled-empty-description {
   margin: 0;
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: 0.75rem; // 12px
-  font-weight: 400;
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
+  font-weight: var(--slds-g-font-weight-4, 400);
   line-height: 1.3;
   color: var(--slds-g-color-on-surface-1, #5c5c5c);
 }
@@ -4311,14 +4174,14 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   justify-content: center;
   min-block-size: var(--slds-g-sizing-8, 1.75rem); // 28px hit target
   padding-inline: var(--slds-g-spacing-2, 0.5rem); // 8px
-  border: 1px solid transparent; // no hairline — matches the Skills action-button hover
+  border: var(--slds-g-sizing-border-1, 1px) solid transparent; // no hairline — matches the Skills action-button hover
   border-radius: var(--slds-g-radius-border-2, 0.5rem); // 8px
   background: transparent;
 
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
   font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
-  font-weight: 600; // Semibold — matches the Figma emphasis
-  line-height: 1;
+  font-weight: var(--slds-g-font-weight-6, 600); // Semibold — matches the Figma emphasis
+  line-height: var(--slds-g-font-lineheight-1, 1);
   color: var(--slds-g-color-error-1, #b60554);
   white-space: nowrap;
   cursor: pointer;
@@ -4458,7 +4321,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   min-width: 11rem;
   padding: var(--slds-g-spacing-1, 0.25rem);
   background: var(--slds-g-color-surface-1, #ffffff);
-  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
   border-radius: var(--slds-g-radius-border-2, 0.5rem);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
 
@@ -4606,7 +4469,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 
   min-height: 3.125rem; // 50px
   padding: var(--slds-g-spacing-3, 0.75rem);
-  border-bottom: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-bottom: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
 }
 
 .seller-home__schedule-side-title {
@@ -4652,7 +4515,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   min-width: 11rem;
   padding: var(--slds-g-spacing-1, 0.25rem);
   background: var(--slds-g-color-surface-1, #ffffff);
-  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
   border-radius: var(--slds-g-radius-border-2, 0.5rem);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
 
@@ -4922,7 +4785,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   padding-block: var(--slds-g-spacing-1, 0.25rem);
 
   background: var(--slds-g-color-surface-1, #ffffff);
-  border: 1px solid var(--slds-g-color-border-2, #c9c9c9);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-2, #c9c9c9);
   border-radius: var(--slds-g-radius-border-2, 0.5rem); // 8px
 
   // Focus ring driven by the inner <select>'s focus.
@@ -4997,8 +4860,8 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   max-width: 100%;
 
   background-color: #f3f3f3;
-  border: 1px solid #e5e5e5;
-  border-radius: 999px;
+  border: var(--slds-g-sizing-border-1, 1px) solid #e5e5e5;
+  border-radius: var(--slds-g-radius-border-pill, 15rem);
 
   color: #2e2e2e;
   text-decoration: none;
@@ -5011,7 +4874,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   }
 
   &:focus-visible {
-    outline: 2px solid var(--slds-g-color-accent-2, #0176d3);
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0176d3);
     outline-offset: 1px;
   }
 }
@@ -5026,7 +4889,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 
 .seller-home__schedule-side-skill-name {
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: 0.75rem; // 12px — Figma Resource Chip label
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px — Figma Resource Chip label
   font-weight: var(--slds-g-font-weight-4, 400);
   line-height: 1.0625rem; // 17px
   color: #2e2e2e;
@@ -5041,7 +4904,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 .seller-home__schedule-side-divider {
   height: 0;
   border: 0;
-  border-top: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-top: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
   margin-block: 0.4375rem; // ~16px band with the hairline centered
   width: 100%;
 }
@@ -5051,7 +4914,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   width: 100%;
   padding: var(--slds-g-spacing-3, 0.75rem);
   background: var(--slds-g-color-surface-1, #ffffff);
-  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
   border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
 
   &:focus-within {
@@ -5076,7 +4939,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   cursor: text;
 
   &:focus-visible {
-    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0250d9);
     outline-offset: 2px;
     border-radius: var(--slds-g-radius-border-1, 0.25rem);
   }

@@ -1,0 +1,100 @@
+// Aurora halo. Shared by the style-sandbox feed and /aurora_lab.html.
+//
+// The color lives on a transparent border. A content-box mask knocks out
+// the middle. That mask edge is a hard cut; if it sits on the corner it
+// reads as a hairline. `--sh-aurora-cover` pulls the cut inside the host
+// so the host's fill hides it and only the blurred falloff shows outside.
+// Pointer events are off: the halo is decorative.
+
+.sh-aurora {
+  --sh-aurora-radius: 16px;
+  --sh-aurora-outset: 152px;
+  --sh-aurora-cover: 32px;
+  position: relative;
+}
+
+.sh-aurora__glow,
+.sh-aurora__gray {
+  position: absolute;
+  inset: calc(var(--sh-aurora-outset) * -1);
+  z-index: 0;
+  border: calc(var(--sh-aurora-outset) + var(--sh-aurora-cover)) solid transparent;
+  border-radius: calc(var(--sh-aurora-outset) + var(--sh-aurora-radius));
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.sh-aurora__glow {
+  opacity: 0;
+  transition: opacity 200ms ease-in-out;
+}
+
+.sh-aurora__gray {
+  opacity: var(--sh-aurora-gray-opacity, 1);
+  transition: opacity 300ms ease;
+}
+
+// Keep the halo behind the feed and the composer fill. The lab preview
+// has empty space around the card, so it stays at z-index 0 where a
+// negative layer would slip under the page background.
+.seller-home__feed > .sh-aurora__glow,
+.seller-home__feed > .sh-aurora__gray,
+.seller-home__composer-editor > .sh-aurora__glow,
+.seller-home__composer-editor > .sh-aurora__gray {
+  z-index: -1;
+}
+
+.sh-aurora__glow::before,
+.sh-aurora__gray::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  transform: translate(10px, 8px);
+  filter: blur(var(--sh-aurora-blur, 40px));
+  border-radius: var(--sh-aurora-radius);
+  pointer-events: none;
+}
+
+.sh-aurora__glow::before {
+  background:
+    radial-gradient(
+      at var(--sh-aurora-x4, 25%) var(--sh-aurora-y4, 25%),
+      hsla(278, var(--sh-aurora-sat, 97%), 86%, var(--sh-aurora-alpha, 1)) 0,
+      transparent var(--sh-aurora-spread, 50%)
+    ),
+    radial-gradient(
+      at var(--sh-aurora-x5, 75%) var(--sh-aurora-y5, 25%),
+      hsla(218, var(--sh-aurora-sat, 97%), 42%, var(--sh-aurora-alpha, 1)) 0,
+      transparent var(--sh-aurora-spread, 50%)
+    ),
+    radial-gradient(
+      at var(--sh-aurora-x6, 25%) var(--sh-aurora-y6, 75%),
+      hsla(198, var(--sh-aurora-sat, 97%), 55%, var(--sh-aurora-alpha, 1)) 0,
+      transparent var(--sh-aurora-spread, 50%)
+    ),
+    radial-gradient(
+      at var(--sh-aurora-x7, 75%) var(--sh-aurora-y7, 75%),
+      hsla(278, var(--sh-aurora-sat, 97%), 86%, var(--sh-aurora-alpha, 1)) 0,
+      transparent var(--sh-aurora-spread, 50%)
+    );
+}
+
+.sh-aurora__gray::before {
+  background:
+    radial-gradient(at 27% 27%, var(--sh-aurora-gray, rgba(0, 0, 0, 0.08)) 0, transparent 50%),
+    radial-gradient(at 73% 27%, var(--sh-aurora-gray, rgba(0, 0, 0, 0.08)) 0, transparent 50%),
+    radial-gradient(at 27% 73%, var(--sh-aurora-gray, rgba(0, 0, 0, 0.08)) 0, transparent 50%),
+    radial-gradient(at 73% 73%, var(--sh-aurora-gray, rgba(0, 0, 0, 0.08)) 0, transparent 50%);
+  filter: blur(40px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sh-aurora__glow,
+  .sh-aurora__gray {
+    transition: none;
+  }
+}

@@ -1,0 +1,1446 @@
+{% extends "_template.html" %}
+
+{#
+  Home style sandbox — /home_style.html
+  A fork of index.html so styling can be tried without touching Home.
+  Edit only this file, src/styles/home_style.scss, src/scripts/home_style.js,
+  src/scripts/aurora.js, src/styles/_aurora.scss, and src/views/style_lab/.
+  The aurora tuner is /aurora_lab.html. Do not point this page back at
+  home.css, home.js, or the _home_*.html partials.
+#}
+{% set home = readData("index") %}
+{% set navPrimary = home.navPrimary %}
+{% set navFooter = home.navFooter %}
+{% set navActive = home.navActive %}
+{% set recents = home.recents %}
+{% set briefing = home.briefing %}
+{% set composer = home.composer %}
+{% set feed = home.feed %}
+
+{% block styles %}
+
+<link rel="stylesheet" href="/styles/home_style.css" />
+<style>
+	/* Page-level shader styling used to live here, back when the canvas was
+     mounted on a fixed `#bg` behind the whole shell. It's now hosted by
+     `.seller-home__shader` inside `.seller-home`, exactly as in
+     hunter-main-main, so home.css owns the host geometry (overscan, min-height,
+     stacking) and the white fallback surface underneath it. Keeping the two
+     prototypes on the same host is what lets the tuned numbers mean the same
+     thing in both — the focal point is placed relative to that box. */
+
+	#panel {
+		display: block;
+		position: fixed;
+		right: 16px;
+		bottom: 16px;
+		top: 100px;
+		z-index: 3;
+		width: 268px;
+		overflow-y: auto;
+		background: rgba(255, 255, 255, 0.78);
+		backdrop-filter: blur(14px);
+		border: 1px solid rgba(13, 27, 42, 0.10);
+		border-radius: 14px;
+		padding: 13px 15px 15px;
+		font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+		color: #0d1b2a;
+		box-shadow: 0 8px 30px rgba(13, 27, 42, 0.10);
+	}
+
+	/* Toggled from the global-header Setup (gear) icon — see the script at
+	   the foot of this file. Beats the base `display: block` on class
+	   specificity, so no !important is needed. */
+	#panel.is-hidden {
+		display: none;
+	}
+
+	#panel.closed {
+		/* Only bottom-anchor when collapsed so the box hugs its content
+		   (the "Controls" launcher) instead of being stretched full-height
+		   by the base rule's top:100px + bottom:16px pair. */
+		top: auto;
+		width: auto;
+		padding: 10px 14px;
+		overflow: visible;
+	}
+
+	#panel.closed .body {
+		display: none;
+	}
+
+	.head {
+		display: flex;
+		justify-content: space-between;
+		gap: 10px;
+	}
+
+	/* `all: unset` below resets `display` to `inline`, which overrides the
+	   UA `[hidden] { display: none }` — so restore it for the panel's
+	   buttons, otherwise Copy/Reset stay visible when collapsed. */
+	#panel button[hidden] {
+		display: none;
+	}
+
+	#panel button {
+		all: unset;
+		cursor: pointer;
+		font: 500 11px/1 ui-monospace, Menlo, monospace;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: #4a5b6b;
+	}
+
+	#panel button.act {
+		color: #148eff;
+	}
+
+	.sect {
+		margin-top: 13px;
+		padding-top: 11px;
+		border-top: 1px solid rgba(13, 27, 42, 0.09);
+	}
+
+	.sect:first-child {
+		margin-top: 12px;
+		padding-top: 0;
+		border-top: 0;
+	}
+
+	.sect h2 {
+		font: 500 10px/1 ui-monospace, Menlo, monospace;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: #8493a3;
+		margin: 0 0 9px;
+	}
+
+	.crow {
+		display: grid;
+		grid-template-columns: 22px 1fr;
+		gap: 8px;
+		align-items: center;
+		margin-bottom: 7px;
+	}
+
+	.crow.off {
+		opacity: 0.32;
+	}
+
+	.crow input[type=color] {
+		width: 22px;
+		height: 22px;
+		padding: 0;
+		border: 1px solid rgba(13, 27, 42, 0.18);
+		border-radius: 6px;
+		background: none;
+		cursor: pointer;
+	}
+
+	.crow .stack {
+		display: grid;
+		gap: 1px;
+	}
+
+	.crow .hex {
+		display: flex;
+		justify-content: space-between;
+		color: #33455a;
+		font-size: 11px;
+	}
+
+	#cones {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 5px;
+		margin-bottom: 4px;
+	}
+
+	#panel .tog {
+		display: block;
+		text-align: center;
+		padding: 6px 0;
+		border-radius: 7px;
+		border: 1px solid rgba(13, 27, 42, 0.14);
+		background: rgba(255, 255, 255, 0.5);
+		color: #8493a3;
+		font-size: 9.5px;
+		letter-spacing: 0.05em;
+	}
+
+	#panel .tog.on {
+		background: #148eff;
+		border-color: #148eff;
+		color: #fff;
+	}
+
+	.row {
+		display: grid;
+		gap: 2px;
+		margin-bottom: 8px;
+	}
+
+	.row .lbl {
+		display: flex;
+		justify-content: space-between;
+		color: #33455a;
+	}
+
+	.val {
+		font-variant-numeric: tabular-nums;
+	}
+
+	input[type=range] {
+		width: 100%;
+		accent-color: #148eff;
+	}
+
+	#err {
+		position: fixed;
+		left: 16px;
+		bottom: 16px;
+		z-index: 4;
+		max-width: 520px;
+		padding: 12px 14px;
+		border-radius: 10px;
+		background: #fff5f5;
+		border: 1px solid #f3c2c2;
+		color: #a02525;
+		font: 400 13px/1.5 ui-monospace, Menlo, monospace;
+		display: none;
+		white-space: pre-wrap;
+	}
+</style>
+{% endblock %}
+
+{% block content %}
+
+	{#
+	  Seller Home components, ported from hunter-main-main/src/views/home.html.
+	  Structure, classes, and data keys are kept identical so home.scss and
+	  home.js drop in unchanged and future changes can be diffed against the
+	  source prototype.
+
+	  What this page adds over the source is the live tuning panel further down.
+	  Everything the shader depends on — the host element, its geometry, the
+	  focal-point solve — is kept the same, so numbers dialled here transfer
+	  verbatim.
+
+	  `data-sh-root` is what home.js boots off of — without it none of the
+	  component controllers wire up.
+	#}
+	<script>
+		/* Keep this sandbox off Home's nav, recents, and demo session keys. */
+		if (window.SH && typeof window.SH.storageKey === 'function') {
+			var shStyleKey = window.SH.storageKey
+			window.SH.storageKey = function (key) { return 'style:' + shStyleKey(key) }
+		}
+	</script>
+	<div class="seller-home" data-sh-root>
+		{# Left navigation. Collapse state is owned by home.js and persisted in
+		   localStorage, so the rail keeps its width across pages. #}
+		{% include "style_lab/_home_left_nav.html" %}
+
+		{# God-rays shader canvas host. The module script at the bottom of this
+		   file mounts a WebGL canvas inside it; geometry and stacking come from
+		   `.seller-home__shader` in home.scss. Empty and aria-hidden — it's
+		   decoration with no semantic content.
+
+		   It stays a child of the row rather than of `__main` because `__main`
+		   is the scroll container — parented there the shader would scroll away
+		   with the briefing. Instead its left edge is inset to the nav width in
+		   home.scss, which is what keeps the box centred on the content column. #}
+		<div class="seller-home__shader" data-sh-shader-host aria-hidden="true"></div>
+
+		{# A plain div, not <main role="main">: this sits inside the template's
+		   own `<main class="app-wrapper">`, and a second main landmark would
+		   be a duplicate for assistive tech. #}
+		<div class="seller-home__main">
+			<div class="seller-home__main-inner">
+				{# ── Daily Briefing ──────────────────────────────────────
+				   Greeting + sentence, both plain strings from briefing.* in
+				   data/index.json so the copy can be reworded without touching
+				   markup. The insight-popover dialogs below are dormant: they
+				   only open from `data-sh-briefing-topic` buttons, and the
+				   sentence no longer carries any. #}
+				{% import "style_lab/_home_briefing_insight_popover.html" as briefingPopover %}
+				<section
+					class="seller-home__briefing"
+					aria-label="Daily briefing"
+					data-sh-briefing-root
+				>
+					<h1 class="seller-home__briefing-heading">
+						What should we work on?
+					</h1>
+
+					{# One dialog per topic that has popover data. Siblings of the
+					   paragraph so they stay inside `data-sh-briefing-root` for JS
+					   scoping and absolute-position against this section. #}
+					{% if briefing.popovers and briefing.popovers|length %}
+					<div class="seller-home__briefing-popovers" data-sh-briefing-popovers>
+						{% for pop in briefing.popovers %}
+							{{ briefingPopover.briefingInsightPopover(pop) }}
+						{% endfor %}
+					</div>
+					{% endif %}
+				</section>
+
+				{# Chat composer — reads its config from the `composer` key in
+				   data/index.json. The god-rays shader anchors its focal point
+				   to this element (`focalOffsetPx`); it falls back to
+				   `focalFallbackPx` only when no composer is on the page. #}
+				{% include "style_lab/_home_composer.html" %}
+
+				{# Feed (Ready / Running / Scheduled) — rows come from
+				   `feed.readyItems`, `feed.runningItems`, `feed.scheduledItems`. #}
+				{% include "style_lab/_home_feed.html" %}
+			</div>
+		</div>
+	</div>
+
+	{% include "style_lab/_home_connections_modal.html" %}
+
+	{# God-rays tuner. Its visibility is toggled from the global-header Setup
+	   (gear) icon — see the toggle script at the foot of this file. The
+	   `.is-hidden` class (not an inline style) drives show/hide so the gear
+	   can flip it, and the state persists in localStorage. Hidden by default. #}
+	<div id="panel" class="is-hidden">
+		<div class="head">
+			<button id="toggle">Close</button>
+			<button id="copy" class="act">Copy</button>
+			<button id="save" class="act">Save</button>
+			<button id="reset" class="act">Reset</button>
+		</div>
+		<div class="body">
+			<div class="sect">
+				<h2>Ray colors</h2>
+				<div id="rayColors"></div>
+				<div class="row" id="countRow"></div>
+			</div>
+			<div class="sect">
+				<h2>Background &amp; bloom</h2>
+				<div id="otherColors"></div>
+			</div>
+			<div class="sect">
+				<h2>Clear cones (no rays)</h2>
+				<div id="cones"></div>
+			</div>
+			<div class="sect">
+				<h2>Shape</h2>
+				<div id="rows"></div>
+			</div>
+		</div>
+	</div>
+
+	<pre id="err"></pre>
+
+	{# Component behaviour for the markup above: briefing popovers, composer,
+	   Ready to Review tablist + row menus. Ported verbatim from
+	   hunter-main-main/src/scripts/home.js — it boots off `[data-sh-root]` and
+	   guards every controller on its own elements, so the sections it doesn't
+	   find here (left nav, knowledge list, scheduled workflows) no-op. #}
+	{# GSAP + the Flip plugin, vendored rather than pulled from a CDN so the
+	   proto keeps working offline. Flip is pinned to the same 3.12.5 as the
+	   core — a version skew between the two breaks the plugin.
+
+	   Loaded before the controllers that read them off the global: the tools
+	   modal, and the feed in home.js, which uses GSAP for the row dismiss and
+	   Flip to re-sort the list when a row changes state. `feedCanAnimate` in
+	   home.js checks for both, so a failed load degrades to instant DOM
+	   changes rather than a dead kebab. #}
+	<script src="/scripts/vendor/gsap.min.js"></script>
+	<script src="/scripts/vendor/Flip.min.js"></script>
+	<script src="/scripts/aurora.js"></script>
+
+	<script src="/scripts/home_style.js"></script>
+
+	<script type="module">
+		import {
+		ShaderMount,
+		godRaysFragmentShader,
+		meshGradientFragmentShader,
+		staticRadialGradientFragmentShader,
+		simplexNoiseFragmentShader,
+		getShaderColorFromString as toVec4,
+		getShaderNoiseTexture,
+		ShaderFitOptions,
+	} from 'https://cdn.jsdelivr.net/npm/@paper-design/shaders@0.0.77/+esm';
+
+		// ---- defaults -------------------------------------------------------------
+		const DEFAULTS = {
+			colors: ['#148effa6', '#c3defebf', '#c380d1', '#33fff5', '#7ad8fa'],
+			colorsCount: 5,          // godRaysMeta.maxColorCount is 5
+			colorBack: '#ffffff',
+			colorBloom: '#ffa8f3',
+			bloom: 0, intensity: 0, density: 0.06, spotty: 0.98,
+			midSize: 0.51, midIntensity: 0.24,
+			scale: 0.71, rotation: 152, offsetX: 0,
+			// Vertical placement is NOT the shader's `offsetY` — see focalOffsetY.
+			// `focalOffsetPx` is the signed distance from the composer's TOP EDGE
+			// down to the convergence point; `focalFallbackPx` measures from the top
+			// of the shell instead, and applies only when there's no composer on the
+			// page. Same keys, same values, same solve as hunter-main-main.
+			focalOffsetPx: 5, focalFallbackPx: 415,
+			speed: 1.09, blur: 5,
+			wedge: 90, feather: 22,  // angular mask, degrees — CSS, not a shader uniform
+			hole: 0, holeFeather: 0,  // radial mask hole, vmin — 0 disables the layer
+			north: true, east: false, south: false, west: false,  // cones cleared of rays
+		};
+
+		// key, uniform (null = not a shader uniform), min, max, step
+		const SLIDERS = [
+			['intensity', 'u_intensity', 0, 1, 0.01],
+			['density', 'u_density', 0, 1, 0.005],
+			['spotty', 'u_spotty', 0, 1, 0.01],
+			['midSize', 'u_midSize', 0, 1, 0.01],
+			['midIntensity', 'u_midIntensity', 0, 1, 0.01],
+			['bloom', 'u_bloom', 0, 1, 0.01],
+			['scale', 'u_scale', 0.1, 4, 0.01],
+			['rotation', 'u_rotation', 0, 360, 1],
+			['offsetX', 'u_offsetX', -1, 1, 0.01],
+			// No offsetY slider: the vertical focal position is solved from
+			// `focalOffsetPx` below, and a second control over the same value would
+			// just fight it.
+			['focalOffsetPx', null, -300, 700, 5],
+			['speed', null, 0, 3, 0.01],
+			['blur', null, 0, 60, 1],
+			['wedge', null, 5, 180, 1],
+			['feather', null, 0, 60, 1],
+			['hole', null, 0, 45, 1],
+			['holeFeather', null, 0, 45, 1],
+		];
+
+		// Per-shader saved presets. "Save" in the panel writes the current
+		// settings here so they become the background on the next load; "Reset"
+		// clears them and falls back to the built-in defaults. Keyed by shader
+		// so god-rays and mesh keep separate saves.
+		const loadSavedState = (shader) => {
+			try {
+				const raw = window.localStorage.getItem('sh:style:shaderState:' + shader);
+				const parsed = raw ? JSON.parse(raw) : null;
+				return (parsed && typeof parsed === 'object') ? parsed : null;
+			} catch (e) { return null; }
+		};
+		const saveState = (shader, obj) => {
+			try { window.localStorage.setItem('sh:style:shaderState:' + shader, JSON.stringify(obj)); } catch (e) { }
+		};
+		const clearSavedState = (shader) => {
+			try { window.localStorage.removeItem('sh:style:shaderState:' + shader); } catch (e) { }
+		};
+
+		// Seed god-rays from its saved preset (if any) over the defaults.
+		const state = structuredClone(DEFAULTS);
+		Object.assign(state, loadSavedState('godrays') || {});
+
+		// Same host as hunter-main-main: a child of `.seller-home`, sized and
+		// stacked by `.seller-home__shader` in home.scss.
+		const bg = document.querySelector('[data-sh-shader-host]');
+		const shell = bg.parentElement;
+		const anchor = document.querySelector('.seller-home__composer');
+		const scroller = document.querySelector('.seller-home__main');
+
+		// 8-digit hex <-> swatch + alpha, since <input type=color> has no alpha channel
+		const splitHex = (h) => {
+			let s = String(h).replace('#', '');
+			if (s.length === 3) s = [...s].map((c) => c + c).join('');
+			if (s.length === 6) s += 'ff';
+			return { rgb: '#' + s.slice(0, 6), a: parseInt(s.slice(6, 8), 16) / 255 };
+		};
+		const joinHex = (rgb, a) =>
+			rgb + Math.round(Math.min(1, Math.max(0, a)) * 255).toString(16).padStart(2, '0');
+
+		// ── Shader selector ────────────────────────────────────────────────
+		// Two background shaders live here: the original god-rays and the mesh
+		// gradient. The active one is chosen (in priority order) by the
+		// `?shader=` URL override, the seller's saved pick from the header gear
+		// dropdown (localStorage 'sh:style:shader'), then DEFAULT_SHADER. Whichever is
+		// active mounts and populates the one #panel; the other's setup sits
+		// dormant behind its guard. Nothing is deleted.
+		const DEFAULT_SHADER = 'simplex';
+		let storedShader = null;
+		try { storedShader = window.localStorage.getItem('sh:style:shader'); } catch (e) { }
+		const ACTIVE_SHADER = 'off';
+
+		if (ACTIVE_SHADER === 'mesh') {
+			// MeshGradient — vanilla translation of the React
+			// `<MeshGradient colors distortion swirl grainMixer grainOverlay
+			// speed scale rotation offsetX offsetY />` (speed is the ShaderMount
+			// arg; the rest are uniforms). Mounted on the shader host, with a
+			// god-rays-style tuning panel built into the same #panel.
+			try {
+				const MESH_DEFAULTS = {
+					// The palette carries the shader's max (10) so the count
+					// slider can reach 10; only `colorsCount` are used by default.
+					colors: ['#e5edff', '#1f9eff', '#50c2f7', '#8097ff', '#ffc7eb', '#a28fff', '#5cecff', '#c7d2fe', '#e0e7ff', '#f0f9ff'],
+					colorsCount: 7,
+					distortion: 0.35, swirl: 0.32,
+					grainMixer: 0.03, grainOverlay: 0.07,
+					speed: 0.08, scale: 1.28, rotation: 32,
+					offsetX: -0.12, offsetY: 0.04,
+				};
+				// key, min, max, step
+				const MESH_SLIDERS = [
+					['distortion', 0, 1, 0.01],
+					['swirl', 0, 1, 0.01],
+					['grainMixer', 0, 1, 0.01],
+					['grainOverlay', 0, 1, 0.01],
+					['speed', 0, 3, 0.01],
+					['scale', 0.1, 4, 0.01],
+					['rotation', 0, 360, 1],
+					['offsetX', -1, 1, 0.01],
+					['offsetY', -1, 1, 0.01],
+				];
+
+				const mstate = structuredClone(MESH_DEFAULTS);
+				// Seed from a saved preset (Save button) over the defaults.
+				Object.assign(mstate, loadSavedState('mesh') || {});
+				// Keep the palette at the shader max (10) so the count slider and
+				// color rows always reach 10, even after loading an older save.
+				while (mstate.colors.length < 10) mstate.colors.push('#ffffffff');
+				mstate.colors.length = 10;
+				const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+
+				const meshUniforms = () => ({
+					// Send every authored color; u_colorsCount decides how many
+					// the shader actually uses (same pattern as the god-rays set).
+					u_colors: mstate.colors.map(toVec4),
+					u_colorsCount: mstate.colorsCount,
+					u_distortion: mstate.distortion,
+					u_swirl: mstate.swirl,
+					u_grainMixer: mstate.grainMixer,
+					u_grainOverlay: mstate.grainOverlay,
+					u_scale: mstate.scale,
+					u_rotation: mstate.rotation,
+					u_offsetX: mstate.offsetX,
+					u_offsetY: mstate.offsetY,
+					u_fit: ShaderFitOptions.cover,
+					u_originX: 0.5, u_originY: 0.5,
+					u_worldWidth: 0, u_worldHeight: 0,
+				});
+
+				const meshMount = new ShaderMount(
+					bg, meshGradientFragmentShader, meshUniforms(), undefined,
+					reduce.matches ? 0 : mstate.speed, 0
+				);
+				window.meshGradient = meshMount;
+
+				const push = () => {
+					meshMount.setUniforms(meshUniforms());
+					meshMount.setSpeed(reduce.matches ? 0 : mstate.speed);
+					// At speed 0 the loop is stopped, so a change needs a nudge.
+					if (mstate.speed === 0 || reduce.matches) { try { meshMount.requestRender(); } catch { } }
+				};
+				reduce.addEventListener('change', push);
+
+				// ---- panel (mirrors the god-rays tuner) --------------------------
+				// Only the #panel body is replaced; its .head (Controls / Copy /
+				// Reset buttons) is shared and rewired below for mesh.
+				const panel = document.getElementById('panel');
+				const body = panel.querySelector('.body');
+				body.innerHTML = '';
+				const sync = [];   // refreshers, replayed on reset
+
+				const sect = (title) => {
+					const s = document.createElement('div');
+					s.className = 'sect';
+					s.innerHTML = `<h2>${title}</h2>`;
+					body.appendChild(s);
+					return s;
+				};
+
+				const colorRow = (host, label, read, write) => {
+					const row = document.createElement('div');
+					row.className = 'crow';
+					row.innerHTML =
+						`<input type="color">` +
+						`<div class="stack">` +
+						`<span class="hex"><span>${label}</span><span class="v"></span></span>` +
+						`<input type="range" min="0" max="1" step="0.01">` +
+						`</div>`;
+					const [swatch, alpha] = row.querySelectorAll('input');
+					const out = row.querySelector('.v');
+					const refresh = () => {
+						const { rgb, a } = splitHex(read());
+						swatch.value = rgb; alpha.value = a; out.textContent = read();
+					};
+					const change = () => { write(joinHex(swatch.value, parseFloat(alpha.value))); refresh(); push(); };
+					swatch.addEventListener('input', change);
+					alpha.addEventListener('input', change);
+					refresh(); sync.push(refresh); host.appendChild(row);
+					return row;
+				};
+
+				const slider = (host, key, min, max, step, after) => {
+					const row = document.createElement('div');
+					row.className = 'row';
+					row.innerHTML =
+						`<span class="lbl"><span>${key}</span><span class="val"></span></span>` +
+						`<input type="range" min="${min}" max="${max}" step="${step}">`;
+					const input = row.querySelector('input');
+					const out = row.querySelector('.val');
+					const refresh = () => { input.value = mstate[key]; out.textContent = mstate[key]; };
+					input.addEventListener('input', () => {
+						mstate[key] = parseFloat(input.value);
+						refresh(); after?.(); push();
+					});
+					refresh(); sync.push(refresh); host.appendChild(row);
+				};
+
+				const colorsSect = sect('Colors');
+				const colorRows = [];
+				for (let i = 0; i < mstate.colors.length; i++) {
+					colorRows.push(colorRow(colorsSect, `color ${i + 1}`,
+						() => mstate.colors[i], (v) => (mstate.colors[i] = v)));
+				}
+				const dimUnused = () => colorRows.forEach((r, i) =>
+					r.classList.toggle('off', i >= mstate.colorsCount));
+				slider(colorsSect, 'colorsCount', 1, mstate.colors.length, 1, dimUnused);
+				dimUnused();
+
+				const motionSect = sect('Motion & shape');
+				for (const [k, min, max, step] of MESH_SLIDERS) slider(motionSect, k, min, max, step);
+
+				const toggleBtn = document.getElementById('toggle');
+				if (toggleBtn) toggleBtn.addEventListener('click', () => {
+					const closed = panel.classList.toggle('closed');
+					toggleBtn.textContent = closed ? 'Controls' : 'Close';
+					for (const id of ['copy', 'save', 'reset']) { const b = document.getElementById(id); if (b) b.hidden = closed; }
+				});
+				const resetBtn = document.getElementById('reset');
+				if (resetBtn) resetBtn.addEventListener('click', () => {
+					// Forget the saved preset and fall back to the built-in defaults.
+					clearSavedState('mesh');
+					Object.assign(mstate, structuredClone(MESH_DEFAULTS));
+					sync.forEach((f) => f()); dimUnused(); push();
+				});
+				// Save — persist the current settings as the background. They're
+				// already applied live via push(); saving is what makes them stick
+				// across reloads (see the `loadSavedState('mesh')` seed above).
+				const copyBtn = document.getElementById('copy');
+				if (copyBtn) copyBtn.addEventListener('click', async (e) => {
+					const q = (v) => (typeof v === 'string' ? `'${v}'` : v);
+					const bodyTxt = Object.keys(MESH_DEFAULTS).map((k) => Array.isArray(mstate[k])
+						? `  ${k}: [${mstate[k].map(q).join(', ')}],`
+						: `  ${k}: ${q(mstate[k])},`).join('\n');
+					await navigator.clipboard.writeText(`const params = {\n${bodyTxt}\n};`);
+					e.target.textContent = 'Copied';
+					setTimeout(() => (e.target.textContent = 'Copy'), 1500);
+				});
+				const saveBtn = document.getElementById('save');
+				if (saveBtn) saveBtn.addEventListener('click', (e) => {
+					saveState('mesh', mstate);
+					push();
+					e.target.textContent = 'Saved';
+					setTimeout(() => (e.target.textContent = 'Save'), 1500);
+				});
+
+				push();
+			} catch (e) {
+				const el = document.getElementById('err');
+				el.style.display = 'block';
+				el.textContent = 'Shader failed to start:\n' + (e?.stack || e);
+			}
+		}
+
+		if (ACTIVE_SHADER === 'radial') {
+			// StaticRadialGradient — vanilla translation of the React
+			// `<StaticRadialGradient colors colorBack radius focalDistance
+			// focalAngle falloff mixing distortion distortionShift distortionFreq
+			// grainMixer grainOverlay />`. Static (speed 0). Same host + panel.
+			try {
+				const RADIAL_DEFAULTS = {
+					// Palette carries the shader max (10); colorsCount decides use.
+					// Values baked from the tuned preset saved in the Cursor browser.
+					colors: ['#c2efff85', '#6ac8e7', '#dbeafe', '#bae6fd', '#a5f3fc', '#c7d2fe', '#e0e7ff', '#f0f9ff', '#ecfeff', '#f5f3ff'],
+					colorsCount: 2,
+					colorBack: '#f0f9ffff',
+					radius: 0.75, focalDistance: 0.11, focalAngle: 0,
+					falloff: -0.1, mixing: 1,
+					distortion: 0, distortionShift: -1, distortionFreq: 9,
+					grainMixer: 0, grainOverlay: 0,
+					offsetX: 0, offsetY: -0.24,
+				};
+				// key, min, max, step
+				const RADIAL_SLIDERS = [
+					['radius', 0, 3, 0.01],
+					['focalDistance', 0, 3, 0.01],
+					['focalAngle', 0, 360, 1],
+					['falloff', -1, 1, 0.01],
+					['mixing', 0, 1, 0.01],
+					['distortion', 0, 1, 0.01],
+					['distortionShift', -1, 1, 0.01],
+					['distortionFreq', 0, 20, 1],
+					['grainMixer', 0, 1, 0.01],
+					['grainOverlay', 0, 1, 0.01],
+					['offsetX', -1, 1, 0.01],
+					['offsetY', -1, 1, 0.01],
+				];
+
+				const rstate = structuredClone(RADIAL_DEFAULTS);
+				Object.assign(rstate, loadSavedState('radial') || {});
+				while (rstate.colors.length < 10) rstate.colors.push('#ffffffff');
+				rstate.colors.length = 10;
+
+				const radialUniforms = () => ({
+					u_colorBack: toVec4(rstate.colorBack),
+					u_colors: rstate.colors.map(toVec4),
+					u_colorsCount: rstate.colorsCount,
+					u_radius: rstate.radius,
+					u_focalDistance: rstate.focalDistance,
+					u_focalAngle: rstate.focalAngle,
+					u_falloff: rstate.falloff,
+					u_mixing: rstate.mixing,
+					u_distortion: rstate.distortion,
+					u_distortionShift: rstate.distortionShift,
+					u_distortionFreq: rstate.distortionFreq,
+					u_grainMixer: rstate.grainMixer,
+					u_grainOverlay: rstate.grainOverlay,
+					u_fit: ShaderFitOptions.cover,
+					u_scale: 1, u_rotation: 0,
+					u_offsetX: rstate.offsetX, u_offsetY: rstate.offsetY,
+					u_originX: 0.5, u_originY: 0.5,
+					u_worldWidth: 0, u_worldHeight: 0,
+				});
+
+				// Static gradient (speed 0) — nudge a render after each change.
+				const radialMount = new ShaderMount(bg, staticRadialGradientFragmentShader, radialUniforms(), undefined, 0, 0);
+				window.radialGradient = radialMount;
+
+				const push = () => {
+					radialMount.setUniforms(radialUniforms());
+					try { radialMount.requestRender(); } catch { }
+				};
+
+				// ---- panel (mirrors the god-rays tuner) --------------------------
+				const panel = document.getElementById('panel');
+				const body = panel.querySelector('.body');
+				body.innerHTML = '';
+				const sync = [];
+
+				const sect = (title) => {
+					const s = document.createElement('div');
+					s.className = 'sect';
+					s.innerHTML = `<h2>${title}</h2>`;
+					body.appendChild(s);
+					return s;
+				};
+
+				const colorRow = (host, label, read, write) => {
+					const row = document.createElement('div');
+					row.className = 'crow';
+					row.innerHTML =
+						`<input type="color">` +
+						`<div class="stack">` +
+						`<span class="hex"><span>${label}</span><span class="v"></span></span>` +
+						`<input type="range" min="0" max="1" step="0.01">` +
+						`</div>`;
+					const [swatch, alpha] = row.querySelectorAll('input');
+					const out = row.querySelector('.v');
+					const refresh = () => {
+						const { rgb, a } = splitHex(read());
+						swatch.value = rgb; alpha.value = a; out.textContent = read();
+					};
+					const change = () => { write(joinHex(swatch.value, parseFloat(alpha.value))); refresh(); push(); };
+					swatch.addEventListener('input', change);
+					alpha.addEventListener('input', change);
+					refresh(); sync.push(refresh); host.appendChild(row);
+					return row;
+				};
+
+				const slider = (host, key, min, max, step, after) => {
+					const row = document.createElement('div');
+					row.className = 'row';
+					row.innerHTML =
+						`<span class="lbl"><span>${key}</span><span class="val"></span></span>` +
+						`<input type="range" min="${min}" max="${max}" step="${step}">`;
+					const input = row.querySelector('input');
+					const out = row.querySelector('.val');
+					const refresh = () => { input.value = rstate[key]; out.textContent = rstate[key]; };
+					input.addEventListener('input', () => {
+						rstate[key] = parseFloat(input.value);
+						refresh(); after?.(); push();
+					});
+					refresh(); sync.push(refresh); host.appendChild(row);
+				};
+
+				const colorsSect = sect('Colors');
+				colorRow(colorsSect, 'colorBack', () => rstate.colorBack, (v) => (rstate.colorBack = v));
+				const colorRows = [];
+				for (let i = 0; i < rstate.colors.length; i++) {
+					colorRows.push(colorRow(colorsSect, `color ${i + 1}`,
+						() => rstate.colors[i], (v) => (rstate.colors[i] = v)));
+				}
+				const dimUnused = () => colorRows.forEach((r, i) =>
+					r.classList.toggle('off', i >= rstate.colorsCount));
+				slider(colorsSect, 'colorsCount', 1, rstate.colors.length, 1, dimUnused);
+				dimUnused();
+
+				const shapeSect = sect('Shape & focal');
+				for (const [k, min, max, step] of RADIAL_SLIDERS) slider(shapeSect, k, min, max, step);
+
+				const toggleBtn = document.getElementById('toggle');
+				if (toggleBtn) toggleBtn.addEventListener('click', () => {
+					const closed = panel.classList.toggle('closed');
+					toggleBtn.textContent = closed ? 'Controls' : 'Close';
+					for (const id of ['copy', 'save', 'reset']) { const b = document.getElementById(id); if (b) b.hidden = closed; }
+				});
+				const resetBtn = document.getElementById('reset');
+				if (resetBtn) resetBtn.addEventListener('click', () => {
+					clearSavedState('radial');
+					Object.assign(rstate, structuredClone(RADIAL_DEFAULTS));
+					while (rstate.colors.length < 10) rstate.colors.push('#ffffffff');
+					rstate.colors.length = 10;
+					sync.forEach((f) => f()); dimUnused(); push();
+				});
+				const copyBtn = document.getElementById('copy');
+				if (copyBtn) copyBtn.addEventListener('click', async (e) => {
+					const q = (v) => (typeof v === 'string' ? `'${v}'` : v);
+					const bodyTxt = Object.keys(RADIAL_DEFAULTS).map((k) => Array.isArray(rstate[k])
+						? `  ${k}: [${rstate[k].map(q).join(', ')}],`
+						: `  ${k}: ${q(rstate[k])},`).join('\n');
+					await navigator.clipboard.writeText(`const params = {\n${bodyTxt}\n};`);
+					e.target.textContent = 'Copied';
+					setTimeout(() => (e.target.textContent = 'Copy'), 1500);
+				});
+				const saveBtn = document.getElementById('save');
+				if (saveBtn) saveBtn.addEventListener('click', (e) => {
+					saveState('radial', rstate);
+					push();
+					e.target.textContent = 'Saved';
+					setTimeout(() => (e.target.textContent = 'Save'), 1500);
+				});
+
+				push();
+			} catch (e) {
+				const el = document.getElementById('err');
+				el.style.display = 'block';
+				el.textContent = 'Shader failed to start:\n' + (e?.stack || e);
+			}
+		}
+
+		if (ACTIVE_SHADER === 'simplex') {
+			// SimplexNoise — vanilla translation of the React
+			// `<SimplexNoise colors stepsPerColor softness speed scale />`
+			// (speed is the ShaderMount arg; the rest are uniforms). Same host
+			// + god-rays-style tuning panel.
+			try {
+				const SIMPLEX_DEFAULTS = {
+					colors: ['#ffffffff', '#e0edff12', '#fbe5ff12', '#dcb8ff12', '#3df2ff12', '#00aaff12', '#4d4dff12', '#ce6bff12', '#ff00aa12', '#ff52bf12'],
+					colorsCount: 10,
+					stepsPerColor: 10, softness: 1,
+					speed: 2.4, scale: 4, rotation: 0,
+					offsetX: 0, offsetY: 0,
+				};
+				// key, min, max, step
+				const SIMPLEX_SLIDERS = [
+					['stepsPerColor', 1, 10, 1],
+					['softness', 0, 1, 0.01],
+					['speed', 0, 5, 0.01],
+					['scale', 0.1, 4, 0.01],
+					['rotation', 0, 360, 1],
+					['offsetX', -1, 1, 0.01],
+					['offsetY', -1, 1, 0.01],
+				];
+
+				const sstate = structuredClone(SIMPLEX_DEFAULTS);
+				Object.assign(sstate, loadSavedState('simplex') || {});
+				while (sstate.colors.length < 10) sstate.colors.push('#ffffffff');
+				sstate.colors.length = 10;
+				const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+
+				const simplexUniforms = () => ({
+					u_colors: sstate.colors.map(toVec4),
+					u_colorsCount: sstate.colorsCount,
+					u_stepsPerColor: sstate.stepsPerColor,
+					u_softness: sstate.softness,
+					u_scale: sstate.scale,
+					u_rotation: sstate.rotation,
+					u_offsetX: sstate.offsetX,
+					u_offsetY: sstate.offsetY,
+					u_fit: ShaderFitOptions.cover,
+					u_originX: 0.5, u_originY: 0.5,
+					u_worldWidth: 0, u_worldHeight: 0,
+				});
+
+				const simplexMount = new ShaderMount(
+					bg, simplexNoiseFragmentShader, simplexUniforms(), undefined,
+					reduce.matches ? 0 : sstate.speed, 0
+				);
+				window.simplexNoise = simplexMount;
+
+				const push = () => {
+					simplexMount.setUniforms(simplexUniforms());
+					simplexMount.setSpeed(reduce.matches ? 0 : sstate.speed);
+					if (sstate.speed === 0 || reduce.matches) { try { simplexMount.requestRender(); } catch { } }
+				};
+				reduce.addEventListener('change', push);
+
+				// ---- panel (mirrors the god-rays tuner) --------------------------
+				const panel = document.getElementById('panel');
+				const body = panel.querySelector('.body');
+				body.innerHTML = '';
+				const sync = [];
+
+				const sect = (title) => {
+					const s = document.createElement('div');
+					s.className = 'sect';
+					s.innerHTML = `<h2>Scheduled</h2>`;
+					body.appendChild(s);
+					return s;
+				};
+
+				const colorRow = (host, label, read, write) => {
+					const row = document.createElement('div');
+					row.className = 'crow';
+					row.innerHTML =
+						`<input type="color">` +
+						`<div class="stack">` +
+						`<span class="hex"><span>${label}</span><span class="v"></span></span>` +
+						`<input type="range" min="0" max="1" step="0.01">` +
+						`</div>`;
+					const [swatch, alpha] = row.querySelectorAll('input');
+					const out = row.querySelector('.v');
+					const refresh = () => {
+						const { rgb, a } = splitHex(read());
+						swatch.value = rgb; alpha.value = a; out.textContent = read();
+					};
+					const change = () => { write(joinHex(swatch.value, parseFloat(alpha.value))); refresh(); push(); };
+					swatch.addEventListener('input', change);
+					alpha.addEventListener('input', change);
+					refresh(); sync.push(refresh); host.appendChild(row);
+					return row;
+				};
+
+				const slider = (host, key, min, max, step, after) => {
+					const row = document.createElement('div');
+					row.className = 'row';
+					row.innerHTML =
+						`<span class="lbl"><span>${key}</span><span class="val"></span></span>` +
+						`<input type="range" min="${min}" max="${max}" step="${step}">`;
+					const input = row.querySelector('input');
+					const out = row.querySelector('.val');
+					const refresh = () => { input.value = sstate[key]; out.textContent = sstate[key]; };
+					input.addEventListener('input', () => {
+						sstate[key] = parseFloat(input.value);
+						refresh(); after?.(); push();
+					});
+					refresh(); sync.push(refresh); host.appendChild(row);
+				};
+
+				const colorsSect = sect('Colors');
+				const colorRows = [];
+				for (let i = 0; i < sstate.colors.length; i++) {
+					colorRows.push(colorRow(colorsSect, `color ${i + 1}`,
+						() => sstate.colors[i], (v) => (sstate.colors[i] = v)));
+				}
+				const dimUnused = () => colorRows.forEach((r, i) =>
+					r.classList.toggle('off', i >= sstate.colorsCount));
+				slider(colorsSect, 'colorsCount', 1, sstate.colors.length, 1, dimUnused);
+				dimUnused();
+
+				const motionSect = sect('Noise & motion');
+				for (const [k, min, max, step] of SIMPLEX_SLIDERS) slider(motionSect, k, min, max, step);
+
+				const toggleBtn = document.getElementById('toggle');
+				if (toggleBtn) toggleBtn.addEventListener('click', () => {
+					const closed = panel.classList.toggle('closed');
+					toggleBtn.textContent = closed ? 'Controls' : 'Close';
+					for (const id of ['copy', 'save', 'reset']) { const b = document.getElementById(id); if (b) b.hidden = closed; }
+				});
+				const resetBtn = document.getElementById('reset');
+				if (resetBtn) resetBtn.addEventListener('click', () => {
+					clearSavedState('simplex');
+					Object.assign(sstate, structuredClone(SIMPLEX_DEFAULTS));
+					while (sstate.colors.length < 10) sstate.colors.push('#ffffffff');
+					sstate.colors.length = 10;
+					sync.forEach((f) => f()); dimUnused(); push();
+				});
+				const copyBtn = document.getElementById('copy');
+				if (copyBtn) copyBtn.addEventListener('click', async (e) => {
+					const q = (v) => (typeof v === 'string' ? `'${v}'` : v);
+					const bodyTxt = Object.keys(SIMPLEX_DEFAULTS).map((k) => Array.isArray(sstate[k])
+						? `  ${k}: [${sstate[k].map(q).join(', ')}],`
+						: `  ${k}: ${q(sstate[k])},`).join('\n');
+					await navigator.clipboard.writeText(`const params = {\n${bodyTxt}\n};`);
+					e.target.textContent = 'Copied';
+					setTimeout(() => (e.target.textContent = 'Copy'), 1500);
+				});
+				const saveBtn = document.getElementById('save');
+				if (saveBtn) saveBtn.addEventListener('click', (e) => {
+					saveState('simplex', sstate);
+					push();
+					e.target.textContent = 'Saved';
+					setTimeout(() => (e.target.textContent = 'Save'), 1500);
+				});
+
+				push();
+			} catch (e) {
+				const el = document.getElementById('err');
+				el.style.display = 'block';
+				el.textContent = 'Shader failed to start:\n' + (e?.stack || e);
+			}
+		}
+
+		// Original god-rays — untouched, just gated so it doesn't mount while
+		// another shader (mesh / radial / simplex) is active. (God-rays is
+		// capped at 5 colors by the shader itself, unlike the others.)
+		if (ACTIVE_SHADER !== 'mesh' && ACTIVE_SHADER !== 'radial' && ACTIVE_SHADER !== 'simplex') try {
+			// ShaderMount rejects a texture that hasn't decoded, so wait for it.
+			let noise;
+			try { noise = getShaderNoiseTexture(document); } catch { noise = getShaderNoiseTexture(); }
+			if (!(noise.complete && noise.naturalWidth)) {
+				if (typeof noise.decode === 'function') await noise.decode();
+				else await new Promise((ok, no) => {
+					noise.addEventListener('load', ok, { once: true });
+					noise.addEventListener('error', no, { once: true });
+				});
+			}
+
+			// Solve for the shader offset that puts the focal point where
+			// `focalOffsetPx` asks, in the CURRENT box. Inverts
+			// `focalY = h / 2 + offsetY * max(w, h)`.
+			//
+			// The anchor is the chat composer's measured position, so the rays and the
+			// content keep the same relationship however the column is laid out. That
+			// was load-bearing when the column centred itself vertically and slid down
+			// by half of any extra window height; it's now top-aligned, which makes
+			// the composer's own position stable, but measuring rather than assuming
+			// is what let that CSS change land without touching this file.
+			//
+			// Everything is measured against the host's own rect, which spares us a
+			// duplicated copy of the overscan constant from home.scss — the gap
+			// between the host and what it overscans is read live.
+			const focalOffsetY = () => {
+				const host = bg.getBoundingClientRect();
+				if (!host.width || !host.height) return 0;
+
+				let fromHostTop;
+				if (anchor) {
+					// `scrollTop` is added back so the anchor's RESTING position is what
+					// counts. Without it the background would slide up the screen as the
+					// seller scrolls the content, since the rect is viewport-relative
+					// while the shader host is not.
+					fromHostTop = (anchor.getBoundingClientRect().top - host.top)
+						+ (scroller ? scroller.scrollTop : 0)
+						+ state.focalOffsetPx;
+				} else {
+					fromHostTop = (shell.getBoundingClientRect().top - host.top) + state.focalFallbackPx;
+				}
+
+				return (fromHostTop - host.height / 2) / Math.max(host.width, host.height);
+			};
+
+			let offsetY = focalOffsetY();
+
+			const uniformsFor = () => {
+				const u = {
+					u_noiseTexture: noise,
+					u_offsetY: offsetY,   // derived, not a slider — see focalOffsetY
+					// Always send all 5 slots (the shader declares vec4 u_colors[5]);
+					// u_colorsCount is what decides how many get used.
+					u_colors: state.colors.map(toVec4),
+					u_colorsCount: state.colorsCount,
+					u_colorBack: toVec4(state.colorBack),
+					u_colorBloom: toVec4(state.colorBloom),
+					u_fit: ShaderFitOptions.cover,
+					u_originX: 0.5, u_originY: 0.5,
+					u_worldWidth: 0, u_worldHeight: 0,
+				};
+				for (const [k, uni] of SLIDERS) if (uni) u[uni] = state[k];
+				return u;
+			};
+
+			const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+
+			const mount = new ShaderMount(
+				bg, godRaysFragmentShader, uniformsFor(), undefined,
+				reduce.matches ? 0 : state.speed, 0,
+				state.blur > 0 ? 1 : 2   // minPixelRatio
+			);
+			window.godRays = mount;
+
+			let lastBlur = state.blur;
+
+			// Cone centres, in conic-gradient degrees (0 = 12 o'clock, clockwise).
+			const CONES = [['north', 0], ['east', 90], ['south', 180], ['west', 270]];
+
+			// Where the rays converge, as CSS percentages of the shader host, so both
+			// mask layers can be pinned to the focal point instead of the box centre.
+			//
+			// The shader puts the focal point where its object UV hits zero. From the
+			// vertex source: v_objectUV = uv * S + (-offsetX, +offsetY), where `uv`
+			// spans -0.5..0.5 across the canvas (x rightward, y UPWARD) and S is
+			// u_resolution / objectBoxSize. So UV is zero at uv = (offsetX / Sx,
+			// -offsetY / Sy). Converting to top-left percentages flips y, and both
+			// axes land on the same tidy form: 0.5 + offset / S.
+			//
+			// `u_fit: cover` with the god-rays' 1:1 world ratio makes the object box a
+			// square of the canvas's longer side, so Sx = w / max(w, h) and
+			// Sy = h / max(w, h). Device pixel ratio cancels out of both, which is why
+			// CSS pixels from getBoundingClientRect are good enough here.
+			//
+			// Percentages outside 0-100 are legal and meaningful — they park the focal
+			// point off-canvas, which is a normal thing to want.
+			//
+			// Reads the live `offsetY` (solved from `focalOffsetPx`), not a default,
+			// so the mask lands on the same point the rays converge on.
+			const focalPct = () => {
+				const { width: w, height: h } = bg.getBoundingClientRect();
+				if (!w || !h) return { x: 50, y: 50 };
+				const longest = Math.max(w, h);
+				return {
+					x: (0.5 + state.offsetX / (w / longest)) * 100,
+					y: (0.5 + offsetY / (h / longest)) * 100,
+				};
+			};
+
+			// Two mask layers, intersected. The conic one CLEARS the enabled cones —
+			// each becomes a clean wedge with no rays, +/- `wedge` degrees wide — while
+			// rays fill everything else. The radial one punches a soft hole at the centre
+			// so the rays never resolve into a visible point. Masking beats overlaying
+			// white shapes: it stays transparent, so this works over any background, and
+			// it doesn't add a layer for the compositor to blur.
+			//
+			// Both layers are positioned at the focal point rather than 50% 50%, so
+			// moving the focal point takes the rays, the cleared cones, and the hole
+			// with it as one composition.
+			const applyMask = () => {
+				const layers = [];
+				const on = CONES.filter(([k]) => state[k]);
+				const { x: cx, y: cy } = focalPct();
+				const at = `${cx.toFixed(2)}% ${cy.toFixed(2)}%`;
+
+				// Nothing cleared means the full circle of rays — no conic layer needed.
+				if (on.length) {
+					const centers = on.map(([, deg]) => deg).sort((a, b) => a - b);
+
+					const gapAfter = (i) => {
+						const next = centers[(i + 1) % centers.length];
+						return ((next - centers[i]) % 360 + 360) % 360 || 360;
+					};
+
+					// Cleared cones must not merge into each other, so cap the half-extent at
+					// half the tightest gap between neighbours.
+					let minGap = 360, seam = 0, widest = -1;
+					for (let i = 0; i < centers.length; i++) {
+						const g = gapAfter(i);
+						minGap = Math.min(minGap, g);
+						if (g > widest) { widest = g; seam = centers[i] + g / 2; }
+					}
+					const limit = centers.length === 1 ? 179 : minGap / 2 - 0.5;
+					const w = Math.min(state.wedge, limit);
+					const f = Math.min(state.feather, limit - w);
+
+					// Anchoring the gradient's seam in the widest gap means no cone straddles
+					// the 0/360 boundary, so the stops stay monotonic without special cases.
+					const stops = [[0, '#000']];
+					for (const p of centers.map((c) => ((c - seam) % 360 + 360) % 360).sort((a, b) => a - b)) {
+						stops.push([p - w - f, '#000'], [p - w, 'transparent'],
+							[p + w, 'transparent'], [p + w + f, '#000']);
+					}
+					stops.push([360, '#000']);
+
+					layers.push(`conic-gradient(from ${seam}deg at ${at}, ` +
+						stops.map(([d, c]) => `${c} ${d}deg`).join(', ') + ')');
+				}
+
+				if (state.hole > 0) {
+					const r = state.hole;
+					const hf = Math.max(state.holeFeather, 0.1);
+					layers.push(`radial-gradient(circle at ${at}, transparent 0, transparent ${r}vmin, #000 ${r + hf}vmin)`);
+				}
+
+				const img = layers.length ? layers.join(', ') : 'none';
+				bg.style.maskImage = img;
+				bg.style.webkitMaskImage = img;
+				// Two layers must intersect, not stack. Safari wants the legacy keyword.
+				bg.style.maskComposite = layers.length > 1 ? 'intersect' : 'add';
+				bg.style.webkitMaskComposite = layers.length > 1 ? 'source-in' : 'source-over';
+			};
+
+			const push = () => {
+				// Re-solve first: `uniformsFor` and `applyMask` both read `offsetY`, and
+				// the slider that feeds it is `focalOffsetPx`.
+				offsetY = focalOffsetY();
+				mount.setUniforms(uniformsFor());
+				mount.setSpeed(reduce.matches ? 0 : state.speed);
+				bg.style.filter = `blur(${state.blur}px)`;
+				applyMask();
+
+				// Blur discards detail, so shade fewer pixels while it's on. Fires only on
+				// the 0 <-> non-zero crossing, since it triggers a resize.
+				if ((lastBlur > 0) !== (state.blur > 0)) mount.setMinPixelRatio(state.blur > 0 ? 1 : 2);
+				lastBlur = state.blur;
+
+				// At speed 0 the render loop is stopped, so uniform changes need a nudge.
+				if (state.speed === 0 || reduce.matches) { try { mount.requestRender(); } catch { } }
+			};
+
+			reduce.addEventListener('change', push);
+
+			// Re-solve the offset and re-place the mask on it. `setUniforms` merges into
+			// the existing set and renders immediately, so this also works while the
+			// animation loop is stopped for reduced-motion.
+			const syncFocal = () => {
+				offsetY = focalOffsetY();
+				mount.setUniforms({ u_offsetY: offsetY });
+				applyMask();
+			};
+
+			// Re-solve whenever the box OR the anchor could have moved:
+			//   • the host, for window resizes, and
+			//   • the content column, because anything that reflows it can move the
+			//     composer — the briefing text rewrapping at a new width, the textarea
+			//     autosizing. Watching the column rather than the composer catches the
+			//     cases where the composer moves without changing its own size.
+			if (typeof ResizeObserver === 'function') {
+				const ro = new ResizeObserver(syncFocal);
+				ro.observe(bg);
+				const column = document.querySelector('.seller-home__main-inner');
+				if (column) ro.observe(column);
+			}
+
+			// ---- panel --------------------------------------------------------------
+			const sync = [];   // functions that pull UI back from state
+
+			function colorRow(host, label, read, write) {
+				const row = document.createElement('div');
+				row.className = 'crow';
+				row.innerHTML =
+					`<input type="color">` +
+					`<div class="stack">` +
+					`<span class="hex"><span>${label}</span><span class="v"></span></span>` +
+					`<input type="range" min="0" max="1" step="0.01">` +
+					`</div>`;
+				const [swatch, alpha] = row.querySelectorAll('input');
+				const out = row.querySelector('.v');
+
+				const refresh = () => {
+					const { rgb, a } = splitHex(read());
+					swatch.value = rgb; alpha.value = a; out.textContent = read();
+				};
+				const change = () => { write(joinHex(swatch.value, parseFloat(alpha.value))); refresh(); push(); };
+
+				swatch.addEventListener('input', change);
+				alpha.addEventListener('input', change);
+				refresh();
+				sync.push(refresh);
+				host.appendChild(row);
+				return row;
+			}
+
+			const rayRows = [];
+			const rayHost = document.getElementById('rayColors');
+			for (let i = 0; i < 5; i++) {
+				rayRows.push(colorRow(rayHost, `color ${i + 1}`,
+					() => state.colors[i], (v) => (state.colors[i] = v)));
+			}
+			const otherHost = document.getElementById('otherColors');
+			colorRow(otherHost, 'colorBack', () => state.colorBack, (v) => (state.colorBack = v));
+			colorRow(otherHost, 'colorBloom', () => state.colorBloom, (v) => (state.colorBloom = v));
+
+			const dimUnused = () => rayRows.forEach((r, i) =>
+				r.classList.toggle('off', i >= state.colorsCount));
+
+			function slider(host, key, min, max, step, after) {
+				const row = document.createElement('div');
+				row.className = 'row';
+				row.innerHTML =
+					`<span class="lbl"><span>${key}</span><span class="val"></span></span>` +
+					`<input type="range" min="${min}" max="${max}" step="${step}">`;
+				const input = row.querySelector('input');
+				const out = row.querySelector('.val');
+				const refresh = () => { input.value = state[key]; out.textContent = state[key]; };
+				input.addEventListener('input', () => {
+					state[key] = parseFloat(input.value);
+					refresh(); after?.(); push();
+				});
+				refresh();
+				sync.push(refresh);
+				host.appendChild(row);
+			}
+
+			slider(document.getElementById('countRow').parentElement, 'colorsCount', 1, 5, 1, dimUnused);
+			document.getElementById('countRow').remove();
+			dimUnused();
+
+			const coneHost = document.getElementById('cones');
+			const coneBtns = {};
+			for (const [k] of CONES) {
+				const b = document.createElement('button');
+				b.className = 'tog';
+				b.textContent = k;
+				b.addEventListener('click', () => { state[k] = !state[k]; refreshCones(); push(); });
+				coneBtns[k] = b;
+				coneHost.appendChild(b);
+			}
+			const refreshCones = () => {
+				for (const [k] of CONES) coneBtns[k].classList.toggle('on', state[k]);
+			};
+			refreshCones();
+			sync.push(refreshCones);
+
+			const rows = document.getElementById('rows');
+			for (const [k, , min, max, step] of SLIDERS) slider(rows, k, min, max, step);
+
+			document.getElementById('toggle').addEventListener('click', () => {
+				const closed = document.getElementById('panel').classList.toggle('closed');
+				document.getElementById('toggle').textContent = closed ? 'Controls' : 'Close';
+				for (const id of ['copy', 'save', 'reset']) document.getElementById(id).hidden = closed;
+			});
+
+			document.getElementById('reset').addEventListener('click', () => {
+				// Forget the saved preset and fall back to the built-in defaults.
+				clearSavedState('godrays');
+				Object.assign(state, structuredClone(DEFAULTS));
+				sync.forEach((f) => f()); dimUnused(); push();
+			});
+
+			// Save — persist the current settings as the background (already
+			// applied live via push(); saving makes them stick across reloads,
+			// see the `loadSavedState('godrays')` seed above).
+			document.getElementById('copy').addEventListener('click', async (e) => {
+				const q = (v) => (typeof v === 'string' ? `'${v}'` : v);
+				const body = Object.keys(DEFAULTS).map((k) => Array.isArray(state[k])
+					? `  ${k}: [${state[k].map(q).join(', ')}],`
+					: `  ${k}: ${q(state[k])},`).join('\n');
+				await navigator.clipboard.writeText(`const params = {\n${body}\n};`);
+				e.target.textContent = 'Copied';
+				setTimeout(() => (e.target.textContent = 'Copy'), 1500);
+			});
+			document.getElementById('save').addEventListener('click', (e) => {
+				saveState('godrays', state);
+				push();
+				e.target.textContent = 'Saved';
+				setTimeout(() => (e.target.textContent = 'Save'), 1500);
+			});
+
+			push();
+		} catch (e) {
+			const el = document.getElementById('err');
+			el.style.display = 'block';
+			el.textContent = 'Shader failed to start:\n' + (e?.stack || e);
+		}
+	</script>
+
+	{# The global-header Setup (gear) icon opens a small demo-controls
+	   dropdown: pick the background shader (God Rays / Mesh — persisted and
+	   applied on reload) and show/hide the control panel. Plain (non-module)
+	   script so it runs at parse time, after the header + panel are in the
+	   DOM. Only wired here on Home, where the shaders + panel live; both
+	   choices persist in localStorage (real preferences, not demo state). #}
+	<script>
+		(function () {
+			return; // Style sandbox: no shader picker.
+			// ── One-time forced default (all users) ──────────────────────────
+			// Bump SHADER_FORCE to push the current defaults onto EVERYONE,
+			// including sellers who previously picked another shader or opened
+			// the control panel (both persisted in localStorage). On the first
+			// load after a bump we drop those saved choices so DEFAULT_SHADER +
+			// the hidden panel win; they can still re-pick / re-open afterward.
+			// This classic script runs before the deferred shader module reads
+			// the same keys, so the forced pick also drives what mounts.
+			var SHADER_FORCE = 'simplex-2026-09-07';
+			try {
+				if (window.localStorage.getItem('sh:style:shaderForce') !== SHADER_FORCE) {
+					window.localStorage.removeItem('sh:style:shader');
+					window.localStorage.removeItem('sh:style:shaderControls');
+					// Also drop any saved Simplex tuning so the new baked defaults win.
+					window.localStorage.removeItem('sh:style:shaderState:simplex');
+					window.localStorage.setItem('sh:style:shaderForce', SHADER_FORCE);
+				}
+			} catch (e) { }
+
+			var panel = document.getElementById('panel');
+			var gearBtn = document.querySelector('.slds-global-actions__setup');
+			if (!gearBtn) return;
+			var trigger = gearBtn.closest('.slds-dropdown-trigger') || gearBtn.parentElement;
+
+			var SHADER_KEY = 'sh:style:shader';        // 'godrays' | 'mesh'
+			var PANEL_KEY = 'sh:style:shaderControls'; // 'shown' | 'hidden'
+			var DEFAULT_SHADER = 'simplex';
+
+			function lsGet(key) { try { return window.localStorage.getItem(key); } catch (e) { return null; } }
+			function lsSet(key, val) { try { window.localStorage.setItem(key, val); } catch (e) { } }
+
+			var activeShader = new URLSearchParams(location.search).get('shader') || lsGet(SHADER_KEY) || DEFAULT_SHADER;
+			// Hidden by default — the panel only shows if the seller explicitly
+			// picked "Show control panel" (persisted as 'shown').
+			var panelHidden = lsGet(PANEL_KEY) !== 'shown';
+
+			// Reflect the saved panel state on load.
+			if (panel) panel.classList.toggle('is-hidden', panelHidden);
+
+			// ── Dropdown markup (SLDS) ────────────────────────────────────
+			var check = '<svg class="slds-icon slds-icon_x-small slds-icon-text-default slds-m-right_x-small" aria-hidden="true"><use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use></svg>';
+			function shaderItem(id, label) {
+				var on = activeShader === id;
+				return '<li class="slds-dropdown__item" role="presentation">' +
+					'<a href="#" role="menuitemradio" aria-checked="' + on + '" data-sh-shader="' + id + '" tabindex="0">' +
+					'<span class="slds-truncate" title="' + label + '">' +
+					'<span data-sh-check style="visibility:' + (on ? 'visible' : 'hidden') + '">' + check + '</span>' + label +
+					'</span></a></li>';
+			}
+			var dd = document.createElement('div');
+			dd.className = 'slds-dropdown slds-dropdown_right slds-dropdown_small';
+			dd.setAttribute('role', 'menu');
+			dd.style.display = 'none';
+			dd.innerHTML =
+				'<ul class="slds-dropdown__list" role="presentation">' +
+				'<li class="slds-dropdown__header slds-truncate" role="separator"><span>Background shader</span></li>' +
+				shaderItem('godrays', 'God Rays') +
+				shaderItem('mesh', 'Mesh') +
+				shaderItem('radial', 'Radial') +
+				shaderItem('simplex', 'Simplex') +
+				'<li class="slds-has-divider_top-space" role="separator"></li>' +
+				'<li class="slds-dropdown__item" role="presentation">' +
+				'<a href="#" role="menuitemcheckbox" aria-checked="' + (!panelHidden) + '" data-sh-panel-toggle tabindex="0">' +
+				'<span class="slds-truncate" title="Show control panel">' +
+				'<span data-sh-panel-check style="visibility:' + (panelHidden ? 'hidden' : 'visible') + '">' + check + '</span>Show control panel' +
+				'</span></a></li>' +
+				'</ul>';
+			trigger.appendChild(dd);
+
+			// ── Open / close ──────────────────────────────────────────────
+			function open() { trigger.classList.add('slds-is-open'); dd.style.display = 'block'; gearBtn.setAttribute('aria-expanded', 'true'); }
+			function close() { trigger.classList.remove('slds-is-open'); dd.style.display = 'none'; gearBtn.setAttribute('aria-expanded', 'false'); }
+
+			gearBtn.setAttribute('aria-haspopup', 'true');
+			gearBtn.setAttribute('aria-expanded', 'false');
+			gearBtn.setAttribute('title', 'Demo controls');
+			gearBtn.addEventListener('click', function (e) {
+				e.preventDefault(); e.stopPropagation();
+				dd.style.display === 'none' ? open() : close();
+			});
+			document.addEventListener('click', function (e) { if (!trigger.contains(e.target)) close(); });
+			document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+
+			// ── Actions ───────────────────────────────────────────────────
+			dd.addEventListener('click', function (e) {
+				var shaderEl = e.target.closest('[data-sh-shader]');
+				if (shaderEl) {
+					e.preventDefault();
+					var choice = shaderEl.getAttribute('data-sh-shader');
+					if (choice === activeShader) { close(); return; }
+					lsSet(SHADER_KEY, choice);
+					// Clean URL so the saved pick (not a stale ?shader=) wins.
+					location.assign(location.pathname);
+					return;
+				}
+				var panelEl = e.target.closest('[data-sh-panel-toggle]');
+				if (panelEl) {
+					e.preventDefault();
+					if (!panel) return;
+					panelHidden = !panel.classList.contains('is-hidden');
+					panel.classList.toggle('is-hidden', panelHidden);
+					lsSet(PANEL_KEY, panelHidden ? 'hidden' : 'shown');
+					panelEl.setAttribute('aria-checked', String(!panelHidden));
+					var chk = dd.querySelector('[data-sh-panel-check]');
+					if (chk) chk.style.visibility = panelHidden ? 'hidden' : 'visible';
+					return;
+				}
+			});
+		})();
+	</script>
+
+{% endblock %}

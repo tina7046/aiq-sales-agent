@@ -1,0 +1,563 @@
+{#
+  Seller Home — left navigation
+  =====================================================================
+  Renders the fixed 300px left-hand navigation for /home.html.
+
+    ┌───────────────────────────────┐  ◂  Sticky top region:
+    │                        ◂ (…)  │      • Row 0: collapse button
+    │  + New chat                   │      • Rows 1-4: primary items
+    │  🗓 Scheduled                 │        (New chat, Scheduled,
+    │  ▦ Skills                     │        Skills, Knowledge)
+    │  📚 Knowledge                 │
+    │                               │  ◂  Scrollable middle region:
+    │  🕒 Recents  (semibold hdr)   │      • Padded top → visible
+    │    Acme Inc Prospecting       │        separation between the
+    │    Top Account Resolutions…   │        primary group and the
+    │    Q3 Pipeline Health Report  │        Recents header per the
+    │    …                          │        current design.
+    ├───────────────────────────────┤  ◂  Sticky footer region:
+    │  💬 Feedback                  │      • Feedback, Connections,
+    │  🔧 Connections               │        Settings
+    │  ⚙ Settings                   │
+    └───────────────────────────────┘
+
+  Consumes context vars provided by src/views/data/home.json:
+    • navPrimary — Array<{ id, label, icon | iconImage, href? }>.
+                   Top primary items (currently New chat, Scheduled,
+                   Skills, Knowledge).
+    • navFooter  — Array<{ id, label, icon }>. Bottom pinned items
+                   (Feedback, Connections, Settings).
+    • navActive  — String. `id` of the current active item. Defaults to
+                   "new_chat". Ignored when unmatched (renders no active
+                   state — intended for L1/orphaned surfaces).
+    • recents    — Array<{ id, label }>. Scrollable Recents list.
+
+  Structure follows the Hunter Builder nav pattern (macro + data-driven
+  render, sprite icons, CSS-only collapse via a modifier class) but is
+  namespaced under `.seller-home__nav` so nothing here couples to
+  hunter_builder.scss.
+
+  Collapse behaviour: the outer `.seller-home` container carries
+  `.seller-home--nav-collapsed` when the user has toggled the nav shut.
+  home.js persists that state to localStorage under key `sh:navCollapsed`.
+  Collapsed styles live in home.scss and simply reduce the width +
+  hide labels; the markup below stays identical between states so JS
+  never has to rebuild the DOM. That's why a Recents row ships both its
+  label AND a two-letter monogram (`recentMonogram`) — the collapsed rail
+  has no icon to fall back on, so one of the two is always hidden.
+#}
+
+{# Reusable nav-item macro. Kept parallel to the Hunter Builder
+   `renderNavItem` shape — same {id,label,icon} contract, same
+   aria-current-on-active convention — so anyone who knows one knows
+   the other. Every row is a `<button type="button">` so the browser
+   never shows a URL preview on hover. Destinations live on
+   `data-sh-nav-href`; home.js navigates on click. Two intentional differences:
+     • Icons live under a dedicated wrapper (`.seller-home__nav-icon`)
+       so collapse-state styling can size/center them without
+       reaching into `<svg>` selectors.
+     • Two icon sources are supported:
+         - `icon: "<sprite-id>"`      → utility-sprite symbol via <svg><use>
+                                        (the default; adapts to currentColor)
+         - `iconImage: "<asset-path>"` → bespoke glyph the SLDS utility
+                                        sprite doesn't carry. Painted as a
+                                        currentColor fill masked by the
+                                        asset, NOT as an <img>, so it
+                                        tints with hover and active state
+                                        exactly like a sprite does.
+                                        `iconImage` wins if both are set.
+                                        The asset must be MONOCHROME with
+                                        a transparent ground — only its
+                                        alpha channel survives the mask,
+                                        so its own colour is discarded
+                                        and a multi-colour raster would
+                                        flatten to one silhouette.
+#}
+{% macro renderNavItem(item, activeId, badgeCount) %}
+{% set isActive = activeId == item.id %}
+<button
+  type="button"
+  class="seller-home__nav-item{% if isActive %} is-active{% endif %}"
+  role="listitem"
+  data-sh-nav="{{ item.id }}"
+  {% if item.href %}data-sh-nav-href="{{ item.href | appUrl }}"{% else %}data-sh-nav-noroute{% endif %}
+  {% if item.hidden %}hidden{% endif %}
+  {# Opt this item into the shared Tools modal. tools_modal.js binds any
+     `[data-sh-tools-open]` (preventDefault + openToolsModal), so on a
+     page carrying the modal this opens it instead of following the
+     stored destination. `data-sh-nav-href` stays as the no-modal fallback. #}
+  {% if item.opensToolsModal %}data-sh-tools-open{% endif %}
+  {% if isActive %}aria-current="page"{% endif %}
+  title="{{ item.label }}"
+>
+  <span class="seller-home__nav-icon" aria-hidden="true">
+    {% if item.iconImage %}
+      {# Bespoke-glyph branch. An empty span rather than an <img>: the
+         asset arrives as a CSS mask (see `.seller-home__nav-icon-image`
+         in home.scss) over a currentColor fill, which is what lets a
+         raster tint with hover and active state. The path travels as a
+         custom property because it's data, not style — the rule in the
+         stylesheet owns everything else about how it renders.
+
+         No `alt` to lose here: the wrapper is aria-hidden and the
+         sibling `.nav-label` (or `title` on the button when collapsed)
+         carries the accessible name. #}
+      <span
+        class="seller-home__nav-icon-image"
+        style="--sh-nav-icon-image: url('{{ item.iconImage }}')"
+        aria-hidden="true"
+      ></span>
+    {% else %}
+      {# Sprite branch. width/height presentation attrs mirror the
+         Hunter Builder pattern: they pin the intrinsic size to 20×20
+         during CSS-load races. Runtime rules in home.scss
+         (.seller-home__nav-icon svg{ … }) still win once styles apply. #}
+      <svg width="20" height="20" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ item.icon }}"></use>
+      </svg>
+    {% endif %}
+  </span>
+  <span class="seller-home__nav-label">{{ item.label }}</span>
+  {# Count badge — passed only for the item that wants one (Connections).
+     A fixed total of available connections; not updated at runtime.
+     `slds-col_bump-left` pushes it to the row's trailing edge. #}
+  {% if badgeCount is defined %}
+  <span
+    class="slds-badge slds-theme_info slds-col_bump-left seller-home__nav-badge"
+    data-sh-tools-nav-badge
+    {% if not badgeCount %}hidden{% endif %}
+  >
+    <span class="slds-assistive-text">: </span><span data-sh-tools-nav-badge-count>{{ badgeCount }}</span>
+    <span class="slds-assistive-text"> connections available</span>
+  </span>
+  {% endif %}
+</button>
+{% endmacro %}
+
+{# ── renderRunningRing(r) ─────────────────────────────────────────
+   Small SLDS 2-style progress ring rendered at the trailing edge of
+   a Recents row when `r.runStatus == "running"`. The ring represents
+   the ACTIVE EXECUTION in that conversation — not any reusable Skill
+   the run happens to be exercising (see the "Skill / RecentChat
+   split" note atop `data/skills.json`).
+
+   Two modes, driven by whether `r.progress` is present:
+
+     • Determinate — `r.progress` is a number 0-100. Rendered as a
+                     stroke-dasharray arc filling from the top,
+                     clockwise, to `progress`% of the ring. This is
+                     the default surface for a running chat because
+                     the platform can report real progress. Role:
+                     `progressbar`, with aria-valuemin/max/now.
+     • Indeterminate — no `progress` (or `null`). Rendered as a
+                     partial arc that spins on a fixed animation
+                     loop (see `.seller-home__nav-recent-ring--
+                     indeterminate` in home.scss). Role: `img`
+                     (no numeric value to report). Reserved for
+                     "we know a run is happening but the platform
+                     can't give us a percentage."
+
+   Both modes share the same 16 px round chrome (gray track +
+   accent-1 blue fill) so the visual affordance is stable across
+   states — the arc's SHAPE and BEHAVIOR differ, not the ring's
+   size or color palette.
+
+   Ring GEOMETRY: circle at (10,10) with r=8 in a 20-unit viewBox.
+   Circumference = 2 π × 8 ≈ 50.2654. `stroke-dasharray` sets the
+   dash length; `stroke-dashoffset` moves the dash "start" so the
+   visible arc represents the desired percentage. Rotation to
+   12 o'clock is done on the SVG element in home.scss (transform:
+   rotate(-90deg)) rather than per-<circle>, so animation and
+   determinate rendering share the same base orientation.
+
+   Aria-label copy is spec-driven ("<label> is running." / "<label>
+   is running, N percent complete.") — do not localize here without
+   also updating the RecentChat model doc.
+#}
+{# ── renderRecentStatus(r) ────────────────────────────────────────
+   Trailing state indicator for a workflow's Recents row, pinned to the
+   row's trailing edge (the SLDS `slds-col_bump-left` pattern in the
+   reference markup). Two states carry an indicator; every other renders
+   nothing so scheduled/paused/failed/archived rows stay bare:
+
+     • running ("Running") → the shared `.sh-spinner` (index.scss), the
+                             same border-spinner the feed status button
+                             reuses, re-boxed to the row slot in home.scss.
+     • completed ("New")   → a green dot: a completed workflow has fresh
+                             results to review. The same green the feed's
+                             completed status dot rests on; sized/coloured
+                             via `.seller-home__nav-recent-status--completed`.
+
+   `data-sh-recent-indicator` tags every node this emits so the runtime
+   live-sync in home.js can swap the indicator out cleanly when a
+   workflow's state changes. The dot is aria-hidden with a sibling
+   assistive-text span so the row still announces "…, new results". #}
+{% macro renderRecentStatus(r) %}
+  {% if r.status == "running" %}
+    <span
+      class="seller-home__nav-recent-status seller-home__nav-recent-status--running slds-col_bump-left"
+      role="img"
+      aria-label="{{ r.label }} is running."
+      data-sh-recent-indicator
+    >
+      <span class="seller-home__nav-recent-status-glyph seller-home__nav-recent-status-glyph--spinner sh-spinner" aria-hidden="true"></span>
+    </span>
+  {% elif r.status == "completed" %}
+    <span
+      class="seller-home__nav-recent-status seller-home__nav-recent-status--completed slds-col_bump-left"
+      data-sh-recent-indicator
+      aria-hidden="true"
+    >
+      <span class="seller-home__nav-recent-status-glyph seller-home__nav-recent-status-glyph--dot" data-sh-recent-status-dot></span>
+    </span>
+    <span class="slds-assistive-text" data-sh-recent-indicator>, new results</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro renderRunningRing(r) %}
+  {% if r.runStatus == "running" %}
+    {% set _hasProgress = (r.progress is defined) and (r.progress != null) %}
+    {% if _hasProgress %}
+      {# Clamp 0-100 without leaning on Nunjucks filters we don't
+         have in scope. Guards against upstream data that hasn't
+         been validated. #}
+      {% set _p = r.progress %}
+      {% if _p < 0   %}{% set _p = 0   %}{% endif %}
+      {% if _p > 100 %}{% set _p = 100 %}{% endif %}
+      {# stroke-dashoffset = C × (1 - p/100).  C ≈ 50.2654. #}
+      {% set _dashOffset = 50.2654 * (100 - _p) / 100 %}
+      <span
+        class="seller-home__nav-recent-ring seller-home__nav-recent-ring--running"
+        role="progressbar"
+        aria-label="{{ r.label }} is running, {{ _p }} percent complete."
+        aria-valuenow="{{ _p }}"
+        aria-valuemin="0"
+        aria-valuemax="100"
+      >
+        <svg viewBox="0 0 20 20" focusable="false" aria-hidden="true">
+          <circle class="seller-home__nav-recent-ring-track" cx="10" cy="10" r="8"></circle>
+          <circle
+            class="seller-home__nav-recent-ring-fill"
+            cx="10" cy="10" r="8"
+            stroke-dasharray="50.2654 50.2654"
+            stroke-dashoffset="{{ _dashOffset }}"
+          ></circle>
+        </svg>
+      </span>
+    {% else %}
+      <span
+        class="seller-home__nav-recent-ring seller-home__nav-recent-ring--running seller-home__nav-recent-ring--indeterminate"
+        role="img"
+        aria-label="{{ r.label }} is running."
+      >
+        <svg viewBox="0 0 20 20" focusable="false" aria-hidden="true">
+          <circle class="seller-home__nav-recent-ring-track" cx="10" cy="10" r="8"></circle>
+          {# ~30% arc — long enough to read as "progress" without
+             matching any specific percentage. Rotation animation
+             in home.scss sweeps it around the ring. #}
+          <circle
+            class="seller-home__nav-recent-ring-fill"
+            cx="10" cy="10" r="8"
+            stroke-dasharray="15 50.2654"
+          ></circle>
+        </svg>
+      </span>
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{# ── recentMonogram(label) ────────────────────────────────────────
+   The collapsed rail's stand-in for a Recents row: one or two letters
+   where the primary items above have their icon.
+
+   Recents have no icon by design — the expanded rail is label-only —
+   which used to mean the collapsed rail dropped the rows entirely and a
+   seller working out of the narrow nav had no sign that history existed,
+   let alone which thread they were in. Initials are the smallest thing
+   that still distinguishes one row from another and still fits the 24px
+   icon column, and the row's `title` carries the full label on hover
+   either way.
+
+   The letters:
+     • two or more words — first letter of the first two ("Found new
+       prospects" → FN), the avatar convention, so a reader who knows the
+       thread recognises it rather than decodes it
+     • one word — its first two letters ("Pipeline" → PI), because a lone
+       letter reads as a bullet more than a name
+   Always upper-case, so every row is the same two-glyph shape and the
+   column doesn't look ragged.
+
+   Emits nothing at all for an empty label — an empty box would take the
+   icon column's space and say less than leaving it blank.
+
+   Mirrored by `recentMonogram` in home.js, which paints these rows from
+   session storage on every load. Change the rule here, change it there.
+   That copy goes further in two ways this one can't cheaply: it splits on
+   runs of whitespace and it skips leading punctuation, so a typed query
+   ("$20M of your quota") gives 2O rather than $O. It's the path that ever
+   sees typed text — this one only renders authored `recents` — so the
+   difference stays there rather than being contorted into Nunjucks, which
+   has no regex and no `select` filter at this version.
+#}
+{% macro recentMonogram(label) %}
+{%- set _words = (label or "") | string | trim -%}
+{%- set _words = _words.split(" ") -%}
+{%- set _mono = "" -%}
+{%- if _words[1] -%}
+  {%- set _mono = (_words[0].slice(0, 1) ~ _words[1].slice(0, 1)) | upper -%}
+{%- elif _words[0] -%}
+  {%- set _mono = _words[0].slice(0, 2) | upper -%}
+{%- endif -%}
+{%- if _mono %}<span class="seller-home__nav-recent-mono" aria-hidden="true">{{ _mono }}</span>{% endif -%}
+{% endmacro %}
+
+{# Default the active id from home.json so pages that include this
+   partial without setting anything render the "New chat" landing state
+   we want. Pass `navActive` explicitly on any consumer that needs a
+   different active state (e.g. a future Workflows sub-page). #}
+{% set _shNavActive = navActive or "new_chat" %}
+
+{# Count for the Connections nav badge: the total number of connections
+   available in the catalog. Deliberately a fixed total, not a live
+   "not-connected" count — the badge should always show how many
+   connections exist, and never shift as the seller connects or
+   disconnects them or moves between pages. #}
+{% set _connectionsCount = (shared.toolsModal.tools or []) | length %}
+
+{# ── Workflow chat sessions (Recents) ─────────────────────────────────
+   One Recents row per workflow, sourced from index.json → feed.items so
+   the rail can't drift from the feed. Built here (not from the page's own
+   `recents`) so every Seller Home page that includes this nav shows the
+   same set — same pattern scheduled.html uses to derive its rows.
+
+     • feedId         — index.json feed item id; the stable key home.js's
+                        live-sync matches on when a feed row changes state.
+     • conversationId — the drill-in target where the workflow has one;
+                        rows without one render inert (present, not linked).
+     • label          — the feed item's title verbatim, so a workflow's
+                        rail row reads exactly like its row in the "Your
+                        agent at work" feed.
+     • status         — the feed item's state; drives the trailing indicator
+                        (running → spinner, completed → dot).
+
+   The same list is inlined as JSON at the foot of the nav for home.js,
+   which re-renders the rail at runtime (and would otherwise wipe this
+   server-rendered seed). #}
+{% set _feedItems = readData("index").feed.items or [] %}
+{% set workflowSessions = [] %}
+{% set workflowSessionsSeed = [] %}
+{% for _it in _feedItems %}
+  {% set _row = {
+    "feedId":         _it.id,
+    "conversationId": _it.conversationId or "",
+    "label":          _it.title,
+    "status":         _it.state,
+    "demoGate":       _it.demoGate or ""
+  } %}
+  {% set _ = workflowSessions.push(_row) %}
+  {# SSR seed omits gated rows so Recents does not flash them before JS. #}
+  {% if not _it.demoGate %}
+    {% set _ = workflowSessionsSeed.push(_row) %}
+  {% endif %}
+{% endfor %}
+
+{# ── Pre-paint nav state ──────────────────────────────────────────────
+   The collapsed preference is client state, so the static markup always
+   ships the expanded 300px rail. home.js applies the real state, but it
+   runs on DOMContentLoaded — after the first paint — and the rail has a
+   180ms width transition, so a collapsed user watched it sweep open and
+   shut on every navigation.
+
+   This runs it earlier instead. A parser-blocking inline script here,
+   ahead of the rail's own markup and inside `[data-sh-root]`, lands the
+   class before the nav is ever laid out, so there's nothing to animate
+   away from.
+
+   Both classes are set, not just the collapsed one: the `max-width:
+   40rem` rule in home.scss auto-collapses `.seller-home:not(
+   .seller-home--nav-expanded)`, so on a narrow window an expanded user
+   would otherwise get the same flash in reverse.
+
+   `--nav-preload` kills the width transition until home.js drops it
+   after the first frame — insurance so any future late state change
+   snaps rather than animates. The storage key is duplicated from
+   home.js by necessity: nothing else has loaded yet at this point. #}
+<script>
+  (function () {
+    var script = document.currentScript
+    var root = script && script.closest ? script.closest('[data-sh-root]') : null
+    if (!root) return
+
+    var collapsed = false
+    try {
+      collapsed = window.localStorage.getItem(
+        (window.SH && window.SH.storageKey)
+          ? window.SH.storageKey('sh:navCollapsed')
+          : 'sh:navCollapsed'
+      ) === 'true'
+    } catch (e) {
+      // Storage unavailable — fall through to the expanded default,
+      // which is what the markup already renders.
+    }
+    // Lab pages can opt into a collapsed first paint without rewriting
+    // the shared Home preference. Toggle still works after load.
+    if (root.hasAttribute('data-sh-nav-default-collapsed')) collapsed = true
+
+    root.classList.add('seller-home--nav-preload')
+    root.classList.toggle('seller-home--nav-collapsed', collapsed)
+    root.classList.toggle('seller-home--nav-expanded', !collapsed)
+  })()
+</script>
+
+<aside
+  class="seller-home__nav"
+  aria-label="Seller Home navigation"
+  data-sh-nav-root
+>
+  {# ── Sticky top ──────────────────────────────────────────────────
+     Holds the collapse toggle and the four primary nav items. Stays
+     visible when the Recents list scrolls. #}
+  <div class="seller-home__nav-top">
+    <div class="seller-home__nav-topbar">
+      <button
+        type="button"
+        class="seller-home__nav-toggle"
+        data-sh-nav-toggle
+        aria-label="Collapse navigation"
+        aria-expanded="true"
+        aria-controls="seller-home-nav-body"
+      >
+        <svg width="20" height="20" aria-hidden="true">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#arrow_left"></use>
+        </svg>
+      </button>
+    </div>
+
+    <div class="seller-home__nav-list seller-home__nav-list--primary" role="list">
+      {% for item in navPrimary %}
+        {% if item.id == "tools" %}
+          {{ renderNavItem(item, _shNavActive, _connectionsCount) }}
+        {% else %}
+          {{ renderNavItem(item, _shNavActive) }}
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ── Scrollable middle ────────────────────────────────────────────
+     Recents header sits inside the scroll region (not the sticky top)
+     because Figma shows the header scrolling out of view with the list
+     — the sticky region is JUST the collapse + primary items above. #}
+  <div
+    class="seller-home__nav-scroll"
+    id="seller-home-nav-body"
+    tabindex="0"
+    aria-label="Recent conversations"
+  >
+    {# The "Recents" heading is always present, including on a cold
+       start with no history — it's a fixed landmark in the rail, so
+       hiding it would shuffle the nav's shape the first time a
+       conversation is opened. Only the rows below it come and go. #}
+    <div class="seller-home__nav-section">
+      <div class="seller-home__nav-section-header" role="heading" aria-level="2">
+        <span class="seller-home__nav-icon" aria-hidden="true">
+          <svg width="20" height="20" aria-hidden="true">
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#clock"></use>
+          </svg>
+        </span>
+        <span class="seller-home__nav-label">Recents</span>
+      </div>
+
+      {# Rows are re-rendered from session storage by home.js on every
+         page load, so this server-rendered pass is a seed rather than
+         the source of truth. Both paths emit the same markup — see
+         `renderRecents` in home.js if you change the shape here. #}
+      <div
+        class="seller-home__nav-list seller-home__nav-list--recents"
+        role="list"
+        data-sh-recents-list
+      >
+        {% for r in workflowSessionsSeed %}
+        {# One row per workflow (see the `workflowSessions` derivation
+           above). Recents rows have no icon — Figma shows label-only,
+           indented under the "Recents" header. The monogram ahead of the
+           label is not a second icon: it only renders in the collapsed
+           rail, where the label doesn't. See `recentMonogram` above.
+
+           Two variants, both `<button>` so hover never shows a URL:
+             • Linked   (`r.conversationId` set) — destination on
+                        `data-sh-nav-href`; JS applies `.is-active` +
+                        `aria-current="page"` when the URL's `?id=`
+                        matches this row's `conversationId`.
+             • Unlinked (no `conversationId`)    — the workflow has no
+                        conversation yet, so the row is inert, still
+                        keyboard-reachable, and still shows its
+                        state indicator.
+
+           `data-sh-recent-feed` carries the feed item id so home.js can
+           flip this row's indicator live when the matching feed row
+           changes state. `data-sh-recent-status` exposes the state to
+           the user's CSS. This whole pass is a first-paint seed —
+           `renderRecents` in home.js re-renders the same markup at
+           runtime and is the source of truth. #}
+        <button
+          type="button"
+          class="seller-home__nav-recent{% if r.conversationId %} seller-home__nav-recent--linked{% endif %}{% if r.status == 'running' %} seller-home__nav-recent--running{% endif %}"
+          role="listitem"
+          data-sh-recent="rec-{{ r.feedId }}"
+          data-sh-recent-feed="{{ r.feedId }}"
+          {% if r.conversationId %}
+          data-sh-recent-conv="{{ r.conversationId }}"
+          data-sh-nav-href="{{ ('/home_conversation.html?id=' ~ r.conversationId) | appUrl }}"
+          {% else %}
+          data-sh-nav-noroute
+          {% endif %}
+          data-sh-recent-status="{{ r.status }}"
+          title="{{ r.label }}"
+        >
+          {{ recentMonogram(r.label) }}
+          <span class="seller-home__nav-recent-label">{{ r.label }}</span>
+          {{ renderRecentStatus(r) }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {# ── Sticky footer ───────────────────────────────────────────────
+     Feedback + Settings anchored at the bottom regardless of scroll
+     position. Border-top separates the footer from the scroll region;
+     see .seller-home__nav-footer in home.scss. #}
+  <div class="seller-home__nav-footer">
+    <div class="seller-home__nav-list seller-home__nav-list--footer" role="list">
+      {% for item in navFooter %}
+        {# Connections lives in the footer (above Settings) and keeps its
+           count badge — same convention as the primary loop, so the badge
+           follows the item wherever it's placed. #}
+        {% if item.id == "tools" %}
+          {{ renderNavItem(item, _shNavActive, _connectionsCount) }}
+        {% else %}
+          {{ renderNavItem(item, _shNavActive) }}
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ── Runtime plumbing for the Recents rail ────────────────────────────
+     home.js re-renders the Recents list on load (it merges opened /
+     schedule-draft threads with these workflow rows), which wipes the
+     server seed above. It rebuilds from this inlined list rather than
+     re-deriving it, so the two paths can't disagree. The <template> holds
+     the running spinner so the runtime renderer can clone it rather than
+     reconstruct it. #}
+  <script type="application/json" data-sh-nav-workflow-sessions>{{ workflowSessions | dump | safe }}</script>
+  <template data-sh-recent-spinner-template>
+    <span
+      class="seller-home__nav-recent-status seller-home__nav-recent-status--running slds-col_bump-left"
+      role="img"
+      data-sh-recent-indicator
+    >
+      <span class="seller-home__nav-recent-status-glyph seller-home__nav-recent-status-glyph--spinner sh-spinner" aria-hidden="true"></span>
+    </span>
+  </template>
+</aside>

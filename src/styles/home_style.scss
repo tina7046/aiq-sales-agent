@@ -1,0 +1,5165 @@
+
+$sh-nav-width-expanded: 18.75rem; // 300px — Figma frame width
+$sh-nav-width-collapsed: var(--slds-g-spacing-9, 3.5rem);
+$sh-nav-row-height: 2.25rem;     // 36px — nav row height
+$sh-nav-row-padding-x: var(--slds-g-spacing-4, 1rem);      // 16px
+$sh-nav-icon-box: var(--slds-g-sizing-7, 1.5rem);         // 24px wrapper (icon 20px + slack)
+$sh-nav-icon-size: 14px;       // 14px
+$sh-nav-icon-gap: var(--slds-g-spacing-2, 0.5rem);         // 8px
+$sh-nav-row-padding-x-collapsed: calc((#{$sh-nav-width-collapsed} - #{$sh-nav-icon-box}) / 2);
+
+
+$sh-shader-overscan: 90px;
+$sh-shader-min-height: 50rem;   // 800px
+
+@import 'aurora';
+
+// ──────────────────────────────────────────────────────────────────────
+// Zero-out `main.app-wrapper`'s SLDS default padding on this page only.
+// The wrapper carries `.slds-template_default`, which applies 16px of
+// padding via `var(--_slds-c-template-sizing-gap)` (see
+// slds2_agentic.scss). On Seller Home we want the nav + main content to
+// sit flush against the wrapper edges, so the left nav's right-edge
+// shadow lands at x=300 (no inset) and the main region uses its own
+// interior padding for content spacing. Selector specificity (0,1,1)
+// beats `.slds-template_default` (0,1,0), no `!important` required.
+// Scoped by virtue of home.css loading only on the Seller Home pages,
+// not the plain Sales chrome.
+// ──────────────────────────────────────────────────────────────────────
+main.app-wrapper {
+  padding: 0;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Root — full-viewport flex row inside .app-wrapper. `.app-wrapper` is
+// already absolutely positioned to fill the space below the Sales
+// header + context bar (see styles/index.scss), so `height: 100%` on
+// `.seller-home` inherits that rectangle directly.
+// ──────────────────────────────────────────────────────────────────────
+.seller-home {
+  display: flex;
+  align-items: stretch;
+  min-height: 100%;
+  height: 100%;
+
+  // Positioning root for the shader canvas
+  // (`.seller-home__shader`), which paints as an absolutely-
+  // positioned sibling of the nav + main, oversized past the box
+  // so its blur halo falls off-screen instead of tapering into
+  // transparent at the edges.
+  position: relative;
+
+  // Page background and the light end of the feed fade. Change these
+  // rather than the rules that paint them.
+  --sh-color-background: #fafafa;
+  --sh-color-foreground: #ffffff;
+
+  // Safe fallback surface — solid white, shows through only if:
+  //   • the shader fails to boot (WebGL error, CDN
+  //     outage, unsupported browser), in which case this is the
+  //     permanent surface, OR
+  //   • the seller opens Home in the brief window before the
+  //     shader has mounted its canvas (usually one frame), OR
+  //   • the seller is looking at a masked-out region of the
+  //     shader (the cleared cone at 12 o'clock) — the shader
+  //     canvas is fully transparent there, so this color is what
+  //     actually fills those areas.
+  // Set to `#FFFFFF` so it matches the shader's own `colorBack`
+  // (see the DEFAULTS block in index.html) — same value on both
+  // means no visible seam between the shader and the masked-out
+  // regions.
+  background-color: var(--sh-color-background);
+
+  // Belt-and-suspenders reset so nothing inside .app-wrapper
+  // injects spacing that misaligns the two panes.
+  margin: 0;
+
+  overflow: clip;
+}
+
+// ── Shader canvas host ─────────────────────────────────────────────
+// Owner: index.html's `<div class="seller-home__shader">` sibling
+// of the left nav + main. The `@paper-design/shaders` runtime mounts
+// a `<canvas>` here for whichever background shader is selected.
+// God Rays paints beams against a masked silhouette: rays everywhere
+// except a wide cleared cone at 12 o'clock, its apex on the
+// convergence point.
+// The animation loop is stopped when `prefers-reduced-motion:
+// reduce` matches (see the module script at the bottom of
+// index.html).
+//
+// Overscan (`inset: -90px`) is per the shader author's guidance so
+// the blur halo falls off-screen instead of fading to transparent
+// at the container's edge. `pointer-events: none` ensures the
+// canvas is inert — clicks and hovers pass straight through to
+// the nav + main above it. The paper-design mask (CSS conic +
+// radial gradient) is applied inline by the mount script so the
+// mask stays in the shader author's tunable coordinate space.
+//
+// Stacking order:
+//   z-index: 0            → the shader host (base layer within
+//                           the .seller-home stacking context)
+//   z-index: 1            → nav + main (in-flow siblings promoted
+//                           to positioned so they paint above the
+//                           absolute-positioned shader host)
+.seller-home__shader {
+  display: none;
+  position: absolute;
+
+  // Anchored to the top and sized with height, rather than pinned on all
+  // four sides with `inset`. Pinning top AND bottom makes the height
+  // fully determined by the shell, which leaves `min-height` nothing to
+  // clamp; growing downward from a fixed top edge is what lets the floor
+  // below take effect.
+  top: -$sh-shader-overscan;
+  right: -$sh-shader-overscan;
+  height: calc(100% + #{$sh-shader-overscan * 2});
+
+  // Left edge starts where the content column starts, not where the row
+  // does. The shader converges on the centre of its own box (`u_originX:
+  // 0.5` in the mount script), so a box spanning nav + content would put
+  // the convergence point half the nav width to the left of the composer
+  // it's supposed to sit under. Insetting by the nav width makes the box
+  // and the content column the same span, which is what keeps the focal
+  // point on the composer.
+  //
+  // The host can't simply be parented to `.seller-home__main` instead —
+  // that element owns `overflow-y: auto`, so an absolutely-positioned
+  // child would scroll away with the briefing.
+  left: calc(#{$sh-nav-width-expanded} - #{$sh-shader-overscan});
+
+  // Matches the nav's own width transition so the host glides to its new
+  // centre with the rail instead of snapping ahead of it.
+  transition: left 180ms ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+
+  // Floor on the box height, so a short window still gets a shader field long
+  // enough to reach the bottom of the shell instead of a squashed one. Below
+  // this height the box stops shrinking and the surplus hangs off the bottom,
+  // clipped by `.seller-home`'s `overflow: hidden`.
+  //
+  // This used to double as the thing that kept the focal point from riding up
+  // the screen. That job now belongs to the focal-point solve in index.html,
+  // which anchors the convergence point to the composer and re-solves the
+  // shader's offset on resize — a floor on the box could only ever influence
+  // the focal point indirectly.
+  min-height: $sh-shader-min-height;
+
+  z-index: 0;
+  pointer-events: none;
+  will-change: filter;
+
+  // ShaderMount injects a <canvas> as this element's child. Force
+  // it to fill so the WebGL surface tracks the container's box
+  // (which itself overscans the .seller-home region).
+  > canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+
+// ──────────────────────────────────────────────────────────────────────
+// Left navigation — 300px column, three stacked regions.
+// Uses flex-column with the middle region getting flex: 1 + its own
+// overflow-y so the top/bottom regions stay pinned regardless of the
+// Recents list length.
+// ──────────────────────────────────────────────────────────────────────
+.seller-home__nav {
+  flex: 0 0 $sh-nav-width-expanded;
+  width: $sh-nav-width-expanded;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; // required so the middle region's overflow honors this
+                 // container's height (default is `auto`, which fights
+                 // flex sizing).
+
+  // Positioned above the shader canvas
+  // (`.seller-home__shader` at z-index 0). Without an explicit
+  // stacking context, the absolutely-positioned shader would paint
+  // ON TOP of this in-flow sibling and cover the nav's white
+  // surface. `position: relative` + a positive z-index keeps the nav
+  // opaque and above the ray canvas.
+  //
+  // 2, not 1, because the rail's right-edge shadow (below) is painted
+  // OUTSIDE its box, into the main pane — so the nav has to outrank
+  // whatever the main pane puts there or the shadow gets covered. At 1
+  // it tied with `.seller-home__conv-composer`, which is later in the
+  // DOM and therefore won, clipping the shadow across the composer's
+  // bottom band on the conversation page.
+  //
+  // The alternative — isolating the conversation column so its layers
+  // stay internal — was rejected: the citation hover card inside that
+  // column is `position: fixed; z-index: 9000` specifically so it can
+  // float above everything, and isolating the column would cap it
+  // under this nav wherever the two overlap.
+  position: relative;
+  z-index: 2;
+
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+
+  // Nav shadow — back on the element as box-shadow. The conversation
+  // page clips it at the bottom; accepted as a known limitation.
+  box-shadow:
+    5px 0 5px 0 rgba(0, 0, 0, 0.10),
+    3px 0 3px 0 rgba(0, 0, 0, 0.16),
+    -1px 0 2px 0 rgba(0, 0, 0, 0.09);
+
+  overflow: hidden;
+
+  // Smooth width animation for the collapse toggle. Kept short so it
+  // feels responsive rather than choreographed.
+  transition: flex-basis 180ms ease, width 180ms ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+// ── Load-time animation suppression ───────────────────────────────
+// The two rules that animate on collapse — the rail's width and the
+// shader box's left inset — are the two that must not animate while
+// the page is still settling into the state it was already in.
+//
+// `--nav-preload` is set by the inline script in _home_left_nav.html
+// before first paint and dropped by home.js one frame later, so a
+// restored collapsed rail arrives already narrow instead of sweeping
+// shut. Both selectors are single-class, matching the specificity of
+// the rules they override, and come later in the file so they win.
+.seller-home--nav-preload {
+  .seller-home__nav,
+  .seller-home__shader {
+    transition: none;
+  }
+}
+
+// Sticky top — collapse control + primary items.
+.seller-home__nav-top {
+  flex: 0 0 auto;
+  padding: 2px 0 0;
+  display: flex;
+  flex-direction: column;
+}
+
+// Row that hosts the collapse toggle. Toggle sits on the right so it
+// aligns with the direction of collapse (Figma shows the arrow pointing
+// left; the button ITSELF sits on the right edge of the nav).
+.seller-home__nav-topbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0 var(--slds-g-spacing-3, 0.75rem); // 12px so the toggle
+                                               // hugs the right edge
+                                               // without touching it.
+  height: $sh-nav-row-height;
+
+  // The toggle stays flex-end at every width and rides in on the
+  // padding, for the same reason the rows do — see
+  // `.seller-home--nav-collapsed`. With one child, symmetric padding in
+  // the narrow rail centres it without touching `justify-content`.
+  transition: padding 180ms ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+.seller-home__nav-toggle {
+  // Reset button chrome so this is purely an icon target.
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+
+  width: $sh-nav-icon-box;
+  height: $sh-nav-icon-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+
+  svg {
+    width: $sh-nav-icon-size;
+    height: $sh-nav-icon-size;
+    fill: currentColor;
+    pointer-events: none;
+
+    // The arrow flips to face out when the rail collapses (see the
+    // `--nav-collapsed` block). Timed with the rail's own width
+    // transition so the two read as one movement.
+    transition: transform 180ms ease;
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  &:hover {
+    background: var(--slds-g-color-surface-container-2, #f3f3f3);
+  }
+
+  &:focus-visible {
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0176d3);
+    outline-offset: 2px;
+  }
+}
+
+// Scrollable middle — Recents section. Owns flex: 1 so it absorbs any
+// leftover vertical space. `min-height: 0` is required for the child's
+// overflow-y to actually clip (flex quirk).
+.seller-home__nav-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  outline: none; // container is `tabindex="0"` for keyboard scroll,
+                 // but we don't want the browser default focus ring
+                 // when the middle region is focused. Nav item focus
+                 // rings still show via `:focus-visible` on each item.
+
+  // Bottom fade-out mask (assumption; see file header). Makes the
+  // scroll affordance visible without hiding the last row entirely.
+  mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 1.5rem), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 1.5rem), transparent 100%);
+
+  // Firefox scrollbar
+  scrollbar-width: thin;
+  scrollbar-color: var(--slds-g-color-border-1, #c9c9c9) transparent;
+
+  // WebKit scrollbar
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb {
+    background: var(--slds-g-color-border-1, #c9c9c9);
+    border-radius: var(--slds-g-radius-border-pill, 15rem);
+  }
+}
+
+// Section wrapper inside the scroll region.
+//
+// `padding-top` is intentionally larger than the sticky-top's inline
+// spacing so the "Recents" header reads as a distinct group below the
+// primary nav rows. The design shows ~40px of separation between the
+// last primary row ("Tools") and the "Recents" header. We use a raw
+// 2.5rem here (matches the design's ~40px) because the SLDS 2 token
+// scale in this stylesheet exposes `--slds-g-spacing-8: 3rem` as the
+// nearest labelled step, which is too tall. Kept as a value rather
+// than a magic number so consumers who want to tune it in one place
+// can override this padding without hunting through the file.
+.seller-home__nav-section {
+  display: flex;
+  flex-direction: column;
+  // padding: 2.5rem 0 var(--slds-g-spacing-4, 1rem);
+}
+
+// Recents header — same 36px row shape as the primary items, semibold,
+// dark-blue. Rendered as a `<div role="heading">` rather than an `<a>`
+// because it's a group label, not a navigable destination.
+.seller-home__nav-section-header {
+  display: flex;
+  align-items: center;
+  gap: $sh-nav-icon-gap;
+  height: $sh-nav-row-height;
+  padding: 0 $sh-nav-row-padding-x;
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 14px);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.4;
+  user-select: none;
+
+  // Travels with the rail on collapse, same as the nav rows above.
+  transition: padding 180ms ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+// Sticky footer — Feedback + Settings. `border-top` separates from the
+// scroll region above so the boundary reads as a divider even when
+// the recents list scrolls past its bottom fade.
+.seller-home__nav-footer {
+  flex: 0 0 auto;
+  border-top: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+  padding: var(--slds-g-spacing-2, 0.5rem) 0;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Nav lists + items
+// ──────────────────────────────────────────────────────────────────────
+.seller-home__nav-list {
+  display: flex;
+  flex-direction: column;
+}
+
+// Every nav row that's clickable (primary items + footer items).
+// All rows are `<button>`. Destinations live on `data-sh-nav-href`.
+// `appearance` / `width` / `text-align` keep the button UA chrome
+// from shrinking or centering the row.
+.seller-home__nav-item {
+  display: flex;
+  align-items: center;
+  gap: $sh-nav-icon-gap;
+  height: $sh-nav-row-height;
+  padding: 0 $sh-nav-row-padding-x;
+
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 14px);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.4;
+
+  text-decoration: none;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  appearance: none;
+  width: 100%;
+  text-align: inherit;
+  box-sizing: border-box;
+
+  // `display: flex` outranks the UA `[hidden] { display: none }`.
+  &[hidden] {
+    display: none;
+  }
+
+  // Hover and active both add a 2px accent strip down the left edge —
+  // see the shared block below for why it's a shadow and not a border.
+  //
+  // `padding` is here because it's what carries the icon between the
+  // expanded and collapsed positions, at the rail's own 180ms so the two
+  // read as one movement. Under reduced motion it comes back out: the
+  // rail's width stops animating there, and padding easing on its own
+  // would be an icon drifting inside a row that already finished moving.
+  transition: background-color 120ms ease, color 120ms ease,
+    box-shadow 120ms ease, padding 180ms ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: background-color 120ms ease, color 120ms ease,
+      box-shadow 120ms ease;
+  }
+
+  // Base-stylesheet `a:hover, a:focus { text-decoration: underline }`
+  // (dist/styles/index.css) beats the resting `text-decoration: none`
+  // above on state due to the pseudo-class specificity bump, so pin
+  // it explicitly on both states.
+  &:hover,
+  &:focus,
+  &:focus-visible {
+    text-decoration: none;
+  }
+
+  &:focus-visible {
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0176d3);
+    outline-offset: -2px; // inset so the ring stays inside the row
+  }
+
+  // Hover and "you are here" are the same treatment on purpose: fill,
+  // accent strip, and the darker label. Grouped rather than duplicated
+  // so hovering an already-active row can't drift into a second look —
+  // and so the strip only has to be described once.
+  //
+  // The strip is an INSET SHADOW, not `border-left`. A border is part of
+  // the box, so adding one on state widened the row by 2px and pushed
+  // the icon and label right on every hover; an inset shadow is painted
+  // inside the padding box and takes up no space, so the row is
+  // identical in both states and only the paint changes. Same reason
+  // it's safe in the collapsed rail, where the row centres its icon and
+  // a 2px border would knock that centring off. This is the pattern the
+  // ready-to-review and scheduled rows already use for their focus
+  // strips — 3px there, 2px here to match the nav spec.
+  &:hover,
+  &.is-active {
+    background: var(--slds-g-color-brand-base-90, #D6E6FF);
+    box-shadow: inset var(--slds-g-sizing-border-2, 2px) 0 0 var(--slds-g-color-border-accent-1, #066AFE);
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+  }
+}
+
+// Icon wrapper — 24px square (see $sh-nav-icon-box). Keeping the SVG
+// itself at 20px so the surrounding pad matches Figma's implied hit
+// target without changing the sprite's rendered size.
+.seller-home__nav-icon {
+  flex: 0 0 $sh-nav-icon-box;
+  width: $sh-nav-icon-box;
+  height: $sh-nav-icon-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+
+  svg {
+    width: $sh-nav-icon-size;
+    height: $sh-nav-icon-size;
+    fill: currentColor;
+    pointer-events: none;
+  }
+
+  // Bespoke glyphs — for a nav item carrying `iconImage` in index.json
+  // instead of a utility-sprite `icon`. Same 20×20 render box as the SVG
+  // branch, so vertical rhythm doesn't depend on where the icon came
+  // from.
+  //
+  // The asset is a MASK over a currentColor fill, not an <img>. That's
+  // the whole point: an <img> paints its own pixels, so a raster glyph
+  // sat at its authored colour while every sprite beside it inherited
+  // the nav's navy and darkened on hover. Masking throws the asset's
+  // colour away and keeps only its alpha, so a flat PNG behaves like a
+  // sprite — one source of truth for icon colour, in `color` on the row.
+  //
+  // Consequence worth knowing: this only suits monochrome art on a
+  // transparent ground. A multi-colour raster would collapse into a
+  // single-colour silhouette.
+  //
+  // `contain` rather than a fixed mask-size so a non-square asset scales
+  // instead of cropping. The unprefixed `mask` is enough for current
+  // Chrome and Firefox; the -webkit- line is for Safari, which still
+  // wants it.
+  .seller-home__nav-icon-image {
+    width: $sh-nav-icon-size;
+    height: $sh-nav-icon-size;
+    background-color: currentColor;
+    -webkit-mask: var(--sh-nav-icon-image) center / contain no-repeat;
+    mask: var(--sh-nav-icon-image) center / contain no-repeat;
+    pointer-events: none;
+  }
+}
+
+// Label text sits inside a truncating span so overly long labels ellipse
+// rather than wrap onto a second line (Figma rows are strictly single-
+// line at 36px height).
+.seller-home__nav-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Recents rows — same 36px height and the same hover / selected
+// treatment as the primary items (brand fill + 2px accent strip), but
+// regular weight + on-surface-1 gray, and no icon column. Left padding
+// matches the primary items' TEXT column (row padding-x + icon box +
+// icon gap) so labels align vertically with the primary item labels
+// above.
+// ──────────────────────────────────────────────────────────────────────
+.seller-home__nav-recent {
+  display: flex;
+  align-items: center;
+  height: $sh-nav-row-height;
+  padding: 0 $sh-nav-row-padding-x;
+  padding-inline-start: calc(#{$sh-nav-row-padding-x} + #{$sh-nav-icon-box} + #{$sh-nav-icon-gap});
+
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 14px);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.4;
+
+  text-decoration: none;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  appearance: none;
+  width: 100%;
+  text-align: inherit;
+  box-sizing: border-box;
+  // `padding` rides along for the same reason it does on
+  // `.seller-home__nav-item`: it's what walks this row's content from the
+  // label column (48px in) to the icon column (16px) as the rail
+  // collapses, and it should take exactly as long as the rail does.
+  transition: background-color 120ms ease, color 120ms ease,
+    box-shadow 120ms ease, padding 180ms ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: background-color 120ms ease, color 120ms ease,
+      box-shadow 120ms ease;
+  }
+
+  // See `.seller-home__nav-item` — same override needed here because
+  // `dist/styles/index.css` promotes `a:hover, a:focus` to underlined.
+  &:hover,
+  &:focus,
+  &:focus-visible {
+    text-decoration: none;
+  }
+
+  &:focus-visible {
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0176d3);
+    outline-offset: -2px;
+  }
+
+  &:visited { color: var(--slds-g-color-on-surface-1, #5c5c5c); }
+
+  // Hover and selected, and they're the primary nav's treatment exactly:
+  // the brand-base-90 fill and the 2px accent strip, drawn as an inset
+  // shadow for the reason spelled out on `.seller-home__nav-item` — a
+  // border would widen the row and shove the label sideways on hover.
+  //
+  // What these rows deliberately DON'T copy is that block's type change.
+  // The label holds its regular weight and grey in every state (see
+  // `.seller-home__nav-recent-label`, which is declared on the text so
+  // nothing here can reach it), so a lit recent still reads as a recent
+  // rather than as a second active nav item.
+  //
+  // `.is-active` arrives from home_conversation.js when the recent's
+  // `data-sh-recent-conv` matches the URL's `?id=`. Grouped with hover
+  // because they're one look — hovering the selected row changes
+  // nothing, which is the intent.
+  //
+  // Not scoped to `--linked` — clients that add active state to
+  // unlinked recents later (e.g. an in-app filter) get the same
+  // treatment for free. `--linked` is a routing marker, not a style
+  // gate.
+  &:hover,
+  &.is-active {
+    background: var(--slds-g-color-brand-base-90, #D6E6FF);
+    box-shadow: inset var(--slds-g-sizing-border-2, 2px) 0 0 var(--slds-g-color-border-accent-1, #066AFE);
+  }
+}
+
+// The text of a Recents row, and the one place its type treatment is
+// decided: regular weight in the mid-tone grey, which is what separates
+// these from the semibold navy primary items above.
+//
+// Set HERE rather than on the row for a specific reason. `color` and
+// `font-weight` inherit, so wherever they're declared on the anchor, any
+// state on that anchor can overrule them — which is what used to happen:
+// the selected recent picked up the primary nav's active treatment and
+// read as bold navy, indistinguishable from an active nav item. A
+// declaration on the text element itself beats anything inherited from
+// an ancestor no matter how specific that ancestor's selector is, so
+// this holds through rest, hover, and selected without a single
+// state-specific override.
+.seller-home__nav-recent-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-weight: var(--slds-g-font-weight-4, 400);
+}
+
+// The collapsed rail's stand-in for that label: two letters in the icon
+// column. Hidden here, shown by `.seller-home--nav-collapsed` — the pair
+// swap, and exactly one of them is ever on screen.
+//
+// Sized as the icon BOX (24px) rather than the icon (14px) so it lands on
+// the same centre line as every sprite above it: the collapsed row's
+// padding is derived from this box (see $sh-nav-row-padding-x-collapsed),
+// so a 24px child is centred in the rail by construction.
+//
+// Type is deliberately smaller and tighter than the row's 14px — two
+// caps at label size read as a word and crowd the box. Colour comes from
+// `.seller-home__nav-recent-label`'s grey rather than the primary items'
+// navy, keeping the same "these are secondary" hierarchy the expanded
+// rail has.
+.seller-home__nav-recent-mono {
+  display: none;
+  flex: 0 0 $sh-nav-icon-box;
+  width: $sh-nav-icon-box;
+  height: $sh-nav-icon-box;
+  align-items: center;
+  justify-content: center;
+
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
+  font-weight: var(--slds-g-font-weight-6, 590);
+  letter-spacing: 0.02em;
+  line-height: var(--slds-g-font-lineheight-1, 1);
+  user-select: none;
+}
+
+// ── Recents row state indicator (New dot / Running spinner) ───────────
+// Trailing indicator on a workflow's Recents row. The status element is a
+// fixed square SLOT — the same 24px box the leading nav icons occupy — that
+// centres its glyph, so an 8px dot and a 14px spinner share one centre axis
+// row-to-row (rather than sitting flush-right at different widths). The
+// glyph itself is an inner element; each variant reuses a visual already on
+// the page rather than inventing a new one.
+.seller-home__nav-recent-status {
+  flex: 0 0 auto;
+  margin-inline-start: auto; // pin the slot to the trailing edge
+
+  inline-size: $sh-nav-icon-box;   // 24px — mirrors the leading icon column
+  block-size: $sh-nav-icon-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// "New" — a completed workflow has fresh results to review. The same green
+// filled dot the feed's completed status button rests on, at the same 8px
+// the feed's `--sh-status-dot` uses, centred in the slot above.
+.seller-home__nav-recent-status-glyph--dot {
+  inline-size: 0.5rem;  // 8px
+  block-size: 0.5rem;
+  border-radius: var(--slds-g-radius-border-circle, 50%);
+  background: var(--slds-g-color-palette-green-70, #45c65a);
+}
+
+// "Running" — the shared border-spinner (index.scss `.sh-spinner`), re-boxed
+// to 14px within the slot exactly the way the feed re-boxes the same spinner
+// into its glyph slot.
+.seller-home__nav-recent-status-glyph--spinner.sh-spinner {
+  width: 0.875rem;  // 14px
+  height: 0.875rem;
+  border-width: 2px;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Collapsed nav (assumption — Figma frame is "Expanded Composed"; the
+// collapsed variant isn't attached to this request). Four visual
+// changes:
+//   1. Width shrinks from 300px → 56px.
+//   2. Labels hide (visually + from AT).
+//   3. Rows re-center around the icon — which, at that width, is the
+//      icon's expanded position too, so it doesn't actually move.
+//   4. Recents rows, which have no icon, show a two-letter monogram in
+//      that same column instead of their label.
+// The toggle button flips its `aria-expanded` and `aria-label` in JS.
+// ──────────────────────────────────────────────────────────────────────
+.seller-home--nav-collapsed {
+  .seller-home__nav {
+    flex: 0 0 $sh-nav-width-collapsed;
+    width: $sh-nav-width-collapsed;
+  }
+
+  // Follow the rail in, so the shader box keeps matching the content
+  // column and the convergence point stays under the composer. Same
+  // transition as the nav width, otherwise the rays would snap to their
+  // new centre while the rail was still sliding.
+  .seller-home__shader {
+    left: calc(#{$sh-nav-width-collapsed} - #{$sh-shader-overscan});
+  }
+
+  .seller-home__nav-topbar {
+    padding: 0 $sh-nav-row-padding-x-collapsed;
+  }
+
+  // Point the arrow the way it will move the rail: inward to collapse,
+  // outward to expand. Without this the collapsed rail still shows a
+  // left-facing arrow, which reads as "collapse further".
+  //
+  // The glyph is an arrow tucking into a bar, so mirroring is the
+  // direct expression of that flip — bar on the left with the arrow
+  // heading into it becomes bar on the right with the arrow heading
+  // out. `rotate(180deg)` looks identical here because the icon is
+  // symmetric about the horizontal axis, but would diverge for a glyph
+  // that isn't.
+  .seller-home__nav-toggle svg {
+    transform: scaleX(-1);
+  }
+
+  // Rows re-centre on their icon by CHANGING PADDING, not by switching
+  // to `justify-content: center` — and by the rail width chosen above,
+  // the padding they change TO is the padding they already had. Two
+  // fixes to the collapse motion are recorded here, because the second
+  // only became visible once the first was in:
+  //
+  // 1. `justify-content` isn't animatable, so it applied the instant the
+  //    class landed while `width` was still easing — the icons snapped to
+  //    the middle of a rail that was still 300px wide (lining up under
+  //    the toggle, which did the same thing) and then slid back left as
+  //    the rail caught up. Padding interpolates, so the position now
+  //    eases over the same 180ms the rail takes. Rows stay left-aligned
+  //    throughout; with the label hidden the icon is the only child, so
+  //    symmetric padding IS centred.
+  //
+  // 2. Smooth still meant moving: centred in the old 64px rail put the
+  //    icons at 20px against an expanded gutter of 16px, so every toggle
+  //    dragged them 4px sideways while the rail went the other way. The
+  //    rail is 56px now, which makes those two numbers the same one, and
+  //    these declarations resolve to the 16px the rows already carry.
+  //    They're kept rather than deleted because they're what holds the
+  //    icons still if either the gutter or the icon box is ever retuned:
+  //    the padding follows the rail width, and nothing has to remember
+  //    that the two were related.
+  .seller-home__nav-item,
+  .seller-home__nav-section-header,
+  .seller-home__nav-recent {
+    padding-left: $sh-nav-row-padding-x-collapsed;
+    padding-right: $sh-nav-row-padding-x-collapsed;
+  }
+
+  // Recents rows stay, on their monogram. They used to be `display:
+  // none` here — with no icon to fall back on there was nothing to show
+  // but a floating label, so the whole group went — which left the
+  // collapsed rail claiming the seller had no history and no way to see
+  // which thread was open. Two letters is the smallest thing that fixes
+  // both: the row keeps its fill and accent strip, so the open
+  // conversation still reads as selected, and `title` still gives the
+  // full label on hover.
+  .seller-home__nav-recent-mono {
+    display: inline-flex;
+  }
+
+  .seller-home__nav-label,
+  .seller-home__nav-recent-label,
+  .seller-home__nav-badge {
+    display: none;
+  }
+
+  // A running/completed row's state indicator is a second object in a
+  // column with room for one, so it sits out the collapsed state. The
+  // monogram is the row's identity; run status is legible again on expand.
+  .seller-home__nav-recent-status,
+  .seller-home__nav-recent-ring {
+    display: none;
+  }
+
+  // No collapsed-state active accent — the row background alone
+  // signals active, matching the expanded-nav treatment.
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Main content region — scroll container for the Daily Briefing, the
+// chat input, and the Ready to Review list. Owns its own overflow so the
+// nav stays fixed while long content scrolls only inside
+// `.seller-home__main`.
+// ──────────────────────────────────────────────────────────────────────
+// Nav edge shadow — painted as a ::before on right columns so it
+// doesn't need to escape the nav's overflow boundary. Each right
+// column (.seller-home__main, .seller-home__conv, .seller-home__knowledge)
+// gets this via position: relative + the pseudo-element.
+.seller-home__main {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  // Reserve the scrollbar gutter on the scroller that actually moves, so
+  // the feed doesn't shift sideways when its scrollbar appears/disappears.
+  // Moved here off `html` (see index.scss) so the fixed global header +
+  // nav no longer leave a gap down the app's right edge.
+  scrollbar-gutter: stable;
+  padding: var(--slds-g-spacing-8, 3rem) var(--slds-g-spacing-6, 2rem);
+
+  // Column flex container so `.seller-home__main-inner` can center itself
+  // horizontally with an auto inline margin (see below) while sitting at
+  // the top of the scroll area.
+  display: flex;
+  flex-direction: column;
+
+  // Positioned above the shader canvas
+  // (`.seller-home__shader` at z-index 0). Same rationale as
+  // `.seller-home__nav`: without a stacking context the absolute-
+  // positioned shader would render on top of this in-flow region
+  // and cover the briefing / composer / review content.
+  position: relative;
+  z-index: 1;
+}
+
+.seller-home__main-inner {
+  // Matches the Figma "Agentic Response no feed" container width
+  // (1000px) which sets the outer content grid for the main region.
+  // The briefing + composer cap themselves to a narrower 800px column
+  // and center within this grid, mirroring the Welcome frame's 100px
+  // gutters in Figma; the Ready to Review list uses the full 62.5rem
+  // width.
+  max-width: 62.5rem;
+
+  // Centers the column horizontally inside `.seller-home__main`, and only
+  // horizontally — the content starts at the top of the scroll area and
+  // grows downward.
+  //
+  // This was `margin: auto` (both axes) while the page centered its content
+  // vertically. The shader's focal point is anchored to the composer's
+  // measured position rather than to a fixed distance from the top, so it
+  // tracks the column wherever this rule puts it; switching axes here needs
+  // no matching change in index.html.
+  margin-inline: auto;
+
+  // Explicit width because the auto cross-axis margins above suppress the
+  // default `align-items: stretch`, which would otherwise collapse this
+  // column to its content width instead of filling main up to the
+  // 62.5rem cap.
+  width: 100%;
+
+  // Stack the child sections (briefing → composer → Ready to Review)
+  // with a Figma-exact 24px gap. Figma's Welcome frame
+  // shows title at y=0 h=96 and input at y=120 → gap = 24px. Doing
+  // this on the container (not per-section margin) lets each section
+  // stay margin-free and keeps the spacing single-sourced.
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-6, 1.5rem); // 24px
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Daily Briefing
+// ============================================================
+// Figma: node 8574:374824 ("title"). Two stacked text rows with 0px
+// gap between them, capped to an 800px content column. Everything
+// inside is text — no card chrome, no border — because the briefing
+// is meant to feel like conversational context above the chat box,
+// not a discrete widget.
+//
+// Tokens used (from Figma get_variable_defs on the frame):
+//   • Heading:   Titles/font-scale-6/Regular
+//                → 32px / 40px line-height / weight 400
+//   • Body:      Titles/font-scale-3/Regular
+//                → 20px / 28px line-height / weight 400
+//   • Fill:      --slds-g-color-on-surface-3 (#001e5b)
+//   • Link fill: --slds-g-color-accent-2     (#0250d9)
+//
+// Line-height on the body is important: `<button>` children inherit
+// it, so setting it once on the `<p>` (not on the button) keeps the
+// linked runs vertically aligned with the surrounding prose. The
+// button reset below never touches line-height.
+// ──────────────────────────────────────────────────────────────────────
+.seller-home__briefing {
+  // `position: relative` establishes the containing block for the
+  // insight popovers below — the controller in home.js sets each
+  // popover's `top` / `left` from the trigger's bounding rect
+  // relative to THIS element, so any other positioned ancestor
+  // would shift the popover into the wrong place.
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+  // Figma spacing-0 between heading and body — the descender of the
+  // 40px-line-height heading already carries visual air below it,
+  // so an explicit gap would double-space the block. Kept as a
+  // named token so a future theme can adjust if needed.
+  gap: var(--slds-g-spacing-0, 0);
+
+  // Figma "Welcome" content column: 800px. Content wraps naturally
+  // below this width (no manual `<br>` in the paragraph — the
+  // sentence reflows on narrow viewports without breaking the meaning
+  // of "…worth $420K,").
+  max-width: 50rem;
+  width: 100%;
+
+  // Center within `.seller-home__main-inner` (62.5rem / 1000px) so
+  // the briefing sits with equal gutters, matching Figma's Welcome
+  // frame at x=100 in a 1000px container (100px gutters). The Ready to
+  // Review list uses main-inner's full width, so the two sections
+  // intentionally have different left edges — same as in Figma.
+  margin-inline: auto;
+}
+
+.seller-home__briefing-heading {
+  letter-spacing: 0;
+  font-size: var(--slds-g-font-scale-5, 1.75rem);
+  text-align: center;
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: var(--slds-g-font-line-height-2, 1.25);
+  color: var(--slds-g-color-on-surface-3, #03234d);
+  display: block;
+}
+
+.seller-home__briefing-text {
+      font-size: var(--slds-g-font-scale-3, 20px);
+      color: var(--slds-g-color-on-surface-2, #03234d);
+}
+
+// Inline "link" that's semantically a button (see comment in
+// index.html for the rationale). Reset the button chrome so it flows
+// like text, then re-apply the Figma link treatment: accent-2 fill,
+// solid underline, `from-font` position so descenders don't bisect
+// the underline.
+.seller-home__briefing-link {
+  // Reset — inherit typography from the surrounding paragraph so
+  // font-size/family/line-height all match the prose. Only color +
+  // decoration diverge.
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: var(--slds-g-color-accent-2, #0250d9);
+  cursor: pointer;
+
+  // Dotted underline. `from-font` positions the stroke using the
+  // font's own metric (rather than the browser default, which floats
+  // it above the baseline and looks disconnected on large text).
+  // `skip-ink: none` keeps the underline continuous through
+  // descenders — the Figma "text-underline-position:from-font" +
+  // "text-decoration-skip-ink:none" pair.
+  //
+  // Thickness is expressed as a percentage of the font size (10%),
+  // so the underline stays visually proportional as the paragraph
+  // scales — at Body/font-scale-3 (20px) that's a crisp 2 px stroke,
+  // and it grows/shrinks automatically if the token changes. Hover
+  // bumps to 15% (~3 px at 20px) to give the affordance a clear
+  // "grow" moment on cursor-in.
+  text-decoration: underline dotted;
+  text-decoration-thickness: 10%;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 0.15em;
+  text-underline-position: from-font;
+
+  // Anti-collision — inline reset also removes native button focus
+  // rings; we bring back an accessible one via :focus-visible below.
+  transition: color 120ms ease, text-decoration-color 120ms ease,
+              text-decoration-thickness 120ms ease,
+              background-color 120ms ease;
+
+  // Hover deepens the fill and thickens the dotted stroke slightly
+  // so the affordance is unambiguous. Kept as a manual shade rather
+  // than color-mix so older browsers don't fall back to plain
+  // accent-2 (which would look identical to the resting state).
+  &:hover {
+    color: #01429c; // roughly 12% darker than #0250d9
+    text-decoration-thickness: 15%;
+  }
+
+  // Keyboard focus ring — matches the pattern used by
+  // `.seller-home__nav-item` above (accent-2 outline, 2px, small
+  // offset). `:focus-visible` (not `:focus`) so mouse clicks don't
+  // leave a stray ring after activation.
+  &:focus-visible {
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0250d9);
+    outline-offset: 2px;
+    border-radius: 2px; // softens the outline against text glyphs
+  }
+
+  // Belt-and-suspenders visited-state neutralization — buttons don't
+  // have :visited, but future refactors that migrate this to `<a>`
+  // shouldn't accidentally regress the color.
+  &:visited { color: var(--slds-g-color-accent-2, #0250d9); }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Briefing insight popover (reusable component)
+// ============================================================
+// Figma frame 8818:259732 ("📝 Popover/Default"). A hover / focus /
+// tap surface that opens below a Daily Briefing sentence link and
+// exposes deeper context + two footer actions.
+//
+// Positioning
+// -----------
+// Absolute-positioned inside `.seller-home__briefing` (which is
+// `position: relative` above). The JS controller sets `top` and
+// `left` inline from the trigger's `getBoundingClientRect()`; the
+// container's job is to declare the visual box, the nub, and the
+// stacking / interactivity states.
+//
+// z-index sits above Ready to Review (which uses z-index 5 for its
+// section-level overflow menu) so the popover always paints on top
+// of the sections below. Hidden state uses the native `hidden`
+// attribute so it's out of the accessibility tree AND stays out of
+// hit-testing without needing a `pointer-events` toggle.
+//
+// Reduced motion + touch fallbacks live at the bottom of this file
+// alongside the other Ready-to-Review a11y rules.
+// ──────────────────────────────────────────────────────────────────────
+.seller-home__briefing-popover {
+  position: absolute;
+  z-index: 20;
+
+  // Width per Figma: 318 px. Cap on very narrow viewports so the
+  // popover never overshoots the 16 px page margin on either side.
+  width: var(--slds-g-sizing-15, 20rem);                           // 320px
+  max-width: calc(100vw - 2rem);
+
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);           // 12px
+
+  // Three-layer shadow per Figma "Shadow/Elevation/4":
+  //   • Ambient  — 0 0 10 rgba(0,0,0,0.12)
+  //   • Directional — 0 7 7 rgba(0,0,0,0.12)
+  //   • Rim light  — 0 -1 3 rgba(0,0,0,0.07)
+  box-shadow:
+    0 0 10px 0 rgba(0, 0, 0, 0.12),
+    0 7px 7px 0 rgba(0, 0, 0, 0.12),
+    0 -1px 3px 0 rgba(0, 0, 0, 0.07);
+
+  // Fade-in on open. Exit transitions are skipped because the
+  // controller flips the `hidden` attribute — which yanks the node
+  // out of the render tree instantly. That trade keeps the close
+  // interaction feeling snappy at the cost of no exit animation
+  // (matching SLDS Popover behavior).
+  animation: seller-home__briefing-popover-in 120ms ease-out both;
+}
+
+@keyframes seller-home__briefing-popover-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+// Directional nub — a rotated square drawn as a child element so it
+// carries the popover's border on two edges and the popover's
+// background on the fill, yielding a filled-and-bordered arrow
+// without SVG or the classic "two triangles" hack.
+//
+// `top: -6px` lifts half the square above the popover's top edge;
+// `overflow` on the popover would clip it, so DO NOT add overflow
+// hidden to the parent. `left` is set inline by JS on every open so
+// the tip always aligns with the trigger's horizontal center — even
+// after the popover has been shifted left to stay inside the
+// viewport.
+.seller-home__briefing-popover-nub {
+  position: absolute;
+  top: -6px;
+  left: 1.25rem;                                                   // 20px — overridden inline by JS
+  width: 0.625rem;                                                 // 10px
+  height: 0.625rem;                                                // 10px
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  border-top: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+  border-left: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+  transform: rotate(45deg);
+
+  // Above the popover's own drop-shadow so the nub reads as part
+  // of the popover surface, not a floating chip.
+  z-index: 1;
+}
+
+// Body row — description + list on the left (flex 1), close button
+// on the right. `align-items: flex-start` pins the close button to
+// the top of the body so it stays anchored while the list grows.
+.seller-home__briefing-popover-body {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  padding: var(--slds-g-spacing-4, 1rem)                            // 16 top
+           var(--slds-g-spacing-2, 0.5rem)                          //  8 right (leaves room for close)
+           var(--slds-g-spacing-2, 0.5rem)                          //  8 bottom
+           var(--slds-g-spacing-3, 0.75rem);                        // 12 left
+}
+
+.seller-home__briefing-popover-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-2, 0.5rem);                             // 8px between description and list
+}
+
+.seller-home__briefing-popover-description {
+  margin: 0;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);                                             // 13px per Figma
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.125rem;                                            // 18px
+}
+
+// Deal list. `list-style-position: outside` + `padding-inline-start`
+// keeps the bullet's optical alignment consistent with the
+// description's left edge — Figma's per-item indent matches the
+// browser default disc marker at ~16 px, so no custom marker glyph.
+.seller-home__briefing-popover-items {
+  margin: 0;
+  padding-inline-start: var(--slds-g-spacing-4, 1rem);              // 16px
+  list-style: disc outside;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);                                               // 12px — detail text (Figma Display/1/Regular)
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.3;
+}
+
+.seller-home__briefing-popover-item {
+  margin: 0;
+}
+
+// Name — semibold, on-surface-2, 13 px. Sits inline with the muted
+// detail via `<strong> + <span>` in the macro so the row wraps as
+// prose if the deal string exceeds the popover width (rare, but
+// safe).
+.seller-home__briefing-popover-item-name {
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);                                             // 13px
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.125rem;                                            // 18px
+}
+
+.seller-home__briefing-popover-item-detail {
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);                                               // 12px
+  line-height: 1.3;
+}
+
+// Close button — 32 px circular hit target. `flex-shrink: 0` so the
+// button never squeezes when the description takes a long-form
+// value on a narrow viewport.
+.seller-home__briefing-popover-close {
+  flex-shrink: 0;
+  width: var(--slds-g-sizing-9, 2rem);                              // 32px
+  height: var(--slds-g-sizing-9, 2rem);                             // 32px
+
+  .slds-button__icon {
+    fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+  }
+}
+
+// Footer — divider above, right-aligned actions. Uses the same
+// 12 / 8 padding rhythm the SLDS popover ships to keep the two
+// actions from crowding the popover walls.
+.seller-home__briefing-popover-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--slds-g-spacing-3, 0.75rem);                            // 12px between the two actions
+  padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
+  border-top: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: 0 0
+    var(--slds-g-radius-border-3, 0.75rem)
+    var(--slds-g-radius-border-3, 0.75rem);
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+}
+
+// Base action — shared reset for both secondary and primary. Real
+// visual treatment (fill / outline / rounding) lives on the two
+// modifier classes below so the base stays a plain focus-ring +
+// typography shell that either variant can override cleanly.
+.seller-home__briefing-popover-action {
+  appearance: none;
+  border: 0;
+  margin: 0;
+  cursor: pointer;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 0.875rem);                  // 14px
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.25rem;                                             // 20px
+
+  transition: background-color 120ms ease, color 120ms ease,
+              box-shadow 120ms ease;
+
+  &:focus-visible {
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0250d9);
+    outline-offset: 2px;
+  }
+}
+
+// Secondary — "Set up a workflow" text-link treatment (Figma shows
+// no border/fill, brand-blue text). Underline appears on hover /
+// focus for affordance.
+.seller-home__briefing-popover-action--secondary {
+  padding: 0.375rem var(--slds-g-spacing-2, 0.5rem);
+  background: transparent;
+  color: var(--slds-g-color-accent-2, #0250d9);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+
+  &:hover {
+    color: #01429c;                                                 // ~12% darker than accent-2
+    text-decoration: underline;
+  }
+}
+
+// Primary — brand-blue rounded "pill" button. Height matches Figma
+// (32 px) and the 999 px radius yields the fully-rounded end caps.
+.seller-home__briefing-popover-action--primary {
+  padding: 0.375rem var(--slds-g-spacing-4, 1rem);                  // 6 / 16
+  min-height: 2rem;                                                 // 32px
+  background: var(--slds-g-color-accent-2, #0250d9);
+  color: var(--slds-g-color-on-accent-1, #ffffff);
+  border-radius: var(--slds-g-radius-border-pill, 15rem);
+
+  &:hover {
+    background: #01429c;                                            // ~12% darker
+  }
+
+  &:active {
+    background: #01337a;
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Chat Composer
+// ============================================================
+// Figma: node 8574:374830 ("✨ Agentic Text Input Field"). A bordered
+// white card with a soft multi-layer drop shadow, a multiline
+// textarea, and a toolbar row split into two action clusters
+// (left/right). Sits directly under the Daily Briefing with a 24px
+// gap (owned by `.seller-home__main-inner`).
+//
+// Tokens used (from Figma get_variable_defs on the composer node):
+//   • Surface:    --slds-g-color-surface-container-1 (#ffffff)
+//   • Border:     --slds-g-color-neutral-base-60      (#939393)
+//   • Radius:     --slds-g-radius-border-3            (12px)
+//   • Text:       Body/font-scale-1/Regular
+//                 → 14px / 19px line-height / weight 400
+//   • Text fill:  --slds-g-color-on-surface-1         (#5c5c5c)
+//   • Pad-x:      --slds-g-spacing-4                  (16px)
+//   • Pad-y:      --slds-g-spacing-3                  (12px)
+//   • Action gap: --slds-g-spacing-2                  (8px)
+//   • Shadow:     Shadow/Elevation/4 - down ⬇
+//                 (three-layer: down-1 mist + down-7 core + 0 halo)
+//
+// Icon buttons reuse SLDS's `slds-button_icon-bare` from the shared
+// stylesheet — no per-button size/color overrides. We only add
+// container-level layout rules here, so the toolbar inherits every
+// SLDS focus / hover / disabled state token automatically.
+// ──────────────────────────────────────────────────────────────────────
+.seller-home__composer {
+  // Same column width as the briefing above, centered within
+  // main-inner. Keeps title + input vertically aligned on the same
+  // left edge, matching Figma's "Welcome" frame (both are 800px
+  // wide at x=100 inside the 1000px container).
+  max-width: 50rem;
+  width: 100%;
+  margin-inline: auto;
+
+  // Figma outer wrapper: `pb-[12px] pt-[0px]`. Applied here so the
+  // drop-shadow on the editor doesn't clip against `.seller-home__
+  // main-inner`'s gap.
+  padding-block: 0 var(--slds-g-spacing-3, 0.75rem);
+}
+
+.seller-home__composer-form {
+  // The form is layout-invisible — it exists purely to give the
+  // send button a submit semantics anchor. All visual layout lives
+  // on the editor below.
+  display: contents;
+}
+
+.seller-home__composer-editor {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-neutral-base-90, #939393);
+  border-radius: var(--slds-g-radius-border-4, 1.25rem);
+  --sh-aurora-radius: var(--slds-g-radius-border-4, 1.25rem);
+  overflow: visible;
+
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+// Textarea wrapper — matches Figma "Editor content" padding (16
+// horizontal, 12 vertical). The textarea itself is a bare element
+// with no chrome so the padded surface around it feels like the
+// clickable target (clicking padding focuses the textarea via the
+// `<label>`).
+.seller-home__composer-content {
+  padding-top: var(--slds-g-spacing-4, 1rem);
+  padding-left: var(--slds-g-spacing-3, 0.75rem);
+  padding-right: var(--slds-g-spacing-3, 0.75rem);
+  border-radius: var(--slds-g-radius-border-4, 1.25rem) var(--slds-g-radius-border-4, 1.25rem) 0 0;
+  overflow: hidden;
+  cursor: text;
+}
+
+// The actual editable surface. All chrome reset so it inherits the
+// composer background, then the Figma type tokens applied directly
+// so a future theme swap propagates cleanly.
+.seller-home__composer-textarea {
+  // Reset SLDS + browser defaults.
+  appearance: none;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  resize: none; // We autosize via JS instead. Manual resize would
+                // clash with the composer's `overflow: hidden` on
+                // the parent and let the user pull the corner
+                // outside the rounded frame.
+  width: 100%;
+  display: block;
+
+  // Figma Body/font-scale-1/Regular
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.1875rem; // 19px — Figma line-height
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  letter-spacing: 0;
+
+  // Initial + max height. The textarea starts at 3 lines (~57px)
+  // matching Figma's composer initial state, and autosizes up to
+  // ~8 lines. Past the max, JS lets `overflow-y: auto` kick in so
+  // the scroll happens INSIDE the textarea rather than making the
+  // whole card taller than the viewport.
+  //
+  // `min-height` is expressed as `calc(19px * 3)` (line-height × 3)
+  // so the token-driven line-height above stays the single source
+  // of truth. If a future theme bumps line-height, min-height
+  // follows automatically.
+  min-height: calc(1.1875rem * 3);   // 3 lines → 57px
+  max-height: calc(1.1875rem * 8);   // 8 lines → 152px
+  overflow-y: auto;
+
+  // Placeholder matches Figma exactly — same color as filled text
+  // (both use on-surface-1 in the design), so the visual delta
+  // when the user starts typing is the presence of glyphs alone.
+  // Kept as its own selector for future-proofing (e.g. lightening
+  // the placeholder to differentiate).
+  &::placeholder {
+    color: var(--slds-g-color-palette-neutral-60, #5c5c5c);
+    opacity: 1; // Firefox lowers placeholder opacity by default
+  }
+
+  // The hint is for the empty, unfocused field. Focusing the box
+  // clears it so the caret sits on a blank line.
+  &:focus::placeholder {
+    opacity: 0;
+  }
+
+  // No visible focus ring on the textarea itself. `outline: 0`
+  // above kills the browser default.
+}
+
+// Toolbar row — flex-wrap justify-between per Figma. Wrapping is
+// important on narrow viewports so the right cluster falls under
+// the left rather than pushing off-screen.
+.seller-home__composer-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+
+  padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-3, 0.75rem);
+  border-radius: 0 0 var(--slds-g-radius-border-4, 1.25rem) var(--slds-g-radius-border-4, 1.25rem);
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+
+  // No `overflow: hidden` here. It used to be, to keep the white
+  // background inside the rounded bottom corners — but `border-radius`
+  // already clips an element's own background and border; overflow only
+  // governs descendants, and every child sits inside the padding. All
+  // it actually did was clip the agent menu, which opens downward out
+  // of this row.
+}
+
+// No gap: since the buttons became 2rem boxes their own padding is the
+// spacing, and a gap on top of it separates the glyphs by more than the
+// hover pills suggest. The pills now sit flush, 16px between glyphs.
+.seller-home__composer-slot {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+// SLDS puts `margin-inline-start: spacing-1` on any button following
+// another, which stacks on the gap above and survives removing it.
+//
+// Scoped through the slot to clear `.slds-button + .slds-button`'s
+// specificity outright. Matching it and letting source order decide
+// would work — home.css loads last — but that's the arrangement that
+// already caught this component out once, in the dropdown.
+.seller-home__composer-slot .seller-home__composer-btn + .seller-home__composer-btn {
+  margin-inline-start: 0;
+}
+
+// Composer icon button — additive tweaks over
+// `.slds-button.slds-button_icon.slds-button_icon-bare`. We inherit
+// every SLDS focus/hover/disabled state and only override things
+// that are Composer-specific.
+.seller-home__composer-btn {
+  // SLDS bare buttons default to a small ~32px hit target with the
+  // 16px icon centered. Figma shows exactly 16px icons in the
+  // toolbar — no size override needed. Any padding/hit-area
+  // adjustments should be done via SLDS button-density modifiers
+  // (e.g. `slds-button_icon-x-small`) rather than local CSS so
+  // interactions stay consistent with the rest of the shell.
+
+  // Ensure the button doesn't inherit the composer's `cursor: text`
+  // from `.seller-home__composer-content`.
+  cursor: pointer;
+
+  // A circular pill on hover or keyboard focus, one step darker while
+  // pressed. Shape, size and timing come from the row kebab
+  // (`.seller-home__feed-item-menu-trigger`), which carries the same
+  // blue — between them they're every icon button on this page.
+  //
+  // A background needs a box to fill, and SLDS' bare variant doesn't
+  // give it one: these buttons were the 16px glyph and nothing else, so
+  // there was no pill to paint and no target to speak of either. 2rem is
+  // the kebab's own size, which puts them back over the 24px minimum.
+  //
+  // Note the icon stays 16px — this is padding around it, not a bigger
+  // glyph.
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--slds-g-sizing-9, 2rem);
+  block-size: var(--slds-g-sizing-9, 2rem);
+  border-radius: var(--slds-g-radius-border-circle, 100%);
+  transition: background-color 120ms ease;
+
+  // Send ships disabled and is the one button here that can be, so the
+  // pill has to opt out of it — a hover response on a button that won't
+  // do anything is a lie.
+  &:hover:not([disabled]),
+  &:focus-visible:not([disabled]) {
+    background-color: var(--slds-g-color-palette-electric-blue-95, #edf4ff);
+  }
+
+  &:active:not([disabled]) {
+    background-color: var(--slds-g-color-palette-electric-blue-90, #d6e6ff);
+  }
+
+  // One colour for the whole toolbar, declared once and inherited by
+  // both icon kinds: `currentColor` is what the sprite fills with and
+  // what the masked PNG paints with, so this single line is what makes a
+  // raster glyph indistinguishable from a sprite one.
+  //
+  // `fill` is repeated on the sprite because SLDS sets it explicitly on
+  // `.slds-button__icon` — inheriting `color` isn't enough to beat that.
+  // Both of the rules below (disabled, and Send when enabled) are more
+  // specific, so they still win where they apply.
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+
+  .slds-button__icon {
+    fill: currentColor;
+  }
+
+  // SLDS' disabled state uses `--slds-c-button-color-*-disabled`
+  // tokens; the send button relies on this + the [disabled]
+  // attribute to render in the muted gray Figma shows.
+  //
+  // Explicit rule below because SLDS bare-button disabled styling
+  // sometimes leaves the icon at full contrast. We match Figma's
+  // `--slds-g-color-disabled-container-2` (#c9c9c9) for the icon
+  // fill so disabled state reads as "not yet available" rather
+  // than "same but unclickable".
+  &[disabled] .slds-button__icon,
+  &:disabled .slds-button__icon {
+    fill: var(--slds-g-color-disabled-container-2, #c9c9c9);
+  }
+
+  &[disabled],
+  &:disabled {
+    cursor: not-allowed;
+    // The disabled grey again, this time as `color`, which is the only
+    // channel a masked icon has — `fill` above does nothing to one. No
+    // action in the toolbar can be disabled today; this is here so the
+    // first one that can doesn't render bright against a greyed sprite.
+    color: var(--slds-g-color-disabled-container-2, #c9c9c9);
+  }
+}
+
+// A toolbar glyph that arrives as an asset instead of a sprite symbol —
+// the Skills mark, which is shared with the left nav and has no utility
+// sprite. Same technique as `.seller-home__nav-icon-image`: the asset is
+// a MASK over a currentColor fill, so its own pixels' colour is thrown
+// away and only its alpha is used. That's what keeps it at the toolbar's
+// on-surface-1 next to the real sprites, and what makes it dim with the
+// button instead of staying bright.
+//
+// Carries `.slds-button__icon` too, so SLDS' 16px sizing already applies
+// and there's no width/height here to keep in sync with it. Consequence
+// of masking: monochrome art on a transparent ground only — a
+// multi-colour asset flattens to a silhouette.
+.seller-home__composer-btn-image {
+  display: inline-block;
+  background-color: currentColor;
+  -webkit-mask: var(--sh-composer-icon-image) center / contain no-repeat;
+  mask: var(--sh-composer-icon-image) center / contain no-repeat;
+  pointer-events: none;
+}
+
+// ── Composer menu trigger badge ────────────────────────────────────
+// A `<button>` wearing `.slds-badge`, so it needs the resets SLDS'
+// `<span>` badge never does.
+.seller-home__composer-badge {
+  appearance: none;
+  margin: 0;
+  cursor: pointer;
+  font-family: inherit;
+
+  // Badges are a size below the toolbar's buttons, so match their box
+  // rather than sit short next to them.
+  min-block-size: 1.5rem;
+
+  transition: background-color 120ms ease;
+
+  // Same blue as the icon buttons beside it — the badge is one of the
+  // toolbar's controls, and a grey response next to four blue ones
+  // reads as something that hasn't been styled yet.
+  //
+  // `slds-badge_lightest` sets the resting background through a custom
+  // property, so hover goes through the same one — setting
+  // `background-color` directly here would win over the badge and
+  // leave the rest state and the hover state configured two ways.
+  &:hover {
+    --slds-c-badge-color-background: var(--slds-g-color-palette-electric-blue-95, #edf4ff);
+  }
+
+  &:focus-visible {
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0250d9);
+    outline-offset: 2px;
+  }
+}
+
+// Matches the chevron opposite it and the same artwork in the menu
+// rows, so the badge's two ends read as a pair.
+.seller-home__composer-badge-icon {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+// Agents whose icon is a portrait rather than a flat mark, cropped so it
+// reads as an avatar instead of a photo tile. Opt-in per agent via
+// `iconRound` in the data — the vector marks fill their box to the
+// corners and a circle would cut into them.
+.seller-home__composer-menu-icon--round,
+.seller-home__composer-badge-icon--round {
+  border-radius: var(--slds-g-radius-border-circle, 50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seller-home__composer-btn,
+  .seller-home__composer-badge {
+    transition: none;
+  }
+}
+
+// ── Composer action menu ───────────────────────────────────────────
+// The dropdown behind a toolbar button that picks one of a set — the
+// agent chooser today. Positioning comes from SLDS
+// (`slds-dropdown-trigger`, `slds-dropdown`); the surface and the rows
+// are styled so the list and the detail panel beside it read as one
+// component.
+//
+// Values from the source: `radius-border-3`, a 1px border, white, and
+// the same two-layer shadow the detail panel carries. Width is SLDS'
+// `slds-dropdown_small` on the element rather than a number here, so it
+// tracks the platform's sizing scale.
+.seller-home__composer-menu-list {
+  padding: var(--slds-g-spacing-1, 0.25rem);
+
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  // SLDS shows and hides its dropdowns with `.slds-is-open` on the
+  // trigger. This one uses the `hidden` attribute as the single source
+  // of truth, the way the feed's menus do, so the JS has one thing to
+  // set and there's no class and attribute to keep agreeing.
+  //
+  // Which means overriding all three properties SLDS hides a dropdown
+  // with — `display` from `.slds-dropdown-trigger_click .slds-dropdown`,
+  // and `visibility` / `opacity` from `.slds-dropdown-trigger
+  // .slds-dropdown`. Both are only undone by `.slds-is-open`, except
+  // that the second is also undone on `:hover`, which is enough to make
+  // a menu missing this rule look fine right up until the pointer
+  // leaves and every row inside it stops being focusable.
+  //
+  // The descendant selector is here to clear their specificity rather
+  // than to scope anything, so `[hidden]` is folded into the same rule
+  // with `:not()`: a separate `&[hidden]` rule would tie and leave
+  // which one wins up to stylesheet order.
+  .slds-dropdown-trigger_click &:not([hidden]) {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+  }
+}
+
+.seller-home__composer-menu-item {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  margin: 0;
+  width: 100%;
+  cursor: pointer;
+  text-align: start;
+
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  padding: var(--slds-g-spacing-2, 0.5rem);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+
+  transition: background-color 120ms ease;
+
+  // Brand tint rather than the neutral SLDS menus use, as in the source.
+  &:hover,
+  &:focus-visible {
+    background: var(--slds-g-color-brand-base-95, #eef4ff);
+    outline: none;
+  }
+
+  &:focus-visible {
+    box-shadow: inset var(--slds-g-sizing-border-3, 3px) 0 0 var(--slds-g-color-accent-2, #0250d9);
+  }
+}
+
+// Full-colour artwork standing on its own — no disc behind it, unlike
+// the source, which sets a monochrome glyph in a coloured circle.
+.seller-home__composer-menu-icon {
+  flex-shrink: 0;
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+// The sprite variant at the two 1rem sizes. `slds-icon_container_circle`
+// ships 0.5rem of padding, which is the whole box here and would leave
+// the glyph nothing — so the padding comes off and the glyph fills the
+// disc instead. Inset by a hair so the artwork doesn't touch the edge.
+.seller-home__composer-menu-icon,
+.seller-home__composer-badge-icon {
+  &.slds-icon_container {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.0625rem;
+  }
+
+  > .slds-icon {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+}
+
+// Each badge icon is wrapped so the whole thing — portrait or disc —
+// can be hidden as one, whichever shape it turned out to be.
+.seller-home__composer-badge-icon-slot {
+  display: inline-flex;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+// `min-width: 0` so a long agent name truncates instead of pushing the
+// check off the end of the row.
+.seller-home__composer-menu-label {
+  flex: 1;
+  min-width: 0;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.1875rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// Reserved with `visibility`, not `display`, so the row's height and
+// the body's width don't change when the selection moves between items.
+.seller-home__composer-menu-check {
+  flex-shrink: 0;
+  inline-size: 1rem;
+  block-size: 1rem;
+  fill: var(--slds-g-color-accent-2, #0250d9);
+  visibility: hidden;
+}
+
+[aria-checked="true"] > .seller-home__composer-menu-check {
+  visibility: visible;
+}
+
+// ── Composer menu detail panel ─────────────────────────────────────
+// Hovering a row opens a panel to the right of the list, aligned to that
+// row's top edge. Widths, the two-layer shadow and the grey header match
+// the menu surface.
+//
+// `position: fixed` is the source's choice and worth keeping — it takes
+// the panel out of every ancestor's overflow, which is what clipped the
+// dropdown itself earlier. The trade is that it doesn't follow a
+// scrolling page, so home.js closes the menu on scroll.
+//
+// JS writes `top` and `left`; everything else is here.
+.seller-home__composer-menu-detail {
+  position: fixed;
+  z-index: 7001; // one above `.slds-dropdown`, so it sits over the list
+  width: 24rem;
+
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  cursor: default;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+// A submenu rather than a description: same panel chrome and the same
+// positioning, but sized like the list it belongs to instead of the
+// 24rem card. Matches `.seller-home__composer-menu-list` so the two
+// read as one menu at two levels.
+.seller-home__composer-menu-detail--menu {
+  width: auto;
+  min-width: var(--slds-g-sizing-14, 15rem);
+  padding: var(--slds-g-spacing-1, 0.25rem);
+}
+
+// The affordance on a row that opens a submenu, where a selectable row
+// carries its check. Same box as the check so both kinds of row lay out
+// identically and the labels line up.
+.seller-home__composer-menu-chevron {
+  flex-shrink: 0;
+  inline-size: 1rem;
+  block-size: 1rem;
+  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+// One padded block, no second section: the panel is a media object, so
+// the avatar and the text beside it are the whole layout. The earlier
+// grey header split it in two, which the redesign dropped.
+.seller-home__composer-menu-detail-header {
+  padding: var(--slds-g-spacing-4, 1rem);
+}
+
+// The sprite variant of the panel's avatar. No size here on purpose:
+// `.slds-icon` is 2rem by default and the circle container adds 0.5rem
+// of padding either side, which is the 3rem `.slds-avatar_large` gives
+// the portraits. Setting it again would be two sources for one number.
+.seller-home__composer-menu-detail-icon {
+  flex-shrink: 0;
+}
+
+// "Best for sales tasks" — a heading, not a label, so it runs at body
+// size rather than the small caps-ish scale the panel used before.
+.seller-home__composer-menu-detail-title {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-2, 1rem);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.3;
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+// The example prompts, as plain lines under the title. The source
+// boxed each one in a dashed rule; at five per agent that read as a
+// form, so they're set as a list instead.
+.seller-home__composer-menu-example {
+  margin: var(--slds-g-spacing-2, 0.5rem) 0 0;
+
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.4;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seller-home__composer-menu-item {
+    transition: none;
+  }
+}
+
+// Send uses the same icon color as the other toolbar buttons.
+
+// ── Composer footer ──
+.seller-home__composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+  font-size: var(--slds-g-font-scale-neg-2, 0.625rem);
+  pointer-events: auto;
+  max-width: 50rem;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.seller-home__composer-disclaimer {
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  text-align: center;
+  flex: 1;
+  padding-block: var(--slds-g-spacing-1, 0.25rem);
+}
+
+.seller-home__composer-feedback {
+  white-space: nowrap;
+  font-weight: var(--slds-g-font-weight-4, 400);
+}
+
+// ── Connected sources ──
+// Row of small icons below the composer showing which data sources are
+// active. Mirrors the LWC `connected-sources` component from the
+// production app, stripped to plain HTML.
+.connected-sources {
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.connected-sources__label {
+  color: var(--slds-g-color-neutral-base-20, #2e2e2e);
+  font-size: var(--slds-g-font-scale-neg-2, 0.625rem);
+  white-space: nowrap;
+}
+
+.connected-sources__icon-container {
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.source-icons {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.source-icons__item {
+  display: flex;
+  align-items: center;
+
+  &:not(:first-child) {
+    margin-left: calc(-1 * var(--slds-g-spacing-1, 0.25rem));
+  }
+}
+
+.source-icons__wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--slds-g-sizing-5, 1rem);
+  min-width: var(--slds-g-sizing-5, 1rem);
+  background-color: var(--slds-g-color-surface-1, #fff);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-neutral-base-90, #e0e0e0);
+  border-radius: var(--slds-g-radius-border-1, 0.25rem);
+  box-sizing: border-box;
+  cursor: pointer;
+
+  &:hover .source-icons__tooltip {
+    visibility: visible;
+    opacity: 1;
+  }
+}
+
+.source-icons__tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 120ms ease;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.source-icons__icon {
+  display: block;
+  width: var(--slds-g-sizing-4, 0.75rem);
+  height: var(--slds-g-sizing-4, 0.75rem);
+}
+
+// ── Connections modal grid ──
+.sources-modal__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.source-tile {
+  display: flex;
+  width: 100%;
+  min-height: 85.5px;
+  align-items: stretch;
+  background-color: var(--slds-g-color-surface-1, #fff);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  overflow: hidden;
+}
+
+.source-tile_connected {
+  background-color: var(--slds-g-color-neutral-base-95, #f3f3f3);
+}
+
+.source-tile__body {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  align-items: flex-start;
+  justify-content: center;
+  border-left: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+  padding-inline-start: var(--slds-g-spacing-4, 1rem);
+}
+
+.source-tile__status {
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: var(--slds-g-font-lineheight-1, 1);
+}
+
+.connected-sources__view-all {
+  font-size: var(--slds-g-font-scale-neg-2, 0.625rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  white-space: nowrap;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// "Your agent at work" feed
+// ──────────────────────────────────────────────────────────────────────
+// One flat list of recurring workflows, each row carrying its own
+// state. Everything is namespaced under `.seller-home__feed` /
+// `.seller-home__feed-item` so it can't leak into other pages that also
+// use SLDS badges.
+//
+//     ┌ 20px ┬──────────────────────────────┬─────────────────┐
+//     │  ✓   │ body (title → desc → pills)  │ rail            │
+//     └──────┴──────────────────────────────┴─────────────────┘
+//        status   flex: 1  min-width: 0       156px reserved
+//
+// The tabbed Completed / Running / Scheduled treatment this replaced —
+// along with its three prototype tab styles and their A/B/C switcher —
+// is gone; the states it filtered are now the sort order, driven by
+// `feed.stateOrder` in index.json.
+// ══════════════════════════════════════════════════════════════════════
+.seller-home__feed {
+  // Match briefing + composer content column: 800px, centered.
+  max-width: 50rem;
+  width: 100%;
+  margin-inline: auto;
+
+  position: relative; // containing block for the fade band below
+  padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-4, 1rem) 0;
+  border-top-left-radius: var(--slds-g-radius-border-4, 1.25rem);
+  border-top-right-radius: var(--slds-g-radius-border-4, 1.25rem);
+  border-bottom-right-radius: var(--slds-g-radius-border-4, 1.25rem);
+  border-bottom-left-radius: var(--slds-g-radius-border-4, 1.25rem);
+  // Same radius the aurora halo uses. The fill matches the page so it
+  // covers the halo's hard mask edge; the soft glow stays outside.
+  --sh-aurora-radius: var(--slds-g-radius-border-4, 1.25rem);
+  background-color: white;
+
+  // Height of the fade band. Raise it to push the wash further down the
+  // list, lower it to tighten it to the header.
+  --sh-feed-fade-height: 120%;
+}
+
+// Subtle top-to-bottom fade: --sh-color-foreground at 7% → --sh-color-background at 48%, then holds.
+// Sits over the page so the section reads as a
+// slightly lighter surface at the top without a hard border.
+//
+// On its own element rather than as the section's background, because a
+// background is painted into its element's box — so as rows were
+// dismissed and the section shrank, the wash was clipped shorter and
+// shorter, collapsing to a small block and then disappearing. An
+// absolutely-positioned band with its own fixed height doesn't take
+// part in that: it paints the same thing whatever the list is doing.
+//
+// From 48% down the band is solid --sh-color-background, the same as the page, so the
+// extra height doesn't show a second edge.
+.seller-home__feed::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  height: var(--sh-feed-fade-height);
+
+  pointer-events: none;
+  border-radius: inherit;
+  // Card opacity from /aurora_lab.html scales this wash. 100% leaves
+  // the gradient as authored.
+  opacity: var(--sh-aurora-card-opacity, 1);
+  background: linear-gradient(
+    to bottom,
+    var(--sh-color-foreground) 7.169%,
+    var(--sh-color-background) 48.276%
+  );
+}
+
+// The fade band is an absolutely-positioned child, which paints above
+// static in-flow content. Positioning the section's other children puts
+// them back on top of it.
+//
+// Header z-index has to beat the list: both are `position: relative`,
+// so without it tree order would paint the first row over the filter
+// dropdown that hangs out of the header. The list stays at 1 so Flip
+// still has a positioned frame; the header at 2 keeps the open menu
+// above row hover (the stretched-link overlay and the card surface).
+.seller-home__feed-header,
+.seller-home__feed-empty {
+  position: relative;
+  z-index: 2;
+}
+
+// With the filter menu open, lift the header above the empty-state panel.
+// Both otherwise sit at z-index 2, but the empty panel is a LATER sibling,
+// so at equal z-index it paints over the menu that hangs down from the
+// header. On the Archived view (no rows by default) that panel is shown,
+// so without this it covers the open listbox and swallows clicks on its
+// options — you can see the menu but can't pick Active/Scheduled.
+.seller-home__feed-header:has(.seller-home__feed-filter-menu.is-open) {
+  z-index: 3;
+}
+
+// ── Header ────────────────────────────────────────────────────────────
+// The tab bar used to own the gap down to the list; with it gone the
+// header carries that space itself.
+.seller-home__feed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  padding-block: var(--slds-g-spacing-2, 0.5rem);
+  margin-bottom: var(--slds-g-spacing-2, 0.5rem);
+  min-height: 3rem;
+}
+
+.seller-home__feed-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+  min-width: 0;
+}
+
+.seller-home__feed-heading {
+  margin: 0;
+  color: #111;
+  font-size: var(--slds-g-font-scale-2, 1rem);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.seller-home__feed-date {
+  flex-shrink: 0;
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  line-height: 1.3;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// ── List ──────────────────────────────────────────────────────────────
+.seller-home__feed-list {
+  position: relative; // reference frame for GSAP Flip during a reshuffle
+  z-index: 1; // under the header so the filter menu isn't covered by row hover
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+// Row spacing is a margin on each item rather than a flex `gap`, because
+// a gap belongs to the container and can't be animated away per-row. A
+// dismissing row has to collapse its own trailing space along with its
+// height, or the list would close up 12px short and then jump.
+.seller-home__feed-list-item {
+  margin-bottom: var(--slds-g-spacing-3, 0.75rem);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  // Demo-gated rows ship `hidden` until sessionStorage unhides them.
+  // `!important` keeps the UA `hidden` style ahead of filter `display`
+  // rules that would otherwise show a completed row before Approve.
+  &[hidden] {
+    display: none !important;
+  }
+}
+
+// ── Group headers ─────────────────────────────────────────────────────
+// "Active" / "Paused" labels above their runs of rows. Only rendered
+// where the data defines `feed.groups`.
+//
+// Each one shows only while its group has something in it, decided with
+// `:has()` on the list rather than in JS — so a row paused at runtime
+// brings the Paused header with it, and resuming the last paused row
+// takes it away again, with nothing to keep in sync.
+.seller-home__feed-group {
+  margin-bottom: var(--slds-g-spacing-2, 0.5rem);
+  transition: opacity var(--duration-quick) var(--ease-in-out);
+}
+
+// A label the current reshuffle is about to move. It holds its space —
+// the rows' landing positions have to account for it, or everything
+// jolts once they arrive — but stays invisible while they travel, and
+// fades in when home.js clears the flag on the Flip's completion.
+//
+// Flagged per label rather than on the list, so a move that shifts one
+// group's label leaves the other alone instead of blinking it.
+//
+// `transition: none` so it snaps to hidden on the way in; the fade only
+// belongs to the way out.
+.seller-home__feed-group[data-sh-feed-settling] {
+  opacity: 0;
+  transition: none;
+}
+
+// A header that follows a run of rows needs more air above it than the
+// gap between two rows, or the label reads as belonging to the row it's
+// sitting under. The first header is the list's first child and needs
+// none.
+.seller-home__feed-list-item + .seller-home__feed-group {
+  margin-top: var(--slds-g-spacing-4, 1rem);
+}
+
+.seller-home__feed-group-label {
+  margin: 0;
+  padding-inline: var(--slds-g-spacing-1, 0.25rem);
+
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.3;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+.seller-home__feed-list:not(:has([data-sh-feed-state="paused"]))
+  [data-sh-feed-group="paused"] {
+  display: none;
+}
+
+// The mirror case, for when everything has been paused: an "Active"
+// label over nothing reads as a bug.
+//
+// Phrased as "no row exists whose state isn't paused" rather than the
+// more natural-sounding "no list item that isn't paused". The latter
+// needs a `:has()` inside a `:has()`, which the spec disallows — and an
+// invalid selector takes its whole rule down with it, silently, which
+// is exactly how this sat here not working. The `:not()` here is a
+// plain attribute negation, so nothing is nested.
+//
+// Group labels carry `data-sh-feed-group-state`, not
+// `data-sh-feed-state`, so they can't match this and count themselves.
+.seller-home__feed-list:not(:has([data-sh-feed-state]:not([data-sh-feed-state="paused"])))
+  [data-sh-feed-group="active"] {
+  display: none;
+}
+
+// ── Empty state ───────────────────────────────────────────────────────
+// Stands in for the list once the last row is dismissed. `:has()` on the
+// section is what drives it, so there's no JS to keep in sync and the
+// same rule covers a page that renders with no rows at all.
+//
+// The min-height is the point: without it the section would collapse to
+// its header the moment the list emptied, and the fade band above would
+// be left hanging over nothing.
+.seller-home__feed-empty {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+
+  min-height: 9rem;
+  padding: var(--slds-g-spacing-6, 2rem) var(--slds-g-spacing-4, 1rem);
+  text-align: center;
+}
+
+.seller-home__feed:not(:has(.seller-home__feed-list-item)) .seller-home__feed-empty:not(.seller-home__feed-empty--filter) {
+  display: flex;
+  // Runs on reveal, since an element can't transition out of
+  // `display: none` — the last row has just animated away, and popping
+  // this in at full opacity reads as a jump.
+  animation: sh-feed-empty-in 220ms ease both;
+}
+
+.seller-home__feed-empty-heading {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.1875rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+.seller-home__feed-empty-body {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.3;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+@keyframes sh-feed-empty-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.25rem);
+  }
+}
+
+// ── Filter empty states (LAB) ──────────────────────────────────────────
+// In filter mode the list always keeps its rows, so the "no list items"
+// rule above never fires. Each
+// view's message shows instead when that view's own states are all
+// absent. The `~` combinator ties the message (a following sibling of the
+// list) to the list's current filter and contents; the `:not(:has(...))`
+// is a single `:has()`, never nested inside another.
+.seller-home__feed-list[data-sh-feed-filter="active"]:has(.seller-home__feed-list-item):not(:has([data-sh-feed-state="completed"], [data-sh-feed-state="running"], [data-sh-feed-state="paused"])) ~ .seller-home__feed-empty[data-sh-feed-empty-view="active"],
+.seller-home__feed-list[data-sh-feed-filter="scheduled"]:has(.seller-home__feed-list-item):not(:has([data-sh-feed-state="scheduled"])) ~ .seller-home__feed-empty[data-sh-feed-empty-view="scheduled"],
+.seller-home__feed-list[data-sh-feed-filter="archived"]:has(.seller-home__feed-list-item):not(:has([data-sh-feed-state="archived"])) ~ .seller-home__feed-empty[data-sh-feed-empty-view="archived"] {
+  display: flex;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  Status button
+// ----------------------------------------------------------------------
+//  Every glyph is in the DOM at once and this stylesheet decides which
+//  two are live, keyed off the row's `data-sh-feed-state`. Two reasons
+//  that's worth the extra elements:
+//
+//    • the hover swap is a cross-fade between two already-painted
+//      layers, so it can't trail the pointer the way a JS href swap can
+//    • the state→glyph mapping exists once, here, instead of being
+//      written in the template for first paint and again in home.js for
+//      every toggle after it
+//
+//  Size is a custom property so the glyph can be retuned without
+//  touching the rules that place it.
+// ══════════════════════════════════════════════════════════════════════
+.seller-home__feed-item-status {
+  // Matches the 14px title's line box, so top-aligning the two centres
+  // the glyph on the title rather than between the two lines.
+  --sh-status-size: 1.25rem;
+  --sh-status-glyph: 1rem;
+
+  // The completed rest glyph is the filled circle, sized via `--sh-status-dot`.
+  --sh-status-dot: calc(8px * 52 / 48);  // 8px visible disc
+
+  position: relative; // lifts it above the row's stretched-link overlay
+  z-index: 2;
+
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--sh-status-size);
+  block-size: var(--sh-status-size);
+
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: var(--slds-g-radius-border-circle, 100%);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0250d9);
+    outline-offset: 2px;
+  }
+}
+
+// All glyphs stack on the same centre; the rules below reveal two.
+//
+// The swap is transitions.dev's icon swap (09-icon-swap.md) — opacity
+// plus blur plus scale — reading the `--icon-swap-*` tokens installed
+// in index.scss. Not its `.t-icon-swap` markup though: that's a
+// two-icon component switched by `data-state`, and this slot holds six
+// glyphs whose visible pair is picked by the maps below, off the row's
+// state crossed with hover. Borrowing the recipe keeps the motion
+// consistent with the rest of the app without pretending this is a
+// binary switch.
+//
+// Blur and scale are dialled back from the shared defaults: those are
+// tuned for a full-size icon, and at this glyph's 16px a 2px blur
+// smears it and a 0.25 start scale reads as a pop rather than a swap.
+.seller-home__feed-item-status-glyph {
+  --icon-swap-blur: 1px;
+  --icon-swap-start-scale: 0.7;
+
+  position: absolute;
+  inline-size: var(--sh-status-glyph);
+  block-size: var(--sh-status-glyph);
+
+  opacity: 0;
+  filter: blur(var(--icon-swap-blur));
+  transform: scale(var(--icon-swap-start-scale));
+  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+
+  transition:
+    opacity   var(--icon-swap-dur) var(--icon-swap-ease),
+    filter    var(--icon-swap-dur) var(--icon-swap-ease),
+    transform var(--icon-swap-dur) var(--icon-swap-ease),
+    fill      var(--duration-quick) var(--ease-in-out);
+}
+
+// Deliberately not gated by the preview latch below: this only darkens
+// whatever glyph is up, so while the button is latched out of previewing
+// it still visibly answers the pointer — it just answers with the row's
+// state instead of the next action.
+.seller-home__feed-item-status:hover .seller-home__feed-item-status-glyph,
+.seller-home__feed-item-status:focus-visible .seller-home__feed-item-status-glyph {
+  fill: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// The spinner is the shared `.sh-spinner` (index.scss), re-boxed to the
+// glyph slot so swapping it in doesn't change the button's metrics.
+// Parked by default — most rows carry one they never show, and an
+// invisible element has no business animating.
+.seller-home__feed-item-status-glyph--spinner {
+  box-sizing: border-box;
+  border-width: 2px;
+  animation: none;
+}
+
+[data-sh-feed-state="running"] .seller-home__feed-item-status-glyph--spinner {
+  animation: sh-spin 0.85s linear infinite;
+}
+
+// Off the shared glyph box and onto its own. Ties with the base rule on
+// specificity, so it has to stay below it.
+//
+// Resizing rather than scaling: `transform` is the icon-swap's, and a
+// scale here would be overwritten the moment the glyph is raised or
+// cleared. Staying out of that also keeps the dot centred for free —
+// the button centres these through its flex alignment, so a different
+// box re-centres itself.
+.seller-home__feed-item-status-glyph--circle {
+  inline-size: var(--sh-status-dot);
+  block-size: var(--sh-status-dot);
+}
+
+// ── Shared status-button chrome (feed + scheduled) ────────────────
+// Extracted so the Seller Home feed and the Scheduled list render the
+// same control — same hit target, glyph size, and swap motion — with
+// only their placement written per surface. (Ported from the shared
+// status refactor so the Scheduled list's button matches the feed.)
+@mixin sh-status-button {
+  // The box matches the 14px title's line box, which is what lets each
+  // surface align the button to the title and land the glyph on it.
+  --sh-status-size: 1.25rem;
+  --sh-status-glyph: 1rem;
+
+  // The completed "done" dot. `#circle` fills only 48/52 of its box (see
+  // the feed's copy of this token), so the box is inflated by 52/48 to land
+  // a true 8px visible disc. Matches the feed's green dot exactly.
+  --sh-status-dot: calc(8px * 52 / 48);  // 8px visible disc
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--sh-status-size);
+  block-size: var(--sh-status-size);
+
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: var(--slds-g-radius-border-circle, 100%);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0250d9);
+    outline-offset: 2px;
+  }
+}
+
+// All glyphs stack on the same centre; the state maps reveal two. Blur
+// and scale are dialled back from the shared `--icon-swap-*` defaults:
+// those are tuned for a full-size icon, and at this glyph's 16px a 2px
+// blur smears it and a 0.25 start scale reads as a pop, not a swap.
+@mixin sh-status-glyph {
+  --icon-swap-blur: 1px;
+  --icon-swap-start-scale: 0.7;
+
+  position: absolute;
+  inline-size: var(--sh-status-glyph);
+  block-size: var(--sh-status-glyph);
+
+  opacity: 0;
+  filter: blur(var(--icon-swap-blur));
+  transform: scale(var(--icon-swap-start-scale));
+  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+
+  transition:
+    opacity   var(--icon-swap-dur) var(--icon-swap-ease),
+    filter    var(--icon-swap-dur) var(--icon-swap-ease),
+    transform var(--icon-swap-dur) var(--icon-swap-ease),
+    fill      var(--duration-quick) var(--ease-in-out);
+}
+
+// The spinner is the shared `.sh-spinner` (index.scss), re-boxed to the
+// glyph slot so swapping it in doesn't change the button's metrics.
+// Parked by default — most rows carry one they never show.
+@mixin sh-status-glyph-spinner {
+  box-sizing: border-box;
+  border-width: 2px;
+  animation: none;
+}
+
+// The two ends of the swap. Every rule that raises or clears a glyph
+// sets all three properties, so a glyph hidden on hover picks the blur
+// and scale back up rather than only fading.
+@mixin sh-feed-glyph-shown {
+  opacity: 1;
+  filter: blur(0);
+  transform: scale(1);
+}
+
+@mixin sh-feed-glyph-hidden {
+  opacity: 0;
+  filter: blur(var(--icon-swap-blur));
+  transform: scale(var(--icon-swap-start-scale));
+}
+
+// Every state a row can be in. Drives the kebab's per-state action
+// visibility further down as well as reading as the canonical list.
+$sh-feed-states: completed, running, scheduled, paused, failed, archived;
+
+// At rest: what the row IS. On hover: what the click WILL DO. Every
+// state offers pause except the two where it isn't the obvious intent —
+// a paused row offers play, and a failed one offers retry.
+$sh-feed-status-rest: (
+  completed: "circle",
+  running:   "spinner",
+  scheduled: "clock",
+  paused:    "pause",
+  failed:    "warning",
+  archived:  "ban",
+);
+
+$sh-feed-status-action: (
+  completed: "pause",
+  running:   "pause",
+  scheduled: "pause",
+  paused:    "play",
+  failed:    "refresh",
+  archived:  "refresh",
+);
+
+@each $state, $glyph in $sh-feed-status-rest {
+  [data-sh-feed-state="#{$state}"] .seller-home__feed-item-status-glyph--#{$glyph} {
+    @include sh-feed-glyph-shown;
+  }
+}
+
+// The two glyphs that carry colour, both scoped to the resting glyph so
+// the hover swap to pause or retry returns to the normal grey — by then
+// the button is describing an action, not a state.
+//
+// The circle is a palette green rather than the success token its meaning
+// would suggest: `success-base-*` resolves teal in the agentic theme,
+// which next to the running spinner's blue reads as another shade of the
+// same thing rather than "done".
+[data-sh-feed-state="completed"] .seller-home__feed-item-status-glyph--circle {
+  fill: var(--slds-g-color-palette-green-70, #45c65a);
+}
+
+[data-sh-feed-state="failed"] .seller-home__feed-item-status-glyph--warning {
+  fill: var(--slds-g-color-error-base-40, #ea001e);
+}
+
+// Archived rows sit in their own view; a muted "ban" glyph at rest reads
+// as set-aside. Its hover action is Restart (the refresh glyph, from the
+// action map above).
+[data-sh-feed-state="archived"] .seller-home__feed-item-status-glyph--ban {
+  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+// The status button, but only while it should be previewing the action.
+//
+// A click leaves the pointer sitting on the button, so without this gate
+// the hover rules would immediately show the NEXT action and the state
+// just created would never appear — press pause on a completed row and
+// you land straight on a play glyph, having never seen it paused.
+// home.js latches the button out of preview on click and releases it
+// when the pointer or focus leaves, which is the point at which asking
+// for a preview again is a deliberate act.
+$sh-feed-status-preview: ".seller-home__feed-item-status:not([data-sh-feed-hover-latched])";
+
+@each $state, $glyph in $sh-feed-status-action {
+  // Clear the resting glyph, then raise the action one. Both selectors
+  // carry the same specificity, so source order decides — which is why
+  // these two blocks must stay in this order.
+  [data-sh-feed-state="#{$state}"] #{$sh-feed-status-preview}:hover .seller-home__feed-item-status-glyph,
+  [data-sh-feed-state="#{$state}"] #{$sh-feed-status-preview}:focus-visible .seller-home__feed-item-status-glyph {
+    @include sh-feed-glyph-hidden;
+  }
+
+  [data-sh-feed-state="#{$state}"] #{$sh-feed-status-preview}:hover .seller-home__feed-item-status-glyph--#{$glyph},
+  [data-sh-feed-state="#{$state}"] #{$sh-feed-status-preview}:focus-visible .seller-home__feed-item-status-glyph--#{$glyph} {
+    @include sh-feed-glyph-shown;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Feed filter (LAB ONLY)
+// ----------------------------------------------------------------------
+// Engaged only when the list carries `data-sh-feed-filter` (written from
+// the data flag `feed.filter`; Seller Home has none, so none of this
+// applies there). One list, three views: CSS hides the states a view
+// doesn't show, so switching views is instant and the Flip re-sort keeps
+// working across all of them.
+// ══════════════════════════════════════════════════════════════════════
+
+// The states each view HIDES (the complement of what it shows). Active =
+// completed + running + paused; Scheduled and Archived are single-state.
+$sh-feed-filter-hidden: (
+  active:    ("scheduled", "archived", "failed"),
+  scheduled: ("completed", "running", "paused", "archived", "failed"),
+  archived:  ("completed", "running", "paused", "scheduled", "failed"),
+);
+@each $view, $states in $sh-feed-filter-hidden {
+  @each $state in $states {
+    .seller-home__feed-list[data-sh-feed-filter="#{$view}"]
+      .seller-home__feed-list-item:has([data-sh-feed-state="#{$state}"]) {
+      display: none;
+    }
+  }
+}
+
+// Section headers belong to the non-filter Active/Paused grouping; the
+// single-state filter views drop them all if any are present.
+.seller-home__feed-list[data-sh-feed-filter="scheduled"] .seller-home__feed-group,
+.seller-home__feed-list[data-sh-feed-filter="archived"] .seller-home__feed-group {
+  display: none;
+}
+
+// Within Active, a section header hides when its state has no rows. The
+// unscoped Paused rule further up already covers paused; these cover the
+// Ready and Running headers (whose group names aren't "paused"/"active").
+@each $state in ("completed", "running") {
+  .seller-home__feed-list[data-sh-feed-filter="active"]:not(:has([data-sh-feed-state="#{$state}"]))
+    .seller-home__feed-group[data-sh-feed-group-state="#{$state}"] {
+    display: none;
+  }
+}
+
+// Under the filter a scheduled row's action is Run (play), not Pause —
+// starting a waiting run is the obvious intent. The extra
+// `[data-sh-feed-filter]` ancestor outweighs the base action rule.
+[data-sh-feed-filter] [data-sh-feed-state="scheduled"] #{$sh-feed-status-preview}:hover .seller-home__feed-item-status-glyph--pause,
+[data-sh-feed-filter] [data-sh-feed-state="scheduled"] #{$sh-feed-status-preview}:focus-visible .seller-home__feed-item-status-glyph--pause {
+  @include sh-feed-glyph-hidden;
+}
+[data-sh-feed-filter] [data-sh-feed-state="scheduled"] #{$sh-feed-status-preview}:hover .seller-home__feed-item-status-glyph--play,
+[data-sh-feed-filter] [data-sh-feed-state="scheduled"] #{$sh-feed-status-preview}:focus-visible .seller-home__feed-item-status-glyph--play {
+  @include sh-feed-glyph-shown;
+}
+
+// Under the filter, a running row's action is Stop (→ back to Scheduled)
+// and a completed row's action is Run now (re-run → running), each
+// replacing the default Pause preview. The extra `[data-sh-feed-filter]`
+// ancestor outweighs the base action rule.
+[data-sh-feed-filter] [data-sh-feed-state="running"] #{$sh-feed-status-preview}:hover .seller-home__feed-item-status-glyph--pause,
+[data-sh-feed-filter] [data-sh-feed-state="running"] #{$sh-feed-status-preview}:focus-visible .seller-home__feed-item-status-glyph--pause {
+  @include sh-feed-glyph-hidden;
+}
+[data-sh-feed-filter] [data-sh-feed-state="running"] #{$sh-feed-status-preview}:hover .seller-home__feed-item-status-glyph--stop,
+[data-sh-feed-filter] [data-sh-feed-state="running"] #{$sh-feed-status-preview}:focus-visible .seller-home__feed-item-status-glyph--stop {
+  @include sh-feed-glyph-shown;
+}
+[data-sh-feed-filter] [data-sh-feed-state="completed"] #{$sh-feed-status-preview}:hover .seller-home__feed-item-status-glyph--pause,
+[data-sh-feed-filter] [data-sh-feed-state="completed"] #{$sh-feed-status-preview}:focus-visible .seller-home__feed-item-status-glyph--pause {
+  @include sh-feed-glyph-hidden;
+}
+[data-sh-feed-filter] [data-sh-feed-state="completed"] #{$sh-feed-status-preview}:hover .seller-home__feed-item-status-glyph--play,
+[data-sh-feed-filter] [data-sh-feed-state="completed"] #{$sh-feed-status-preview}:focus-visible .seller-home__feed-item-status-glyph--play {
+  @include sh-feed-glyph-shown;
+}
+
+// Filter menu options: label on the left, a check on the selected view.
+.seller-home__feed-filter-item {
+  justify-content: space-between;
+}
+
+.seller-home__feed-filter-item-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seller-home__feed-filter-item-check {
+  flex-shrink: 0;
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
+  margin-inline-start: var(--slds-g-spacing-3, 0.75rem);
+  fill: var(--slds-g-color-accent-2, #0250d9);
+  visibility: hidden;
+}
+
+.seller-home__feed-filter-item[aria-selected="true"] .seller-home__feed-filter-item-check {
+  visibility: visible;
+}
+
+// ── Row ───────────────────────────────────────────────────────────────
+// Rows with no third line stay on the compact 56px min-height; the
+// `--has-outputs` variant top-aligns and grows to fit the pills.
+.seller-home__feed-item {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+
+  min-height: 3.5rem;
+  padding-inline: var(--slds-g-spacing-4, 1rem);
+
+  background: #ffffffa1;
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-palette-neutral-95);
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+
+  cursor: pointer;
+  transition: box-shadow 120ms ease;
+
+  // Same lift for pointer hover and keyboard focus, so both input modes
+  // get the same "this is interactive" signal. `:has(:focus-visible)`
+  // rather than `:focus-within`: a mouse click focuses the title
+  // button, and `:focus-within` would keep the lift after the pointer
+  // left until the next click elsewhere.
+  &:hover,
+  &:has(:focus-visible) {
+    --shadow-color: 0deg 0% 73%;
+    --shadow-elevation-medium:
+      0px 0.7px 0.6px hsl(var(--shadow-color) / 0.4),
+      0px 1.6px 1.4px -1.3px hsl(var(--shadow-color) / 0.33),
+      0px 4.7px 4.2px -2.7px hsl(var(--shadow-color) / 0.25),
+      0px 12.8px 11.5px -4px hsl(var(--shadow-color) / 0.18);
+
+    box-shadow: var(--shadow-elevation-medium);
+    background: #ffffffe8;
+  }
+}
+
+.seller-home__feed-item--has-outputs {
+  align-items: flex-start;
+  padding-block: var(--slds-g-spacing-4, 1rem);
+  min-height: 0;
+}
+
+// Status glyph + text, as one block the row can centre. It must stay
+// unpositioned: the title's stretched ::after resolves against the
+// nearest positioned ancestor, and that has to be the row, not this.
+.seller-home__feed-item-main {
+  display: flex;
+  align-items: flex-start; // glyph sits on the title's line, not between lines
+  gap: var(--slds-g-spacing-3, 0.75rem);
+  flex: 1;
+  min-width: 0;
+}
+
+.seller-home__feed-item-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0; // lets the nested truncation actually truncate
+}
+
+// The heading is a layout-neutral wrapper — all the type lives on the
+// interactive element inside it, so `<h3><a>` and `<h3><button>` render
+// identically.
+.seller-home__feed-item-title {
+  margin: 0;
+  max-width: 100%;
+  min-width: 0;
+  font: inherit;
+}
+
+// Plain dark text, not a blue link — the row's hover lift already
+// carries the affordance. Underline appears on hover/focus of the
+// element itself so keyboard users see it on the focused thing.
+//
+// `<button>` needs the reset that `<a>` doesn't; sharing one class
+// keeps the two element choices visually indistinguishable.
+.seller-home__feed-item-title-action {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: start;
+
+  font-family: inherit;
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.1875rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  text-decoration: none;
+  cursor: pointer;
+
+  // Stretched hit area: a transparent overlay filling the row, so a
+  // mouse click anywhere activates this control while the row keeps one
+  // tab stop and one announcement. Radius is restated because it
+  // doesn't inherit through a pseudo-element.
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: var(--slds-g-radius-border-3, 0.75rem);
+  }
+
+  &:hover,
+  &:focus-visible {
+    // No underline on hover — `none` (not just omission) so it also beats
+    // the global `a:hover { text-decoration: underline }` in
+    // slds2_agentic.css. The colour shift carries the hover affordance.
+    text-decoration: none;
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  }
+
+  &:focus-visible {
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0250d9);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  &:visited {
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  }
+}
+
+// Subline — "<status> · <time>". Separate spans because both halves are
+// rewritten independently when a row is paused, resumed or retried.
+.seller-home__feed-item-desc {
+  margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.3;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+.seller-home__feed-item-desc-sep {
+  margin-inline: 0.375em;
+}
+
+// One-time rows omit next/last run. Hide the middot when the time
+// slot has nothing to show, so the subline is just the cadence.
+.seller-home__feed-item-desc:has(.seller-home__feed-item-desc-time:empty)
+  .seller-home__feed-item-desc-sep {
+  display: none;
+}
+
+// ── State cues ────────────────────────────────────────────────────────
+// There are none, deliberately. A paused row keeps the same surface,
+// title colour and subline treatment as every other row; the only things
+// that change are what the subline SAYS ("Paused · Last run Thursday")
+// and which glyph the status button rests on. Both are content, not
+// decoration, so `data-sh-feed-state` drives the glyph and nothing else.
+//
+// Styling paused rows down was tried and dropped: it made a row that's
+// one click from running again look disabled, which is the wrong read
+// for a schedule the seller switched off on purpose.
+
+// ── Error line ────────────────────────────────────────────────────────
+// A failed row's error badge and the pill that replaces it on retry both
+// sit in the outputs row, and state shows one. Neither is ever removed,
+// so the row keeps a third line through the transition and its height
+// holds — and the error is still there if the retry fails again.
+[data-sh-feed-state="failed"] .seller-home__feed-item-retry {
+  display: none;
+}
+
+[data-sh-feed-state]:not([data-sh-feed-state="failed"]) .seller-home__feed-item-error {
+  display: none;
+}
+
+.seller-home__feed-item-retry {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+}
+
+// The badge is stock SLDS apart from its box: `line-height: normal` and
+// a 1px border would make it a pixel taller than an output pill, which
+// is enough to nudge the row when the two swap. Matching the pill's 16px
+// line and absorbing the border into the padding lands both on 24px.
+.seller-home__feed-item-error {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1rem;
+  padding-block: calc(var(--slds-g-spacing-1, 0.25rem) - 1px);
+}
+
+.seller-home__feed-item-outputs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+  margin-top: var(--slds-g-spacing-2, 0.5rem);
+  max-width: 100%;
+
+  // The row is spaced with `gap`; SLDS's own sibling margin would add a
+  // second helping between adjacent badges.
+  .slds-badge + .slds-badge {
+    margin-left: 0;
+  }
+}
+
+// ── Output pill ───────────────────────────────────────────────────────
+// A neutral chip; only the leading glyph differentiates the semantic
+// categories. Doctype sprites are pre-colored, so no `fill` override —
+// forcing currentColor would flatten them to one hue.
+.seller-home__feed-item-output-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+  max-width: 100%;
+  overflow: hidden;
+
+  padding: 0 0.5rem;
+  height: 28px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: var(--slds-g-radius-border-2, 0.25rem);
+  background: #fafafa;
+
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+.seller-home__feed-item-output-pill-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 4px;
+}
+
+.seller-home__feed-item-output-pill-glyph {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.seller-home__feed-item-output-pill-glyph--image {
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.seller-home__feed-item-output-pill-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: inherit;
+}
+
+// ── Right rail ────────────────────────────────────────────────────────
+// Fixed reserve so revealing the badge / kebab on hover can't reflow the
+// text to their left.
+.seller-home__feed-item-workflow-slot {
+  flex-shrink: 0;
+  min-width: 9.75rem; // 156px
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+// Hidden with `visibility` (not just opacity) so the badge leaves the
+// a11y tree too — the title's aria-label already carries the workflow.
+.seller-home__feed-item-workflow {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--slds-g-radius-border-pill, 15rem);
+  background: #d8e6fe;
+  color: #0250d9;
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  line-height: 1.125rem;
+
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 120ms ease, visibility 120ms ease;
+}
+
+.seller-home__feed-item:hover .seller-home__feed-item-workflow,
+.seller-home__feed-item:has(:focus-visible) .seller-home__feed-item-workflow {
+  opacity: 1;
+  visibility: visible;
+}
+
+// ── Menus (row kebab + section overflow) ──────────────────────────────
+// z-index clears the stretched-link overlay (z-index 1) so clicks land
+// on the trigger instead of the row's title action.
+.seller-home__feed-item-menu,
+.seller-home__feed-overflow {
+  position: relative;
+  z-index: 3;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.seller-home__feed-item-menu-trigger,
+.seller-home__feed-overflow-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--slds-g-sizing-9, 2rem);
+  block-size: var(--slds-g-sizing-9, 2rem);
+  border-radius: var(--slds-g-radius-border-circle, 100%);
+
+  transition: opacity 160ms ease, background-color 120ms ease;
+
+  .slds-button__icon {
+    fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+  }
+
+  // Blue rather than the neutral SLDS menus use, matching the
+  // composer's controls. Both overflow actions take it — the section's
+  // and the row's — so the two levels of "more actions" answer alike.
+  // The open state holds the hover colour, so a menu that's up still
+  // reads as attached to the button that opened it.
+  &:hover,
+  &:focus-visible,
+  &[aria-expanded="true"] {
+    background-color: var(--slds-g-color-palette-electric-blue-95, #edf4ff);
+    border-radius: var(--slds-g-radius-border-circle, 100%);
+  }
+
+  &:active {
+    background-color: var(--slds-g-color-palette-electric-blue-90, #d6e6ff);
+  }
+}
+
+// The filter trigger carries a state label (Active / Scheduled /
+// Archived) beside its icon, so it sizes to content instead of the
+// icon-only square, and its hover fill is a rounded pill, not a circle.
+.seller-home__feed-filter-trigger {
+  inline-size: auto;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+  padding-inline: var(--slds-g-spacing-2, 0.5rem);
+  border-radius: var(--slds-g-radius-border-4, 0.5rem);
+
+  &:hover,
+  &:focus-visible,
+  &[aria-expanded="true"] {
+    border-radius: var(--slds-g-radius-border-4, 0.5rem);
+  }
+}
+
+// Same size and colour as the header date beside the heading.
+.seller-home__feed-filter-label {
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  line-height: 1.3;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// The row kebab follows the workflow badge's progressive disclosure, but
+// stays put while its menu is open so it can't vanish under the pointer.
+.seller-home__feed-item-menu-trigger {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.seller-home__feed-item:hover .seller-home__feed-item-menu-trigger,
+.seller-home__feed-item:has(:focus-visible) .seller-home__feed-item-menu-trigger,
+.seller-home__feed-item-menu-trigger[aria-expanded="true"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.seller-home__feed-item-menu-list,
+.seller-home__feed-overflow-menu {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  z-index: 5;
+
+  min-width: 10rem;
+  // Padding on all sides (not just block) so the rounded hover on each
+  // item sits inset with a gutter around it — the agent switcher /
+  // run-history treatment (`.seller-home__composer-menu-list`).
+  padding: var(--slds-g-spacing-1, 0.25rem);
+  background: var(--slds-g-color-surface-container-1, #fff);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-3);
+  box-shadow:
+    0 4px 12px 0 rgba(0, 0, 0, 0.12),
+    0 1px 3px 0 rgba(0, 0, 0, 0.08);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.seller-home__feed-item-menu-items,
+.seller-home__feed-overflow-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+// Per-state menu actions. Every item is rendered once and state decides
+// which are live, so a row that changes state — "Run now" putting it
+// into `running`, say — has the right menu waiting without the markup
+// being rebuilt. `display: none` keeps a scoped-out item out of the a11y
+// tree; `menuItems` in home.js filters on `offsetParent` to keep it out
+// of Arrow-key navigation too, since focus can't land on it.
+//
+// Both attributes take a space-separated list of states, hence `~=`.
+@each $state in $sh-feed-states {
+  [data-sh-feed-state="#{$state}"] [data-sh-feed-action-not~="#{$state}"],
+  [data-sh-feed-state="#{$state}"] [data-sh-feed-action-only]:not([data-sh-feed-action-only~="#{$state}"]) {
+    display: none;
+  }
+}
+
+.seller-home__feed-item-menu-item,
+.seller-home__feed-overflow-item {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  margin: 0;
+  width: 100%;
+  cursor: pointer;
+  text-align: start;
+
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
+  // Rounded so the hover reads as a pill inset in the list gutter, the
+  // same as the agent switcher / run-history rows.
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.0625rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  transition: background-color 120ms ease, color 120ms ease;
+
+  // Brand tint on hover, matching the agent switcher / run-history menus
+  // (`.seller-home__composer-menu-item`) rather than the neutral grey
+  // this used before.
+  &:hover,
+  &:focus-visible {
+    background: var(--slds-g-color-brand-base-95, #eef4ff);
+    outline: none;
+  }
+
+  &:focus-visible {
+    box-shadow: inset var(--slds-g-sizing-border-3, 3px) 0 0 var(--slds-g-color-accent-2, #0250d9);
+  }
+}
+
+.seller-home__feed-item-menu-item-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+.seller-home__feed-item-menu-item-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Dismiss and reshuffle are GSAP timelines in home.js, not keyframes —
+// a Flip reorder needs to measure real positions before and after a DOM
+// move, which CSS can't do.
+
+// A11y — reduced motion + touch (no-hover) fallbacks.
+@media (prefers-reduced-motion: reduce) {
+  .seller-home__feed-item,
+  .seller-home__feed-item-status-glyph,
+  .seller-home__scheduled-status-glyph,
+  .seller-home__feed-group,
+  .seller-home__feed-item-workflow,
+  .seller-home__feed-item-menu-trigger,
+  .seller-home__feed-item-menu-item,
+  .seller-home__feed-overflow-trigger,
+  .seller-home__feed-overflow-item,
+  .seller-home__briefing-popover-action {
+    transition: none;
+  }
+
+  // Dismiss and reshuffle opt out in home.js (`canAnimate`) rather than
+  // here, since skipping them means not running the timeline at all.
+
+  .seller-home__feed:not(:has(.seller-home__feed-list-item)) .seller-home__feed-empty:not(.seller-home__feed-empty--filter) {
+    animation: none;
+  }
+
+  // Popover fade-in animation is a distraction for reduced-motion
+  // users — snap it open instead of interpolating opacity + Y.
+  .seller-home__briefing-popover {
+    animation: none;
+  }
+}
+
+@media (hover: none) {
+  // On coarse-pointer / touch devices, keep workflow labels visible
+  // always — sighted touch users can't hover so gating the label
+  // behind hover would hide meaningful context. AT users still get
+  // it from the row's aria-label.
+  .seller-home__feed-item-workflow {
+    opacity: 1;
+    visibility: visible;
+    transition: none;
+  }
+
+  // Same reasoning for the per-row overflow trigger — touch users
+  // can't hover, so the kebab has to be always-visible or the menu
+  // is unreachable. AT users always had it via keyboard focus.
+  .seller-home__feed-item-menu-trigger {
+    opacity: 1;
+    pointer-events: auto;
+    transition: none;
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Responsive: below 40rem (~640px) collapse the nav to icon-rail by
+// default so the placeholder region has usable width. User can still
+// toggle back to expanded via the button.
+// ──────────────────────────────────────────────────────────────────────
+@media (max-width: 40rem) {
+  .seller-home:not(.seller-home--nav-expanded) {
+    .seller-home__nav {
+      flex-basis: $sh-nav-width-collapsed;
+      width: $sh-nav-width-collapsed;
+    }
+    .seller-home__nav-label,
+    .seller-home__nav-recent-label,
+    .seller-home__nav-badge {
+      display: none;
+    }
+    // Recents keep their rows and swap to the monogram, exactly as they
+    // do under the toggled collapse — a rail narrowed by the viewport
+    // shouldn't be missing a group the same-width rail has.
+    .seller-home__nav-recent-mono { display: inline-flex; }
+    .seller-home__nav-recent-status,
+    .seller-home__nav-recent-ring { display: none; }
+    // Same padding-not-justify-content centring as the toggled collapse
+    // above, so a rail narrowed by the viewport and a rail narrowed by
+    // the button put their icons in the same place.
+    .seller-home__nav-item,
+    .seller-home__nav-section-header,
+    .seller-home__nav-recent {
+      padding-left: $sh-nav-row-padding-x-collapsed;
+      padding-right: $sh-nav-row-padding-x-collapsed;
+    }
+    .seller-home__nav-topbar {
+      padding: 0 $sh-nav-row-padding-x-collapsed;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Scheduled workflows page (src/views/scheduled.html)
+// ----------------------------------------------------------------------
+// Sibling surface to Knowledge — same left-nav + right-column shell,
+// same header band, same body-scroll pattern, same 50-rem inner
+// column. `.seller-home--scheduled` is applied alongside
+// `.seller-home--knowledge` on the root so the outer chrome (viewport
+// lock, column widths, header 48-px band, body scroll) all cascade
+// from the already-tuned Knowledge rules without duplication. Only
+// the Scheduled-specific concerns (composer margin, description
+// paragraph, tab row, workflow list, status indicators) live below.
+//
+// Design source: Figma "Scheduled" (frame 8831:380388 in Issa's
+// Explorations).
+// ══════════════════════════════════════════════════════════════════════
+
+// Root — page-level hook. Kept as an empty class today so a future
+// Scheduled-only viewport tweak (e.g. a compact variant) can pin to
+// this selector without changing markup. All positioning + scroll
+// behavior cascades from `.seller-home__knowledge` (applied to the
+// same element in scheduled.html) so there's nothing to override
+// here today.
+.seller-home__scheduled {
+  /* Intentionally empty — shared shell rules cascade from
+     `.seller-home__knowledge`. Reserved for future Scheduled-only
+     overrides. */
+}
+
+// (The 14/19 intro paragraph beneath the header was removed when
+// Scheduled adopted the shared educational banner. Its
+// `.seller-home__scheduled-description` selector was deleted with
+// the markup; if the intro line ever returns, redeclare it here so
+// `.seller-home__scheduled` overrides stay grouped.)
+
+// ══════════════════════════════════════════════════════════════════════
+// Toolbar — tab chips + right-anchored filter button.
+// ----------------------------------------------------------------------
+// One row that anchors the tab group on the left and the circular
+// filter icon-button on the right. Uses the same 40-px block that
+// Ready-to-Review's tab bar uses so the two surfaces feel like
+// siblings; the bottom hairline that separates tabs from list content
+// comes from the tab's own `border-bottom` (active) — not the toolbar
+// wrapper — so the underline sits inside the tab row rather than
+// spanning the full width of the composer / description above.
+// ══════════════════════════════════════════════════════════════════════
+.seller-home__scheduled-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  // No `gap` between the tab group and the filter button — the tab
+  // group's own trailing padding + the filter button's own padding
+  // handle the visual separation. `justify-content: space-between`
+  // pushes the two flex children to opposite edges regardless of the
+  // width in between, matching the Figma layout at every viewport.
+
+  // 4-px reserved bottom "hairline lane" sits UNDER the active-tab
+  // border so the active border-bottom paints on top of the toolbar
+  // border, forming the classic "tab-under-a-line" look without
+  // requiring the tab to negative-margin over its parent. A tab that
+  // ISN'T active leaves the toolbar's own border visible in its slot.
+  border-bottom: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+}
+
+.seller-home__scheduled-tabs {
+  display: flex;
+  gap: 0;
+  // Sit the tab row's baseline flush with the toolbar's bottom border
+  // so an active tab's own bottom border overlays the toolbar border.
+  // 1-px negative-margin trick — same convention SLDS's own
+  // `.slds-tabs_default__nav` uses.
+  margin-bottom: -1px;
+}
+
+// ── Individual tab (filter chip) ──────────────────────────────────
+// These were cloned from the Home feed's tab vocabulary so the two
+// surfaces read as one visual family. The feed has since dropped its
+// tabs for a single sorted list, so this is now the only place that
+// vocabulary lives — the values below are the source of truth rather
+// than a copy of something else. Note:
+//   • Semantic role is `radio` (not `tab`) because these filter one
+//     list, not swap panels. See scheduled.html for the ARIA
+//     rationale. Styling is unaffected.
+.seller-home__scheduled-tab {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  // Reserved 3-px bottom border so switching between inactive /
+  // active states never reflows the row height.
+  border-bottom: 3px solid transparent;
+  padding: 0 var(--slds-g-spacing-3, 0.75rem);
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  height: 2.5rem;   // 40px — Figma
+  max-width: 15rem; // 240px cap so a long future label truncates
+  overflow: hidden;
+
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.1875rem; // 19px
+
+  transition: color 120ms ease, border-color 120ms ease;
+
+  &:hover {
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+  }
+
+  // `:focus-visible` paints an inset ring so mouse clicks don't
+  // paint a persistent outline. Uses SLDS accent-2 so the ring
+  // matches the resting tab's own active color — one focus
+  // vocabulary across the page.
+  &:focus-visible {
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0250d9);
+    outline-offset: -2px;
+    border-radius: 2px;
+  }
+
+  // Active state — brand-blue text + brand-blue underline. Applied
+  // both by CSS class (SSR first paint) AND by ARIA state
+  // (`aria-checked="true"` painted by the tab controller in
+  // Step 6). Both selectors are listed so a tab whose class flag
+  // drifts still shows the correct visual state.
+  &.is-active,
+  &[aria-checked="true"] {
+    color: var(--slds-g-color-accent-2, #0250d9);
+    border-bottom-color: var(--slds-g-color-border-accent-2, #0250d9);
+  }
+}
+
+.seller-home__scheduled-tab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.seller-home__scheduled-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;      // 20px — single digit still reads as a pill
+  padding-inline: 0.375rem;
+  height: 1.125rem;        // 18px
+  border-radius: var(--slds-g-radius-border-pill, 15rem);
+
+  background: var(--slds-g-color-surface-container-3, #e5e5e5);
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-family: inherit;
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: var(--slds-g-font-lineheight-1, 1);
+
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+// Active-state count pill — brand-blue tinted so it visually
+// couples with the active tab's brand-blue text + underline.
+.seller-home__scheduled-tab.is-active .seller-home__scheduled-tab-count,
+.seller-home__scheduled-tab[aria-checked="true"] .seller-home__scheduled-tab-count {
+  background: var(--slds-g-color-info-container-1, #d8e6fe);
+  color: var(--slds-g-color-on-info-1, #0b5cab);
+}
+
+// ── Right-anchored filter icon-button ────────────────────────────
+// Circular 32×32 icon-only button next to the tabs. Uses SLDS 2's
+// `slds-button slds-button_icon slds-button_icon-bare` shell so its
+// tap target, focus ring, and disabled state come from the base
+// stylesheet. Only the icon color + resting opacity are tuned here.
+.seller-home__scheduled-filter {
+  // Paint the icon in the SLDS brand-blue (accent-2 → #0250D9) so
+  // the filter affordance visually couples with the active-tab's
+  // brand-blue text + underline, forming one "primary interaction"
+  // color vocabulary across the toolbar. Falls back to the raw hex
+  // so a missing SLDS theme file can't drop the icon to a
+  // colorless default.
+  .slds-button__icon {
+    fill: var(--slds-g-color-accent-2, #0250d9);
+  }
+
+  // Hover/active surface shares the exact treatment the per-row ⋮
+  // trigger uses (see `.seller-home__scheduled-workflow-menu-trigger`)
+  // so the toolbar and row controls read as one family — see the
+  // shared box rule below.
+}
+
+// ── Workflow list ─────────────────────────────────────────────────
+// Structural cousin of `.seller-home__knowledge-doc-list`. Same
+// list reset, same 8-px inter-row gap, same "region is labeled by
+// the surrounding landmark, not by role on the list" contract.
+.seller-home__scheduled-workflow-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-2, 0.5rem); // 8px between rows
+}
+
+// Row wrapper. `position: relative` scopes the overflow menu's
+// absolute positioning — same convention Knowledge uses.
+.seller-home__scheduled-workflow-item {
+  position: relative;
+  list-style: none;
+}
+
+// ── Workflow row body — full-row click target ─────────────────────
+// Card surface + hairline + hover / focus / active states cloned
+// from `.seller-home__knowledge-doc-row` so both lists share one
+// visual vocabulary. Row height is 56 px, radius 12 px, inline
+// padding 16 px each side.
+.seller-home__scheduled-workflow-row {
+  display: flex;
+  align-items: center;
+  // Gap between the flexing text body and the fixed right-side actions
+  // (the leading status cell is reserved with padding-inline-start, not
+  // this gap — it's a sibling, not a flex child).
+  column-gap: var(--slds-g-spacing-3, 0.75rem); // 12px
+  min-height: 3.5rem; // 56px — Figma-fixed row height
+
+  // The status button is a SIBLING of this element rather than a flex
+  // child of it (it's a `<button>` and this row is an `<a>` — see the
+  // template), so the leading cell is reserved with padding instead of
+  // being laid out by a gap: 12 px row padding + 20 px button + 10 px
+  // to the title. The 10 is bespoke rather than tokenised — it falls
+  // between `--slds-g-spacing-2` (8) and `-3` (12), and it's the
+  // optical gap from the 16-px glyph inside that 20-px box that was
+  // tuned, not the box-to-box figure.
+  padding-inline-start: 2.625rem; // 42px = 12 + 20 + 10
+  padding-inline-end: var(--slds-g-spacing-3, 0.75rem); // 12px
+  padding-block: 0;
+
+  background: var(--slds-g-color-surface-1, #ffffff);
+  border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+
+  // Card, not hyperlink — reset the browser's default `<a>` chrome
+  // so the row reads as a surface. Same defense-in-depth
+  // `.seller-home__knowledge-doc-row` uses against the global
+  // `a:hover { text-decoration: underline }` rule shipped by
+  // `slds2_agentic.css`.
+  color: inherit;
+  text-decoration: none;
+
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+
+  &:hover,
+  &:focus,
+  &:focus-visible {
+    text-decoration: none;
+  }
+
+  &:hover {
+    background: var(--slds-g-color-surface-container-2, #f3f3f3);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  }
+
+  &:active {
+    background: var(--slds-g-color-surface-container-3, #ebebeb);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16);
+  }
+
+  &:focus {
+    outline: none;
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 0, 0, 0.16),
+      0 0 0 2px var(--slds-g-color-accent-2, #0250d9);
+  }
+
+  // ── Unlinked variant ──
+  // Rendered as a `<div>` (not an `<a>`) when the workflow opts
+  // out of drill-in via `linked: false`. Card surface + border +
+  // typography stay identical so linked / unlinked rows visually
+  // align in the same list, but the "leads somewhere" affordances
+  // are all suppressed:
+  //   • no pointer cursor
+  //   • no hover surface shift / border darken
+  //   • no active surface shift
+  //   • no focus-visible ring (the wrapper isn't focusable — it's
+  //     a `<div>` with no tabindex — so this rule is defensive)
+  // Every row in scheduled.json ships with `linked: false` today
+  // because the detail view is a future increment; the branch
+  // remains in place so individual rows can flip on once the
+  // detail page exists.
+  &--unlinked,
+  &--unlinked:hover,
+  &--unlinked:focus,
+  &--unlinked:active,
+  &--unlinked:focus-visible {
+    cursor: default;
+    background: var(--slds-g-color-surface-1, #ffffff);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+  }
+}
+
+// ── Status button (left) ──────────────────────────────────────────
+// The home feed's status control, dropped into this list's leading
+// cell — one workflow reads and behaves the same on both surfaces.
+// Chrome + glyph come from the shared `sh-status-*` mixins; the rest /
+// action glyph maps are scheduled-local (below) but now mirror the feed
+// exactly, including "completed" resting on the same green check.
+//
+// Absolutely positioned instead of laid out in the row, because it's a
+// `<button>` and the row body is an `<a>` on linked rows — so the
+// template keeps it as a sibling and this drops it into the cell the
+// body's `padding-inline-start` reserves. Same arrangement the ⋮ menu
+// uses at the other end of the row.
+.seller-home__scheduled-status {
+  @include sh-status-button;
+
+  position: absolute;
+  // The row's own inline padding, so the button lands on the line the
+  // row starts its content on. Moves with that padding or it drifts.
+  inset-inline-start: var(--slds-g-spacing-3, 0.75rem); // 12px
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2; // above the row body's full-row click surface
+}
+
+// Card surface hover / focus. Keyed on the ITEM (not the row-open
+// overlay) so the treatment is identical whether the pointer is over the
+// row surface, the status glyph, the Reconnect button, or the overflow —
+// and `:focus-within` gives keyboard users the same cue without relying
+// on hover. Higher specificity than the is-selected outline below, so a
+// selected card also yields to this neutral surface on hover/focus.
+// Unlinked rows (inert draft rows) opt out via `:not(--unlinked)`.
+.seller-home__scheduled-workflow-item:hover
+  .seller-home__scheduled-workflow-row:not(.seller-home__scheduled-workflow-row--unlinked),
+.seller-home__scheduled-workflow-item:focus-within
+  .seller-home__scheduled-workflow-row:not(.seller-home__scheduled-workflow-row--unlinked) {
+  background: var(--slds-g-color-surface-container-2, #f3f3f3);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+.seller-home__scheduled-status-glyph {
+  @include sh-status-glyph;
+}
+
+// The completed dot is sized on its own — the same treatment the feed's
+// `--circle` glyph gets — because `#circle` is a solid disc and would land
+// far heavier than the line glyphs at the shared 16px box. Must follow the
+// base glyph rule above so its size wins on source order.
+.seller-home__scheduled-status-glyph--circle {
+  inline-size: var(--sh-status-dot);
+  block-size: var(--sh-status-dot);
+}
+
+.seller-home__scheduled-status-glyph--spinner {
+  @include sh-status-glyph-spinner;
+}
+
+[data-sh-workflow-status="running"] .seller-home__scheduled-status-glyph--spinner {
+  animation: sh-spin 0.85s linear infinite;
+}
+
+// Darkens whatever glyph is up, so the button still answers the pointer
+// while it's latched out of previewing the next action.
+.seller-home__scheduled-status:hover .seller-home__scheduled-status-glyph,
+.seller-home__scheduled-status:focus-visible .seller-home__scheduled-status-glyph {
+  fill: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// Rest = what the row IS; action = what a click WILL DO. Scheduled-local
+// (not the feed's `$sh-feed-status-*`), but the values now mirror the feed
+// exactly — "completed" rests on the same green check the feed
+// uses — so a workflow reads identically on both surfaces.
+$sh-scheduled-status-rest: (
+  completed: "check",
+  running:   "spinner",
+  scheduled: "clock",
+  paused:    "pause",
+  failed:    "warning",
+  archived:  "archive",
+);
+
+// Action glyphs must (a) exist in the row's glyph preload list in
+// _scheduled_workflow_list.html and (b) match the action verb in
+// scheduled.json `statusTypes` (Pause / Resume / Retry / Restore).
+// The preload set is [check, clock, pause, play, warning, refresh,
+// archive], so "stop"/"circle" (from the main-side merge) are not
+// rendered — hence pause for running (verb "Pause") and refresh for
+// failed/archived (verbs "Retry"/"Restore").
+$sh-scheduled-status-action: (
+  completed: "pause",
+  running:   "pause",
+  scheduled: "pause",
+  paused:    "play",
+  failed:    "refresh",
+  archived:  "refresh",
+);
+
+// At rest: what the row IS.
+@each $state, $glyph in $sh-scheduled-status-rest {
+  [data-sh-workflow-status="#{$state}"] .seller-home__scheduled-status-glyph--#{$glyph} {
+    @include sh-feed-glyph-shown;
+  }
+}
+
+// Completed rows rest on a green check — scoped to the resting glyph so
+// the hover swap to the Run-now arrow (play) returns to grey.
+[data-sh-workflow-status="completed"] .seller-home__scheduled-status-glyph--check {
+  fill: var(--slds-g-color-palette-green-70, #45c65a);
+}
+
+// The one line glyph that carries colour — the failed warning. Scoped to
+// the resting glyph so the hover swap to the retry arrow returns to grey.
+[data-sh-workflow-status="failed"] .seller-home__scheduled-status-glyph--warning {
+  fill: var(--slds-g-color-palette-red-50, #ea001e);
+}
+
+// Archived rows rest on a muted "ban" glyph (hover swaps to Restart's
+// refresh, from the action map) — same treatment as the feed.
+[data-sh-workflow-status="archived"] .seller-home__scheduled-status-glyph--ban {
+  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+// On hover: what the click WILL DO. Latched off after a click so the
+// state just created is the one you see, rather than the next action the
+// pointer is already sitting on — home.js releases the latch when the
+// pointer or focus leaves. Same gate the feed uses.
+$sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workflow-hover-latched])";
+
+@each $state, $glyph in $sh-scheduled-status-action {
+  // Same specificity in both blocks, so source order decides which wins
+  // — these two have to stay in this order.
+  [data-sh-workflow-status="#{$state}"] #{$sh-scheduled-status-preview}:hover .seller-home__scheduled-status-glyph,
+  [data-sh-workflow-status="#{$state}"] #{$sh-scheduled-status-preview}:focus-visible .seller-home__scheduled-status-glyph {
+    @include sh-feed-glyph-hidden;
+  }
+
+  [data-sh-workflow-status="#{$state}"] #{$sh-scheduled-status-preview}:hover .seller-home__scheduled-status-glyph--#{$glyph},
+  [data-sh-workflow-status="#{$state}"] #{$sh-scheduled-status-preview}:focus-visible .seller-home__scheduled-status-glyph--#{$glyph} {
+    @include sh-feed-glyph-shown;
+  }
+}
+
+// Per-state overflow scoping — mirrors the feed's action-visibility loop,
+// keyed off the row's `data-sh-workflow-status`. `onlyForState` /
+// `hideForState` take a space-separated list (hence `~=`), so Run now and
+// Archive can scope to "completed scheduled" at once.
+@each $state in $sh-feed-states {
+  [data-sh-workflow-status="#{$state}"] [data-sh-workflow-action-not~="#{$state}"],
+  [data-sh-workflow-status="#{$state}"] [data-sh-workflow-action-only]:not([data-sh-workflow-action-only~="#{$state}"]) {
+    display: none;
+  }
+}
+
+// ── Text stack (center) ──
+// Title (14 px Semibold) stacked over the cadence line (12 px).
+// `min-width: 0` unlocks child ellipsis (see the block comment on
+// the Knowledge doc body — same reasoning). It flexes into the space
+// the fixed-width `.actions` cluster leaves, and the row `gap` (below)
+// keeps a breathing gutter between the text and the actions, so an
+// ellipsized title never crashes into Reconnect / the overflow.
+.seller-home__scheduled-workflow-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.seller-home__scheduled-workflow-title {
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
+  font-weight: var(--slds-g-font-weight-6, 600); // Semibold
+  line-height: 1.1875rem; // 19px — Figma Body/font-scale-1/Semibold
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.seller-home__scheduled-workflow-meta {
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px — Figma Display/1/Regular
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.3; // Figma "leading-[1.3]"
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Overflow menu — mirrors `.seller-home__knowledge-doc-menu` block.
+// Cloned rather than shared because the position math differs
+// (Scheduled has no chevron column — the trigger sits closer to the
+// row's right edge — so `right: 0.75rem` here vs `right: 3rem` on
+// Knowledge). Reveal contract, panel drop, item hover states, and
+// aria conventions are otherwise identical.
+// ══════════════════════════════════════════════════════════════════════
+.seller-home__scheduled-workflow-menu {
+  display: inline-flex;
+  align-items: center;
+}
+
+// Authored rows: the menu rides inside the flex `.actions` cluster.
+// `position: relative` makes it the anchor for the dropdown
+// (`.menu-list`, absolute below).
+.seller-home__scheduled-workflow-actions .seller-home__scheduled-workflow-menu {
+  position: relative;
+}
+
+// Draft rows (scheduled_drafts.js) append the menu straight onto the
+// <li> — a linked draft's row is an `<a>`, so the trigger button can't
+// nest inside it — so there it stays an absolutely-centred overlay on
+// the row's right edge, tracking the 12px row padding.
+.seller-home__scheduled-workflow-item > .seller-home__scheduled-workflow-menu {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+// …and because that menu is out of flow, a draft row's text body has to
+// reserve the right gutter itself so an ellipsized title never crashes
+// into it. Authored rows don't need this — their in-flow `.actions`
+// cluster already reserves the space.
+.seller-home__scheduled-workflow-item:has(> .seller-home__scheduled-workflow-menu)
+  .seller-home__scheduled-workflow-body {
+  margin-inline-end: 2.75rem; // 44px (32 overflow + 12 gap)
+}
+
+.seller-home__scheduled-workflow-menu-trigger {
+  opacity: 0;
+  pointer-events: none;
+
+  // 32×32 box (icon centered) so the hover-gray is an even circle —
+  // matches the Knowledge tile + Ready-row kebabs. The wrapper is
+  // absolute-positioned and centered at right:1rem, already sized for
+  // a 32-px trigger.
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--slds-g-sizing-9, 2rem);  // 32px
+  block-size: var(--slds-g-sizing-9, 2rem);   // 32px
+  border-radius: var(--slds-g-radius-border-circle, 100%);
+
+  transition:
+    opacity 160ms ease,
+    background-color 120ms ease;
+
+  .slds-button__icon {
+    fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+  }
+
+  // Match the Skills-list kebab: the card wash is #f3f3f3, so the
+  // trigger's own hover circle is one step darker (#e5e5e5,
+  // surface-container-3) to read as a distinct target on the lit card
+  // instead of dissolving into it. The card stays lit while the
+  // pointer is on the trigger via `.item:hover .row`.
+  &:hover,
+  &:focus-visible,
+  &[aria-expanded="true"] {
+    background-color: var(--slds-g-color-surface-container-3, #e5e5e5);
+    border-radius: var(--slds-g-radius-border-circle, 100%);
+  }
+
+  &:active {
+    background-color: #dbdbdb;
+  }
+}
+
+.seller-home__scheduled-workflow-item:hover .seller-home__scheduled-workflow-menu-trigger,
+.seller-home__scheduled-workflow-item:focus-within .seller-home__scheduled-workflow-menu-trigger,
+.seller-home__scheduled-workflow-menu-trigger[aria-expanded="true"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+// Touch devices have no hover to reveal the overflow, so keep it
+// permanently visible there — matching how the always-on Reconnect
+// button stays reachable without a pointer.
+@media (hover: none) {
+  .seller-home__scheduled-workflow-menu-trigger {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.seller-home__scheduled-workflow-menu-list {
+  position: absolute;
+  top: calc(100% + 0.25rem); // 4px gap below the trigger
+  right: 0;
+  z-index: 5;
+
+  min-width: 10rem; // 160px
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem); // 8px
+  box-shadow:
+    0 4px 12px 0 rgba(0, 0, 0, 0.12),
+    0 1px 3px 0 rgba(0, 0, 0, 0.08);
+
+  padding-block: var(--slds-g-spacing-1, 0.25rem); // 4px vertical
+}
+
+.seller-home__scheduled-workflow-menu-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.seller-home__scheduled-workflow-menu-item {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  margin: 0;
+  cursor: pointer;
+  text-align: start;
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem); // 8px icon-to-label
+
+  padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.0625rem; // 17px
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  transition: background-color 120ms ease, color 120ms ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--slds-g-color-surface-container-2, #f3f3f3);
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+    outline: none;
+  }
+
+  &:focus-visible {
+    box-shadow: inset var(--slds-g-sizing-border-3, 3px) 0 0 var(--slds-g-color-accent-2, #0250d9);
+  }
+
+  // Disabled — e.g. Run now while a blocking issue remains. Muted, no
+  // hover/press affordance, but still shown so the path stays visible.
+  &:disabled,
+  &[aria-disabled="true"] {
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+    cursor: default;
+    opacity: 0.5;
+  }
+  &:disabled:hover,
+  &[aria-disabled="true"]:hover {
+    background: transparent;
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  }
+}
+
+.seller-home__scheduled-workflow-menu-item-icon {
+  width: 0.875rem;  // 14px
+  height: 0.875rem; // 14px
+  fill: currentColor;
+  flex: 0 0 auto;
+}
+
+.seller-home__scheduled-workflow-menu-item-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+// ── Empty state ───────────────────────────────────────────────────
+// Sibling of the workflow list. Hidden by default; the tab
+// controller (built in Step 6) toggles `hidden` in tandem with the
+// list when the active tab filters every row out.
+.seller-home__scheduled-empty {
+  padding-block: var(--slds-g-spacing-6, 1.5rem);
+  padding-inline: var(--slds-g-spacing-4, 1rem);
+  text-align: center;
+
+  background: var(--slds-g-color-surface-container-2, #f3f3f3);
+  border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
+}
+
+.seller-home__scheduled-empty-title {
+  margin: 0 0 var(--slds-g-spacing-1, 0.25rem);
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
+  font-weight: var(--slds-g-font-weight-6, 600);
+  line-height: 1.1875rem; // 19px
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+.seller-home__scheduled-empty-description {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.3;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+// Touch devices don't fire `:hover` reliably, so always show the
+// overflow trigger on coarse pointers. Same escape hatch Knowledge
+// uses.
+@media (hover: none) {
+  .seller-home__scheduled-workflow-menu-trigger {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+// Narrow-viewport tuning — tighten the gap between the text body and
+// the right-side actions so the row breathes at small widths. The
+// fixed `.actions` cluster still reserves its own width, so the body
+// just ellipsizes sooner. Mirrors the equivalent Knowledge doc-row rule.
+@media (max-width: 40rem) {
+  .seller-home__scheduled-workflow-row {
+    column-gap: var(--slds-g-spacing-2, 0.5rem); // 8px
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Clickable-card resets, toolbar overflow, archived bar, detail panel
+// ------------------------------------------------------------------
+// Draft rows (scheduled_drafts.js) still render `.row` as the
+// interactive `<a>`/`<div>`, so keep these resets on it. Authored rows
+// render `.row` as an inert `<div>` with a stretched-button overlay
+// (`.seller-home__scheduled-workflow-open`, below) as the click target;
+// the resets are harmless there and `text-align`/`font` still apply to
+// the card text.
+.seller-home__scheduled-workflow-row {
+  width: 100%;
+  appearance: none;
+  border: 0;
+  margin: 0;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+// ── Full-row open target (stretched-button overlay) ───────────────
+// Authored rows layer a transparent `<button>` over the card so the
+// whole row opens the details panel while the card's own text can host
+// inline controls (the failed-row Reconnect). It fills the item's
+// coordinate space (the item is position:relative) and sits BELOW the
+// status button / Reconnect / ⋮ menu (all z-index 2) so their hit
+// targets win over the row-open surface.
+.seller-home__scheduled-workflow-open {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px, matches the card
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 0, 0, 0.16),
+      0 0 0 2px var(--slds-g-color-accent-2, #0250d9);
+  }
+}
+
+// Pressed surface — only while the row-open area itself is active, so
+// pressing the Reconnect button or overflow (which own their own press
+// states) doesn't darken the whole card.
+.seller-home__scheduled-workflow-item:has(.seller-home__scheduled-workflow-open:active)
+  .seller-home__scheduled-workflow-row {
+  background: var(--slds-g-color-surface-container-3, #ebebeb);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16);
+}
+
+// ── Right-side action area (Reconnect + overflow) ─────────────────
+// A flow child of the row, lifted above the row-open overlay so its
+// controls are clickable. Never shrinks (flex 0 0 auto) so it can't be
+// squeezed by a long title / error message; the text body flexes into
+// the remaining width and ellipsizes instead.
+.seller-home__scheduled-workflow-actions {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem); // 8px between Reconnect and ⋮
+}
+
+// ── Reconnect — primary recovery action (Needs-Attention rows) ────
+// A design-system text button tinted with the error token: visible and
+// actionable, but no destructive fill, so the whole card never reads as
+// destructive. Always visible (unlike the hover-revealed overflow), and
+// swaps its label for a spinner while the reconnect flow runs.
+//
+// Hover/active follow the SLDS 2 stateful-button treatment
+// (`.slds-button_neutral.slds-is-selected` in slds2_agentic.scss): a
+// `surface-container-2` fill AND a `border-1` hairline on hover/focus
+// (surface-container-3 on active). The border is transparent at rest so
+// it reveals on hover without shifting layout (box-sizing: border-box).
+.seller-home__scheduled-workflow-reconnect {
+  --slds-c-button-text-color: var(--slds-g-color-error-1, #b60554);
+
+  box-sizing: border-box;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: var(--slds-g-sizing-8, 1.75rem); // 28px hit target
+  padding-inline: var(--slds-g-spacing-2, 0.5rem); // 8px
+  border: var(--slds-g-sizing-border-1, 1px) solid transparent; // no hairline — matches the Skills action-button hover
+  border-radius: var(--slds-g-radius-border-2, 0.5rem); // 8px
+  background: transparent;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
+  font-weight: var(--slds-g-font-weight-6, 600); // Semibold — matches the Figma emphasis
+  line-height: var(--slds-g-font-lineheight-1, 1);
+  color: var(--slds-g-color-error-1, #b60554);
+  white-space: nowrap;
+  cursor: pointer;
+
+  transition: background-color 120ms ease;
+
+  // Match the Skills-list action button: the card wash is #f3f3f3, so
+  // the button's own hover fill is one step darker (#e5e5e5,
+  // surface-container-3) and reads as a distinct target on the lit
+  // card — no hairline. The card stays lit while the pointer is on the
+  // button via `.item:hover .row`. Error tint is preserved on the label.
+  &:hover,
+  &:focus-visible {
+    background: var(--slds-g-color-surface-container-3, #e5e5e5);
+    color: var(--slds-g-color-error-1, #b60554);
+  }
+  &:active {
+    background: #dbdbdb;
+  }
+  &:focus {
+    outline: none;
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--slds-g-color-error-1, #b60554);
+  }
+
+  // Loading — swap label for the shared spinner, freeze interaction.
+  &[aria-busy="true"] {
+    cursor: default;
+    pointer-events: none;
+  }
+}
+
+// Spinner sizing/visibility scoped under the button so it beats the
+// shared `.sh-spinner` defaults (20px, always inline-block) on
+// specificity regardless of stylesheet order. Hidden until busy; a
+// 14px ring with a 2px stroke sits neatly on the 12px label baseline.
+.seller-home__scheduled-workflow-reconnect .seller-home__scheduled-workflow-reconnect-spinner {
+  display: none;
+  width: 0.875rem; // 14px
+  height: 0.875rem;
+  border-width: 2px;
+}
+
+.seller-home__scheduled-workflow-reconnect[aria-busy="true"]
+  .seller-home__scheduled-workflow-reconnect-label {
+  display: none;
+}
+
+.seller-home__scheduled-workflow-reconnect[aria-busy="true"]
+  .seller-home__scheduled-workflow-reconnect-spinner {
+  display: inline-block;
+}
+
+// Error message (second line) on a Needs-Attention row picks up the
+// error token; the schedule name above stays neutral.
+.seller-home__scheduled-workflow-item[data-sh-workflow-status="failed"]
+  .seller-home__scheduled-workflow-meta {
+  color: var(--slds-g-color-error-1, #b60554);
+}
+
+// Selected state — the card whose panel is open keeps a neutral
+// surface + hairline (no brand-blue outline) so it stays gently
+// distinct beside the docked panel without a heavy border. The open
+// panel is the primary "this one" cue.
+.seller-home__scheduled-workflow-item.is-selected .seller-home__scheduled-workflow-row {
+  background: var(--slds-g-color-surface-container-2, #f3f3f3);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+// ── Toolbar right cluster (filter + overflow) ─────────────────────
+.seller-home__scheduled-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+  flex: 0 0 auto;
+}
+
+// Overflow (⋮) menu container — positioned coordinate space for the
+// dropdown, matching the per-row menu convention.
+.seller-home__scheduled-overflow {
+  position: relative;
+  display: inline-flex;
+}
+
+.seller-home__scheduled-overflow-trigger {
+  .slds-button__icon {
+    fill: var(--slds-g-color-accent-2, #0250d9);
+  }
+}
+
+// ── Shared box + hover/active for the two toolbar icon-buttons ────
+// The bare SLDS button collapses to its 16-px glyph, which left the
+// hover wash as a tight 16-px circle. Give both toolbar buttons the
+// same 32×32 centered box + hover/active surface the per-row ⋮ trigger
+// uses so their hover reads identically and the icons sit on an even
+// circle.
+.seller-home__scheduled-filter,
+.seller-home__scheduled-overflow-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--slds-g-sizing-9, 2rem);  // 32px
+  block-size: var(--slds-g-sizing-9, 2rem);   // 32px
+  border-radius: var(--slds-g-radius-border-circle, 100%);
+
+  transition: background-color 120ms ease;
+
+  &:hover,
+  &:focus-visible {
+    background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+    border-radius: var(--slds-g-radius-border-circle, 100%);
+  }
+
+  &:active {
+    background-color: var(--slds-g-color-surface-container-3, #e5e5e5);
+  }
+}
+
+// The ⋮ trigger's expanded (menu open) + is-active (Archived view)
+// states reuse the same neutral surface so its hover/pressed feel
+// matches the per-row ⋮ trigger rather than introducing a second
+// vocabulary.
+.seller-home__scheduled-overflow-trigger.is-active,
+.seller-home__scheduled-overflow-trigger[aria-expanded="true"] {
+  background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+  border-radius: var(--slds-g-radius-border-circle, 100%);
+}
+
+.seller-home__scheduled-overflow-menu {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(100% + 0.25rem);
+  z-index: 20;
+
+  min-width: 11rem;
+  padding: var(--slds-g-spacing-1, 0.25rem);
+  background: var(--slds-g-color-surface-1, #ffffff);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.seller-home__scheduled-overflow-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.seller-home__scheduled-overflow-item {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  margin: 0;
+  cursor: pointer;
+  text-align: start;
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+
+  padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
+  border-radius: var(--slds-g-radius-border-1, 0.25rem);
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.1875rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  transition: background-color 120ms ease, color 120ms ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--slds-g-color-surface-container-2, #f3f3f3);
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+    outline: none;
+  }
+}
+
+.seller-home__scheduled-overflow-item-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  fill: currentColor;
+  flex: 0 0 auto;
+}
+
+// ── Archived-view bar ─────────────────────────────────────────────
+.seller-home__scheduled-archived-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  margin-block-end: var(--slds-g-spacing-3, 0.75rem);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.seller-home__scheduled-archived-back {
+  .slds-button__icon {
+    fill: var(--slds-g-color-on-surface-2, #2e2e2e);
+  }
+}
+
+.seller-home__scheduled-archived-title {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-2, 1rem); // 16px
+  font-weight: 590;
+  line-height: 1.5rem;
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Workspace + schedule-details side panel
+// ------------------------------------------------------------------
+// The workspace is a flex row: the list section flexes and the panel
+// docks to the right. The list reflows to make room — no overlay, no
+// horizontal scroll. `.seller-home__knowledge` above is
+// `position: relative`, so the narrow-viewport overlay below anchors
+// to it.
+.seller-home__scheduled-workspace {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+
+  // Let the list section own the vertical scroll and flex freely.
+  .seller-home__knowledge-body {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+// Left column — the page header + scrollable body stacked. Flexes to
+// fill the width left of the panel, so with the panel open the
+// "Scheduled" header shrinks to the same width as the body list. Owns
+// the header↔body rhythm the `.seller-home__knowledge` column used to
+// provide (that column now holds only this row).
+.seller-home__scheduled-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem; // 4px — matches the knowledge header/body joint
+}
+
+// Panel shell. Figma node 13068:330830 — soft left drop-shadow
+// (shadow-3-left), no hard border, so it reads as a floating rail over
+// the list. Reuses the Run-History panel's docked-aside framework.
+.seller-home__schedule-side {
+  flex: 0 0 22.5rem; // 360px docked width
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  background: var(--slds-g-color-surface-1, #ffffff);
+  box-shadow:
+    -1px 0 1.44px rgba(0, 0, 0, 0.03),
+    -4px 0 4.4px rgba(0, 0, 0, 0.09),
+    0 0 4.4px rgba(0, 0, 0, 0.09);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+// ── Header (Figma 13068:330832) ───────────────────────────────────
+// 50-px min height, 12-px padding, 8-px gap, bottom hairline.
+.seller-home__schedule-side-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+
+  min-height: 3.125rem; // 50px
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  border-bottom: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+}
+
+.seller-home__schedule-side-title {
+  flex: 1 0 0;
+  margin: 0;
+  min-width: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-2, 1rem); // 16px
+  font-weight: var(--slds-g-font-weight-4, 400); // Figma: Regular
+  line-height: 1.375rem; // 22px
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+// Header action cluster (overflow ⋮ + close), right-anchored.
+.seller-home__schedule-side-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+}
+
+// ── Overflow (⋮) menu ─────────────────────────────────────────────
+.seller-home__schedule-side-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.seller-home__schedule-side-menu-list {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(100% + 0.25rem);
+  z-index: 20;
+
+  min-width: 11rem;
+  padding: var(--slds-g-spacing-1, 0.25rem);
+  background: var(--slds-g-color-surface-1, #ffffff);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.seller-home__schedule-side-menu-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.seller-home__schedule-side-menu-item {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  margin: 0;
+  cursor: pointer;
+  text-align: start;
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+
+  padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
+  border-radius: var(--slds-g-radius-border-1, 0.25rem);
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.1875rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+  transition: background-color 120ms ease, color 120ms ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--slds-g-color-surface-container-2, #f3f3f3);
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+    outline: none;
+  }
+
+  &[hidden] {
+    display: none;
+  }
+
+  // Disabled — e.g. Run now while a blocking issue remains. Muted, no
+  // hover affordance, but still listed so the action stays discoverable.
+  &:disabled,
+  &[aria-disabled="true"] {
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+    cursor: default;
+    opacity: 0.5;
+  }
+  &:disabled:hover,
+  &[aria-disabled="true"]:hover {
+    background: transparent;
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  }
+}
+
+.seller-home__schedule-side-menu-item-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  fill: currentColor;
+  flex: 0 0 auto;
+}
+
+// ── Body (Figma 13068:330833) — 12-px padding, 8-px section gap ────
+.seller-home__schedule-side-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: clip;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-2, 0.5rem); // 8px
+  padding: var(--slds-g-spacing-3, 0.75rem);
+}
+
+// Section group (label over control), 4-px internal gap.
+.seller-home__schedule-side-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+}
+
+// ── Error alert (Figma "Scoped Notification - Error", 13106:332987) ─
+// error-container-1 surface, 12-px padding, 8-px radius; a warning glyph
+// + semibold heading, then an indented body (description + a "Reconnect
+// Slack" text link) aligned under the heading text (16-px icon + 12-px
+// gap = 28-px inset). All text on-error-1 at 13px/18px. Persistent —
+// the controller toggles `hidden`; it never auto-dismisses.
+.seller-home__schedule-side-alert {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-1, 0.375rem); // ~6px between heading + body
+
+  padding: var(--slds-g-spacing-3, 0.75rem); // 12px
+  border-radius: var(--slds-g-radius-border-2, 0.5rem); // 8px
+  background: var(--slds-g-color-error-container-1, #fddde3);
+  color: var(--slds-g-color-on-error-1, #b60554);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.seller-home__schedule-side-alert-head {
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-3, 0.75rem); // 12px icon → heading
+}
+
+.seller-home__schedule-side-alert-icon {
+  flex: 0 0 auto;
+  inline-size: 1rem; // 16px — x-small utility icon
+  block-size: 1rem;
+  fill: var(--slds-g-color-on-error-1, #b60554);
+}
+
+.seller-home__schedule-side-alert-title {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  font-weight: var(--slds-g-font-weight-6, 590); // Semibold
+  line-height: 1.125rem; // 18px
+  color: var(--slds-g-color-on-error-1, #b60554);
+}
+
+// Body aligns under the heading text: 16px icon + 12px gap = 28px inset.
+.seller-home__schedule-side-alert-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-1, 0.375rem); // ~6px description → link
+  padding-inline-start: 1.75rem; // 28px
+}
+
+.seller-home__schedule-side-alert-desc {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.125rem; // 18px
+  color: var(--slds-g-color-on-error-1, #b60554);
+  word-break: break-word; // wrap the full message, never clip
+}
+
+// "Reconnect Slack" — DS text link (underline semibold) in the error
+// color. Swaps its label for the shared spinner while the flow runs.
+.seller-home__schedule-side-alert-link {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 1.125rem; // 18px — sits on the text baseline
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  font-weight: var(--slds-g-font-weight-6, 590); // Semibold
+  line-height: 1.125rem; // 18px
+  color: var(--slds-g-color-on-error-1, #b60554);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--slds-g-color-error-2, #8a033e);
+  }
+  &:focus {
+    outline: none;
+  }
+  &:focus-visible {
+    outline: none;
+    border-radius: 0.1875rem; // 3px
+    box-shadow: 0 0 0 2px var(--slds-g-color-on-error-1, #b60554);
+  }
+
+  &[aria-busy="true"] {
+    cursor: default;
+    pointer-events: none;
+    text-decoration: none;
+  }
+}
+
+// Spinner scoped under the link so it beats the shared `.sh-spinner`
+// defaults on specificity; hidden until the link goes busy.
+.seller-home__schedule-side-alert-link .seller-home__schedule-side-alert-link-spinner {
+  display: none;
+  width: 0.875rem; // 14px
+  height: 0.875rem;
+  border-width: 2px;
+}
+
+.seller-home__schedule-side-alert-link[aria-busy="true"]
+  .seller-home__schedule-side-alert-link-label {
+  display: none;
+}
+
+.seller-home__schedule-side-alert-link[aria-busy="true"]
+  .seller-home__schedule-side-alert-link-spinner {
+  display: inline-block;
+}
+
+// Last-run FAILED status treatment — the status words carry the error
+// color; only "View run" (the sibling link) is interactive.
+.seller-home__schedule-side-meta-error {
+  color: var(--slds-g-color-error-1, #b60554);
+}
+
+// Section label — 13px Semibold, Neutral-20.
+.seller-home__schedule-side-label {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.125rem; // 18px
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// Plain value line (Delivery) — 13px Regular, wraps.
+.seller-home__schedule-side-value {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.125rem; // 18px
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  word-break: break-word;
+}
+
+// ── Frequency row ─────────────────────────────────────────────────
+.seller-home__schedule-side-frequency {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.seller-home__schedule-side-frequency-on {
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.125rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+// Editable picklist styled like the SLDS 2 input the Figma uses. The
+// bordered box is the container; the native <select> fills it (its own
+// chrome removed) and a sprite chevron sits at the trailing edge.
+.seller-home__schedule-side-input {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+
+  min-height: 2rem; // 32px — SLDS input height
+  padding-inline: var(--slds-g-spacing-2, 0.5rem);
+  padding-block: var(--slds-g-spacing-1, 0.25rem);
+
+  background: var(--slds-g-color-surface-1, #ffffff);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-2, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem); // 8px
+
+  // Focus ring driven by the inner <select>'s focus.
+  &:focus-within {
+    border-color: var(--slds-g-color-accent-2, #0250d9);
+    box-shadow: 0 0 0 1px var(--slds-g-color-accent-2, #0250d9);
+  }
+}
+
+.seller-home__schedule-side-input-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.125rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  text-overflow: ellipsis;
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
+
+  // Kill the legacy IE/Edge picklist arrow so only our chevron shows.
+  &::-ms-expand {
+    display: none;
+  }
+}
+
+.seller-home__schedule-side-input--picklist {
+  min-width: 8.75rem; // 140px — matches the Figma picklist width
+}
+
+.seller-home__schedule-side-input--time {
+  min-width: 6.25rem; // 100px — snug around "12:00 AM" + chevron
+}
+
+.seller-home__schedule-side-input-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+  flex: 0 0 auto;
+  pointer-events: none; // clicks fall through to the <select>
+}
+
+// ── Uses-Skill chip (Figma 13068:331255) ──────────────────────────
+// Matches the skill editor's supporting-skill chip (skills.scss →
+// `.seller-home__skill-canvas-doc .seller-home__skill-chip`): a 24-px
+// #f3f3f3 capsule with a hairline #e5e5e5 border, 14-px indigo skill
+// badge, 12-px label, and an #e5e5e5 hover surface.
+.seller-home__schedule-side-skill-chip {
+  align-self: flex-start;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+
+  min-block-size: 1.5rem; // 24px — matches the skill-chip pill height
+  padding-block: 2px;
+  padding-inline: 4px;
+  max-width: 100%;
+
+  background-color: #f3f3f3;
+  border: var(--slds-g-sizing-border-1, 1px) solid #e5e5e5;
+  border-radius: var(--slds-g-radius-border-pill, 15rem);
+
+  color: #2e2e2e;
+  text-decoration: none;
+  transition: border-color 0.1s ease, background-color 0.1s ease;
+
+  &:hover,
+  &:focus-visible {
+    background-color: #e5e5e5;
+    text-decoration: none;
+  }
+
+  &:focus-visible {
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0176d3);
+    outline-offset: 1px;
+  }
+}
+
+.seller-home__schedule-side-skill-icon {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.seller-home__schedule-side-skill-name {
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px — Figma Resource Chip label
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.0625rem; // 17px
+  color: #2e2e2e;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+// ── Divider (Figma "Menu - Divider", 16-px band around a hairline) ─
+.seller-home__schedule-side-divider {
+  height: 0;
+  border: 0;
+  border-top: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+  margin-block: 0.4375rem; // ~16px band with the hairline centered
+  width: 100%;
+}
+
+// ── Instructions box (Figma 13068:331137) — editable in place ─────
+.seller-home__schedule-side-instructions {
+  width: 100%;
+  padding: var(--slds-g-spacing-3, 0.75rem);
+  background: var(--slds-g-color-surface-1, #ffffff);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
+
+  &:focus-within {
+    border-color: var(--slds-g-color-accent-2, #0250d9);
+    box-shadow: 0 0 0 1px var(--slds-g-color-accent-2, #0250d9);
+  }
+}
+
+// Shared type for both display + edit states so the box doesn't jump.
+.seller-home__schedule-side-instructions-display,
+.seller-home__schedule-side-instructions-edit {
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.125rem; // 18px
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.seller-home__schedule-side-instructions-display {
+  cursor: text;
+
+  &:focus-visible {
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0250d9);
+    outline-offset: 2px;
+    border-radius: var(--slds-g-radius-border-1, 0.25rem);
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.seller-home__schedule-side-instructions-edit {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  resize: none;
+  overflow: hidden; // JS auto-grows to content so nothing clips
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+// ── Created + Last run (Figma 13068:331122) ───────────────────────
+.seller-home__schedule-side-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.seller-home__schedule-side-meta-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.seller-home__schedule-side-meta-label {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.0625rem; // 17px
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+.seller-home__schedule-side-meta-value {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.0625rem; // 17px
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  word-break: break-word;
+}
+
+// The Last-run value is a link when a run id exists (jumps into chat).
+.seller-home__schedule-side-meta-link {
+  color: var(--slds-g-color-accent-2, #0250d9);
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Narrow viewports — the docked panel becomes a right-anchored overlay
+// inside the (relatively positioned) main region so the list keeps its
+// full width behind it and nothing scrolls horizontally.
+@media (max-width: 48rem) {
+  .seller-home__schedule-side {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    z-index: 30;
+    flex-basis: min(22.5rem, 100%);
+    width: min(22.5rem, 100%);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Educational banner — brand-blue hero above the tab strip.
+// ------------------------------------------------------------------
+// Shared surface used on both the Skills and Scheduled landing
+// pages (renamed 2026-08-11 from the Skills-only `.seller-home__
+// skills-banner*` block). Rendered by the shared
+// `_seller_home_banner.html` partial.
+//
+// Lives in home.scss rather than skills.scss because both hosts
+// link home.css while only /skills.html links skills.css — a
+// second consumer on Scheduled would otherwise have had to pull
+// in the whole Skills stylesheet (or duplicate these rules) just
+// to paint the hero.
+//
+// Each host page ships its own
+// copy (title, description) and illustration path via its
+// {skills,scheduled}.json `banner` block; the CSS below owns the
+// gradient fill, mascot positioning, radius, padding, and
+// typography so the two hosts stay visually identical without
+// duplicating rules.
+//
+// The illustration is applied as a `background-image` (inline
+// `style` attr in the partial so the asset path stays in JSON)
+// which lets the mascot tuck behind the title gracefully at
+// narrow widths without a JS-driven visibility toggle.
+//
+// Layout math (Figma "Coworker – Skills" hero):
+//   • Height:     8rem (128 px) — tall enough for a two-line
+//                 description without pushing the tab strip off
+//                 the first fold.
+//   • Padding:    1.5rem 2rem (24 / 32) — matches the mascot's
+//                 baked-in inset so the title never overlaps the
+//                 sparkles.
+//   • Radius:     `--slds-g-radius-border-3` (12 px) — same shape
+//                 the SkillCard used pre-refactor, keeping the
+//                 visual family consistent inside the body-inner.
+//   • Margin-bottom: `--slds-g-spacing-4` (16 px) — separates the
+//                 banner from the tab-toolbar's top edge without
+//                 crowding.
+//
+// The gradient behind the mascot on the asset transitions from a
+// slightly lighter blue on the left to `--slds-g-color-accent-2` on
+// the right. `background-position: right center` anchors the
+// mascot to the right so a container narrower than the artwork's
+// intrinsic 1024 × 215 aspect still shows the whole mascot; the
+// left portion of the artwork's gradient covers the text region.
+//
+// Fallback gradient: if `banner.imageSrc` is ever cleared in JSON,
+// the CSS `background-color` below carries a token-driven brand-
+// blue so the banner still reads as a hero surface rather than a
+// grey block. Text contrast stays above WCAG AA against either
+// the image or the fallback fill.
+.seller-home__banner {
+  display: flex;
+  // Top-align the copy stack so the title's baseline sits ~25 px
+  // from the banner top edge (Figma frame 9737:22220 — copy stack
+  // anchored at `left: 24px, top: 25px`, NOT vertically centred).
+  // The banner's overall min-height (128 px) still holds; if a
+  // future localisation grows the copy taller than that, the
+  // banner grows downward from the top edge rather than pushing
+  // the title off the top-of-frame position.
+  align-items: flex-start;
+  justify-content: flex-start;
+  min-height: 8rem; // 128px
+  // 24 px on every side — matches Figma's copy-container inset
+  // (`left: 24`, `top: 25`, ~1 px off). Right pad doesn't matter
+  // for the copy column (its own max-width clears the mascot art)
+  // but keeps the mascot from crowding the very edge in narrow
+  // viewports.
+  padding: var(--slds-g-spacing-5, 1.5rem);
+  margin-bottom: var(--slds-g-spacing-4, 1rem);
+
+  color: var(--slds-g-color-on-accent-1, #ffffff);
+  background-color: var(--slds-g-color-accent-2, #0176fa);
+  background-repeat: no-repeat;
+  // `cover` keeps the artwork's aspect ratio while filling the
+  // banner surface; `right center` anchors the mascot to the right
+  // edge so a container narrower than the artwork still shows the
+  // whole mascot rather than cropping it.
+  background-size: cover;
+  background-position: right center;
+
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+  overflow: hidden;
+}
+
+// Left-anchored copy stack. `max-width` clamps the text column to
+// roughly the visual boundary between the gradient's darker right
+// side and the mascot art — long localised copy wraps to a second
+// line rather than running under the mascot. The whole stack is
+// vertically centred against the banner via the parent's
+// `align-items: center` rule.
+.seller-home__banner-copy {
+  display: flex;
+  flex-direction: column;
+  // Title and description stack with ZERO gap per Figma (frame
+  // 9737:22222 — inner text block sets `gap: --slds-g-spacing-0`).
+  // Optical spacing between them comes entirely from each block's
+  // line-box padding at their respective line-heights (28 px on
+  // the title, 18 px on the description).
+  gap: 0;
+  // 474 px per Figma (frame 9737:22221 → `w-[474px]`). Chosen so
+  // the copy column ends flush with where the mascot artwork
+  // begins — long localisations wrap onto a second line inside
+  // the copy area rather than colliding with the mascot.
+  max-width: 29.625rem; // 474px
+  min-width: 0;
+}
+
+// Title — SLDS Titles/font-scale-3 semibold, white. Matches the
+// header title one level up (`.seller-home__knowledge-header-title`)
+// so the two hero elements read as one typographic family across
+// the top of the page.
+.seller-home__banner-title {
+  margin: 0;
+  color: var(--slds-g-color-on-accent-1, #ffffff);
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-3, 1.25rem); // 20px
+  font-weight: 590;
+  line-height: 1.75rem; // 28px
+  letter-spacing: 0;
+}
+
+// Description — SLDS Body/font-scale-base regular (frame
+// 9737:22224 in the Figma source). 13 / 18, weight 400, letter
+// spacing 0, full-white foreground. The 90 %-alpha treatment the
+// prior implementation shipped was withdrawn because the Figma
+// spec uses solid white here (`text-white` on the paragraph, no
+// opacity modifier); the mascot never crosses under the copy
+// column, so there's no gradient region where a duller tone
+// would help contrast. Overflow-wrap on `anywhere` guards against
+// long unbroken tokens (URLs, locale tokens) blowing out the
+// text column at narrow widths.
+.seller-home__banner-description {
+  margin: 0;
+  color: var(--slds-g-color-on-accent-1, #ffffff);
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.125rem; // 18px
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+// Narrow-viewport tuning. On tablet-portrait widths (under 40 rem
+// / 640 px) the mascot begins to crowd the copy — we tighten the
+// padding, shorten the min-height, and cap the copy column at the
+// full banner width so the text stack drops onto more lines rather
+// than being pushed under the mascot art. The mascot itself is
+// still visible (`background-size: cover`, right-anchored) but
+// occupies less of the banner's total width.
+@media (max-width: 40rem) {
+  .seller-home__banner {
+    min-height: 7rem; // 112px
+    padding: 1.25rem 1.5rem; // 20 / 24
+  }
+
+  .seller-home__banner-copy {
+    max-width: 100%;
+  }
+}
+
+// ── Ultra-narrow (≤ 30 rem / 480 px) ──────────────────────────────
+// Below phone-portrait width the banner's mascot art gets crowded
+// enough by the copy column that its face falls behind the title.
+// Three protections stacked for defence in depth:
+//   • Nudge the mascot further off the right edge via
+//     `background-position: right -64px center` so its silhouette
+//     stays visible but its face doesn't sit under the copy.
+//   • Shrink the banner's inner padding by 4 px so the copy column
+//     reclaims horizontal room.
+//   • Overlay a right-anchored gradient scrim on the banner's
+//     surface via `::after` — transparent on the left, ~50 % accent-2
+//     on the right — so any copy that reaches into the mascot's
+//     silhouette region reads against a uniform darkened field
+//     rather than the mascot's lighter facial highlights. Kept as
+//     a pseudo-element (not a `background-image` layer) so the JSON-
+//     driven `imageSrc` on the banner element stays the sole owner
+//     of the mascot artwork; the scrim is a CSS-only overlay
+//     scoped to this breakpoint.
+// The `.seller-home__banner-copy` gets `position: relative;
+// z-index: 1` so it stays above the scrim. Copy is fully readable
+// at every band on the mascot art — SLDS tokens for
+// `--slds-g-color-on-accent-1` (white) stay above 4.5:1 against
+// the darkened field, so contrast holds even when the title
+// wraps under the mascot silhouette.
+@media (max-width: 30rem) {
+  // Drop the mascot artwork entirely at ultra-narrow — the copy
+  // column at this width is only ~ 240 px, which is smaller than
+  // the artwork's mascot region. Any positioning trick that keeps
+  // the mascot visible ends up placing its face directly under the
+  // title. Rather than fight the artwork, we hand the full banner
+  // to the copy and rely on the SLDS accent-2 background-color
+  // fallback (declared on `.seller-home__banner` above) for
+  // a clean, uniform brand-blue surface. The artwork returns
+  // automatically at > 30 rem because the `!important`-free
+  // `background-image` on the element (set inline from
+  // `banner.imageSrc` in `_seller_home_banner.html`) is a lower cascade
+  // priority than this media-query rule.
+  //
+  // 30 rem = 480 px at the default 16-px root font-size. Chrome
+  // headless clamps its viewport to a 500-px minimum, so this
+  // breakpoint is unreachable in the automated screenshot audit —
+  // but real phones (iPhone 375 CSS px, Android 360–412 CSS px)
+  // all report below 480 CSS px and therefore hit this rule
+  // naturally.
+  .seller-home__banner {
+    padding: 1rem 1.25rem; // 16 / 20
+    // `!important` is load-bearing here: `_seller_home_banner.html`
+    // sets `background-image` as an INLINE style attribute
+    // (specificity 1000), which regular CSS rules can't
+    // out-cascade. `!important` gives this media-query rule the
+    // authority to override the inline default at ultra-narrow —
+    // without it, the mascot artwork would still paint at 400 px.
+    // Preferred over refactoring the template to move the
+    // artwork onto a CSS class because keeping `banner.imageSrc`
+    // in JSON is the documented path for a future
+    // artwork / localised-mascot swap.
+    background-image: none !important;
+    background-color: var(--slds-g-color-accent-2, #0176fa);
+  }
+
+  .seller-home__banner-copy {
+    max-width: 100%;
+  }
+}

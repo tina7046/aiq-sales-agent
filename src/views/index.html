@@ -7,7 +7,7 @@
 <style>
 	/* Page-level shader styling used to live here, back when the canvas was
      mounted on a fixed `#bg` behind the whole shell. It's now hosted by
-     `.seller-home__god-rays` inside `.seller-home`, exactly as in
+     `.seller-home__shader` inside `.seller-home`, exactly as in
      hunter-main-main, so home.css owns the host geometry (overscan, min-height,
      stacking) and the white fallback surface underneath it. Keeping the two
      prototypes on the same host is what lets the tuned numbers mean the same
@@ -220,14 +220,14 @@
 
 		{# God-rays shader canvas host. The module script at the bottom of this
 		   file mounts a WebGL canvas inside it; geometry and stacking come from
-		   `.seller-home__god-rays` in home.scss. Empty and aria-hidden — it's
+		   `.seller-home__shader` in home.scss. Empty and aria-hidden — it's
 		   decoration with no semantic content.
 
 		   It stays a child of the row rather than of `__main` because `__main`
 		   is the scroll container — parented there the shader would scroll away
 		   with the briefing. Instead its left edge is inset to the nav width in
 		   home.scss, which is what keeps the box centred on the content column. #}
-		<div class="seller-home__god-rays" data-sh-god-rays aria-hidden="true"></div>
+		<div class="seller-home__shader" data-sh-shader-host aria-hidden="true"></div>
 
 		{# A plain div, not <main role="main">: this sits inside the template's
 		   own `<main class="app-wrapper">`, and a second main landmark would
@@ -437,8 +437,8 @@
 		Object.assign(state, loadSavedState('godrays') || {});
 
 		// Same host as hunter-main-main: a child of `.seller-home`, sized and
-		// stacked by `.seller-home__god-rays` in home.scss.
-		const bg = document.querySelector('[data-sh-god-rays]');
+		// stacked by `.seller-home__shader` in home.scss.
+		const bg = document.querySelector('[data-sh-shader-host]');
 		const shell = bg.parentElement;
 		const anchor = document.querySelector('.seller-home__composer');
 		const scroller = document.querySelector('.seller-home__main');
@@ -469,7 +469,7 @@
 			// MeshGradient — vanilla translation of the React
 			// `<MeshGradient colors distortion swirl grainMixer grainOverlay
 			// speed scale rotation offsetX offsetY />` (speed is the ShaderMount
-			// arg; the rest are uniforms). Mounted on the god-rays host, with a
+			// arg; the rest are uniforms). Mounted on the shader host, with a
 			// god-rays-style tuning panel built into the same #panel.
 			try {
 				const MESH_DEFAULTS = {

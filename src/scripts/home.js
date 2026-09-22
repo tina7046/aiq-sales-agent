@@ -159,13 +159,6 @@
   // on Marcus's cadence in conv-001. Same session lifecycle as Recents.
   var MARCUS_REPLY_KEY = 'sh:marcusReplyReady'
 
-  // Feed header calendar. Pinned for the demo — not the browser clock.
-  // Starts Wed Sep 2 so the feed reads as already happened. Approve on
-  // Found New Prospects advances to Thu Sep 3.
-  var DEMO_DAY_KEY = 'sh:demoDay'
-  var DEMO_DAY_START = new Date(2026, 8, 2)
-  var DEMO_DAY_NEXT = new Date(2026, 8, 3)
-
   // Cap the rail so a long session can't scroll forever. Oldest fall
   // off the bottom.
   var RECENTS_MAX = 12
@@ -234,7 +227,7 @@
   // already played their opening. It belongs in this list or a restart
   // would clear the rail but still treat every conversation as read,
   // painting them instantly instead of replaying them.
-  var DEMO_SESSION_KEYS = [RECENTS_KEY, KNOWLEDGE_BANNER_KEY, 'sh:convSeen', 'sh:convOpeningContinued', FEED_CONSUMED_KEY, MARCUS_REPLY_KEY, DEMO_DAY_KEY]
+  var DEMO_SESSION_KEYS = [RECENTS_KEY, KNOWLEDGE_BANNER_KEY, 'sh:convSeen', 'sh:convOpeningContinued', FEED_CONSUMED_KEY, MARCUS_REPLY_KEY, 'sh:demoDay']
   var DEMO_LOCAL_KEYS = [DRAFT_LIST_KEY, 'sh:scheduledWorkflows:v1']
   var DEMO_LOCAL_PREFIXES = ['sh:convDraft:v1:', 'sh:convSched:v1:']
 
@@ -773,12 +766,8 @@
   }
 
   // ── Today's date ────────────────────────────────────────────────
-  // Re-stamp every `[data-sh-today]` element from the demo calendar.
-  //
-  // Home always opens on Wed Sep 2. Approving a cadence in Found New
-  // Prospects writes `sh:demoDay` so the next Home load paints Thu 3.
-  // `?reset=1` / a reload start-over clears that with the other demo
-  // keys. Pages that pin `feed.date` omit `data-sh-today` and stay put
+  // Re-stamp every `[data-sh-today]` element from the browser clock.
+  // Pages that pin `feed.date` omit `data-sh-today` and stay put
   // (agent_at_work.html owns its own ladder).
   //
   // Format is "Mon July 13", matching the review header's design.
@@ -806,22 +795,8 @@
     }
   }
 
-  function readDemoDay () {
-    try {
-      if (window.sessionStorage.getItem(sk(DEMO_DAY_KEY)) === '17') return DEMO_DAY_NEXT
-    } catch (e) {}
-    return DEMO_DAY_START
-  }
-
-  function advanceDemoDay () {
-    try { window.sessionStorage.setItem(sk(DEMO_DAY_KEY), '17') } catch (e) {}
-  }
-
-  window.SH = window.SH || {}
-  window.SH.advanceDemoDay = advanceDemoDay
-
   function stampToday (root) {
-    var day = readDemoDay()
+    var day = new Date()
     var text = formatToday(day)
     if (!text) return
     var nodes = root.querySelectorAll('[data-sh-today]')
@@ -886,7 +861,7 @@
     // restore animate.
     releasePreload(root)
 
-    // Correct any build-time date stamp to the demo calendar day.
+    // Correct any build-time date stamp to the live calendar day.
     stampToday(root)
 
     var toggle = root.querySelector('[data-sh-nav-toggle]')
