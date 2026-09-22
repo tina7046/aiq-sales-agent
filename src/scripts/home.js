@@ -1533,6 +1533,14 @@
     // when the user starts typing.
     bindPlaceholderTypewriter(textarea)
 
+    var restingPlaceholder = textarea.getAttribute('placeholder') || ''
+    textarea.addEventListener('focus', function () {
+      textarea.placeholder = ''
+    })
+    textarea.addEventListener('blur', function () {
+      if (!textarea.value.trim()) textarea.placeholder = restingPlaceholder
+    })
+
     textarea.addEventListener('input', function () {
       autosize(textarea)
       updateSendState(textarea, sendBtn)
@@ -2131,9 +2139,8 @@
   // newlines) never enables Send. Matches the intent — "enable
   // after non-whitespace text".
   function updateSendState (textarea, sendBtn) {
-    var hasText = textarea.value.trim().length > 0
-    sendBtn.disabled = !hasText
-    sendBtn.setAttribute('aria-disabled', hasText ? 'false' : 'true')
+    sendBtn.disabled = false
+    sendBtn.setAttribute('aria-disabled', 'false')
   }
 
   // Build the URL Send navigates to, or null when this composer has no

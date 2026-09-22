@@ -96,6 +96,8 @@ $sh-nav-row-padding-x-collapsed: calc((#{$sh-nav-width-collapsed} - #{$sh-nav-ic
 $sh-shader-overscan: 90px;
 $sh-shader-min-height: 50rem;   // 800px
 
+@import 'aurora';
+
 // ──────────────────────────────────────────────────────────────────────
 // Zero-out `main.app-wrapper`'s SLDS default padding on this page only.
 // The wrapper carries `.slds-template_default`, which applies 16px of
@@ -131,6 +133,10 @@ main.app-wrapper {
   // transparent at the edges.
   position: relative;
 
+  // Page background and the light end of the feed fade.
+  --sh-color-background: #fafafa;
+  --sh-color-foreground: #ffffff;
+
   // Safe fallback surface — solid white, shows through only if:
   //   • the shader fails to boot (WebGL error, CDN
   //     outage, unsupported browser), in which case this is the
@@ -145,7 +151,7 @@ main.app-wrapper {
   // (see the DEFAULTS block in index.html) — same value on both
   // means no visible seam between the shader and the masked-out
   // regions.
-  background-color: #f7fbff;;
+  background-color: var(--sh-color-background);
 
   // Belt-and-suspenders reset so nothing inside .app-wrapper
   // injects spacing that misaligns the two panes.
@@ -1029,8 +1035,8 @@ main.app-wrapper {
 
 .seller-home__briefing-heading {
   letter-spacing: 0;
-  // font-size: var(--slds-g-font-scale-3, 1.25rem);
-  font-size: var(--slds-g-font-scale-6, 2rem);
+  font-size: var(--slds-g-font-scale-5, 1.75rem);
+  text-align: center;
   font-weight: var(--slds-g-font-weight-4, 400);
   line-height: var(--slds-g-font-line-height-2, 1.25);
   color: var(--slds-g-color-on-surface-3, #03234d);
@@ -1407,42 +1413,12 @@ main.app-wrapper {
   position: relative;
 
   background: var(--slds-g-color-surface-container-1, #ffffff);
-  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-neutral-base-60, #939393);
-  border-radius: 1rem;
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-neutral-base-90, #939393);
+  border-radius: var(--slds-g-radius-border-4, 1.25rem);
+  --sh-aurora-radius: var(--slds-g-radius-border-4, 1.25rem);
   overflow: visible;
 
   transition: border-color 120ms ease, box-shadow 120ms ease;
-
-  // Gradient glow behind the editor, visible on focus.
-  &::before {
-    --gradient-shadow: linear-gradient(to right, #b8bbe9, #99defc, #e3bbff, #98bdff, #b8bbe9, #99defc, #e3bbff, #98bdff);
-    content: '';
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    width: calc(100% + 4px);
-    height: calc(100% + 4px);
-    border-radius: inherit;
-    background: var(--gradient-shadow);
-    background-size: 400%;
-    animation: composer-glow 6s linear infinite paused;
-    transition: opacity 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
-    opacity: 0;
-    z-index: -1;
-    filter: blur(6px);
-  }
-
-  &:focus-within {
-    &::before {
-      opacity: 1;
-      animation-play-state: running;
-    }
-  }
-}
-
-@keyframes composer-glow {
-  0%   { background-position: 0% 50%; }
-  100% { background-position: 400% 50%; }
 }
 
 // Textarea wrapper — matches Figma "Editor content" padding (16
@@ -1451,8 +1427,10 @@ main.app-wrapper {
 // clickable target (clicking padding focuses the textarea via the
 // `<label>`).
 .seller-home__composer-content {
-  padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
-  border-radius: 1rem 1rem 0 0;
+  padding-top: var(--slds-g-spacing-4, 1rem);
+  padding-left: var(--slds-g-spacing-3, 0.75rem);
+  padding-right: var(--slds-g-spacing-3, 0.75rem);
+  border-radius: var(--slds-g-radius-border-4, 1.25rem) var(--slds-g-radius-border-4, 1.25rem) 0 0;
   overflow: hidden;
 
   cursor: text;
@@ -1505,13 +1483,18 @@ main.app-wrapper {
   // Kept as its own selector for future-proofing (e.g. lightening
   // the placeholder to differentiate).
   &::placeholder {
-    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+    color: var(--slds-g-color-palette-neutral-60, #5c5c5c);
     opacity: 1; // Firefox lowers placeholder opacity by default
   }
 
-  // No visible focus ring on the textarea itself — the editor
-  // frame's `:focus-within` accent-color border owns that
-  // affordance. `outline: 0` above kills the browser default.
+  // The hint is for the empty, unfocused field. Focusing the box
+  // clears it so the caret sits on a blank line.
+  &:focus::placeholder {
+    opacity: 0;
+  }
+
+  // No visible focus ring on the textarea itself. `outline: 0`
+  // above kills the browser default.
 }
 
 // Toolbar row — flex-wrap justify-between per Figma. Wrapping is
@@ -1524,8 +1507,8 @@ main.app-wrapper {
   align-items: center;
   gap: var(--slds-g-spacing-2, 0.5rem);
 
-  padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
-  border-radius: 0 0 1rem 1rem;
+  padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-3, 0.75rem);
+  border-radius: 0 0 var(--slds-g-radius-border-4, 1.25rem) var(--slds-g-radius-border-4, 1.25rem);
   background: var(--slds-g-color-surface-container-1, #ffffff);
 
   // No `overflow: hidden` here. It used to be, to keep the white
@@ -1955,17 +1938,7 @@ main.app-wrapper {
   }
 }
 
-// Send-specific tweak. When the send button becomes enabled (user
-// types non-whitespace), its icon adopts the SLDS accent-2 fill so
-// the CTA reads as active. Kept subtle — no background fill, no
-// scale — because Figma shows Send as a bare icon button, matching
-// the other toolbar buttons.
-.seller-home__composer-send {
-  &:not([disabled]) .slds-button__icon,
-  &:not(:disabled) .slds-button__icon {
-    fill: var(--slds-g-color-accent-2, #0250d9);
-  }
-}
+// Send uses the same icon color as the other toolbar buttons.
 
 // ── Composer footer ──
 .seller-home__composer-footer {
@@ -2138,16 +2111,23 @@ main.app-wrapper {
 
   position: relative; // containing block for the fade band below
   padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-4, 1rem) 0;
-  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+  border-top-left-radius: var(--slds-g-radius-border-4, 1.25rem);
+  border-top-right-radius: var(--slds-g-radius-border-4, 1.25rem);
+  border-bottom-right-radius: var(--slds-g-radius-border-4, 1.25rem);
+  border-bottom-left-radius: var(--slds-g-radius-border-4, 1.25rem);
+  // Same radius the aurora halo uses. The fill covers the halo's
+  // hard mask edge; the soft glow stays outside.
+  --sh-aurora-radius: var(--slds-g-radius-border-4, 1.25rem);
+  background-color: white;
 
   // Height of the fade band. Raise it to push the wash further down the
   // list, lower it to tighten it to the header.
-  --sh-feed-fade-height: 44.5rem;
+  --sh-feed-fade-height: 120%;
 }
 
-// Subtle top-to-bottom fade: rgba(255,255,255,0.8) at 7% → 0% at 48%.
-// Sits over the shader so the section reads as a
-// slightly-more-opaque surface without a hard border.
+// Subtle top-to-bottom fade: --sh-color-foreground at 7% → --sh-color-background at 48%, then holds.
+// Sits over the page so the section reads as a
+// slightly lighter surface at the top without a hard border.
 //
 // On its own element rather than as the section's background, because a
 // background is painted into its element's box — so as rows were
@@ -2156,9 +2136,8 @@ main.app-wrapper {
 // absolutely-positioned band with its own fixed height doesn't take
 // part in that: it paints the same thing whatever the list is doing.
 //
-// Its bottom half is fully transparent (the gradient hits zero alpha at
-// 48%), so nothing is visible below ~189px even when the band is taller
-// than the section.
+// From 48% down the band is solid --sh-color-background, the same as the page, so the
+// extra height doesn't show a second edge.
 .seller-home__feed::before {
   content: "";
   position: absolute;
@@ -2168,10 +2147,13 @@ main.app-wrapper {
 
   pointer-events: none;
   border-radius: inherit;
+  // Card opacity from /aurora_lab.html scales this wash. 100% leaves
+  // the gradient as authored.
+  opacity: var(--sh-aurora-card-opacity, 1);
   background: linear-gradient(
     to bottom,
-    rgba(255, 255, 255, 0.8) 7.169%,
-    rgba(255, 255, 255, 0) 48.276%
+    var(--sh-color-foreground) 7.169%,
+    var(--sh-color-background) 48.276%
   );
 }
 
@@ -2794,7 +2776,7 @@ $sh-feed-filter-hidden: (
   padding-inline: var(--slds-g-spacing-4, 1rem);
 
   background: #ffffffa1;
-  border: var(--slds-g-sizing-border-1, 1px) solid #9d5bff1f;
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-palette-neutral-95);
   border-radius: var(--slds-g-radius-border-3, 0.75rem);
 
   cursor: pointer;
@@ -3008,20 +2990,33 @@ $sh-feed-filter-hidden: (
   max-width: 100%;
   overflow: hidden;
 
-  padding: 0.25rem 0.5rem;
+  padding: 0 0.5rem;
+  height: 28px;
+  box-sizing: border-box;
   border: 0;
-  border-radius: var(--slds-g-radius-border-1, 0.25rem);
+  border-radius: var(--slds-g-radius-border-2, 0.25rem);
   background: var(--slds-g-color-neutral-base-95, #f3f3f3);
 
   font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
   font-weight: var(--slds-g-font-weight-4, 400);
   line-height: 1rem;
-  color: #2e2e2e;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+.seller-home__feed-item-output-pill-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 4px;
 }
 
 .seller-home__feed-item-output-pill-glyph {
-  width: 0.75rem;
-  height: 0.75rem;
+  width: 1rem;
+  height: 1rem;
   flex-shrink: 0;
 }
 

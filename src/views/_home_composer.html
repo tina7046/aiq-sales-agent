@@ -54,7 +54,14 @@
   {% if composer.submitTarget %}data-sh-composer-target="{{ composer.submitTarget | appUrl }}"{% endif %}
 >
   <form class="seller-home__composer-form" data-sh-composer-form novalidate>
-    <div class="seller-home__composer-editor">
+    <div
+      class="seller-home__composer-editor sh-aurora"
+      data-sh-aurora-root
+      data-sh-aurora-target="composer"
+      data-sh-aurora-card="fill"
+    >
+      <div class="sh-aurora__gray" data-sh-aurora-gray hidden aria-hidden="true"></div>
+      <div class="sh-aurora__glow" data-sh-aurora-glow aria-hidden="true"></div>
       <div class="seller-home__composer-content">
         <label for="seller-home-composer-input" class="slds-assistive-text">{{ composer.ariaLabel }}</label>
         {# The static `placeholder` attribute is what SSR paints
@@ -425,32 +432,30 @@
       <div class="seller-home__composer-toolbar" role="toolbar" aria-label="Composer actions">
         <div class="seller-home__composer-slot seller-home__composer-slot--start" role="group" aria-label="Attach and augment">
           {% for action in composer.actions.start %}
-            {{ composerAction(action) }}
+            {% if action.id != 'skills' and action.id != 'all_tools' and not action.menu %}
+              {{ composerAction(action) }}
+            {% endif %}
           {% endfor %}
         </div>
 
-        {#- "Send" alone names this group accurately: `actions.end` is
-            empty in every config today. The loop stays because the slot is
-            still the place a trailing action belongs. -#}
-        <div class="seller-home__composer-slot seller-home__composer-slot--end" role="group" aria-label="Send">
-          {% for action in composer.actions.end %}
-            {{ composerAction(action) }}
-          {% endfor %}
-
-          {# Send — the form's submit control. Starts disabled
-             because the textarea is empty on load; home.js
-             toggles the attribute as the user types. Kept as
-             a separate button (not part of `composer.actions`
-             data) because it's structurally different: it's
-             the form's primary action, semantically distinct
-             from the peripheral icon actions. #}
+        <div class="seller-home__composer-slot seller-home__composer-slot--end" role="group" aria-label="Voice and send">
+          <button
+            type="button"
+            class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn"
+            title="Start voice input"
+            aria-label="Start voice input"
+          >
+            <svg class="slds-button__icon" aria-hidden="true">
+              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#unmuted"></use>
+            </svg>
+            <span class="slds-assistive-text">Start voice input</span>
+          </button>
           <button
             type="submit"
             class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn seller-home__composer-send"
             data-sh-composer-send
             title="Send message"
             aria-label="Send message"
-            disabled
           >
             <svg class="slds-button__icon" aria-hidden="true">
               <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#send"></use>
@@ -461,41 +466,4 @@
       </div>
     </div>
   </form>
-
-  <div class="seller-home__composer-footer">
-    <div class="connected-sources">
-      <span class="connected-sources__label">Connections</span>
-      <div class="connected-sources__icon-container">
-        <ul class="source-icons" role="list">
-          <li class="source-icons__item">
-            <span class="source-icons__wrapper" aria-label="Salesforce">
-              <img class="source-icons__icon" src="/assets/images/source_icons/source_salesforce.svg" alt="Salesforce">
-              <span class="slds-popover slds-popover_tooltip slds-nubbin_bottom source-icons__tooltip" role="tooltip"><div class="slds-popover__body">Salesforce</div></span>
-            </span>
-          </li>
-          <li class="source-icons__item">
-            <span class="source-icons__wrapper" aria-label="Momentum">
-              <img class="source-icons__icon" src="/assets/images/source_icons/source_momentum.svg" alt="Momentum">
-              <span class="slds-popover slds-popover_tooltip slds-nubbin_bottom source-icons__tooltip" role="tooltip"><div class="slds-popover__body">Momentum</div></span>
-            </span>
-          </li>
-          <li class="source-icons__item">
-            <span class="source-icons__wrapper" aria-label="ZoomInfo">
-              <img class="source-icons__icon" src="/assets/images/source_icons/source_zoominfo.svg" alt="ZoomInfo">
-              <span class="slds-popover slds-popover_tooltip slds-nubbin_bottom source-icons__tooltip" role="tooltip"><div class="slds-popover__body">ZoomInfo</div></span>
-            </span>
-          </li>
-        </ul>
-        {# Opens the ported Tools modal. The older Connections modal is
-           still in the tree (_home_connections_modal.html) but nothing
-           triggers it now — swap this back to `data-sh-connections-open`
-           to reach it again. #}
-        <button type="button" class="slds-button connected-sources__view-all" data-sh-tools-open>View all</button>
-      </div>
-    </div>
-
-    <span class="seller-home__composer-disclaimer">Generative AI can produce inaccurate responses. Review responses carefully.</span>
-
-    <button type="button" class="slds-button seller-home__composer-feedback">Share Feedback</button>
-  </div>
 </section>

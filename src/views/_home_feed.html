@@ -47,28 +47,56 @@
 {% set typeInfo = outputTypes[output.icon] %}
 {% set schedInfo = outputTypes[output.scheduledIcon] if output.scheduledIcon else null %}
 {% set hasSchedVariant = output.scheduledLabel or (schedInfo and schedInfo.iconImage) %}
+{# Doc glyphs use the source marks. Keyed by the pill label so two
+   outputs that share a doc color can still differ. #}
+{% set sourceIcons = {
+  "1 reply": "/assets/images/source_icons/source_gmail.png",
+  "Reply": "/assets/images/source_icons/source_gmail.png",
+  "1 account": "/assets/images/source_icons/source_salesforce.svg",
+  "Account": "/assets/images/source_icons/source_salesforce.svg",
+  "1 opportunity": "/assets/images/source_icons/source_salesforce.svg",
+  "Opportunity": "/assets/images/source_icons/source_salesforce.svg",
+  "6 new accounts": "/assets/images/source_icons/source_salesforce.svg",
+  "New accounts": "/assets/images/source_icons/source_salesforce.svg",
+  "10 prospects": "/assets/images/source_icons/source_salesforce.svg",
+  "Prospects": "/assets/images/source_icons/source_salesforce.svg",
+  "10 proposals": "/assets/images/source_icons/source_pdf.png",
+  "Proposals": "/assets/images/source_icons/source_pdf.png",
+  "Quarterly Deal Pulse": "/assets/images/source_icons/source_pdf.png",
+  "Action items": "/assets/images/source_icons/source_gcalendar.png",
+  "50 accounts": "/assets/images/source_icons/source_salesforce.svg",
+  "Target accounts": "/assets/images/source_icons/source_salesforce.svg",
+  "30 drafted": "/assets/images/source_icons/source_gmail.png",
+  "Outreach drafts": "/assets/images/source_icons/source_gmail.png",
+  "3 things to know": "/assets/images/source_icons/source_gdocs.png",
+  "Pipeline snapshot": "/assets/images/source_icons/source_slack.svg"
+} %}
+{% set defaultSrc = sourceIcons[output.label] if sourceIcons[output.label] else (typeInfo.iconImage if typeInfo and typeInfo.iconImage else none) %}
+{% set scheduledSrc = sourceIcons[output.scheduledLabel] if output.scheduledLabel and sourceIcons[output.scheduledLabel] else (schedInfo.iconImage if schedInfo and schedInfo.iconImage else defaultSrc) %}
 <span class="slds-badge slds-badge_lightest seller-home__feed-item-output-pill"
   {%- if hasSchedVariant %}
   data-sh-feed-output
   data-sh-feed-output-label-default="{{ output.label }}"
   {%- if output.scheduledLabel %} data-sh-feed-output-label-scheduled="{{ output.scheduledLabel }}"{% endif %}
-  {%- if typeInfo and typeInfo.iconImage %} data-sh-feed-output-icon-default="{{ typeInfo.iconImage }}"{% endif %}
-  {%- if schedInfo and schedInfo.iconImage %} data-sh-feed-output-icon-scheduled="{{ schedInfo.iconImage }}"{% endif %}
+  {%- if defaultSrc %} data-sh-feed-output-icon-default="{{ defaultSrc }}"{% endif %}
+  {%- if scheduledSrc %} data-sh-feed-output-icon-scheduled="{{ scheduledSrc }}"{% endif %}
   {%- endif %}>
-  {% if typeInfo %}
-    {% if typeInfo.iconImage %}
+  {% if defaultSrc or (typeInfo and typeInfo.sprite) %}
+    <span class="seller-home__feed-item-output-pill-icon">
+      {% if defaultSrc %}
       <img
         class="seller-home__feed-item-output-pill-glyph seller-home__feed-item-output-pill-glyph--image"
-        src="{{ typeInfo.iconImage }}"
+        src="{{ defaultSrc }}"
         alt=""
         aria-hidden="true"
       />
-    {% elif typeInfo.sprite %}
+      {% elif typeInfo.sprite %}
       {% set spriteFamily = typeInfo.spriteFamily or "utility" %}
       <svg class="seller-home__feed-item-output-pill-glyph" aria-hidden="true">
         <use xlink:href="/assets/icons/{{ spriteFamily }}-sprite/svg/symbols.svg#{{ typeInfo.sprite }}"></use>
       </svg>
-    {% endif %}
+      {% endif %}
+    </span>
   {% endif %}
   <span
     class="seller-home__feed-item-output-pill-label"
@@ -447,11 +475,17 @@
    with — and it should come from the data, not a second copy in
    home.js. #}
 <section
-  class="seller-home__feed"
+  class="seller-home__feed sh-aurora"
   aria-labelledby="seller-home-ready-heading"
   data-sh-feed-root
   data-sh-feed-state-order="{{ feed.stateOrder | join(',') }}"
+  data-sh-aurora-root
+  data-sh-aurora-target="feed"
+  data-sh-aurora-card="fade"
 >
+  {# Halo only. Painted by aurora.js from the /aurora_lab.html setting. #}
+  <div class="sh-aurora__gray" data-sh-aurora-gray hidden aria-hidden="true"></div>
+  <div class="sh-aurora__glow" data-sh-aurora-glow aria-hidden="true"></div>
   <div class="seller-home__feed-header">
     <div class="seller-home__feed-title-row">
       <h2 id="seller-home-ready-heading" class="seller-home__feed-heading">

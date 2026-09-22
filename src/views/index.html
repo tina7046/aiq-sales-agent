@@ -3,7 +3,6 @@
 {% block styles %}
 
 <link rel="stylesheet" href="/styles/home.css" />
-<link rel="stylesheet" href="/styles/tools.css" />
 <style>
 	/* Page-level shader styling used to live here, back when the canvas was
      mounted on a fixed `#bg` behind the whole shell. It's now hosted by
@@ -249,21 +248,6 @@
 					<h1 class="seller-home__briefing-heading">
 						{{ briefing.heading }}
 					</h1>
-					{# `linkPhrase` is data, not markup, so the sentence stays one
-					   editable string: wrap that phrase in the styled button and
-					   emit the result as HTML. A phrase that's blank or absent
-					   from the sentence renders plain prose instead.
-
-					   Because this branch bypasses autoescaping, `text` is treated
-					   as markup — write `&amp;` for a literal ampersand. #}
-					<p class="seller-home__briefing-text">
-						{%- if briefing.linkPhrase -%}
-							{%- set _linked = '<button type="button" class="seller-home__briefing-link">' + briefing.linkPhrase + '</button>' -%}
-							{{ briefing.text | replace(briefing.linkPhrase, _linked) | safe }}
-						{%- else -%}
-							{{ briefing.text }}
-						{%- endif -%}
-					</p>
 
 					{# One dialog per topic that has popover data. Siblings of the
 					   paragraph so they stay inside `data-sh-briefing-root` for JS
@@ -291,16 +275,6 @@
 	</div>
 
 	{% include "_home_connections_modal.html" %}
-
-	{# Tools modal — ported from BB-AOP. Opened by any
-	   `data-sh-tools-open` trigger; the composer footer's "View all"
-	   is the one wired today. The catalog is handed to the controller
-	   as JSON rather than interpolated into it, so tools_modal.js
-	   stays a plain static file. #}
-	{% include "_tools_modal.html" %}
-	<script type="application/json" id="sh-tools-config">
-		{{ { "tools": shared.toolsModal.tools } | tojson | safe }}
-	</script>
 
 	{# God-rays tuner. Its visibility is toggled from the global-header Setup
 	   (gear) icon — see the toggle script at the foot of this file. The
@@ -352,11 +326,9 @@
 	   changes rather than a dead kebab. #}
 	<script src="/scripts/vendor/gsap.min.js"></script>
 	<script src="/scripts/vendor/Flip.min.js"></script>
+	<script src="/scripts/aurora.js"></script>
 
 	<script src="/scripts/home.js"></script>
-
-	<script src="/scripts/tools_filter.js"></script>
-	<script type="module" src="/scripts/tools_modal.js"></script>
 
 	<script type="module">
 		import {
@@ -460,7 +432,7 @@
 		// dropdown (localStorage 'sh:shader'), then DEFAULT_SHADER. Whichever is
 		// active mounts and populates the one #panel; the other's setup sits
 		// dormant behind its guard. Nothing is deleted.
-		const DEFAULT_SHADER = 'simplex';
+		const DEFAULT_SHADER = 'off';
 		let storedShader = null;
 		try { storedShader = window.localStorage.getItem('sh:shader'); } catch (e) { }
 		const ACTIVE_SHADER = new URLSearchParams(location.search).get('shader') || storedShader || DEFAULT_SHADER;
@@ -988,7 +960,7 @@
 		// Original god-rays — untouched, just gated so it doesn't mount while
 		// another shader (mesh / radial / simplex) is active. (God-rays is
 		// capped at 5 colors by the shader itself, unlike the others.)
-		if (ACTIVE_SHADER !== 'mesh' && ACTIVE_SHADER !== 'radial' && ACTIVE_SHADER !== 'simplex') try {
+		if (ACTIVE_SHADER !== 'off' && ACTIVE_SHADER !== 'mesh' && ACTIVE_SHADER !== 'radial' && ACTIVE_SHADER !== 'simplex') try {
 			// ShaderMount rejects a texture that hasn't decoded, so wait for it.
 			let noise;
 			try { noise = getShaderNoiseTexture(document); } catch { noise = getShaderNoiseTexture(); }
@@ -1343,7 +1315,7 @@
 			// the hidden panel win; they can still re-pick / re-open afterward.
 			// This classic script runs before the deferred shader module reads
 			// the same keys, so the forced pick also drives what mounts.
-			var SHADER_FORCE = 'simplex-2026-09-07';
+			var SHADER_FORCE = 'aurora-2026-09-22';
 			try {
 				if (window.localStorage.getItem('sh:shaderForce') !== SHADER_FORCE) {
 					window.localStorage.removeItem('sh:shader');
@@ -1359,9 +1331,9 @@
 			if (!gearBtn) return;
 			var trigger = gearBtn.closest('.slds-dropdown-trigger') || gearBtn.parentElement;
 
-			var SHADER_KEY = 'sh:shader';        // 'godrays' | 'mesh'
+			var SHADER_KEY = 'sh:shader';        // 'off' | 'godrays' | 'mesh' | 'radial' | 'simplex'
 			var PANEL_KEY = 'sh:shaderControls'; // 'shown' | 'hidden'
-			var DEFAULT_SHADER = 'simplex';
+			var DEFAULT_SHADER = 'off';
 
 			function lsGet(key) { try { return window.localStorage.getItem(key); } catch (e) { return null; } }
 			function lsSet(key, val) { try { window.localStorage.setItem(key, val); } catch (e) { } }
@@ -1391,6 +1363,7 @@
 			dd.innerHTML =
 				'<ul class="slds-dropdown__list" role="presentation">' +
 				'<li class="slds-dropdown__header slds-truncate" role="separator"><span>Background shader</span></li>' +
+				shaderItem('off', 'Aurora') +
 				shaderItem('godrays', 'God Rays') +
 				shaderItem('mesh', 'Mesh') +
 				shaderItem('radial', 'Radial') +
