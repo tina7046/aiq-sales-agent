@@ -558,72 +558,17 @@
                 role="group"
                 aria-label="Attach and augment"
               >
-                {# Placeholder icon actions — same three glyphs, same
-                   order, same colour as the Seller Home composer
-                   (_home_composer.html, driven by `composer.actions` in
-                   index.json), because a seller moving from Home into a
-                   thread shouldn't find a different toolbar. Written out
-                   here rather than shared: this composer is a separate
-                   component on purpose (see the note above the form).
-                   Non-functional in Phase 1.
-
-                   They carry `seller-home__composer-btn` as well as the
-                   local class. That is deliberate and it is what makes
-                   the hover match: the circular pill, its hover and
-                   active fills, and the disabled treatment all live on
-                   that class in home.scss (linked here), so wearing it
-                   means the two toolbars cannot drift on state the way
-                   they had — these buttons previously had no pill at
-                   all. The local class keeps what is genuinely local.
-
-                   The middle glyph is the Skills mark, an asset rather
-                   than a sprite symbol, so it's painted as a mask over
-                   the button's colour — see
-                   `.seller-home__conv-composer-btn-image`. #}
+                {# Same toolbar as Seller Home: Add, then voice and send.
+                   Skills, All tools, and the agent badge are not on
+                   this composer. The mic is wired here
+                   (`data-sh-conv-composer-mic`); Home's mic is visual
+                   only. No aurora host — that glow stays on Home. #}
                 <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn seller-home__conv-composer-btn" title="Add" aria-label="Add">
                   <svg class="slds-button__icon" aria-hidden="true">
                     <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
                   </svg>
                   <span class="slds-assistive-text">Add</span>
                 </button>
-                <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn seller-home__conv-composer-btn" title="Skills" aria-label="Skills">
-                  <span
-                    class="slds-button__icon seller-home__conv-composer-btn-image"
-                    style="--sh-composer-icon-image: url('/assets/images/nav-icons/skills.png')"
-                    aria-hidden="true"
-                  ></span>
-                  <span class="slds-assistive-text">Skills</span>
-                </button>
-                <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn seller-home__conv-composer-btn" title="All tools" aria-label="All tools">
-                  <svg class="slds-button__icon" aria-hidden="true">
-                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#all"></use>
-                  </svg>
-                  <span class="slds-assistive-text">All tools</span>
-                </button>
-
-                {# ── Agent switcher ──────────────────────────────────
-                   The same chooser Seller Home carries, so the agent you
-                   picked before sending is still switchable once you are
-                   in the thread. Rendered from the SAME data (index.json
-                   → `composer.actions.start`, the entry with a `menu`)
-                   through the SAME macro, so there is one definition of
-                   what the menu looks like and one list of agents.
-
-                   `bindComposerMenus` in home.js drives it. That binder
-                   delegates on whatever root it is handed, and this
-                   composer is not `[data-sh-composer-root]` — it must
-                   not be, or home.js would also wire Seller Home's
-                   submit-navigates-away behavior onto a follow-up input.
-                   So home.js binds it against `[data-sh-conv-composer]`
-                   instead; see the call there. #}
-                {% from "_home_composer.html" import composerActionMenu as convComposerActionMenu %}
-                {% set _agentAction = null %}
-                {% for _action in (_home.composer.actions.start or []) %}
-                  {% if _action.menu %}{% set _agentAction = _action %}{% endif %}
-                {% endfor %}
-                {% if _agentAction %}
-                  {{ convComposerActionMenu(_agentAction) }}
-                {% endif %}
               </div>
 
               <div
@@ -704,42 +649,6 @@
               </div>
             </div>
           </div>
-        </div>
-        <div class="seller-home__composer-footer">
-      <div class="connected-sources">
-        <span class="connected-sources__label">Connections</span>
-        <div class="connected-sources__icon-container">
-          <ul class="source-icons" role="list">
-            <li class="source-icons__item">
-              <span class="source-icons__wrapper" aria-label="Salesforce">
-                <img class="source-icons__icon" src="/assets/images/source_icons/source_salesforce.svg" alt="Salesforce">
-                <span class="slds-popover slds-popover_tooltip slds-nubbin_bottom source-icons__tooltip" role="tooltip"><div class="slds-popover__body">Salesforce</div></span>
-              </span>
-            </li>
-            <li class="source-icons__item">
-              <span class="source-icons__wrapper" aria-label="Momentum">
-                <img class="source-icons__icon" src="/assets/images/source_icons/source_momentum.svg" alt="Momentum">
-                <span class="slds-popover slds-popover_tooltip slds-nubbin_bottom source-icons__tooltip" role="tooltip"><div class="slds-popover__body">Momentum</div></span>
-              </span>
-            </li>
-            <li class="source-icons__item">
-              <span class="source-icons__wrapper" aria-label="ZoomInfo">
-                <img class="source-icons__icon" src="/assets/images/source_icons/source_zoominfo.svg" alt="ZoomInfo">
-                <span class="slds-popover slds-popover_tooltip slds-nubbin_bottom source-icons__tooltip" role="tooltip"><div class="slds-popover__body">ZoomInfo</div></span>
-              </span>
-            </li>
-          </ul>
-          {# Opens the Tools modal, same as the Seller Home composer.
-             The old Connections modal is still in the tree but no longer
-             triggered — swap back to `data-sh-connections-open` to reach
-             it. #}
-          <button type="button" class="slds-button connected-sources__view-all" data-sh-tools-open>View all</button>
-        </div>
-      </div>
-
-      <span class="seller-home__composer-disclaimer">Generative AI can produce inaccurate responses. Review responses carefully.</span>
-
-      <button type="button" class="slds-button seller-home__composer-feedback">Share Feedback</button>
         </div>
       </form>
     </div>{# /.seller-home__conv #}

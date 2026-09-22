@@ -418,8 +418,8 @@
 
 .seller-home__conv-composer-editor {
   background: var(--slds-g-color-surface-container-1, #ffffff);
-  border: 1px solid var(--slds-g-color-neutral-base-60, #939393);
-  border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px per Figma
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-neutral-base-90, #939393);
+  border-radius: var(--slds-g-radius-border-4, 1.25rem);
   overflow: hidden;
 
   display: flex;
@@ -427,7 +427,9 @@
 }
 
 .seller-home__conv-composer-content {
-  padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
+  padding-top: var(--slds-g-spacing-4, 1rem);
+  padding-left: var(--slds-g-spacing-3, 0.75rem);
+  padding-right: var(--slds-g-spacing-3, 0.75rem);
 }
 
 // Contenteditable div acting as a rich textarea, so inline skill chips
@@ -460,9 +462,13 @@
   // <br> on focus and would leave the field looking unlabelled.
   &.is-empty::before {
     content: attr(data-placeholder);
-    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+    color: var(--slds-g-color-palette-neutral-60, #5c5c5c);
     pointer-events: none;
     display: block;
+  }
+
+  &.is-empty:focus::before {
+    content: none;
   }
 
   &:focus,
@@ -522,7 +528,7 @@
   flex-wrap: wrap;
   gap: var(--slds-g-spacing-2, 0.5rem);
 
-  padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
+  padding: var(--slds-g-spacing-3, 0.75rem);
   background: var(--slds-g-color-surface-container-1, #ffffff);
 }
 
@@ -594,7 +600,7 @@
   display: none;
   align-items: center;
   gap: var(--slds-g-spacing-2, 0.5rem);
-  padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
+  padding: var(--slds-g-spacing-3, 0.75rem);
   background: var(--slds-g-color-surface-container-1, #ffffff);
   color: var(--slds-g-color-on-surface-1, #5c5c5c);
   box-sizing: border-box;
