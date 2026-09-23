@@ -42,14 +42,6 @@
     var emptyFiltered = root.querySelector('[data-sh-skill-empty-filtered]')
     var statusRegion = root.querySelector('[data-sh-skills-status]')
 
-    // Filter trigger — plain stateless icon button (Scheduled-parity
-    // shape as of 2026-07-31). Click dispatches `sh:skills-filter`
-    // on the Skills root so a future filter surface (popover,
-    // dialog, or off-canvas menu) can subscribe without touching
-    // this markup. The previous inline popover was withdrawn; see
-    // git history for the multi-facet checkbox implementation.
-    var filterBtn = root.querySelector('[data-sh-skills-filter]')
-
     // Bail if the tab / grid DOM isn't fully rendered — a half-
     // hydrated shell is better ignored than crashed.
     if (!tabsRoot || !gridRoot) return
@@ -200,6 +192,9 @@
     // filter after a card mutation).
     skillActionRouter(gridRoot)
 
+    bindStatusChip(root)
+    bindOwnershipChips(root)
+
     // Create Skill — navigate to the empty three-block canvas.
     // The button used to be a dead `data-sh-skills-create` hook;
     // the detail page now owns `?new=1` as the empty-state entry.
@@ -249,23 +244,6 @@
       refreshTabCounts()
       applyFilters({ announce: false })
     })
-
-    // ── Filter trigger ─────────────────────────────────────────
-    // Simple event dispatch — no popover, no active-fill state,
-    // no count pill. Mirrors `.seller-home__scheduled-filter`'s
-    // contract 1:1 so a future filter surface (popover, dialog,
-    // off-canvas) can bind on `sh:skills-filter` without touching
-    // this markup. `preventDefault` on the click is defensive —
-    // the button is a `<button type="button">` so it never
-    // submits anything, but the guard costs nothing.
-    if (filterBtn) {
-      filterBtn.addEventListener('click', function (event) {
-        event.preventDefault()
-        document.dispatchEvent(new CustomEvent('sh:skills-filter'))
-        // eslint-disable-next-line no-console
-        console.info('[seller-home] skills filter clicked')
-      })
-    }
 
     // Re-run the tab / ownership filter against the card list and
     // update visibility + empty-state + aria-live in one pass.
@@ -342,6 +320,13 @@
       if (tabOwnershipsById[tabId] === undefined) return
 
       activeTabId = tabId
+
+      // Your Skills (the first chip) is one column. Later chips use
+      // the two-column grid.
+      if (gridRoot.classList.contains('c-vf-cards')) {
+        var firstTabId = tabs[0].getAttribute('data-sh-skills-tab')
+        gridRoot.classList.toggle('c-vf-cards--single', tabId === firstTabId)
+      }
 
       // Update tab visual + ARIA state. Roving tabindex per WAI-
       // ARIA — only the active tab is in the natural tab order.
@@ -1029,6 +1014,96 @@
       return String(s).replace(/([\0-\x1f\x7f]|^-?\d)|([\x80-\uFFFF]|[\-_a-zA-Z0-9])/g,
         function (m, p1) { return p1 ? '\\' + m : m })
     }
+  }
+
+  // Shared with me / Owned by me toggle between the blue chip and the
+  // plain filter button. No filtering yet.
+  function bindOwnershipChips (root) {
+    var chips = root.querySelectorAll('[data-sh-ownership-chip]')
+    Array.prototype.forEach.call(chips, function (chip) {
+      chip.addEventListener('click', function () {
+        var selected = chip.classList.contains('c-ve-chip')
+        chip.classList.toggle('c-ve-chip', !selected)
+        chip.classList.toggle('c-ve-filter-btn', selected)
+        chip.setAttribute('aria-pressed', selected ? 'false' : 'true')
+      })
+    })
+  }
+
+  // Status starts as the filter button. Picking a statusLibrary label
+  // swaps it for the blue chip; the close control puts the button back.
+  function bindStatusChip (root) {
+    var host = root.querySelector('[data-sh-status-filter]')
+    var sortHost = root.querySelector('[data-sh-sort-filter]')
+    var btn = host && host.querySelector('[data-sh-status-btn]')
+    var chip = host && host.querySelector('[data-sh-status-chip]')
+    var label = host && host.querySelector('[data-sh-status-chip-label]')
+    var statusMenu = host && host.querySelector('[data-sh-status-menu]')
+    var sortBtn = sortHost && sortHost.querySelector('[data-sh-sort-btn]')
+    var sortMenu = sortHost && sortHost.querySelector('[data-sh-sort-menu]')
+
+    function setMenu (menu, trigger, open) {
+      if (!menu) return
+      menu.hidden = !open
+      if (trigger) trigger.setAttribute('aria-expanded', open ? 'true' : 'false')
+    }
+
+    function closeMenus () {
+      setMenu(statusMenu, btn, false)
+      setMenu(sortMenu, sortBtn, false)
+    }
+
+    if (host) {
+      host.addEventListener('click', function (event) {
+        var option = closest(event.target, '[data-sh-status-option]')
+        if (option && host.contains(option)) {
+          event.preventDefault()
+          var next = option.getAttribute('data-status-label') || option.textContent.trim()
+          if (label) label.textContent = next
+          if (btn) btn.hidden = true
+          if (chip) {
+            chip.hidden = false
+            chip.focus()
+          }
+          closeMenus()
+          return
+        }
+
+        var clear = closest(event.target, '[data-sh-status-clear]')
+        if (clear && host.contains(clear)) {
+          event.preventDefault()
+          if (chip) chip.hidden = true
+          if (btn) {
+            btn.hidden = false
+            btn.focus()
+          }
+          return
+        }
+
+        if (btn && (event.target === btn || btn.contains(event.target))) {
+          event.preventDefault()
+          var willOpen = statusMenu && statusMenu.hidden
+          closeMenus()
+          setMenu(statusMenu, btn, !!willOpen)
+        }
+      })
+    }
+
+    if (sortHost && sortBtn) {
+      sortHost.addEventListener('click', function (event) {
+        if (event.target !== sortBtn && !sortBtn.contains(event.target)) return
+        event.preventDefault()
+        var willOpen = sortMenu && sortMenu.hidden
+        closeMenus()
+        setMenu(sortMenu, sortBtn, !!willOpen)
+      })
+    }
+
+    document.addEventListener('click', function (event) {
+      if (host && host.contains(event.target)) return
+      if (sortHost && sortHost.contains(event.target)) return
+      closeMenus()
+    })
   }
 
   // ── Utils ─────────────────────────────────────────────────────────

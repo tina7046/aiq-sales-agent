@@ -24,7 +24,7 @@
 // regress Skills and vice versa (confirmed decision 2026-07-31).
 //
 // Layout skeleton mirrors Scheduled: the `.seller-home__skills` right-
-// column class piggy-backs on `.seller-home__knowledge` for its outer
+// column class piggy-backs on `.seller-home__page` for its outer
 // column + header band + body scroll, and adds nothing of its own
 // today (parallel to `.seller-home__scheduled {}`).
 //
@@ -51,7 +51,7 @@
 
 .seller-home__skills {
   /* Intentionally empty — shared shell rules cascade from
-     `.seller-home__knowledge`. Reserved for future Skills-only
+     `.seller-home__page`. Reserved for future Skills-only
      overrides (e.g., a different body-inner max-width). */
 }
 
@@ -1153,21 +1153,13 @@
   // attached to the wrong thing.
   top: calc(100% + 2px);
 
-  // LEFT-anchored, so the surface opens rightward from the kebab into
-  // the page gutter beside the card rather than reaching back across
-  // the description. The 8 px steps in by the padding the hover box
-  // holds around its 14-px glyph, so the surface lines up with the
-  // GLYPH the seller clicked rather than hanging 8 px to its left.
-  // `@media (max-width: 79rem)` below covers the widths where the
-  // gutter runs out.
-  left: var(--slds-g-spacing-2, 0.5rem); // 8px
+  // Horizontal alignment comes from `slds-dropdown_right` on the
+  // element: the surface's right edge lines up with the trigger.
   z-index: 5;
 
-  // Shrink-wraps the longest label rather than holding a width floor:
-  // the design sizes the surface to its content (106 px = 12 px
-  // padding + 16 px icon + 8 px gap + a 58-px "Duplicate" + 12 px
-  // padding), and an absolutely positioned box does that on its own.
-  min-width: 0;
+  // Width floor comes from `slds-dropdown_x-small` on the element
+  // (min-width: sizing-9 × 6 = 12rem). An absolutely positioned box
+  // still grows past that if a label is longer.
   background: var(--slds-g-color-surface-container-1, #ffffff);
   border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
 
@@ -1187,28 +1179,6 @@
   // insets each item so its rounded hover fill floats clear of the
   // surface edge, exactly as on the homepage dropdown.
   padding: var(--slds-g-spacing-1, 0.25rem); // 4px
-}
-
-// Narrow-viewport guard. The left-anchored surface overhangs its card —
-// by 47 px in Version A, whose kebab sits 36 px inside the row's right
-// edge, and 67 px in Version B, whose kebab sits at 16 px — and around
-// 1250 px the gutter it lands in stops being wide enough: the surface
-// crosses the scroll container's content edge, the container gains
-// horizontal scrollable overflow (its `overflow-y: auto` computes
-// `overflow-x` to `auto` too), and the menu clips. Flipping to
-// right-anchoring keeps it inside the card at any width.
-//
-// 79 rem = 1264 px, one step above Version B's crossing — the wider
-// overhang of the two, so one threshold covers both. At 1280 px, where
-// B still clears the edge by 15 px, the design holds.
-//
-// Anchoring from `right` by the same 8 px keeps the surface's edge on
-// the glyph rather than on the hover box, mirroring the `left` above.
-@media (max-width: 79rem) {
-  .seller-home__skill-menu-list {
-    right: var(--slds-g-spacing-2, 0.5rem); // 8px
-    left: auto;
-  }
 }
 
 .seller-home__skill-menu-items {
@@ -1497,28 +1467,6 @@
   color: var(--slds-g-color-on-info-1, #0b5cab);
 }
 
-// ── Filter icon-button ───────────────────────────────────────────
-// Bordered icon affordance per Figma "Coworker – Skills" (node
-// 9723:17391). Uses SLDS 2's `slds-button_icon-border` shell (not
-// `icon-bare` as Scheduled ships) so the base rule already ships a
-// circular 32-px surface with a `--slds-g-color-border-2` outline,
-// hover fill, and focus-visible ring — this rule only tints the
-// icon glyph to accent-2 (brand blue), which is the Skills-
-// specific piece the token system doesn't own by default. Falls
-// back to raw hex if the SLDS theme file is missing.
-//
-// The popover-driven variant (active-fill + count pill +
-// `slds-popover` container) shipped briefly on 2026-07-30 and was
-// withdrawn 2026-07-31 in favour of keeping the toolbar
-// composition simple; the CSS + JS + markup were all reverted.
-// `filters` + `emptyState.filtered` in skills.json survive as
-// dormant schema for re-introducing the popover later.
-.seller-home__skills-filter {
-  .slds-button__icon {
-    fill: var(--slds-g-color-accent-2, #0250d9);
-  }
-}
-
 // ── Empty-state variants ─────────────────────────────────────────
 // Both `--tab` and `--filtered` share the same layout / spacing so
 // only the copy changes when the tab controller flips between them.
@@ -1562,7 +1510,7 @@
   // 100%` here, the title would just ellipsize further and the
   // button would keep sharing line 1 — the wrap never triggers
   // because a shrinkable item never overflows.
-  .seller-home__knowledge-header-title {
+  .seller-home__page-header-title {
     flex: 1 1 100%;
   }
 
@@ -4226,312 +4174,6 @@
   background-size: contain;
 }
 
-// ============================================================
-// Skills landing — VERSION B page-level styling
-// ============================================================
-// Version B's layout hook is `.seller-home--skills-v2` on the page
-// shell (see `_skills_body_v2.html`). Scope every Version B rule to
-// it — nested, like `.seller-home--skills-v2 { .foo { … } }`, or as a
-// descendant selector — so Version A and /skills.html cannot regress
-// no matter how far B diverges.
-//
-// Add rules under this banner rather than editing the shared
-// `.seller-home__skills-*` / `.seller-home__skill-*` blocks above —
-// those are what both versions paint from, so a "small tweak" there is
-// a change to Version A too.
-//
-// ── Skill card (Figma 11194:24307 "Source Tile") ──────────────────
-// B's card restacks A's row into three lines:
-//
-//     Pipeline Snapshot
-//     Sales
-//     Get a prioritized daily view of pipeline changes, at-risk …
-//
-// Same facts as Version A, moved: the agent leaves the tinted pill
-// beside the name and lands on a muted attribute line under the name.
-// Author and last-edited are not shown at all.
-//
-// The row's structure, hooks, hover reveal, overflow menu, and chevron
-// are UNCHANGED and keep coming from the shared rules above — the
-// markup branch is confined to the body stack in `_skill_list.html`.
-//
-// The 2026-08-18 Figma pass retired the object tile, the "☁ Skill"
-// stamp, the 16-px accent-blue title, and the author/edited footer this
-// block used to style; those rules are deleted rather than left
-// dormant. The title now needs NO override: Figma's 14 px / 590 /
-// #2e2e2e is exactly what the shared `.seller-home__skill-title`
-// already ships.
-//
-// Everything here is nested under the version scope on purpose, even
-// the classes only B's markup emits (`__skill-heading`,
-// `__skill-source*`). Two reasons: the nesting is the documentation —
-// it says "this is Version B's card, not the Skills card" — and if
-// those elements ever appear in another version, its rules can't
-// inherit B's by accident.
-.seller-home--skills-v2 {
-  // Card padding — 16 px inline, 12 px block per Figma, where the
-  // shared row is a flat 16 px. Three lines of type inside 16 px of
-  // block padding sat too tall against the 800-px column.
-  .seller-home__skill-row {
-    padding-block: var(--slds-g-spacing-3, 0.75rem); // 12px
-  }
-
-  // Loosen the body rhythm from A's 2 px to Figma's 4 px
-  // (`--slds-g-spacing-1`, node 11194:24315). This gap now applies at
-  // exactly one seam — heading block ↔ description — because the name
-  // and its attribute line are wrapped together below.
-  .seller-home__skill-body {
-    gap: var(--slds-g-spacing-1, 0.25rem);
-  }
-
-  // Heading block — the name over its attribute line, GAP 0 per Figma
-  // (node 11194:24941). Not as tight as it reads: the 19-px and 14-px
-  // line boxes around 14-px and 10-px type leave ~5 px of leading
-  // between the glyphs. To close it further, reduce the attribute
-  // line's `line-height` rather than reaching for a negative margin.
-  //
-  // This wrapper exists so the body stack's 4-px gap applies between
-  // the heading and the description ONLY, matching Figma's nesting.
-  .seller-home__skill-heading {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  }
-
-  // ── Attribute line ───────────────────────────────────────────────
-  // "Sales" — where the skill came from, set as quietly as the type
-  // system allows so it annotates the name instead of competing with it.
-  .seller-home__skill-source {
-    display: flex;
-    align-items: center;
-    gap: var(--slds-g-spacing-1, 0.25rem); // 4px between facts
-    min-width: 0;
-  }
-
-  // The agent name (and any other fact on the line) shares one size,
-  // weight, leading, and tone so the line reads as a single phrase.
-  //
-  // 12 px / 17 px, matching the description below it: the 2026-08-18
-  // Figma revision stepped this line up from 10 px / 14 px, so the
-  // attribute line and the description now share one size and differ
-  // only in what they say. The bullet stayed at 10 px — see below.
-  .seller-home__skill-source-label {
-    font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-    font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
-    font-weight: var(--slds-g-font-weight-4, 400);
-    line-height: 1.0625rem; // 17px
-    color: var(--slds-g-color-on-surface-1, #5c5c5c);
-    white-space: nowrap;
-  }
-
-  // Bullet divider. Semibold, and the fixed 7-px box with centered text
-  // comes from Figma: a bullet needs more weight than the copy it
-  // divides to register as a divider rather than as punctuation, and
-  // pinning the width keeps the 4-px gaps optically even on both sides
-  // regardless of the font's own sidebearings. `aria-hidden` in the
-  // template, so this is purely visual.
-  //
-  // Deliberately still 10 px / 14 px while the facts around it moved to
-  // 12 px / 17 px — Figma holds the bullet at the smaller step, and its
-  // shorter line box centers against the taller ones (the line is
-  // `align-items: center`), which is what keeps the dot on the copy's
-  // optical midline instead of riding its baseline.
-  .seller-home__skill-source-separator {
-    flex: 0 0 auto;
-    inline-size: 0.4375rem; // 7px
-    font-size: var(--slds-g-font-scale-neg-2, 0.625rem); // 10px
-    font-weight: var(--slds-g-font-weight-6, 590);
-    line-height: 0.875rem; // 14px
-    text-align: center;
-    color: var(--slds-g-color-on-surface-1, #5c5c5c);
-  }
-
-  // Description keeps the shared 12 px and takes Figma's 17-px leading
-  // (the shared rule's unitless 1.3 works out to ~15.6 px).
-  .seller-home__skill-description {
-    line-height: 1.0625rem; // 17px
-  }
-
-  // ── Action cluster (Figma 11194:24333) ───────────────────────────
-  // "Use Skill" + bare kebab, 8 px apart, vertically centered at
-  // the card's right edge. Absolute against the <li> (which
-  // `.seller-home__skill-item` already makes a positioning parent)
-  // because it sits ON TOP of the row anchor — see the template note
-  // for why it cannot be a descendant of it.
-  //
-  // `inset-inline-end` matches the card's own 16-px inline padding, so
-  // the kebab's right edge lines up with the text column's left edge
-  // inset. Same `z-index: 2` the bare kebab uses: above the anchor,
-  // below the dropdown it opens (z-index 5) and below SLDS overlays.
-  .seller-home__skill-actions {
-    position: absolute;
-    inset-block-start: 50%;
-    inset-inline-end: var(--slds-g-spacing-4, 1rem); // 16px
-    transform: translateY(-50%);
-    z-index: 2;
-
-    display: flex;
-    align-items: center;
-    gap: var(--slds-g-spacing-2, 0.5rem); // 8px, per Figma
-
-    // Empty cluster space must not steal clicks from the row
-    // underneath while the icons are hidden. Revealed buttons (and
-    // the open menu) opt back in with `auto`, which still hit-tests
-    // even when the parent is `none`.
-    pointer-events: none;
-  }
-
-  // STACKING: the wrapper above is a stacking context — `transform`
-  // alone makes it one, and the `z-index` seals it — so the overflow
-  // dropdown that opens inside it (`z-index: 5`) cannot escape it. Every
-  // row's wrapper then sits at the same `2`, ties, and resolves on DOM
-  // order, which paints each card's cluster over the open menu of every
-  // card ABOVE it: the dropdown disappears behind the next few rows'
-  // buttons.
-  //
-  // Lifting the wrapper while its own menu is open is the fix — it
-  // carries the trapped dropdown up with it. `.is-menu-open` is toggled
-  // on the <li> by `skillOverflowController` for exactly this kind of
-  // "menu is open" styling, and it drops back to `2` on close so a
-  // resting cluster never outranks its neighbours.
-  .seller-home__skill-item.is-menu-open .seller-home__skill-actions {
-    z-index: 6;
-  }
-
-  // Reserve the cluster's width on the text column. The cluster is out
-  // of flow, so without this the description — which ellipsizes at its
-  // own content edge — would run underneath the buttons.
-  //
-  // 5.25 rem = the 72-px cluster (two 32-px icon buttons with the 8-px
-  // gap between them) plus the 12-px gutter Figma puts between the text
-  // column and the actions (`pr` on node 11194:24309). Down from 9 rem,
-  // which budgeted for the 92-px "Use Skill" pill this pass replaced
-  // with an icon button — the description now ellipsizes 72 px later.
-  // A literal is the trade-off of taking the cluster out of flow: the
-  // text column can no longer discover the cluster's width itself.
-  .seller-home__skill-body {
-    padding-inline-end: 5.25rem; // 84px
-  }
-
-  // The menu container joins the cluster's flex flow instead of
-  // absolute-positioning itself against the <li>. `position: relative`
-  // (not `static`) is load-bearing: the dropdown inside is absolute and
-  // anchors to this box, so going static would send it to the <li>
-  // instead and it would open 36 px off target.
-  //
-  // `z-index: auto` clears the `2` the shared rule needs to lift its
-  // absolute kebab above the row anchor. In flow inside the cluster
-  // that lift is the wrapper's job, and a z-index here would only add a
-  // second stacking context between the dropdown and the page.
-  .seller-home__skill-menu--inline {
-    position: relative;
-    top: auto;
-    right: auto;
-    transform: none;
-    z-index: auto;
-    display: flex;
-    align-items: center;
-  }
-
-  // The action cluster above sets `pointer-events: none` so its empty
-  // space doesn't steal clicks from the row; the buttons opt back in
-  // with `auto`, but the dropdown — a descendant of the cluster in this
-  // version — was left inheriting `none`, so its items couldn't be
-  // hovered or clicked. Re-enable hit-testing on the open menu. Harmless
-  // while it's hidden; scoped to v2 so Version A is untouched.
-  .seller-home__skill-menu-list {
-    pointer-events: auto;
-  }
-
-  // "Use Skill" quick-action button hidden for now — the cluster
-  // degrades to just the overflow kebab, and the same action still
-  // ships as the first item in that menu ("Use Skill"). Scoped to v2.
-  .seller-home__skill-action-use {
-    display: none;
-  }
-
-  // ── Hover / focus interaction (Version B only) ─────────────────
-  // The action cluster is a SIBLING of the row, sitting on top of it.
-  // Hovering a button therefore is NOT hovering `.seller-home__skill-
-  // row`, which would drop the card wash the moment the pointer left
-  // the text. Driving both the wash and the icon reveal off the <li>
-  // (`:hover`, `:focus-within`, `.is-menu-open`) keeps them in
-  // lockstep — including while the overflow menu is open, because the
-  // menu is still a descendant of the <li> even when it overflows.
-  .seller-home__skill-item:hover .seller-home__skill-row:not(.seller-home__skill-row--unlinked),
-  .seller-home__skill-item:focus-within .seller-home__skill-row:not(.seller-home__skill-row--unlinked),
-  .seller-home__skill-item.is-menu-open .seller-home__skill-row:not(.seller-home__skill-row--unlinked) {
-    background: var(--slds-g-color-surface-container-2, #f3f3f3);
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
-  }
-
-  // Both icons hide at rest via opacity (not `visibility` / `display`
-  // / `aria-hidden`) so they stay in the accessibility tree and in
-  // tab order. The shared kebab rule already does this for the
-  // overflow trigger; this restates it for "Use Skill" and for the
-  // kebab so Version B's resting override cannot drift. 120 ms matches
-  // the card wash.
-  .seller-home__skill-action-use,
-  .seller-home__skill-menu-trigger {
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 120ms ease;
-  }
-
-  .seller-home__skill-item:hover .seller-home__skill-action-use,
-  .seller-home__skill-item:hover .seller-home__skill-menu-trigger,
-  .seller-home__skill-item:focus-within .seller-home__skill-action-use,
-  .seller-home__skill-item:focus-within .seller-home__skill-menu-trigger,
-  .seller-home__skill-item.is-menu-open .seller-home__skill-action-use,
-  .seller-home__skill-item.is-menu-open .seller-home__skill-menu-trigger,
-  .seller-home__skill-menu-trigger[aria-expanded="true"] {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  // #E5E5E5 circle on the hovered / focused icon only, so it reads
-  // against the card's #f3f3f3 wash (one step darker than it). The
-  // shared rule paints surface-2 (#f3f3f3) — invisible on that wash —
-  // and also latches it on `[aria-expanded="true"]`; the transparent
-  // reset below drops that latch so only the pointer/keyboard target
-  // is selected.
-  .seller-home__skill-action-use:hover,
-  .seller-home__skill-action-use:focus-visible,
-  .seller-home__skill-menu-trigger:hover,
-  .seller-home__skill-menu-trigger:focus-visible {
-    background: #e5e5e5;
-  }
-
-  .seller-home__skill-menu-trigger[aria-expanded="true"]:not(:hover):not(:focus-visible) {
-    background: transparent;
-  }
-
-  // Touch devices never fire `:hover`, so both actions stay painted.
-  // Nested under the version scope so Version A's kebab (which the
-  // shared `(hover: none)` rule already reveals) is the only A change.
-  @media (hover: none) {
-
-    .seller-home__skill-action-use,
-    .seller-home__skill-menu-trigger {
-      opacity: 1;
-      pointer-events: auto;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-
-    .seller-home__skill-action-use,
-    .seller-home__skill-menu-trigger {
-      transition: none;
-    }
-  }
-
-  // The overflow menu carries no Version B overrides: the surface, its
-  // 2-px vertical offset, its left-anchoring and the narrow-viewport
-  // guard all live in the shared rule further up this file, which both
-  // versions draw identically.
-}
-
 // Block handle / convert menus are portaled to `document.body` so the
 // canvas scrollport cannot clip them. Un-nested on purpose.
 // Visuals follow prompt-builder `.ce-popover__container`.
@@ -4870,125 +4512,493 @@
 }
 
 // ============================================================
-// Prototype-only design-version switcher
+// Skill card — ported from skills_migrate.html
+// ------------------------------------------------------------
+// Rules below are the dump's pasted stylesheet with every [lwc-*]
+// attribute selector removed, so they match the flattened markup.
+// Nothing was added for a class the paste never styled.
+//
+// MISSING — no rule at all:
+//   .skill-card--no-swap
+//   .skill-card--inactive
+//   .skill-card--vf-dimmed
+//   .skill-card__vf-meta-agent
+//   .skill-card__vf-meta-sep
+//   .skill-card__off-badge
+//   .c-skill-vf-overflow
+//   [data-tooltip]
+//
+// INCOMPLETE:
+//   .skill-card__vf-desc sets line-clamp without display: -webkit-box,
+//   so the clamp does nothing.
+//
+// The paste hides .skill-card__vf-actions with display: none and never
+// shows it. The buttons are in the card markup, so the row is revealed
+// on hover, focus-within, and while the overflow menu is open.
+//
+// NO-OP:
+//   .skill-card_library:hover sets the same white the card already has.
+//
+// CASCADE: the paste listed .skill-card--vf before .skill-card, so the
+// base rule cancelled the variant's column layout. The variant block
+// now follows the base so flex-direction, padding, gap, and radius apply.
+// The card is an <a>, so color and text-decoration are reset here too —
+// the base stylesheet otherwise paints the description as a blue link.
 // ============================================================
-// PROTOTYPE SCAFFOLDING — delete this whole block together with
-// `_prototype_version_switcher.html` and the `prototypeVersions` block
-// in skills.json when the A/B question is settled. Nothing else styles
-// or reads these classes.
-//
-// It lives at the END of skills.scss, outside every page namespace, for
-// that reason: the control belongs to the review process rather than
-// to any design, so it should lift out in one contiguous cut. That is
-// also why the class prefix is `proto-` and not `seller-home__` —
-// grep-visible as scaffolding, and it cannot collide with a real
-// component when someone later reads the Skills styles above.
-//
-// It ships in skills.scss rather than home.scss because the Skills
-// landing is its only consumer: the two version bodies are the only
-// templates that include the partial, and both load this sheet.
-//
-// `position: fixed` bottom-right. The page shell locks the viewport
-// (`.seller-home--knowledge` sets `overflow: hidden` and scrolls an
-// inner section), so a fixed element is the only way to stay put while
-// the list scrolls beneath it.
-//
-// Z-INDEX 500 is chosen to sit above the page and below SLDS overlays.
-// The action dialogs this page ships (`_skills_dialogs.html`) sit at
-// 9500, and SLDS popovers at 6000 (see the
-// `--slds-c-popover-position-zindex` note earlier in this file), so the
-// switcher never covers an open dialog, its backdrop, or a popover —
-// while still clearing the row overflow menus, which top out at 5.
-.proto-version-switcher {
-  position: fixed;
-  inset-block-end: var(--slds-g-spacing-4, 1rem);
-  inset-inline-end: var(--slds-g-spacing-4, 1rem);
-  z-index: 500;
 
+.c-vk-content-area {
+  max-width: 850px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.c-vf-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--slds-g-spacing-4, 1rem);
+  padding-bottom: 2rem;
+}
+
+// First tab. Later tabs drop this class and keep the two columns.
+.c-vf-cards--single {
+  grid-template-columns: 1fr;
+}
+
+.skill-card {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-neutral-base-90, #e5e5e5);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  background-color: var(--slds-g-color-surface-1, #ffffff);
+  padding: var(--slds-g-spacing-4, 1rem);
+  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+
+  &:hover,
+  &:focus,
+  &:focus-visible,
+  &:active {
+    color: inherit;
+    text-decoration: none;
+    border-color: var(--slds-g-color-neutral-base-80, #c9c9c9);
+  }
+}
+
+.skill-card--vf {
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--slds-g-spacing-4, 1rem);
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  border-radius: 12px;
+}
+
+.skill-card_library:hover {
+  background-color: var(--slds-g-color-surface-1, #ffffff);
+}
+
+.skill-card__vf-title-row {
   display: flex;
   align-items: center;
   gap: var(--slds-g-spacing-2, 0.5rem);
-
-  padding: var(--slds-g-spacing-1, 0.25rem) var(--slds-g-spacing-2, 0.5rem);
-  border-radius: 999px;
-  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
-  background-color: var(--slds-g-color-surface-container-1, #fff);
-  // SLDS elevation 2 — the same three-shadow stack the floating panels
-  // in this prototype use, so the control reads as floating chrome
-  // rather than as part of the page.
-  box-shadow:
-    0 0 5px 0 rgba(0, 0, 0, 0.16),
-    0 3px 3px 0 rgba(0, 0, 0, 0.16),
-    0 -1px 2px 0 rgba(0, 0, 0, 0.09);
-
-  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  min-width: 0;
+  width: 100%;
 }
 
-.proto-version-switcher__label {
-  font-size: var(--slds-g-font-scale-neg-2, 0.625rem);
-  font-weight: var(--slds-g-font-weight-6, 590);
-  // Uppercase + tracking marks this as a meta label, which keeps it
-  // from reading as one of the selectable options beside it.
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--slds-g-color-on-surface-1, #5c5c5c);
-  padding-inline-start: var(--slds-g-spacing-1, 0.25rem);
-}
-
-.proto-version-switcher__list {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.proto-version-switcher__item {
-  display: flex;
-}
-
-// One rule paints both the anchor and the current-version `<span>`, so
-// the two chips share a box and only their colors differ. Sizing is
-// deliberately compact (12 px label in a 24 px chip): the control sits
-// on top of real content and should be reachable without competing
-// with it.
-.proto-version-switcher__option {
-  display: inline-flex;
-  align-items: center;
-  padding-inline: var(--slds-g-spacing-2, 0.5rem);
-  block-size: 1.5rem;
-  border-radius: 999px;
-
-  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
-  font-weight: var(--slds-g-font-weight-4, 400);
-  line-height: 1;
+.skill-card__vf-title {
+  font-size: var(--slds-g-font-scale-1, 0.875rem);
+  font-weight: var(--slds-g-font-weight-6, 600);
+  color: var(--slds-g-color-neutral-base-10, #181818);
+  line-height: 1.3;
   white-space: nowrap;
-  text-decoration: none;
-  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1 1 0;
+}
 
-  &:hover,
-  &:focus-visible {
-    background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
-    text-decoration: none;
+.skill-card--desc-1 .skill-card__vf-desc {
+  -webkit-line-clamp: 1;
+  min-height: 0;
+  max-height: 1.125rem;
+  overflow: hidden;
+}
+
+.skill-card__vf-meta {
+  font-size: var(--slds-g-font-scale-neg1, 0.75rem);
+  color: var(--slds-g-color-neutral-base-40, #5c5c5c);
+  margin: 0;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  overflow: visible;
+  white-space: nowrap;
+  position: relative;
+}
+
+.skill-card__vf-actions {
+  position: absolute;
+  top: var(--slds-g-spacing-2, 0.5rem);
+  right: var(--slds-g-spacing-2, 0.5rem);
+  z-index: 2;
+  display: none;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+  background: linear-gradient(to right, transparent, var(--slds-g-color-surface-1, #fff) 16px);
+  padding-left: 16px;
+}
+
+// The action row is a sibling of the card link, so the hover target is
+// the <li>, not .skill-card. focus-within and the open menu keep the
+// row available from the keyboard.
+.seller-home__skill-item:hover .skill-card__vf-actions,
+.seller-home__skill-item:focus-within .skill-card__vf-actions,
+.seller-home__skill-item.is-menu-open .skill-card__vf-actions {
+  display: flex;
+}
+
+.skill-card--vf .c-skill-action {
+  --slds-c-icon-color-foreground-default: var(--slds-g-color-brand-base-40, #0b5cab);
+}
+
+.c-skill-action {
+  position: relative;
+  --slds-c-icon-color-foreground-default: var(--slds-g-color-neutral-base-20, #2e2e2e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--slds-g-sizing-9, 2rem);
+  height: var(--slds-g-sizing-9, 2rem);
+  border: none;
+  background: transparent;
+  border-radius: 9999px;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+
+  // Same pill as the composer icon buttons
+  // (`.seller-home__composer-btn`): electric-blue-95 on hover or
+  // keyboard focus, one step darker while pressed. The open overflow
+  // menu keeps the hover pill so the kebab still reads as the trigger.
+  transition: background-color 120ms ease;
+
+  &:hover:not([disabled]),
+  &:focus-visible:not([disabled]),
+  &[aria-expanded="true"] {
+    background-color: var(--slds-g-color-palette-electric-blue-95, #edf4ff);
   }
 
-  // The chips are links, so the SLDS focus ring has to be asked for
-  // explicitly — this control is outside any `.slds-button` cascade.
+  &:active:not([disabled]) {
+    background-color: var(--slds-g-color-palette-electric-blue-90, #d6e6ff);
+  }
+
   &:focus-visible {
-    outline: 2px solid var(--slds-g-color-border-brand-1, #0176d3);
+    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
     outline-offset: 1px;
   }
 }
 
-// Current version. Filled rather than merely bolded because the
-// switcher is read at a glance from across a room during design
-// review, and weight alone doesn't carry at 12 px. Not a link (see the
-// partial), so it needs no hover or focus treatment.
-.proto-version-switcher__option--current {
-  background-color: var(--slds-g-color-palette-blue-95, #eef4ff);
-  color: var(--slds-g-color-palette-blue-30, #032d60);
-  font-weight: var(--slds-g-font-weight-6, 590);
-  cursor: default;
+@media (prefers-reduced-motion: reduce) {
+  .c-skill-action {
+    transition: none;
+  }
+}
+
+.slds-icon_container,
+.slds-icon--container {
+  padding-block-start: var(--slds-s-icon-spacing);
+  padding-block-end: var(--slds-s-icon-spacing);
+  padding-inline-start: var(--slds-s-icon-spacing);
+  padding-inline-end: var(--slds-s-icon-spacing);
+  border-radius: var(--slds-c-icon-radius-border, var(--slds-s-icon-radius-border));
+  border-width: var(--slds-s-icon-sizing-border, 0);
+  border-style: solid;
+  border-color: var(--slds-s-icon-color-border, transparent);
+  background-color: var(--slds-c-icon-color-background, var(--slds-s-icon-color-background));
+  display: inline-block;
+  line-height: 1;
+}
+
+.c-skill-install-toggle {
+  display: flex;
+  align-items: center;
+  transform: scale(0.78);
+  transform-origin: center;
+}
+
+// ============================================================
+// Skills filter row — ported from skills_migrate.html
+// ------------------------------------------------------------
+// [lwc-*] attribute selectors are removed so the rules match the
+// flattened markup. Repeated trigger and button rules are kept once.
+//
+// MISSING — no rule at all:
+//   .c-vk-search
+//
+// .c-ve-chip-label has no rules of its own. It inherits type size,
+// weight, line-height, and color from .c-ve-chip.
+//
+// Dropdown surfaces match the homepage composer menu
+// (.seller-home__composer-menu-list / __composer-menu-item), not the
+// pasted c-ve-dropdown rules. Menus stay closed until their trigger
+// opens them.
+// ============================================================
+
+.c-vk-filter-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  column-gap: 0.5rem;
+  row-gap: 1rem;
+  padding: 2px 0px;
+}
+
+.c-vk-filter-row .c-vk-search-wrap {
+  flex: 1 1 200px;
+  min-width: 160px;
+}
+
+.c-vk-search-wrap {
+  flex-shrink: 0;
+  width: 240px;
+}
+
+.c-vf-search {
+  flex: 1 1 auto;
+  --slds-c-input-color-border: var(--slds-g-color-neutral-base-80, #c9c9c9);
+  --slds-c-input-radius-border: 9999px;
+  --slds-c-input-spacing-horizontal-start: var(--slds-g-spacing-3, 0.75rem);
+  --slds-c-input-spacing-horizontal-end: var(--slds-g-spacing-3, 0.75rem);
+}
+
+.c-vk-filter-row .c-vk-spacer {
+  display: none;
+}
+
+.c-vk-spacer {
+  flex: 1 1 auto;
+}
+
+.c-vk-filter-row .c-vk-right-group {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  max-width: 100%;
+  min-width: 0;
+  overflow: visible;
+}
+
+.c-vk-right-group {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+.c-vk-filter-row .c-vk-filters {
+  flex: 1 1 auto;
+  overflow-x: clip;
+  overflow-y: visible;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  flex-wrap: nowrap;
+  min-width: 0;
+  max-width: calc(100vw - 2rem);
+}
+
+.c-vk-filters {
+  flex: 0 0 auto;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.c-ve-filters {
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+}
+
+.c-ve-filter-trigger {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  overflow: visible;
+}
+
+.c-ve-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  height: var(--slds-g-sizing-9, 2rem);
+  padding: 0 var(--slds-g-spacing-4, 1rem);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-neutral-base-80, #c9c9c9);
+  border-radius: 9999px;
+  background: transparent;
+  cursor: pointer;
+  font-size: var(--slds-g-font-scale-base, 1rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  color: var(--slds-g-color-neutral-base-30, #3e3e3c);
+  --slds-c-icon-color-foreground-default: var(--slds-g-color-neutral-base-50, #747474);
+
+  &:hover {
+    border-color: var(--slds-g-color-neutral-base-20, #2e2e2e);
+    color: var(--slds-g-color-neutral-base-10, #181818);
+    --slds-c-icon-color-foreground-default: var(--slds-g-color-neutral-base-20, #2e2e2e);
+  }
+}
+
+// Ownership toggles swap between the chip and the filter button.
+// The chip's end padding is tighter to leave room for a close icon,
+// which these two buttons don't have, so both states share one box.
+[data-sh-ownership-chip].c-ve-chip,
+[data-sh-ownership-chip].c-ve-filter-btn {
+  box-sizing: border-box;
+  padding: 0 var(--slds-g-spacing-4, 1rem);
+  border-width: var(--slds-g-sizing-border-1, 1px);
+  border-style: solid;
+}
+
+.c-ve-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  height: var(--slds-g-sizing-9, 2rem);
+  padding: 0 var(--slds-g-spacing-3, 0.75rem) 0 var(--slds-g-spacing-4, 1rem);
+  border: var(--slds-g-sizing-border-1, 1px) solid transparent;
+  border-radius: 9999px;
+  background-color: var(--slds-g-color-brand-base-90, #c5dff7);
+  cursor: pointer;
+  font-size: var(--slds-g-font-scale-base, 1rem);
+  line-height: 1;
+  font-weight: var(--slds-g-font-weight-4, 400);
+  color: var(--slds-g-color-brand-base-30, #032d60);
+  --slds-c-icon-color-foreground-default: var(--slds-g-color-brand-base-30, #032d60);
+  box-sizing: border-box;
+
+  &:hover {
+    border-color: var(--slds-g-color-brand-base-40, #0b5cab);
+  }
+}
+
+.c-ve-chip-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  --slds-c-icon-color-foreground-default: var(--slds-g-color-brand-base-30, #032d60);
+
+  &:hover {
+    background-color: var(--slds-g-color-brand-base-40, #0b5cab);
+    --slds-c-icon-color-foreground-default: var(--slds-g-color-neutral-base-100, #ffffff);
+  }
+}
+
+// display:inline-flex on the chip and the filter button would otherwise
+// beat the hidden attribute and leave the swapped control on screen.
+.c-ve-chip[hidden],
+.c-ve-filter-btn[hidden] {
+  display: none;
+}
+
+.c-vk-right-group .c-vk-filter-divider.c-vk-sort-divider {
+  flex-shrink: 0;
+}
+
+.c-vk-right-group .c-vk-filter-divider {
+  margin: 0 0.5rem;
+}
+
+.c-vk-filter-divider {
+  width: 1px;
+  height: 2rem;
+  align-self: center;
+  background: var(--slds-g-color-neutral-base-90, #e5e5e5);
+  flex-shrink: 0;
+  margin: 0 var(--slds-g-spacing-2, 0.5rem);
+}
+
+.c-vk-right-group .c-ve-filter-trigger.c-vf-sort-trigger {
+  flex-shrink: 0;
+}
+
+.c-vf-sort-trigger {
+  margin-left: auto;
+}
+
+.c-vk-sort-btn {
+  border: 1px solid var(--slds-g-color-neutral-base-80, #c9c9c9);
+  border-radius: 9999px;
+  padding: 0 var(--slds-g-spacing-3, 0.75rem);
+  height: 2rem;
+}
+
+// Same surface as the homepage composer dropdown.
+.c-ve-dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: 0;
+  left: auto;
+  z-index: 5;
+  min-width: 10rem;
+  margin: 0;
+  background: var(--slds-g-color-surface-container-1, #ffffff);
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
+  padding: var(--slds-g-spacing-1, 0.25rem);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.c-ve-dropdown-item {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  margin: 0;
+  width: 100%;
+  cursor: pointer;
+  text-align: start;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  padding: var(--slds-g-spacing-2, 0.5rem);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.1875rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  transition: background-color 120ms ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--slds-g-color-brand-base-95, #eef4ff);
+    outline: none;
+  }
+}
+
+.c-ve-check {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  fill: var(--slds-g-color-accent-2, #0250d9);
 }
 

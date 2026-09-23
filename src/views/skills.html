@@ -12,22 +12,14 @@
   Design source: Figma "Skills" (Issa's Explorations, referenced
   during the 2026-07-31 build).
 
-  ── Two design versions ───────────────────────────────────────────
-  As of 2026-08-17 this landing ships in two versions for review:
-  THIS route renders Version A, and /skills-v2.html renders Version B
-  (Figma 11194:24307 — a richer skill card). The page body moved out
-  to `_skills_body_v1.html` in that pass; nothing about the rendered
-  output changed. A prototype-only switcher in the bottom-right corner
-  hops between the two, and both are meant to be retired down to one
-  once a direction is chosen (see `_prototype_version_switcher.html`).
+  The page body lives in `_skills_body_v1.html`.
 
   Left-nav content (navPrimary, navFooter, recents) is hydrated at
   build time from index.json via the `readData` Nunjucks global —
   one authoritative list feeds every Seller Home page so a nav
   item added to index.json shows up here automatically.
   `navActive = "skills"` is set below so the shared nav partial
-  highlights the Skills item — Version B sets the same value, so the
-  nav stays lit on either route.
+  highlights the Skills item.
 
   Layout skeleton — mirrors knowledge.html and scheduled.html.
   Restructured on 2026-08-11 to match the Figma "Coworker – Skills"
@@ -57,7 +49,7 @@
     └──────────────────────────────────────────────────────────┘
 
   All chrome (page shell, header band, body scroll) reuses
-  Knowledge's CSS by adopting the same `.seller-home__knowledge-*`
+  Knowledge's CSS by adopting the same `.seller-home__page-*`
   class stack — exactly the pattern Scheduled uses. Skills-only
   concerns (list, row, badges, popover, tools row) live under their
   own `.seller-home__skills-*` / `.seller-home__skill-*` namespace
@@ -81,13 +73,9 @@
 {% set recents    = readData("index").recents %}
 
 {# `skillsData` is read explicitly even though gulpfile.js already
-   injects `data/skills.json` here (the stem matches). The body partial
-   is shared with /skills-v2.html, whose stem has no data file and so
-   gets no injection — binding from `skillsData` in the body means one
-   code path serves both routes. `skillsVersion` tells the switcher
-   which chip is current; this route serves Version A. #}
-{% set skillsData    = readData("skills") %}
-{% set skillsVersion = "v1" %}
+   injects `data/skills.json` here (the stem matches). Binding from
+   `skillsData` in the body keeps one code path for the catalog. #}
+{% set skillsData = readData("skills") %}
 
 {% block styles %}
   {# home.css — the `.seller-home` shell (left nav, composer, shared
@@ -103,9 +91,7 @@
 {% endblock %}
 
 {% block content %}
-  {# Version A's layout. Version B's equivalent is
-     `_skills_body_v2.html`; both bodies include the same toolbar, row,
-     and dialog partials, so this file holds no markup of its own. #}
+  {# Page body: header, banner, tabs, and the skill list. #}
   {% include "_skills_body_v1.html" %}
 
   {# Tools "Connections" modal — opened by the left-nav Connections item

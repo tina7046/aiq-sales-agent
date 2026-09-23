@@ -1,21 +1,8 @@
 {#
   Seller Home — Skills toolbar (tab chips + filter button + live region)
   =====================================================================
-  Lifted verbatim out of `skills.html` on 2026-08-17, when the Skills
-  landing gained a second design version (`/skills-v2.html`; see
-  `_skills_body_v1.html` for the split's rationale). Both version
-  bodies include THIS file, so the tab contract exists exactly once:
-  one SSR count loop, one radiogroup ARIA pattern, one roving-tabindex
-  rule, one filter-button dispatch.
-
-  Version B is expected to RESTYLE this toolbar, not re-author it —
-  rules scoped to `.seller-home--skills-v2` in skills.scss can repaint
-  every element below without a second copy of the markup. Only reach
-  for a variant branch inside this file if a version needs different
-  STRUCTURE (an extra control, a different element order); anything
-  purely visual belongs in CSS, or the versions start drifting on
-  counts and keyboard behavior — which is what this extraction exists
-  to prevent.
+  Included by the Skills landing. One SSR count loop, one radiogroup
+  ARIA pattern, one roving-tabindex rule, one filter-button dispatch.
 
   Context expected from the includer (Nunjucks includes can read the
   including template's variables, so each version body binds these
@@ -28,7 +15,7 @@
   DOM contract consumed by `bindSkills()` in skills.js — every hook
   below is load-bearing, so keep the attribute names when restyling:
   `data-sh-skills-toolbar`, `-tabs`, `-tab`, `-tab-ownerships`,
-  `-tab-count`, `-filter`, `-status`.
+  `-tab-count`, `-status`.
 #}
 
 {# ── Skills toolbar (tabs + filter button) ─────────────────────────
@@ -118,35 +105,6 @@
       {% endif %}
     {% endfor %}
   </div>
-
-  {# ── Filter icon-button ────────────────────────────────
-     Bordered icon button per Figma "Coworker – Skills" (node
-     9723:17362) — the design shows a circular affordance with a
-     visible neutral border, not the transparent `icon-bare` shell
-     Scheduled ships with. Uses SLDS 2's `slds-button_icon-border`
-     so the border color, radius, hover fill, and focus-visible ring
-     come from tokens (`--slds-c-button-*` /
-     `--slds-g-color-border-2`) without a bespoke override.
-
-     Click dispatches `sh:skills-filter` on the Skills root so a
-     future filter menu can bind without touching this markup. The
-     prior popover implementation (checkbox facets for State +
-     Tools) was withdrawn 2026-07-31 to hold the tab strip alone as
-     the visible filter affordance; `filters` + `emptyState.filtered`
-     remain in `skills.json` as dormant schema so re-introducing the
-     popover is a JSON + JS edit, not a re-author of the toolbar. #}
-  <button
-    type="button"
-    class="slds-button slds-button_icon slds-button_icon-border seller-home__skills-filter"
-    data-sh-skills-filter
-    title="{{ filterAction.label }}"
-    aria-label="{{ filterAction.label }}"
-  >
-    <svg class="slds-button__icon" aria-hidden="true">
-      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ filterAction.icon }}"></use>
-    </svg>
-    <span class="slds-assistive-text">{{ filterAction.label }}</span>
-  </button>
 </div>
 
 {# ── Live-region — announces tab-switch results ─────────

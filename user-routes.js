@@ -9,7 +9,6 @@ const SELLER_HTML = [
   'knowledge.html',
   'knowledge_document_detail.html',
   'skills.html',
-  'skills-v2.html',
   'skill_detail.html',
   'scheduled.html',
   'home_conversation.html',

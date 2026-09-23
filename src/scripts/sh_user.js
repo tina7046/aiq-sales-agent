@@ -19,7 +19,6 @@
     'knowledge.html': true,
     'knowledge_document_detail.html': true,
     'skills.html': true,
-    'skills-v2.html': true,
     'skill_detail.html': true,
     'scheduled.html': true,
     'home_conversation.html': true,

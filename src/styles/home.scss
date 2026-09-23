@@ -915,7 +915,7 @@ main.app-wrapper {
 // ──────────────────────────────────────────────────────────────────────
 // Nav edge shadow — painted as a ::before on right columns so it
 // doesn't need to escape the nav's overflow boundary. Each right
-// column (.seller-home__main, .seller-home__conv, .seller-home__knowledge)
+// column (.seller-home__main, .seller-home__conv, .seller-home__page)
 // gets this via position: relative + the pseudo-element.
 .seller-home__main {
   flex: 1 1 auto;
@@ -2109,6 +2109,10 @@ main.app-wrapper {
   width: 100%;
   margin-inline: auto;
 
+  // Floor sits just under two running rows (header + "Running" label +
+  // two 105px cards). A longer list still grows the card past this.
+  min-height: 21rem;
+
   position: relative; // containing block for the fade band below
   padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-4, 1rem) 0;
   border-top-left-radius: var(--slds-g-radius-border-4, 1.25rem);
@@ -2155,6 +2159,31 @@ main.app-wrapper {
     var(--sh-color-foreground) 7.169%,
     var(--sh-color-background) 48.276%
   );
+}
+
+// Stroke around the card, same fade as the wash above. ::before is the
+// wash, so the ring is ::after. The mask leaves only the 1px edge and
+// follows the card's radius. #e5e5e5 at the top, clear by halfway down.
+.seller-home__feed::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    var(--slds-g-color-neutral-base-90, #e5e5e5) 7.169%,
+    transparent 48.276%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
 }
 
 // The fade band is an absolutely-positioned child, which paints above
@@ -2694,11 +2723,20 @@ $sh-feed-filter-hidden: (
   display: none;
 }
 
-// Within Active, a section header hides when its state has no rows. The
-// unscoped Paused rule further up already covers paused; these cover the
-// Ready and Running headers (whose group names aren't "paused"/"active").
+// Within Active, a section header hides when its state has no visible
+// rows. The unscoped Paused rule further up already covers paused; these
+// cover the Ready and Running headers (whose group names aren't
+// "paused"/"active").
+//
+// Count only a list item that isn't `[hidden]`. A demo-gated Ready row
+// stays in the DOM with `hidden` until its gate opens; `:has()` matches
+// that, so the old "any completed state" test left the Ready label up
+// after the last visible row was gone. Running had no such row, which
+// is why its label already disappeared. The state attribute is on the
+// article inside the `<li>`, so a child combinator is enough — no
+// `:has()` nested inside `:has()`.
 @each $state in ("completed", "running") {
-  .seller-home__feed-list[data-sh-feed-filter="active"]:not(:has([data-sh-feed-state="#{$state}"]))
+  .seller-home__feed-list[data-sh-feed-filter="active"]:not(:has(.seller-home__feed-list-item:not([hidden]) > [data-sh-feed-state="#{$state}"]))
     .seller-home__feed-group[data-sh-feed-group-state="#{$state}"] {
     display: none;
   }
@@ -3350,7 +3388,7 @@ $sh-feed-filter-hidden: (
 // Sibling surface to Knowledge — same left-nav + right-column shell,
 // same header band, same body-scroll pattern, same 50-rem inner
 // column. `.seller-home--scheduled` is applied alongside
-// `.seller-home--knowledge` on the root so the outer chrome (viewport
+// `.seller-home--page` on the root so the outer chrome (viewport
 // lock, column widths, header 48-px band, body scroll) all cascade
 // from the already-tuned Knowledge rules without duplication. Only
 // the Scheduled-specific concerns (composer margin, description
@@ -3363,12 +3401,12 @@ $sh-feed-filter-hidden: (
 // Root — page-level hook. Kept as an empty class today so a future
 // Scheduled-only viewport tweak (e.g. a compact variant) can pin to
 // this selector without changing markup. All positioning + scroll
-// behavior cascades from `.seller-home__knowledge` (applied to the
+// behavior cascades from `.seller-home__page` (applied to the
 // same element in scheduled.html) so there's nothing to override
 // here today.
 .seller-home__scheduled {
   /* Intentionally empty — shared shell rules cascade from
-     `.seller-home__knowledge`. Reserved for future Scheduled-only
+     `.seller-home__page`. Reserved for future Scheduled-only
      overrides. */
 }
 
@@ -4403,7 +4441,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 // ------------------------------------------------------------------
 // The workspace is a flex row: the list section flexes and the panel
 // docks to the right. The list reflows to make room — no overlay, no
-// horizontal scroll. `.seller-home__knowledge` above is
+// horizontal scroll. `.seller-home__page` above is
 // `position: relative`, so the narrow-viewport overlay below anchors
 // to it.
 .seller-home__scheduled-workspace {
@@ -4413,7 +4451,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   display: flex;
 
   // Let the list section own the vertical scroll and flex freely.
-  .seller-home__knowledge-body {
+  .seller-home__page-body {
     flex: 1 1 auto;
     min-width: 0;
   }
@@ -4422,7 +4460,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 // Left column — the page header + scrollable body stacked. Flexes to
 // fill the width left of the panel, so with the panel open the
 // "Scheduled" header shrinks to the same width as the body list. Owns
-// the header↔body rhythm the `.seller-home__knowledge` column used to
+// the header↔body rhythm the `.seller-home__page` column used to
 // provide (that column now holds only this row).
 .seller-home__scheduled-main {
   flex: 1 1 auto;
@@ -5130,7 +5168,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 }
 
 // Title — SLDS Titles/font-scale-3 semibold, white. Matches the
-// header title one level up (`.seller-home__knowledge-header-title`)
+// header title one level up (`.seller-home__page-header-title`)
 // so the two hero elements read as one typographic family across
 // the top of the page.
 .seller-home__banner-title {

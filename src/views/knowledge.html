@@ -33,20 +33,20 @@
 
   This layout is deliberately parallel to `.seller-home__conv` on the
   conversation page:
-    • Root gets `.seller-home--knowledge` so the outer container is
+    • Root gets `.seller-home--page` so the outer container is
       viewport-locked (no page-level scroll). Only the body section
       scrolls, exactly like `.seller-home--conversation` on
       home_conversation.html.
-    • Right column `.seller-home__knowledge` replaces
+    • Right column `.seller-home__page` replaces
       `.seller-home__main` for this page — plain white surface
       (--slds-g-color-surface-1), no aurora gradient, so Knowledge
       reads as a quiet reading surface instead of the Seller Home
       landing.
-    • Header `.seller-home__knowledge-header` is a fixed 48px band
+    • Header `.seller-home__page-header` is a fixed 48px band
       (min-height 3rem + spacing-2 vertical pad = 48px in practice,
       same math conv-header uses), title anchored left, brand-outline
       pill anchored right via `justify-content: space-between`.
-    • Body `.seller-home__knowledge-body` fills the remaining flex
+    • Body `.seller-home__page-body` fills the remaining flex
       track and owns `overflow-y: auto`. Its inner wrapper caps the
       content at 50rem (800px), same column width as the briefing +
       composer, so all Seller-Home surfaces share one content column
@@ -55,7 +55,7 @@
   Phase 3 lands the doc list (via _home_knowledge_list.html →
   renderKnowledgeDocRow macro). Phase 4 adds the search field
   (Figma 8931:383736 → "Input - Search") as a sibling above the
-  `<ul>` inside `.seller-home__knowledge-body-inner` and swaps in an
+  `<ul>` inside `.seller-home__page-body-inner` and swaps in an
   empty state (`[data-sh-knowledge-empty]`) when the client-side
   filter (`home.js → bindKnowledgeSearch`) drops every row. The
   header + search field stay visible across all states so keyboard
@@ -74,12 +74,12 @@
 {% endblock %}
 
 {% block content %}
-  {# `.seller-home--knowledge` scopes the viewport-lock rule
+  {# `.seller-home--page` scopes the viewport-lock rule
      (`overflow: hidden`) to this page only, exactly like
      `.seller-home--conversation` does for home_conversation.html.
      Without it the outer container would grow to fit its children
      and the body-section's `overflow-y: auto` would never engage. #}
-  <div class="seller-home seller-home--knowledge" data-sh-root>
+  <div class="seller-home seller-home--page" data-sh-root>
     {# Left navigation — same partial Seller Home uses. `navActive`
        from knowledge.json drives the "Knowledge" item's .is-active
        state; nothing else here differs from home.html's nav. #}
@@ -98,7 +98,7 @@
        order, same convention the Seller Home + Conversation pages
        already use. #}
     <div
-      class="seller-home__knowledge"
+      class="seller-home__page"
       role="main"
       aria-label="{{ pageTitle }}"
       tabindex="-1"
@@ -138,10 +138,10 @@
          etc.) so the 8-px icon-to-label gap is owned by the shared
          SLDS utility, not a bespoke gap rule on the button. #}
       <header
-        class="seller-home__knowledge-header"
+        class="seller-home__page-header"
         data-sh-knowledge-header
       >
-        <h1 class="seller-home__knowledge-header-title">{{ header.heading }}</h1>
+        <h1 class="seller-home__page-header-title">{{ header.heading }}</h1>
         <button
           type="button"
           class="slds-button slds-button_neutral seller-home__knowledge-new"
@@ -168,11 +168,11 @@
          phase (search filtering, empty-state toggles) can bind
          without needing to know the current markup. #}
       <section
-        class="seller-home__knowledge-body"
+        class="seller-home__page-body"
         aria-label="Documents"
         data-sh-knowledge-body
       >
-        <div class="seller-home__knowledge-body-inner">
+        <div class="seller-home__page-body-inner">
           {# ── Banner ───────────────────────────────────────────────
              Promo banner at the top of the page content: copy + CTA on
              the left, animated illustration over an isometric grid

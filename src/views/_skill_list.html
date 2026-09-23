@@ -6,8 +6,7 @@
   the Figma "Coworker – Skills" frame: rows read as a scannable list
   instead of a grid of self-contained cards.
 
-  Owned by the Skills landing bodies (`_skills_body_v1.html` /
-  `_skills_body_v2.html`); consumes:
+  Owned by the Skills landing (`_skills_body_v1.html`); consumes:
     • skills[]      — the rows to render (see skills.json for the
                        field-level contract).
     • agentLibrary  — keyed registry of owning agents; each row's
@@ -149,30 +148,39 @@
   Callers gate on `actions | length` — an empty menu is never rendered.
 #}
 {% macro renderSkillMenu(skill, menuId, actions, variant) %}
-  {% set isV2 = (variant == "v2") %}
+  {% set isVf = (variant == "vf") %}
   <div
-    class="seller-home__skill-menu{% if isV2 %} seller-home__skill-menu--inline{% endif %}"
+    class="{% if isVf %}c-skill-vf-overflow{% else %}seller-home__skill-menu{% endif %}"
     data-sh-skill-menu
     data-sh-skill-stop
   >
     <button
       type="button"
-      class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger"
+      class="{% if isVf %}c-skill-action{% else %}slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger{% endif %}"
       data-sh-skill-menu-trigger
+      {% if isVf %}data-tooltip="More actions"{% endif %}
       aria-haspopup="menu"
       aria-expanded="false"
       aria-controls="{{ menuId }}"
       aria-label="More actions for {{ skill.name }}"
       title="More actions"
     >
-      <svg class="slds-button__icon" aria-hidden="true">
-        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-      </svg>
+      {% if isVf %}
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+          <g>
+            <path d="M200 440c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60"></path>
+          </g>
+        </svg>
+      {% else %}
+        <svg class="slds-button__icon" aria-hidden="true">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
+        </svg>
+      {% endif %}
       <span class="slds-assistive-text">More actions</span>
     </button>
 
     <div
-      class="seller-home__skill-menu-list"
+      class="seller-home__skill-menu-list slds-dropdown_x-small slds-dropdown_right"
       id="{{ menuId }}"
       role="menu"
       aria-label="{{ skill.name }} actions"
@@ -235,12 +243,10 @@
   no cross-row bleed if two menus open in rapid succession.
 
   ── Row structure ─────────────────────────────────────────────────
-  Version A (default — `variant` unset or "v1"):
-
-    ┌──────────────────────────────────────────────────────────────┐
-    │ Name  (Sales)                                        ⋮  › │
-    │ Description that clamps to one line with an ellipsis.        │
-    └──────────────────────────────────────────────────────────────┘
+  Version A (default — `variant` unset or "v1") is the skill-card
+  layout: title, description, then agent · Owned by. The use button,
+  install switch, and kebab sit in `.skill-card__vf-actions`, a
+  sibling of the card link.
 
   Version B (`variant == "v2"`, Figma 11194:24307):
 
@@ -266,14 +272,8 @@
   behavior. `variant` and `useAction` are both optional; omitting them
   is exactly what Version A does.
 #}
-{% macro renderSkillRow(skill, rowActions, agentLibrary, variant, useAction) %}
+{% macro renderSkillRow(skill, rowActions, agentLibrary, useAction, statusLibrary) %}
   {% set isLinked = not (skill.linked == false) %}
-
-  {# `variant` names the LANDING VERSION asking for the row (set by
-     `_skills_body_v1.html` / `_skills_body_v2.html`), not a state of
-     the skill itself. #}
-  {% set isV2 = (variant == "v2") %}
-
   {# Owning agent, resolved from the registry. `agentLibrary` is
      passed in rather than read off the template context — the same
      reason `renderSkillToolChip` takes `toolLibrary` as a parameter:
@@ -285,6 +285,14 @@
      intended degradation: a typo shows no badge instead of an empty
      one or a raw key. #}
   {% set agent = (agentLibrary or {})[skill.agent] %}
+  {% set isInactive = skill.status and skill.status != "published" %}
+  {% set statusEntry = (statusLibrary or {})[skill.status] %}
+  {% set ownerName = "You" if skill.ownership == "mine" else (skill.sharedBy or skill.createdBy) %}
+  {% set vfCardClass = "skill-card skill-card_library skill-card--no-swap skill-card--vf skill-card--desc-1" %}
+  {% if isInactive %}
+    {% set vfCardClass = vfCardClass ~ " skill-card--inactive skill-card--vf-dimmed" %}
+  {% endif %}
+  {% set rowSurfaceClass = vfCardClass %}
   {# Route selection: prefer an explicit `skill.href` (used by
      bespoke rows that need to jump elsewhere), fall back to the
      skill-detail route keyed on the row's stable `id`, and finally
@@ -348,7 +356,7 @@
          sentence instead of a second copy of the anchor. No state
          fragment: state is not a Skill concept. #}
       <a
-        class="seller-home__skill-row"
+        class="{{ rowSurfaceClass }}"
         href="{{ skillHref | appUrl }}"
         aria-label="{{ rowLabel }}"
         data-sh-skill-open
@@ -357,201 +365,82 @@
       {# Unlinked branch — inert <div>. No aria-label because
          there's nothing to open. #}
       <div
-        class="seller-home__skill-row seller-home__skill-row--unlinked"
+        class="{{ rowSurfaceClass }}"
         title="{{ skill.name }}"
       >
     {% endif %}
-      <div class="seller-home__skill-body">
-        {# Title row — skill name plus the owning-agent pill, to the
-           immediate right of the name per Figma "Source Tile" (node
-           9723:17395 for a Sales Agent skill, 9723:17471 for a
-           CoWorker Agent one).
-
-           `<span>`s, not a heading / interactive element: the whole
-           row is already an <a>, and HTML forbids interactive
-           descendants of an anchor. The badge is decorative-
-           adjacent (it duplicates no visible copy elsewhere on the
-           row) and reaches assistive tech through the anchor's
-           aria-label above, so it carries no ARIA of its own.
-
-           The pill is an SLDS 2 `.slds-badge`; the local classes only
-           re-skin it via the component's `--slds-c-badge-*` styling
-           hooks (see home.scss). The agent KEY is emitted as a
-           variant modifier so each agent carries its own tint —
-           that tint is the only thing distinguishing one agent from
-           another at a glance, since the pill shape is shared.
-
-           Gated on `agent` resolving — an entry with no (or an
-           unknown) agent renders the bare title exactly as before.
-           Still no RUNTIME-state badge here; state is not a Skill
-           concept. #}
-        {% if isV2 %}
-          {# ── Version B heading: name over an attribute line ─────
-             Figma 11194:24307. The name owns its line, and the agent
-             that Version A shows as a badge beside the name collapses
-             into one 10-px muted line directly beneath it.
-
-             The heading wrapper exists to hold the name and the
-             attribute line as one unit with NO gap between them
-             (their leading does the separating, per Figma), so the
-             4-px gap the body stack carries applies only between this
-             block and the description below it.
-
-             The agent is plain text here rather than the tinted pill
-             Version A uses — same fact, different treatment per Figma,
-             and it means the line reads as one phrase instead of a
-             badge plus a chip. It is already announced through the
-             row's aria-label, so nothing here is announced twice.
-
-             The bullet is `aria-hidden` and each half is independently
-             gated, so the separator can never end up leading or
-             trailing. #}
-          <span class="seller-home__skill-heading">
-            <span class="seller-home__skill-title">{{ skill.name }}</span>
-
-            {% if agent or skill.sharedBy %}
-              <span class="seller-home__skill-source">
-                {% if agent %}
-                  <span class="seller-home__skill-source-label">{{ agent.label }}</span>
-                {% endif %}
-
-                {# "Shared by <name>" for a shared skill — set as another
-                   quiet fact on the attribute line, reusing the same
-                   `__skill-source-label` treatment as the agent name so
-                   the line reads as one phrase. Gated on `sharedBy` so
-                   non-shared rows are unchanged. #}
-                {% if agent and skill.sharedBy %}
-                  <span class="seller-home__skill-source-separator" aria-hidden="true">•</span>
-                {% endif %}
-
-                {% if skill.sharedBy %}
-                  <span class="seller-home__skill-source-label">Shared by {{ skill.sharedBy }}</span>
-                {% endif %}
-              </span>
-            {% endif %}
+          {# Title, one-line description, then
+             agent · owner. `seller-home__skill-title` stays on the
+             name so duplicateSkillItem can still find it. Each meta
+             fact is gated so a missing field never leaves a dangling
+             separator. The inactive badge uses statusLibrary and is
+             omitted when that label is absent. #}
+          <span class="skill-card__vf-title-row">
+            <span class="skill-card__vf-title seller-home__skill-title">{{ skill.name }}</span>
           </span>
-        {% else %}
-          {# Version A: the title row is the first line of the stack,
-             with no tile and no stamp. #}
-          {{ renderSkillTitleRow(skill, agent) }}
-
-          {# Version A rest-state meta line — "Owned by <person> ·
-             Last modified <date>". It occupies the slot the
-             description sits in; the row's hover / focus-within /
-             open-menu state swaps it for the description (see the
-             swap rules in skills.scss). Owner resolves to "You" for
-             the current user's own skills, else the sharer / author.
-             Each half is independently gated so a missing field can
-             never leave a dangling separator. #}
-          {% set ownerName = "You" if skill.ownership == "mine" else (skill.sharedBy or skill.createdBy) %}
-          {% if ownerName or skill.updatedAt %}
-            <p class="seller-home__skill-ownership">
+          <p class="skill-card__vf-desc" title="{{ skill.description }}">{{ skill.description }}</p>
+          {% if (isInactive and statusEntry) or agent or ownerName %}
+            <p class="skill-card__vf-meta">
+              {% if isInactive and statusEntry %}
+                <span class="skill-card__off-badge">{{ statusEntry.label }}</span>
+              {% endif %}
+              {% if isInactive and statusEntry and (agent or ownerName) %}
+                <span class="skill-card__vf-meta-sep" aria-hidden="true">·</span>
+              {% endif %}
+              {% if agent %}
+                <span class="skill-card__vf-meta-agent">{{ agent.label }}</span>
+              {% endif %}
+              {% if agent and ownerName %}
+                <span class="skill-card__vf-meta-sep" aria-hidden="true">·</span>
+              {% endif %}
               {% if ownerName %}
                 <span>Owned by {{ ownerName }}</span>
               {% endif %}
-              {% if ownerName and skill.updatedAt %}
-                <span class="seller-home__skill-ownership-sep" aria-hidden="true">·</span>
-              {% endif %}
-              {% if skill.updatedAt %}
-                <span>Last modified {{ skill.updatedAt }}</span>
-              {% endif %}
             </p>
           {% endif %}
-        {% endif %}
-
-        {# Description — authored once for both variants (they differ
-           only in type size, which is CSS). `title` carries the full
-           copy so users can see everything the 1-line clamp elided —
-           matches the tooltip pattern used across Knowledge /
-           Scheduled rows. Screen readers get the full text in the
-           source order (the <p> renders the entire string; only the
-           visual clamp hides overflow). #}
-        <p
-          class="seller-home__skill-description"
-          title="{{ skill.description }}"
-        >{{ skill.description }}</p>
-
-      </div>
-
-      {# Trailing chevron — HIDDEN by default; revealed via CSS on
-         hover / focus-within / is-menu-open of the <li> wrapper.
-         Rendered on linked rows only; unlinked / inert rows ship
-         no drill-in glyph so the affordance can't mis-signal.
-
-         Version A only: Version B fills that right slot with the
-         action cluster below, and a chevron behind those buttons would
-         be a second drill-in signal competing with them. The row
-         itself is still the click target there — only the glyph is
-         gone. #}
-      {% if isLinked and not isV2 %}
-        <span class="seller-home__skill-chevron" aria-hidden="true">
-          <svg class="seller-home__skill-chevron-glyph" focusable="false">
-            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
-          </svg>
-        </span>
-      {% endif %}
     {% if isLinked %}</a>{% else %}</div>{% endif %}
 
-    {% if isV2 %}
-      {# ── Version B action cluster ──────────────────────────────
-         Figma 11314:170930: a pair of bare 32-px icon buttons — "Use
-         Skill" carrying the `anywhere_chat` glyph, then the kebab — 8 px
-         apart and vertically centered at the card's right edge. Both are
-         real <button>s, so the cluster is a SIBLING of the anchor and
-         absolute-positions on top of it — the same escape hatch Version
-         A's kebab has always used, because HTML forbids interactive
-         descendants of an <a>. Hidden at rest (opacity only, still in
-         the accessibility tree) and revealed on the <li>'s hover /
-         focus-within / is-menu-open so the card wash and both icons
-         stay in lockstep when the pointer moves onto a button.
-
-         "Use Skill" is icon-only, so its label moves to
-         `slds-assistive-text` and the per-row accessible name comes from
-         `aria-label` / `title` (which name the skill, where the glyph
-         alone could not).
-
-         Clicks here never reach the anchor (it is not an ancestor), so
-         no `stopPropagation` is needed to protect row activation.
-
-         "Use Skill" routes through the SAME `data-sh-skill-action`
-         hook the menu items use, so `skillOverflowController` picks it
-         up with no new binding and `skillActionRouter` handles it in
-         one switch case. `useAction.id` comes from skills.json rather
-         than being hard-coded here, so the button and the router agree
-         through data. #}
-      {% if useAction %}
-        <div class="seller-home__skill-actions">
+      {# Action cluster — sibling of the card link so the
+         buttons are not descendants of the anchor. The install switch
+         has no JSON field; it renders checked and stays unwired.
+         Inactive cards omit the use button, matching the source card. #}
+      <div class="skill-card__vf-actions">
+        {% if useAction and not isInactive %}
           <button
             type="button"
-            class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-action-use"
+            class="c-skill-action"
+            data-tooltip="{{ useAction.label }}"
             data-sh-skill-action="{{ useAction.id }}"
             aria-label="{{ useAction.assistiveText | replace("{name}", skill.name) }}"
             title="{{ useAction.assistiveText | replace("{name}", skill.name) }}"
           >
-            <svg class="slds-button__icon" aria-hidden="true">
-              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ useAction.icon }}"></use>
+            <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+              <g>
+                <path d="M140 437V83c0-10 13-17 22-9l212 173c8 6 8 19 0 25L162 447c-9 7-22 1-22-10"></path>
+              </g>
             </svg>
             <span class="slds-assistive-text">{{ useAction.label }}</span>
           </button>
-
-          {% if allowedActions | length %}
-            {{ renderSkillMenu(skill, menuId, allowedActions, "v2") }}
-          {% endif %}
+        {% endif %}
+        <div class="c-skill-install-toggle">
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <label class="slds-checkbox_toggle slds-grid">
+                <span class="slds-form-element__label slds-assistive-text">Install</span>
+                <input type="checkbox" role="switch" checked>
+                <span class="slds-checkbox_faux_container">
+                  <span class="slds-checkbox_faux"></span>
+                  <span class="slds-checkbox_on"></span>
+                  <span class="slds-checkbox_off"></span>
+                </span>
+              </label>
+            </div>
+          </div>
         </div>
-      {% elif allowedActions | length %}
-        {# No `useAction` copy authored — the kebab still ships, and the
-           cluster degrades to a single button. #}
-        <div class="seller-home__skill-actions">
-          {{ renderSkillMenu(skill, menuId, allowedActions, "v2") }}
-        </div>
-      {% endif %}
-    {% elif allowedActions | length %}
-      {# Version A's bare kebab: absolute-positioned against the <li>,
-         revealed on hover / focus-within / menu-open. Skipped entirely
-         when the skill has zero applicable actions so we never render
-         an empty popover. #}
-      {{ renderSkillMenu(skill, menuId, allowedActions, "v1") }}
-    {% endif %}
+        {% if allowedActions | length %}
+          {{ renderSkillMenu(skill, menuId, allowedActions, "vf") }}
+        {% endif %}
+      </div>
   </li>
 {% endmacro %}
 
@@ -570,19 +459,15 @@
   for the card grid and the attribute name was kept when the list
   refactor landed to avoid churning every controller reference.
 
-  `skillListVariant` comes from the including body partial
-  (`_skills_body_v1.html` / `_skills_body_v2.html`) and picks the row's
-  body layout; `useAction` carries the copy for Version B's "Use Skill"
-  button. Both are undefined on any other surface that includes this
-  file, which lands on Version A's row — the historical default.
+  `useAction` carries the copy for the use button.
 #}
 <ul
-  class="seller-home__skill-list"
+  class="seller-home__skill-list c-vf-cards c-vf-cards--single"
   data-sh-skill-grid
 >
   {% for skill in skills %}
     {% if not (skill.hidden == true) %}
-      {{ renderSkillRow(skill, rowActions, agentLibrary, skillListVariant, useAction) }}
+      {{ renderSkillRow(skill, rowActions, agentLibrary, useAction, skillsData.statusLibrary) }}
     {% endif %}
   {% endfor %}
 </ul>

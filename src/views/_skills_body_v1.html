@@ -1,34 +1,12 @@
 {#
-  Seller Home — Skills landing, VERSION A body
+  Seller Home — Skills landing body
   =====================================================================
-  Rendered by /skills.html, which is Version A's route. Version B lives
-  in `_skills_body_v2.html`.
+  Rendered by /skills.html. The data (skills.json), the shell, the
+  left nav, the header, the banner, the toolbar, the list, and the
+  dialogs are composed here. skills.js binds by `[data-sh-skills-root]`.
 
-  ── Why the page body is a partial ────────────────────────────────
-  Added 2026-08-17 so two design versions of this landing can be
-  reviewed side by side without either one owning a private copy of
-  the page. The markup below is what `skills.html` held inline before
-  that date — lifted, not rewritten, so Version A's rendered output is
-  unchanged.
-
-  What the versions SHARE (never duplicate any of it in a version
-  body): the data (skills.json), the `.seller-home` shell, the left
-  nav, the header band, the educational banner, the toolbar
-  (`_skills_toolbar.html`), the rows (`_skill_list.html`), the dialogs
-  (`_skills_dialogs.html`), and ALL behavior (skills.js binds by
-  `[data-sh-skills-root]`, so it has no idea versions exist). A version
-  body owns page LAYOUT and nothing else.
-
-  ── Page data ─────────────────────────────────────────────────────
-  The `{% set %}` block below looks redundant on /skills.html, where
-  gulpfile.js already injects `data/skills.json` automatically because
-  the stem matches. It is not: /skills-v2.html has no `skills-v2.json`
-  and gets nothing injected, so it passes `skillsData` down instead.
-  Binding from `skillsData` in the BODY means one code path serves both
-  routes, and neither version can quietly render a different catalog.
-  Nunjucks includes cannot write variables back to their includer,
-  which is why these bindings live here rather than in a shared data
-  partial.
+  Bindings live in this file because Nunjucks includes cannot write
+  variables back to their includer.
 #}
 
 {% set header       = skillsData.header %}
@@ -40,20 +18,21 @@
 {% set toolLibrary  = skillsData.toolLibrary %}
 {% set filterAction = skillsData.filterAction %}
 {% set emptyState   = skillsData.emptyState %}
+{% set useAction    = skillsData.useAction %}
 
 {# `.seller-home--skills` scopes the viewport-lock rule
    (`overflow: hidden`) to this page only, exactly like
-   `.seller-home--knowledge` and `.seller-home--scheduled` do for their
+   `.seller-home--page` and `.seller-home--scheduled` do for their
    respective surfaces. Without it the outer container would grow to
    fit its children and the body-section's `overflow-y: auto` would
    never engage.
 
-   We deliberately also apply `.seller-home--knowledge` so this page
+   We deliberately also apply `.seller-home--page` so this page
    inherits Knowledge's already-tuned column widths, body scroll, and
    header-band styling without duplicating rules.
    `.seller-home--skills` is reserved for Skills-only overrides (tab-row
    spacing, list layout). #}
-<div class="seller-home seller-home--knowledge seller-home--skills" data-sh-root>
+<div class="seller-home seller-home--page seller-home--skills" data-sh-root>
   {# Left navigation — same partial Seller Home / Knowledge /
      Scheduled use. `navActive = "skills"` set by the page file drives
      the highlight. #}
@@ -61,7 +40,7 @@
 
   {# ── Right column ────────────────────────────────────────────────
      Sibling to the left nav; fills the remaining width. Reuses
-     Knowledge's `.seller-home__knowledge` class so the outer column
+     Knowledge's `.seller-home__page` class so the outer column
      layout, header band, and body scroll behavior stay identical
      between Knowledge / Scheduled / Skills. `role="main"` +
      `aria-label="Skills"` give AT users a meaningful region label;
@@ -71,7 +50,7 @@
      `data-sh-skills-root` is what makes skills.js adopt this page —
      it is not decorative. #}
   <div
-    class="seller-home__knowledge seller-home__skills"
+    class="seller-home__page seller-home__skills"
     role="main"
     aria-label="{{ pageTitle }}"
     tabindex="-1"
@@ -79,7 +58,7 @@
   >
     {# ── Header band (48 px) ─────────────────────────────────────
        Structural clone of `/knowledge.html`'s header (see
-       `.seller-home__knowledge-header` for the flex / spacing / gap
+       `.seller-home__page-header` for the flex / spacing / gap
        rules). Title anchors left; a right-anchored "Create Skill"
        pill mirrors Knowledge's "New Knowledge" pill 1:1 — same SLDS 2
        `slds-button_neutral` shape so height, radius, padding, colors,
@@ -94,10 +73,10 @@
        event-delegation contract Knowledge's "New Knowledge" button
        uses. #}
     <header
-      class="seller-home__knowledge-header"
+      class="seller-home__page-header"
       data-sh-skills-header
     >
-      <h1 class="seller-home__knowledge-header-title">{{ header.heading }}</h1>
+      <h1 class="seller-home__page-header-title">{{ header.heading }}</h1>
       <button
         type="button"
         class="slds-button slds-button_neutral seller-home__skills-new"
@@ -113,7 +92,7 @@
     {# ── Body section ────────────────────────────────────────────
        Same scrollable pattern as Knowledge and Scheduled. The inner
        column is capped at 50 rem (800 px) via the shared
-       `.seller-home__knowledge-body-inner` rule. Content order
+       `.seller-home__page-body-inner` rule. Content order
        mirrors the Figma exactly:
          1. Educational banner (hero)
          2. Tabs + filter button
@@ -124,10 +103,10 @@
        context). The composer partial still exists — Home / Scheduled
        continue to use it — but it is no longer included here. #}
     <section
-      class="seller-home__knowledge-body"
+      class="seller-home__page-body"
       aria-label="{{ pageTitle }}"
     >
-      <div class="seller-home__knowledge-body-inner">
+      <div class="seller-home__page-body-inner">
         {# ── Educational banner ───────────────────────────────────
            Brand-blue hero introducing what Skills are. Copy comes
            from `skills.json` → `banner`; markup lives in the shared
@@ -155,6 +134,8 @@
            Shared with Version B — see `_skills_toolbar.html`. #}
         {% include "_skills_toolbar.html" %}
 
+        {% include "_skills_filter_row.html" %}
+
         {# ── Skill list + empty state ─────────────────────────
            Renders the single-column list via `_skill_list.html`.
            Region carries `data-sh-skills-list-region` so the tab
@@ -175,10 +156,11 @@
            two dialogs in `_skills_dialogs.html` all continue to work
            with no JS edits after a layout change.
 
-           Version A leaves `skillListVariant` unset, which is what
-           selects the original two-line row inside the partial. #}
+           `useAction` supplies the use button's accessible name from
+           skills.json. #}
         <div
           id="seller-home-skills-list"
+          class="c-vk-content-area"
           data-sh-skills-list-region
         >
           {% include "_skill_list.html" %}
@@ -197,8 +179,3 @@
    skills.js opens them in response to `sh:skill-action` events and
    manages focus trap + focus restore. #}
 {% include "_skills_dialogs.html" %}
-
-{# Prototype-only design-version control (bottom-right). Scaffolding —
-   see the partial's docblock, and delete it together with
-   `prototypeVersions` in skills.json once a direction is chosen. #}
-{% include "_prototype_version_switcher.html" %}

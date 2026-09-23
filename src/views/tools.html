@@ -41,7 +41,7 @@
     └──────────────────────────────────────────────────────────┘
 
   Chrome (page shell, header band, body scroll) reuses Knowledge's
-  already-tuned `.seller-home__knowledge-*` class stack rather than
+  already-tuned `.seller-home__page-*` class stack rather than
   inventing a third layout family — the same borrowing scheduled.html
   does. Tools-only concerns stay in tools.scss under `.tool-*`, which
   is also what styles the cards inside the modal.
@@ -65,12 +65,12 @@
 {% endblock %}
 
 {% block content %}
-  {# `.seller-home--knowledge` brings the viewport lock (`overflow:
+  {# `.seller-home--page` brings the viewport lock (`overflow:
      hidden`) plus Knowledge's column widths and body scroll;
      `.seller-home--tools` is the hook for Tools-only overrides. Without
      the lock the outer container grows to fit its children and the
      body section's `overflow-y: auto` never engages. #}
-  <div class="seller-home seller-home--knowledge seller-home--tools" data-sh-root>
+  <div class="seller-home seller-home--page seller-home--tools" data-sh-root>
     {% include "_home_left_nav.html" %}
 
     {# Right column. Not a <main> element — the SLDS `<main
@@ -80,20 +80,20 @@
        programmatic focus target for skip-links without adding it to
        the tab order. #}
     <div
-      class="seller-home__knowledge seller-home__tools"
+      class="seller-home__page seller-home__tools"
       role="main"
       aria-label="{{ pageTitle }}"
       tabindex="-1"
     >
-      <header class="seller-home__knowledge-header">
-        <h1 class="seller-home__knowledge-header-title">{{ header.heading }}</h1>
+      <header class="seller-home__page-header">
+        <h1 class="seller-home__page-header-title">{{ header.heading }}</h1>
       </header>
 
       <section
-        class="seller-home__knowledge-body"
+        class="seller-home__page-body"
         aria-label="Tools"
       >
-        <div class="seller-home__knowledge-body-inner">
+        <div class="seller-home__page-body-inner">
           {# `true` makes the tiles interactive — each becomes a button
              carrying `data-tool-id`, and the delegated opener in
              tools_modal.js routes a click into the modal at that tool.
