@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════
-   Background shader — /agent_at_work.html
+   Background shader — /style_lab/agent_at_work.html
    ----------------------------------------------------------------------
    Mounts whichever pick Home's header gear last saved (`sh:shader`),
    falling back to simplex. Tuner panel stays on Home; this page just

@@ -1,4 +1,4 @@
-// Aurora pointer effect. The lab page (/aurora_lab.html) writes one setting
+// Aurora pointer effect. The lab page (/style_lab/aurora_lab.html) writes one setting
 // per target; the style sandbox reads them separately for the feed and
 // the chat composer. Loaded as a classic script: window.SHAurora.
 (function (global) {

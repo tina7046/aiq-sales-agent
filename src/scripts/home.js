@@ -2302,8 +2302,12 @@
         }
       }
       var label = verb + (title ? title.textContent.trim() : '')
+      var tipLabel = verb.trim()
       toggle.setAttribute('aria-label', label)
-      toggle.setAttribute('title', label)
+      toggle.setAttribute('data-tooltip', tipLabel)
+      var tip = toggle.parentElement &&
+        toggle.parentElement.querySelector('[data-sh-feed-status-tip]')
+      if (tip) tip.textContent = tipLabel
     }
 
     // Reflect the change on the Recents rail: this workflow's nav row
@@ -2913,6 +2917,9 @@
       if (labelEl) labelEl.textContent = text
       trigger.setAttribute('aria-label', 'Filter: ' + text)
       trigger.setAttribute('title', 'Filter: ' + text)
+      var headingEl = feedRoot.querySelector('[data-sh-feed-heading]')
+      var heading = chosen && chosen.getAttribute('data-sh-feed-filter-heading')
+      if (headingEl && heading) headingEl.textContent = heading
     }
 
     trigger.addEventListener('click', function (event) {

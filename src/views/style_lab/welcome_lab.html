@@ -1,0 +1,186 @@
+{% extends "_template.html" %}
+
+{#
+  Welcome lab — Seller Home without Hunter at work
+  =====================================================================
+  Served at /style_lab/welcome_lab.html. Same shell as index.html (left nav,
+  briefing, composer) so an empty-state prototype sits in the real
+  column. The Hunter at work feed is not on this page.
+
+  Isolation: this file and welcome_lab.scss are the only place that
+  prototype lives. Do not add the feed back by editing
+  `_home_feed.html`, home.scss, or index.html. New empty-state markup
+  goes in the marked slot below; new rules go in welcome_lab.scss
+  under `.welcome-lab`, which is not on Seller Home.
+#}
+
+{% set _home = readData("index") or {} %}
+{% set briefing = _home.briefing or {} %}
+{% set composer = _home.composer or {} %}
+{% set connections = _home.connections %}
+{% set navPrimary = _home.navPrimary %}
+{% set navFooter  = _home.navFooter %}
+{% set recents    = _home.recents %}
+{% set navActive  = "new_chat" %}
+{# Lab-only. Home keeps its own composer placeholder. #}
+{% set composerPlaceholder = "Ask Hunter" %}
+
+{% block styles %}
+  {# Shared Seller Home chrome, then this page's own sheet. The second
+     file is loaded only here, so rules in it cannot reach index.html. #}
+  <link rel="stylesheet" href="/styles/home.css" />
+  <link rel="stylesheet" href="/styles/welcome_lab.css" />
+{% endblock %}
+
+{% block content %}
+  <div class="welcome-lab seller-home" data-sh-root>
+    {% include "_home_left_nav.html" %}
+
+    <div class="seller-home__shader" data-sh-shader-host aria-hidden="true"></div>
+
+    <div class="seller-home__main">
+      <div class="seller-home__main-inner">
+        {% import "_home_briefing_insight_popover.html" as briefingPopover %}
+        <section
+          class="seller-home__briefing"
+          aria-label="Daily briefing"
+          data-sh-briefing-root
+        >
+          <h1 class="seller-home__briefing-heading">
+            {{ briefing.heading }}
+          </h1>
+
+          {% if briefing.popovers and briefing.popovers|length %}
+          <div class="seller-home__briefing-popovers" data-sh-briefing-popovers>
+            {% for pop in briefing.popovers %}
+              {{ briefingPopover.briefingInsightPopover(pop) }}
+            {% endfor %}
+          </div>
+          {% endif %}
+        </section>
+
+        {% include "_home_composer.html" %}
+
+        {# Suggestion rows under the composer. One line each: icon,
+           truncated description, dismiss control on hover. Rolling over
+           a row writes its text into the composer; rolling off restores
+           the placeholder. #}
+        <ul class="welcome-lab__suggestions">
+          <li class="welcome-lab__suggestion">
+            <button type="button" class="welcome-lab__suggestion-action slds-media">
+              <span class="slds-media__figure welcome-lab__suggestion-icon" aria-hidden="true">
+                <img src="/assets/images/source_icons/source_salesforce.svg" alt="" />
+              </span>
+              <span class="slds-media__body slds-truncate">Give me a daily brief of the top things I need to know to hit my quota</span>
+            </button>
+            <button type="button" class="slds-button slds-button_icon slds-button_icon-bare welcome-lab__suggestion-dismiss" aria-label="Dismiss suggestion">
+              <svg class="slds-button__icon" aria-hidden="true">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+              </svg>
+            </button>
+          </li>
+          <li class="welcome-lab__suggestion">
+            <button type="button" class="welcome-lab__suggestion-action slds-media">
+              <span class="slds-media__figure welcome-lab__suggestion-icon" aria-hidden="true">
+                <img src="/assets/images/source_icons/source_gmail.png" alt="" />
+              </span>
+              <span class="slds-media__body slds-truncate">Give me a Monday briefing on market moves affecting CRM and autonomous sales-agent products</span>
+            </button>
+            <button type="button" class="slds-button slds-button_icon slds-button_icon-bare welcome-lab__suggestion-dismiss" aria-label="Dismiss suggestion">
+              <svg class="slds-button__icon" aria-hidden="true">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+              </svg>
+            </button>
+          </li>
+          <li class="welcome-lab__suggestion">
+            <button type="button" class="welcome-lab__suggestion-action slds-media">
+              <span class="slds-media__figure welcome-lab__suggestion-icon" aria-hidden="true">
+                <img src="/assets/images/source_icons/source_pdf.png" alt="" />
+              </span>
+              <span class="slds-media__body slds-truncate">Find the latest docs related to a project and summarize them.</span>
+            </button>
+            <button type="button" class="slds-button slds-button_icon slds-button_icon-bare welcome-lab__suggestion-dismiss" aria-label="Dismiss suggestion">
+              <svg class="slds-button__icon" aria-hidden="true">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+              </svg>
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  {% include "_home_connections_modal.html" %}
+
+  <script src="/scripts/vendor/gsap.min.js"></script>
+  <script src="/scripts/vendor/Flip.min.js"></script>
+  <script src="/scripts/aurora.js"></script>
+  <script src="/scripts/home.js"></script>
+  <script>
+    (function () {
+      var list = document.querySelector('.welcome-lab__suggestions');
+      var textarea = document.querySelector('[data-sh-composer-textarea]');
+      if (!list || !textarea) return;
+
+      var previewing = false;
+      var savedPlaceholder = '';
+
+      // Home's composer is 3 rows. This page starts at 2; the shared
+      // autosize already ran, so remeasure after lowering `rows`.
+      function autosize (el) {
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+      }
+      textarea.rows = 2;
+      autosize(textarea);
+
+      function rowFrom (node) {
+        return node && node.closest ? node.closest('.welcome-lab__suggestion') : null;
+      }
+
+      function labelOf (row) {
+        var label = row.querySelector('.slds-truncate');
+        return label ? label.textContent : '';
+      }
+
+      function preview (row) {
+        if (!previewing && textarea.value) return;
+        if (!previewing) savedPlaceholder = textarea.placeholder;
+        previewing = true;
+        textarea.value = labelOf(row);
+        autosize(textarea);
+      }
+
+      function restore () {
+        if (!previewing) return;
+        previewing = false;
+        textarea.value = '';
+        textarea.placeholder = savedPlaceholder;
+        autosize(textarea);
+      }
+
+      list.addEventListener('mouseover', function (event) {
+        var row = rowFrom(event.target);
+        if (!row || !list.contains(row)) return;
+        if (event.relatedTarget && row.contains(event.relatedTarget)) return;
+        preview(row);
+      });
+
+      list.addEventListener('mouseout', function (event) {
+        var row = rowFrom(event.target);
+        if (!row || !list.contains(row)) return;
+        if (event.relatedTarget && row.contains(event.relatedTarget)) return;
+        restore();
+      });
+
+      list.addEventListener('click', function (event) {
+        var dismiss = event.target.closest('.welcome-lab__suggestion-dismiss');
+        if (!dismiss || !list.contains(dismiss)) return;
+        var row = rowFrom(dismiss);
+        if (!row) return;
+        restore();
+        row.remove();
+      });
+    })();
+  </script>
+{% endblock %}

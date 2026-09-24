@@ -4654,10 +4654,12 @@
 }
 
 // The action row is a sibling of the card link, so the hover target is
-// the <li>, not .skill-card. focus-within and the open menu keep the
-// row available from the keyboard.
+// the <li>, not .skill-card. `:has(:focus-visible)` keeps the row up
+// for keyboard focus. `:focus-within` would do that too, but a mouse
+// click on the install toggle leaves the checkbox focused, so the row
+// stayed visible after the pointer left the card.
 .seller-home__skill-item:hover .skill-card__vf-actions,
-.seller-home__skill-item:focus-within .skill-card__vf-actions,
+.seller-home__skill-item:has(:focus-visible) .skill-card__vf-actions,
 .seller-home__skill-item.is-menu-open .skill-card__vf-actions {
   display: flex;
 }

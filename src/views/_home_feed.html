@@ -113,7 +113,7 @@
     state       at rest    on hover / focus   pressing it
     ─────────   ────────   ────────────────   ───────────
     completed   circle     pause              pauses
-    running     spinner    pause              pauses
+    running     pulse      pause              pauses
     scheduled   clock      pause              pauses
     paused      pause      play               resumes
     failed      warning    refresh            retries
@@ -142,24 +142,43 @@
 {% elif filtered and item.state == "archived" %}{% set verb = "Restart " %}
 {% else %}{% set verb = "Pause " %}{% endif %}
 {% set label = verb ~ item.title %}
-<button
-  type="button"
-  class="seller-home__feed-item-status"
-  data-sh-feed-run-toggle
-  data-sh-feed-item-stop
-  aria-label="{{ label }}"
-  title="{{ label }}"
->
-  <span
-    class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--spinner sh-spinner"
+{% set tipLabel = verb | trim %}
+{% set tipId = "seller-home-feed-" ~ item.id ~ "-status-tip" %}
+<span class="t-tt-group seller-home__feed-item-status-group">
+  <button
+    type="button"
+    class="seller-home__feed-item-status t-tt-trigger"
+    data-sh-feed-run-toggle
+    data-sh-feed-item-stop
+    data-tooltip="{{ tipLabel }}"
+    aria-label="{{ label }}"
+    aria-describedby="{{ tipId }}"
+  >
+    <span
+      class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--spinner"
+      aria-hidden="true"
+    >
+      <span class="seller-home__feed-status-pulse">
+        <span class="seller-home__feed-status-pulse-dot"></span>
+        <span class="seller-home__feed-status-pulse-ring"></span>
+      </span>
+    </span>
+    {% for glyph in ["circle", "check", "clock", "pause", "play", "warning", "refresh", "stop", "ban"] %}
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--{{ glyph }}" aria-hidden="true">
+      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ glyph }}"></use>
+    </svg>
+    {% endfor %}
+  </button>
+  <div
+    class="slds-popover slds-popover_tooltip t-tt seller-home__feed-status-tip"
+    role="tooltip"
+    id="{{ tipId }}"
     aria-hidden="true"
-  ></span>
-  {% for glyph in ["circle", "check", "clock", "pause", "play", "warning", "refresh", "stop", "ban"] %}
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--{{ glyph }}" aria-hidden="true">
-    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ glyph }}"></use>
-  </svg>
-  {% endfor %}
-</button>
+    data-show="false"
+  >
+    <div class="slds-popover__body t-tt-text seller-home__feed-status-tip-label" data-sh-feed-status-tip>{{ tipLabel }}</div>
+  </div>
+</span>
 {% endmacro %}
 
 
@@ -483,12 +502,12 @@
   data-sh-aurora-target="feed"
   data-sh-aurora-card="fade"
 >
-  {# Halo only. Painted by aurora.js from the /aurora_lab.html setting. #}
+  {# Halo only. Painted by aurora.js from the /style_lab/aurora_lab.html setting. #}
   <div class="sh-aurora__gray" data-sh-aurora-gray hidden aria-hidden="true"></div>
   <div class="sh-aurora__glow" data-sh-aurora-glow aria-hidden="true"></div>
   <div class="seller-home__feed-header">
     <div class="seller-home__feed-title-row">
-      <h2 id="seller-home-ready-heading" class="seller-home__feed-heading">
+      <h2 id="seller-home-ready-heading" class="seller-home__feed-heading" data-sh-feed-heading>
         {{ feed.heading }}
       </h2>
       {#
@@ -552,6 +571,7 @@
                 role="option"
                 aria-selected="{% if opt.id == feed.filter.default %}true{% else %}false{% endif %}"
                 data-sh-feed-filter-option="{{ opt.id }}"
+                {%- if opt.heading %} data-sh-feed-filter-heading="{{ opt.heading }}"{% endif %}
               >
                 <span class="seller-home__feed-filter-item-label">{{ opt.label }}</span>
                 <svg class="seller-home__feed-filter-item-check" aria-hidden="true" focusable="false">

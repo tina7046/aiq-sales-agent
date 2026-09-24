@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Feed time-lapse director — lab only (/agent_at_work.html)
+// Feed time-lapse director — lab only (/style_lab/agent_at_work.html)
 // =====================================================================
 // Opening stack is wave 1 (3 cards). Each Left/Up swipes the whole
 // visible pack, jumps the date ladder (Sep 17 → Oct 1 → Oct 28,

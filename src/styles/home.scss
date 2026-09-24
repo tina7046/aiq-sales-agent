@@ -1463,17 +1463,17 @@ main.app-wrapper {
   color: var(--slds-g-color-on-surface-1, #5c5c5c);
   letter-spacing: 0;
 
-  // Initial + max height. The textarea starts at 3 lines (~57px)
-  // matching Figma's composer initial state, and autosizes up to
-  // ~8 lines. Past the max, JS lets `overflow-y: auto` kick in so
-  // the scroll happens INSIDE the textarea rather than making the
-  // whole card taller than the viewport.
+  // Initial + max height. The textarea starts at 2 lines (~38px)
+  // and autosizes up to ~8 lines. Past the max, JS lets
+  // `overflow-y: auto` kick in so the scroll happens INSIDE the
+  // textarea rather than making the whole card taller than the
+  // viewport.
   //
-  // `min-height` is expressed as `calc(19px * 3)` (line-height × 3)
+  // `min-height` is expressed as `calc(19px * 2)` (line-height × 2)
   // so the token-driven line-height above stays the single source
   // of truth. If a future theme bumps line-height, min-height
   // follows automatically.
-  min-height: calc(1.1875rem * 3);   // 3 lines → 57px
+  min-height: calc(1.1875rem * 2);   // 2 lines → 38px
   max-height: calc(1.1875rem * 8);   // 8 lines → 152px
   overflow-y: auto;
 
@@ -2151,7 +2151,7 @@ main.app-wrapper {
 
   pointer-events: none;
   border-radius: inherit;
-  // Card opacity from /aurora_lab.html scales this wash. 100% leaves
+  // Card opacity from /style_lab/aurora_lab.html scales this wash. 100% leaves
   // the gradient as authored.
   opacity: var(--sh-aurora-card-opacity, 1);
   background: linear-gradient(
@@ -2457,6 +2457,76 @@ main.app-wrapper {
   }
 }
 
+// Tooltip for the status button. Open/close motion is the tooltip
+// snippet — delayed fade + scale in, immediate out. The bubble is
+// centered on the button. Visuals live on `.seller-home__feed-status-tip`
+// and `.seller-home__feed-status-tip-label` so they can be retuned
+// without fighting the motion rules.
+
+.seller-home__feed-status-tip{
+  background-color: var(--slds-g-color-palette-neutral-100, #FFFFFF);
+}
+
+.seller-home__feed-item-status-group {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  z-index: 2;
+}
+
+.seller-home__feed-item-status-group > .t-tt {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  width: max-content;
+  box-sizing: border-box;
+  translate: -50% 0;
+  scale: var(--tt-scale);
+  transform-origin: 50% 100%;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity   var(--tt-out-dur) var(--tt-out-ease),
+    scale     var(--tt-out-dur) var(--tt-out-ease),
+    translate var(--tt-move-dur) var(--tt-move-ease);
+}
+
+.seller-home__feed-item-status-group > .seller-home__feed-status-tip {
+  border: 0;
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  box-shadow: var(--slds-g-shadow-3);
+  min-height: 0;
+}
+
+.seller-home__feed-status-tip > .seller-home__feed-status-tip-label {
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.25;
+  padding: var(--slds-g-spacing-1, 0.25rem) var(--slds-g-spacing-2, 0.5rem);
+  white-space: nowrap;
+}
+
+.seller-home__feed-item-status-group:hover > .t-tt,
+.seller-home__feed-item-status-group > .t-tt-trigger:focus-visible + .t-tt,
+.seller-home__feed-item-status-group > .t-tt[data-show="true"] {
+  opacity: 1;
+  scale: 1;
+  transition:
+    opacity   var(--tt-in-dur) var(--tt-in-ease) var(--tt-delay),
+    scale     var(--tt-in-dur) var(--tt-in-ease) var(--tt-delay),
+    translate var(--tt-move-dur) var(--tt-move-ease);
+}
+
+.seller-home__feed-item-status-group > .t-tt .t-tt-text {
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seller-home__feed-item-status-group > .t-tt { transition: none !important; }
+}
+
 // All glyphs stack on the same centre; the rules below reveal two.
 //
 // The swap is transitions.dev's icon swap (09-icon-swap.md) — opacity
@@ -2500,18 +2570,60 @@ main.app-wrapper {
   fill: var(--slds-g-color-on-surface-2, #2e2e2e);
 }
 
-// The spinner is the shared `.sh-spinner` (index.scss), re-boxed to the
-// glyph slot so swapping it in doesn't change the button's metrics.
-// Parked by default — most rows carry one they never show, and an
-// invisible element has no business animating.
+// Running rest glyph. The slot is still `--spinner` so the state map
+// can show and hide it with the other glyphs; the painted mark is the
+// pulse dot (a solid circle plus one that scales and fades). The ring
+// only animates while this glyph is the running state's rest mark —
+// every row carries one, and a hidden one should not keep animating.
 .seller-home__feed-item-status-glyph--spinner {
-  box-sizing: border-box;
-  border-width: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   animation: none;
 }
 
-[data-sh-feed-state="running"] .seller-home__feed-item-status-glyph--spinner {
-  animation: sh-spin 0.85s linear infinite;
+.seller-home__feed-status-pulse {
+  --aurora-fill-active: linear-gradient(135deg, #00a1e5 0%, #cb65ff 101.5%);
+  --pulse-size: 7px;
+  --pulse-scale-factor: 2.75;
+  --pulse-duration: 2.5s;
+
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--pulse-size);
+  block-size: var(--pulse-size);
+}
+
+.seller-home__feed-status-pulse-dot,
+.seller-home__feed-status-pulse-ring {
+  position: absolute;
+  border-radius: 50%;
+  inline-size: var(--pulse-size);
+  block-size: var(--pulse-size);
+  background: var(--aurora-fill-active);
+}
+
+.seller-home__feed-status-pulse-ring {
+  opacity: 0;
+  animation: none;
+}
+
+[data-sh-feed-state="running"] .seller-home__feed-item-status-glyph--spinner .seller-home__feed-status-pulse-ring {
+  animation: sh-feed-status-pulse var(--pulse-duration) cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes sh-feed-status-pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(var(--pulse-scale-factor));
+  }
 }
 
 // Off the shared glyph box and onto its own. Ties with the base rule on
@@ -3321,6 +3433,12 @@ $sh-feed-filter-hidden: (
   // users — snap it open instead of interpolating opacity + Y.
   .seller-home__briefing-popover {
     animation: none;
+  }
+
+  // The running selector is more specific than this class, so the
+  // animation has to be cleared outright.
+  .seller-home__feed-status-pulse-ring {
+    animation: none !important;
   }
 }
 
