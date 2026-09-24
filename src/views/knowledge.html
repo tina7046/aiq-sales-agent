@@ -33,20 +33,20 @@
 
   This layout is deliberately parallel to `.seller-home__conv` on the
   conversation page:
-    • Root gets `.seller-home--page` so the outer container is
+    • Root gets `.page-root` so the outer container is
       viewport-locked (no page-level scroll). Only the body section
       scrolls, exactly like `.seller-home--conversation` on
       home_conversation.html.
-    • Right column `.seller-home__page` replaces
+    • Right column `.page` replaces
       `.seller-home__main` for this page — plain white surface
       (--slds-g-color-surface-1), no aurora gradient, so Knowledge
       reads as a quiet reading surface instead of the Seller Home
       landing.
-    • Header `.seller-home__page-header` is a fixed 48px band
+    • Header `.page__header` is a fixed 48px band
       (min-height 3rem + spacing-2 vertical pad = 48px in practice,
       same math conv-header uses), title anchored left, brand-outline
       pill anchored right via `justify-content: space-between`.
-    • Body `.seller-home__page-body` fills the remaining flex
+    • Body `.page__body` fills the remaining flex
       track and owns `overflow-y: auto`. Its inner wrapper caps the
       content at 50rem (800px), same column width as the briefing +
       composer, so all Seller-Home surfaces share one content column
@@ -55,7 +55,7 @@
   Phase 3 lands the doc list (via _home_knowledge_list.html →
   renderKnowledgeDocRow macro). Phase 4 adds the search field
   (Figma 8931:383736 → "Input - Search") as a sibling above the
-  `<ul>` inside `.seller-home__page-body-inner` and swaps in an
+  `<ul>` inside `.page__inner` and swaps in an
   empty state (`[data-sh-knowledge-empty]`) when the client-side
   filter (`home.js → bindKnowledgeSearch`) drops every row. The
   header + search field stay visible across all states so keyboard
@@ -68,18 +68,19 @@
 
 {% block styles %}
   <link rel="stylesheet" href="/styles/home.css" />
+  <link rel="stylesheet" href="/styles/page.css" />
   <link rel="stylesheet" href="/styles/knowledge.css" />
   {# Tools modal visuals — the left-nav Connections item opens it here. #}
   <link rel="stylesheet" href="/styles/tools.css" />
 {% endblock %}
 
 {% block content %}
-  {# `.seller-home--page` scopes the viewport-lock rule
+  {# `.page-root` scopes the viewport-lock rule
      (`overflow: hidden`) to this page only, exactly like
      `.seller-home--conversation` does for home_conversation.html.
      Without it the outer container would grow to fit its children
      and the body-section's `overflow-y: auto` would never engage. #}
-  <div class="seller-home seller-home--page" data-sh-root>
+  <div class="seller-home page-root" data-sh-root>
     {# Left navigation — same partial Seller Home uses. `navActive`
        from knowledge.json drives the "Knowledge" item's .is-active
        state; nothing else here differs from home.html's nav. #}
@@ -98,7 +99,7 @@
        order, same convention the Seller Home + Conversation pages
        already use. #}
     <div
-      class="seller-home__page"
+      class="page"
       role="main"
       aria-label="{{ pageTitle }}"
       tabindex="-1"
@@ -137,23 +138,6 @@
          _knowledge_header_actions.html, _write_messaging_body.html,
          etc.) so the 8-px icon-to-label gap is owned by the shared
          SLDS utility, not a bespoke gap rule on the button. #}
-      <header
-        class="seller-home__page-header"
-        data-sh-knowledge-header
-      >
-        <h1 class="seller-home__page-header-title">{{ header.heading }}</h1>
-        <button
-          type="button"
-          class="slds-button slds-button_neutral seller-home__knowledge-new"
-          data-sh-knowledge-new
-        >
-          <svg class="slds-button__icon slds-button__icon_left" aria-hidden="true">
-            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
-          </svg>
-          {{ newKnowledgeLabel }}
-        </button>
-      </header>
-
       {# ── Body section ─────────────────────────────────────────────
          The only scrollable region on the page (`overflow-y: auto`)
          so the header stays pinned. `min-height: 0` + `flex: 1 1
@@ -168,11 +152,28 @@
          phase (search filtering, empty-state toggles) can bind
          without needing to know the current markup. #}
       <section
-        class="seller-home__page-body"
+        class="page__body"
         aria-label="Documents"
         data-sh-knowledge-body
       >
-        <div class="seller-home__page-body-inner">
+        <div class="page__center">
+        <header
+          class="page__header"
+          data-sh-knowledge-header
+        >
+          <h1 class="page__title">{{ header.heading }}</h1>
+          <button
+            type="button"
+            class="slds-button slds-button_neutral seller-home__knowledge-new"
+            data-sh-knowledge-new
+          >
+            <svg class="slds-button__icon slds-button__icon_left" aria-hidden="true">
+              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
+            </svg>
+            {{ newKnowledgeLabel }}
+          </button>
+        </header>
+        <div class="page__inner">
           {# ── Banner ───────────────────────────────────────────────
              Promo banner at the top of the page content: copy + CTA on
              the left, animated illustration over an isometric grid
@@ -193,7 +194,7 @@
              The whole block is guarded on `banner`, so removing that
              object from knowledge.json removes the banner. #}
           {% if banner %}
-          <div class="knowledge-banner knowledge-banner_grid-right" data-sh-knowledge-banner>
+          <div class="knowledge-banner knowledge-banner_grid-right" data-sh-knowledge-banner hidden>
             <div class="knowledge-banner__content">
               <div>
                 <span class="knowledge-banner__badge">{{ banner.badge }}</span>
@@ -407,6 +408,7 @@
              the search controller swaps in when a query drops every
              row — no placeholder skeleton rows, only prose. #}
           {% include "_home_knowledge_list.html" %}
+        </div>
         </div>
       </section>
     </div>

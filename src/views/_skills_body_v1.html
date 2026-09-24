@@ -22,17 +22,17 @@
 
 {# `.seller-home--skills` scopes the viewport-lock rule
    (`overflow: hidden`) to this page only, exactly like
-   `.seller-home--page` and `.seller-home--scheduled` do for their
+   `.page-root` and `.seller-home--scheduled` do for their
    respective surfaces. Without it the outer container would grow to
    fit its children and the body-section's `overflow-y: auto` would
    never engage.
 
-   We deliberately also apply `.seller-home--page` so this page
+   We deliberately also apply `.page-root` so this page
    inherits Knowledge's already-tuned column widths, body scroll, and
    header-band styling without duplicating rules.
    `.seller-home--skills` is reserved for Skills-only overrides (tab-row
    spacing, list layout). #}
-<div class="seller-home seller-home--page seller-home--skills" data-sh-root>
+<div class="seller-home page-root seller-home--skills" data-sh-root>
   {# Left navigation — same partial Seller Home / Knowledge /
      Scheduled use. `navActive = "skills"` set by the page file drives
      the highlight. #}
@@ -40,7 +40,7 @@
 
   {# ── Right column ────────────────────────────────────────────────
      Sibling to the left nav; fills the remaining width. Reuses
-     Knowledge's `.seller-home__page` class so the outer column
+     the shared `.page` column so the outer column
      layout, header band, and body scroll behavior stay identical
      between Knowledge / Scheduled / Skills. `role="main"` +
      `aria-label="Skills"` give AT users a meaningful region label;
@@ -50,7 +50,7 @@
      `data-sh-skills-root` is what makes skills.js adopt this page —
      it is not decorative. #}
   <div
-    class="seller-home__page seller-home__skills"
+    class="page seller-home__skills"
     role="main"
     aria-label="{{ pageTitle }}"
     tabindex="-1"
@@ -58,7 +58,7 @@
   >
     {# ── Header band (48 px) ─────────────────────────────────────
        Structural clone of `/knowledge.html`'s header (see
-       `.seller-home__page-header` for the flex / spacing / gap
+       `.page__header` for the flex / spacing / gap
        rules). Title anchors left; a right-anchored "Create Skill"
        pill mirrors Knowledge's "New Knowledge" pill 1:1 — same SLDS 2
        `slds-button_neutral` shape so height, radius, padding, colors,
@@ -72,27 +72,10 @@
        route) can bind without touching this template — same
        event-delegation contract Knowledge's "New Knowledge" button
        uses. #}
-    <header
-      class="seller-home__page-header"
-      data-sh-skills-header
-    >
-      <h1 class="seller-home__page-header-title">{{ header.heading }}</h1>
-      <button
-        type="button"
-        class="slds-button slds-button_neutral seller-home__skills-new"
-        data-sh-skills-create
-      >
-        <svg class="slds-button__icon slds-button__icon_left" aria-hidden="true">
-          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
-        </svg>
-        {{ header.actionLabel }}
-      </button>
-    </header>
-
     {# ── Body section ────────────────────────────────────────────
        Same scrollable pattern as Knowledge and Scheduled. The inner
        column is capped at 50 rem (800 px) via the shared
-       `.seller-home__page-body-inner` rule. Content order
+       `.page__inner` rule. Content order
        mirrors the Figma exactly:
          1. Educational banner (hero)
          2. Tabs + filter button
@@ -103,10 +86,33 @@
        context). The composer partial still exists — Home / Scheduled
        continue to use it — but it is no longer included here. #}
     <section
-      class="seller-home__page-body"
+      class="page__body"
       aria-label="{{ pageTitle }}"
     >
-      <div class="seller-home__page-body-inner">
+      <div class="page__center">
+        <div class="seller-home__skills-sticky">
+          <header
+            class="page__header"
+            data-sh-skills-header
+          >
+            <h1 class="page__title">{{ header.heading }}</h1>
+            <button
+              type="button"
+              class="slds-button slds-button_neutral seller-home__skills-new"
+              data-sh-skills-create
+            >
+              <svg class="slds-button__icon slds-button__icon_left" aria-hidden="true">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
+              </svg>
+              {{ header.actionLabel }}
+            </button>
+          </header>
+          <div class="seller-home__skills-sticky-bar">
+            {% include "_skills_toolbar.html" %}
+            {% include "_skills_filter_row.html" %}
+          </div>
+        </div>
+      <div class="page__inner">
         {# ── Educational banner ───────────────────────────────────
            Brand-blue hero introducing what Skills are. Copy comes
            from `skills.json` → `banner`; markup lives in the shared
@@ -129,12 +135,6 @@
           {% set bannerVariant   = "skills" %}
           {% include "_seller_home_banner.html" %}
         {% endif %}
-
-        {# Tab chips + filter button + the tab-switch live region.
-           Shared with Version B — see `_skills_toolbar.html`. #}
-        {% include "_skills_toolbar.html" %}
-
-        {% include "_skills_filter_row.html" %}
 
         {# ── Skill list + empty state ─────────────────────────
            Renders the single-column list via `_skill_list.html`.
@@ -165,6 +165,7 @@
         >
           {% include "_skill_list.html" %}
         </div>
+      </div>
       </div>
     </section>
   </div>

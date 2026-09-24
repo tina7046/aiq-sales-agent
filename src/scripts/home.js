@@ -600,7 +600,7 @@
   // the highlight doesn't depend on script order.
   // Trailing state indicator for a Recents row — the runtime twin of the
   // `renderRecentStatus` macro in _home_left_nav.html. `running` clones
-  // the shared-spinner <template> the nav ships (so the markup lives in
+  // the pulse <template> the nav ships (so the markup lives in
   // one place); `completed` ("New") appends a green dot + an assistive-text
   // sibling. Every node carries `data-sh-recent-indicator` so
   // `updateNavSessionStatus` can strip the old indicator before swapping.

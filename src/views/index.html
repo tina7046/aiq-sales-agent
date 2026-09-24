@@ -3,6 +3,7 @@
 {% block styles %}
 
 <link rel="stylesheet" href="/styles/home.css" />
+<link rel="stylesheet" href="/styles/tools.css" />
 <style>
 	/* Page-level shader styling used to live here, back when the canvas was
      mounted on a fixed `#bg` behind the whole shell. It's now hosted by
@@ -276,6 +277,14 @@
 
 	{% include "_home_connections_modal.html" %}
 
+	{# Tools modal — opened by the left-nav Connections item
+	   (`data-sh-tools-open`). The catalog is handed to the controller
+	   as JSON so tools_modal.js stays a plain static file. #}
+	{% include "_tools_modal.html" %}
+	<script type="application/json" id="sh-tools-config">
+		{{ { "tools": shared.toolsModal.tools } | tojson | safe }}
+	</script>
+
 	{# God-rays tuner. Its visibility is toggled from the global-header Setup
 	   (gear) icon — see the toggle script at the foot of this file. The
 	   `.is-hidden` class (not an inline style) drives show/hide so the gear
@@ -329,6 +338,8 @@
 	<script src="/scripts/aurora.js"></script>
 
 	<script src="/scripts/home.js"></script>
+	<script src="/scripts/tools_filter.js"></script>
+	<script type="module" src="/scripts/tools_modal.js"></script>
 
 	<script type="module">
 		import {

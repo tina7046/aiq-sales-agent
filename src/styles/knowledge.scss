@@ -1,28 +1,11 @@
 // ══════════════════════════════════════════════════════════════════════
 // Knowledge page (src/views/knowledge.html)
 // ----------------------------------------------------------------------
-// Layout skeleton mirrors the conversation drill-in
-// (home_conversation.scss → `.seller-home__conv`): the outer container
-// is viewport-locked and the right column stacks a fixed-height
-// header + a scroll-only body section. This is deliberately parallel
-// to `.seller-home__conv` so future surfaces (Skills, Workflows) can
-// pick either the "single-scroll landing" (`.seller-home__main`) or
-// this "pinned header + scrolling body" pattern without inventing a
-// third layout family.
+// The pinned-header column (viewport lock, header band, scrolling
+// body, 50rem inner column) lives in page.scss under `.page*`.
+// This file owns Knowledge-only UI on top of that column.
 //
 // Ownership:
-//   • `.seller-home--page` (root modifier) — locks the outer
-//     shell to viewport height so nothing scrolls at page level.
-//   • `.seller-home__page` — the right column (replaces
-//     `.seller-home__main` for this page). Plain white surface, no
-//     aurora gradient, so the surface reads as a quiet reading area.
-//   • `.seller-home__page-header` — 48-px sticky header band
-//     with the title on the left and the brand-outline pill on the
-//     right. Structural parallel to `.seller-home__conv-header`.
-//   • `.seller-home__page-body` — flex-1 scrollable section
-//     that owns `overflow-y: auto`. Content column capped at 50rem
-//     via the inner wrapper. Parallel to `.seller-home__conv-thread`
-//     + `.seller-home__conv-thread-inner`.
 //   • `.seller-home__knowledge-doc-list` + `.seller-home__knowledge-
 //     doc-item` — compact vertical list of docs (Figma frame
 //     8931:383007). Rows use a native `<a>` for click / Enter /
@@ -49,108 +32,6 @@
 //   • Header pad:   spacing-4 (16px) inline, spacing-2 (8px) block
 //   • Body cap:     50rem (800px), matches briefing + composer
 // ══════════════════════════════════════════════════════════════════════
-
-// ── Root modifier — viewport lock ────────────────────────────────────
-// Same trick `.seller-home--conversation` uses. Without this the outer
-// `.seller-home` grows to fit its children and the body-section's
-// `overflow-y: auto` never engages (the page scrolls instead of the
-// body). All other Seller Home rules on `.seller-home` still apply —
-// only the outer overflow is overridden here.
-.seller-home--page {
-  overflow: clip;
-}
-
-// ── Right column — the Knowledge shell ──────────────────────────────
-// Sibling to `.seller-home__nav`, occupies the same slot in the outer
-// flex row that `.seller-home__main` uses on home.html. Laid out as a
-// fixed / flex vertical stack (header + body) instead of a single
-// scroll region so the header can stay pinned while the body scrolls.
-//
-// `min-height: 0` + `min-width: 0` prevent the child regions' intrinsic
-// sizes from forcing the flex parent to grow past its container — the
-// classic flexbox "min-content escape" that would otherwise nuke
-// `overflow` inside the body section.
-.seller-home__page {
-  position: relative;
-  flex: 1 1 auto;
-  min-width: 0;
-  min-height: 0;
-
-
-  display: flex;
-  flex-direction: column;
-  // Small separator between the pinned header and the scroll surface
-  // below — same 4-px gap `.seller-home__conv` uses so a future
-  // "sticky-header shadow on scroll" tweak can be added without a
-  // layout shift.
-  gap: 0.25rem; // 4px
-
-  // Plain white surface — overrides the aurora gradient painted by
-  // the outer `.seller-home`. Keep as a token (not `#fff`) so a
-  // future dark-mode swap flows through the same variable that
-  // `.seller-home__conv` uses.
-  background: var(--slds-g-color-surface-1, #ffffff);
-
-  // Programmatic focus target for skip-links (tabindex=-1 on the
-  // element) — hide the UA focus ring so keyboard focus doesn't paint
-  // a border around the whole page region.
-  &:focus {
-    outline: none;
-  }
-}
-
-// ── Header band — pinned, 48px ──────────────────────────────────────
-// Figma frame 8931:383002 ("Title"): full-width row anchoring the
-// page title on the left and the primary action on the right. The
-// same 48-px math `.seller-home__conv-header` uses: min-height 3rem
-// + spacing-2 (8px) top/bottom padding lands at exactly 48px in
-// practice while still letting a hypothetical long title wrap into a
-// two-line header without cropping.
-.seller-home__page-header {
-  flex: 0 0 auto;
-  min-height: 3rem; // 48px
-  padding-inline: var(--slds-g-spacing-4, 1rem);
-  padding-block: var(--slds-g-spacing-2, 0.5rem);
-
-  background: var(--slds-g-color-surface-1, #ffffff);
-  // No border by default — Figma shows a plain surface joint. If we
-  // later want a hairline separator once the body scrolls, that
-  // becomes a JS-driven `.is-scrolled` modifier rather than a
-  // permanent border (same convention `.seller-home__conv-header`
-  // deferred).
-
-  display: flex;
-  align-items: center;
-  // Title anchors left, primary action anchors right. `gap` prevents
-  // the title from ever overlapping the button when the title runs
-  // long — it just pushes the button rightward, respecting the pill's
-  // `white-space: nowrap`.
-  justify-content: space-between;
-  gap: var(--slds-g-spacing-4, 1rem);
-}
-
-.seller-home__page-header-title {
-  // SLDS Titles/font-scale-3 Semibold. Same treatment
-  // `.seller-home__conv-header-title` uses — deep-navy on-surface-3
-  // for the color family and font-scale-3 (20px) resolved through
-  // the SLDS token so the SLDS-2 `font-size-base` override can't win
-  // and shrink the header title.
-  margin: 0;
-  color: var(--slds-g-color-on-surface-3, #001e5b);
-  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: var(--slds-g-font-scale-3, 1.25rem); // 20px
-  font-weight: 590;
-  line-height: 1.75rem; // 28px — Figma Titles/font-scale-3/Semibold
-  letter-spacing: 0;
-
-  // Long titles ellipsize instead of pushing the button off the
-  // viewport. `min-width: 0` on the flex item enables the ellipsis
-  // rule to bite; without it the intrinsic content width would win.
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 // ── "New Knowledge" primary action ─────────────────────────────────
 // The button uses the shipped SLDS 2 button pattern verbatim —
@@ -184,55 +65,9 @@
   /* Intentionally empty — see comment above. */
 }
 
-// ── Body section — the only scroll surface ─────────────────────────
-// Grows to fill the space below the header. `min-height: 0` +
-// `overflow-y: auto` together are what actually enable scrolling
-// inside a flex column — without the min-height escape the flex
-// child's intrinsic content height would push the sibling header
-// off-screen. Structural parallel to `.seller-home__conv-thread`.
-//
-// The 50rem content column is applied on the inner wrapper so the
-// scrollbar continues to attach to the outer, viewport-wide element
-// (matches macOS's scrollbar convention and Figma's "Chat Body"
-// layout: full-bleed scroll rail, capped content column).
-.seller-home__page-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-
-  background: var(--slds-g-color-surface-1, #ffffff);
-
-  // Vertical rhythm — 16-px top so the placeholder / list isn't flush
-  // against the header band; matches Figma's spacing-4 gap between
-  // the header and the body content. Inline padding gives the column
-  // a gutter at narrow viewports so it never touches the edges.
-  padding-block: var(--slds-g-spacing-4, 1rem) 0;
-  padding-inline: var(--slds-g-spacing-4, 1rem);
-}
-
-// ── Inner column — 50rem cap, centered ─────────────────────────────
-// Same content-column width the briefing + composer + conv-thread
-// use, so every Seller-Home surface shares one column and left edge.
-// Kept as a separate wrapper (not `max-width` on the section itself)
-// so the outer section can still stretch full-width for its scroll
-// rail while the content stays capped and centered.
-.seller-home__page-body-inner {
-  max-width: 50rem; // 800px — Figma cap
-  width: 100%;
-  margin: 0 auto;
-
-  // Vertical rhythm inside the inner column — 16 px between the
-  // search field and the doc list (Figma frame 8931:383008 uses
-  // spacing-5 / 24 px between its two children; we go slightly
-  // tighter here so the compact 32-px search field reads as
-  // part of the list group rather than a distinct region). Kept
-  // as a flex column so the empty state can slot in and out
-  // without a layout jump — every child is a full-width block.
-  display: flex;
-  flex-direction: column;
-  gap: var(--slds-g-spacing-4, 1rem); // 16px
-
-  // ── Knowledge banner dismiss timings ──────────────────────────────
+// ── Knowledge banner dismiss timings ───────────────────────────────
+// Declared on the shared inner column (page.scss owns its layout).
+.page__inner {
   // Declared here, on the column, rather than on the banner, because
   // both halves of the gesture need them and they live on different
   // elements: the banner fades, its siblings glide. Custom properties
@@ -791,13 +626,13 @@
 // files) flashed inside the Learnings grid before the filter ran.
 // `:has()` keys off the same `aria-checked` the radios already have
 // from the server, so the inactive tab never paints.
-.seller-home__page-body-inner:has([data-sh-knowledge-tab="learnings"][aria-checked="true"]) {
+.page__inner:has([data-sh-knowledge-tab="learnings"][aria-checked="true"]) {
   .seller-home__knowledge-doc-item[data-sh-knowledge-doc-tab="sources"] {
     display: none;
   }
 }
 
-.seller-home__page-body-inner:has([data-sh-knowledge-tab="sources"][aria-checked="true"]) {
+.page__inner:has([data-sh-knowledge-tab="sources"][aria-checked="true"]) {
   .seller-home__knowledge-doc-item[data-sh-knowledge-doc-tab="learnings"] {
     display: none;
   }
@@ -810,37 +645,9 @@
   display: none;
 }
 
-// ── Learnings tab only: 2-column tile grid ──────────────────────────
-// Sources stays a single column (the default flex above). Scoped with
-// `:has()` on `.knowledge-body-inner`, which contains BOTH the tab radios
-// and the list — so it flips live as the active tab's `aria-checked`
-// changes. `minmax(0, 1fr)` lets the nowrap doc name ellipsize instead of
-// forcing the track wider; `grid-auto-rows: 1fr` levels each row.
-.seller-home__page-body-inner:has([data-sh-knowledge-tab="learnings"][aria-checked="true"]) {
-  .seller-home__knowledge-doc-list {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 1rem;
-    grid-auto-rows: 1fr;
-  }
-
-  // Grid items must shrink below content width (default is `auto`) and
-  // fill the levelled row height so the tiles line up.
-  .seller-home__knowledge-doc-item {
-    min-width: 0;
-    height: 100%;
-  }
-  .seller-home__knowledge-doc-row {
-    height: 100%;
-  }
-
-  // Collapse to one column on narrow viewports so tiles don't cramp.
-  @media (max-width: 40rem) {
-    .seller-home__knowledge-doc-list {
-      grid-template-columns: 1fr;
-    }
-  }
-}
+// Learnings and Sources share the single-column list above. Learnings
+// used to switch that list to a 2-column tile grid; it now stays one
+// column, the same shape as the Skills rows.
 
 // Row wrapper. `position: relative` scopes the overflow menu's
 // absolute positioning; without it the menu would resolve `right`
@@ -1411,22 +1218,10 @@
   }
 }
 
-// Narrow-viewport tuning. Below 40rem (~640px) we tighten the
-// header + body inline padding from 16px to 12px so the title +
-// button stay on the same line for as long as possible without
-// eating into the button's tap target, and the content column
-// gains ~8px of usable width at every narrow breakpoint. The doc
-// row also drops its horizontal padding to 12px so short row content
-// (icon + short name + chevron) stops feeling caged at narrow widths.
+// Narrow-viewport tuning. Header and body padding live in page.scss.
+// The doc row drops its horizontal padding to 12px so short row
+// content (icon + short name + chevron) stops feeling caged.
 @media (max-width: 40rem) {
-  .seller-home__page-header {
-    padding-inline: var(--slds-g-spacing-3, 0.75rem);
-  }
-
-  .seller-home__page-body {
-    padding-inline: var(--slds-g-spacing-3, 0.75rem);
-  }
-
   .seller-home__knowledge-doc-row {
     padding-inline: var(--slds-g-spacing-3, 0.75rem);
   }
@@ -1451,7 +1246,7 @@
 // ══════════════════════════════════════════════════════════════════════
 // Knowledge document detail page (src/views/knowledge_document_detail.html)
 // ----------------------------------------------------------------------
-// Structural parallel to `.seller-home--page` above: the outer
+// Structural parallel to `.page-root` in page.scss: the outer
 // container is viewport-locked and the right column stacks a pinned
 // chrome header + a scroll-only body region. The body region hosts two
 // mutually-exclusive surfaces:
@@ -1491,7 +1286,7 @@
 // ══════════════════════════════════════════════════════════════════════
 
 // ── Root modifier — viewport lock ────────────────────────────────────
-// Same overflow: hidden trick `.seller-home--page` and
+// Same overflow: hidden trick `.page-root` and
 // `.seller-home--conversation` use. Locks the outer shell to the
 // visible viewport so the body region below (its own overflow-y:
 // auto) is the ONLY scroll surface on the page. Without this the
@@ -1515,7 +1310,7 @@
 //
 // `min-height: 0` + `min-width: 0` are the flex-child unlocks that
 // prevent the intrinsic content size from forcing the outer flex row
-// to grow past its container. Same escape `.seller-home__page`
+// to grow past its container. Same escape `.page`
 // runs.
 .seller-home__knowledge-doc-detail {
   flex: 1 1 auto;
@@ -1525,7 +1320,7 @@
   display: flex;
   flex-direction: column;
   // 4-px separator between the chrome and the scroll surface below.
-  // Matches the same gap `.seller-home__page` uses so a future
+  // Matches the same gap `.page` uses so a future
   // "sticky-header shadow on scroll" tweak can slot in without a
   // layout shift.
   gap: 0.25rem; // 4px
@@ -1533,7 +1328,7 @@
   // Plain white surface — overrides the aurora gradient painted on
   // the outer `.seller-home`. Kept as a token (not `#fff`) so a
   // dark-mode retune later flows through the same variable
-  // `.seller-home__page` uses.
+  // `.page` uses.
   background: var(--slds-g-color-surface-1, #ffffff);
 
   // Programmatic focus target for skip-links + a11y (`tabindex="-1"`
@@ -1551,7 +1346,7 @@
 // the reading flow — same split Agent Configuration's Knowledge
 // canvas uses.
 //
-// Structural parallel to `.seller-home__page-header`: min-height
+// Structural parallel to `.page__header`: min-height
 // 3rem + spacing-2 vertical padding lands at exactly 48px in practice
 // while still letting a wrapped back-link on narrow viewports grow to
 // two lines without cropping.
@@ -1878,7 +1673,7 @@
 }
 
 // Below ~40rem tighten the outer inline padding, same escape
-// `.seller-home__page-header` runs so both surfaces read as
+// `.page__header` runs so both surfaces read as
 // coming from one design system at narrow widths.
 @media (max-width: 40rem) {
   .seller-home__knowledge-doc-detail-header {

@@ -180,9 +180,9 @@
    reference markup). Two states carry an indicator; every other renders
    nothing so scheduled/paused/failed/archived rows stay bare:
 
-     • running ("Running") → the shared `.sh-spinner` (index.scss), the
-                             same border-spinner the feed status button
-                             reuses, re-boxed to the row slot in home.scss.
+     • running ("Running") → the feed's pulse dot
+                             (`.seller-home__feed-status-pulse`), the same
+                             classes the Running status button uses.
      • completed ("New")   → a green dot: a completed workflow has fresh
                              results to review. The same green the feed's
                              completed status dot rests on; sized/coloured
@@ -200,7 +200,10 @@
       aria-label="{{ r.label }} is running."
       data-sh-recent-indicator
     >
-      <span class="seller-home__nav-recent-status-glyph seller-home__nav-recent-status-glyph--spinner sh-spinner" aria-hidden="true"></span>
+      <span class="seller-home__feed-status-pulse" aria-hidden="true">
+        <span class="seller-home__feed-status-pulse-dot"></span>
+        <span class="seller-home__feed-status-pulse-ring"></span>
+      </span>
     </span>
   {% elif r.status == "completed" %}
     <span
@@ -548,7 +551,7 @@
      schedule-draft threads with these workflow rows), which wipes the
      server seed above. It rebuilds from this inlined list rather than
      re-deriving it, so the two paths can't disagree. The <template> holds
-     the running spinner so the runtime renderer can clone it rather than
+     the running pulse so the runtime renderer can clone it rather than
      reconstruct it. #}
   <script type="application/json" data-sh-nav-workflow-sessions>{{ workflowSessions | dump | safe }}</script>
   <template data-sh-recent-spinner-template>
@@ -557,7 +560,10 @@
       role="img"
       data-sh-recent-indicator
     >
-      <span class="seller-home__nav-recent-status-glyph seller-home__nav-recent-status-glyph--spinner sh-spinner" aria-hidden="true"></span>
+      <span class="seller-home__feed-status-pulse" aria-hidden="true">
+        <span class="seller-home__feed-status-pulse-dot"></span>
+        <span class="seller-home__feed-status-pulse-ring"></span>
+      </span>
     </span>
   </template>
 </aside>

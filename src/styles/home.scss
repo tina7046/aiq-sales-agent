@@ -793,14 +793,8 @@ main.app-wrapper {
   background: var(--slds-g-color-palette-green-70, #45c65a);
 }
 
-// "Running" — the shared border-spinner (index.scss `.sh-spinner`), re-boxed
-// to 14px within the slot exactly the way the feed re-boxes the same spinner
-// into its glyph slot.
-.seller-home__nav-recent-status-glyph--spinner.sh-spinner {
-  width: 0.875rem;  // 14px
-  height: 0.875rem;
-  border-width: 2px;
-}
+// "Running" — the feed pulse (`.seller-home__feed-status-pulse`). The
+// slot above centres that 7px dot; the ring animation is the feed's.
 
 // ──────────────────────────────────────────────────────────────────────
 // Collapsed nav (assumption — Figma frame is "Expanded Composed"; the
@@ -915,7 +909,7 @@ main.app-wrapper {
 // ──────────────────────────────────────────────────────────────────────
 // Nav edge shadow — painted as a ::before on right columns so it
 // doesn't need to escape the nav's overflow boundary. Each right
-// column (.seller-home__main, .seller-home__conv, .seller-home__page)
+// column (.seller-home__main, .seller-home__conv, .page)
 // gets this via position: relative + the pseudo-element.
 .seller-home__main {
   flex: 1 1 auto;
@@ -2610,7 +2604,8 @@ main.app-wrapper {
   animation: none;
 }
 
-[data-sh-feed-state="running"] .seller-home__feed-item-status-glyph--spinner .seller-home__feed-status-pulse-ring {
+[data-sh-feed-state="running"] .seller-home__feed-item-status-glyph--spinner .seller-home__feed-status-pulse-ring,
+.seller-home__nav-recent-status--running .seller-home__feed-status-pulse-ring {
   animation: sh-feed-status-pulse var(--pulse-duration) cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
@@ -2925,7 +2920,7 @@ $sh-feed-filter-hidden: (
   min-height: 3.5rem;
   padding-inline: var(--slds-g-spacing-4, 1rem);
 
-  background: #ffffffa1;
+  background: #ffffff80;
   border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-palette-neutral-95);
   border-radius: var(--slds-g-radius-border-3, 0.75rem);
 
@@ -2945,9 +2940,10 @@ $sh-feed-filter-hidden: (
       0px 1.6px 1.4px -1.3px hsl(var(--shadow-color) / 0.33),
       0px 4.7px 4.2px -2.7px hsl(var(--shadow-color) / 0.25),
       0px 12.8px 11.5px -4px hsl(var(--shadow-color) / 0.18);
-
-    box-shadow: var(--shadow-elevation-medium);
-    background: #ffffffe8;
+    background-color: white;
+    // box-shadow: var(--shadow-elevation-medium);
+    
+    border: 1px solid var(--slds-g-color-palette-neutral-90);
   }
 }
 
@@ -3506,9 +3502,9 @@ $sh-feed-filter-hidden: (
 // Sibling surface to Knowledge — same left-nav + right-column shell,
 // same header band, same body-scroll pattern, same 50-rem inner
 // column. `.seller-home--scheduled` is applied alongside
-// `.seller-home--page` on the root so the outer chrome (viewport
+// `.page-root` on the root so the outer chrome (viewport
 // lock, column widths, header 48-px band, body scroll) all cascade
-// from the already-tuned Knowledge rules without duplication. Only
+// from page.scss without duplication. Only
 // the Scheduled-specific concerns (composer margin, description
 // paragraph, tab row, workflow list, status indicators) live below.
 //
@@ -3519,12 +3515,12 @@ $sh-feed-filter-hidden: (
 // Root — page-level hook. Kept as an empty class today so a future
 // Scheduled-only viewport tweak (e.g. a compact variant) can pin to
 // this selector without changing markup. All positioning + scroll
-// behavior cascades from `.seller-home__page` (applied to the
+// behavior cascades from `.page` (applied to the
 // same element in scheduled.html) so there's nothing to override
 // here today.
 .seller-home__scheduled {
   /* Intentionally empty — shared shell rules cascade from
-     `.seller-home__page`. Reserved for future Scheduled-only
+     `.page`. Reserved for future Scheduled-only
      overrides. */
 }
 
@@ -4559,7 +4555,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 // ------------------------------------------------------------------
 // The workspace is a flex row: the list section flexes and the panel
 // docks to the right. The list reflows to make room — no overlay, no
-// horizontal scroll. `.seller-home__page` above is
+// horizontal scroll. `.page` in page.scss is
 // `position: relative`, so the narrow-viewport overlay below anchors
 // to it.
 .seller-home__scheduled-workspace {
@@ -4569,7 +4565,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   display: flex;
 
   // Let the list section own the vertical scroll and flex freely.
-  .seller-home__page-body {
+  .page__body {
     flex: 1 1 auto;
     min-width: 0;
   }
@@ -4578,7 +4574,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 // Left column — the page header + scrollable body stacked. Flexes to
 // fill the width left of the panel, so with the panel open the
 // "Scheduled" header shrinks to the same width as the body list. Owns
-// the header↔body rhythm the `.seller-home__page` column used to
+// the header↔body rhythm the `.page` column used to
 // provide (that column now holds only this row).
 .seller-home__scheduled-main {
   flex: 1 1 auto;
@@ -5286,7 +5282,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 }
 
 // Title — SLDS Titles/font-scale-3 semibold, white. Matches the
-// header title one level up (`.seller-home__page-header-title`)
+// header title one level up (`.page__title`)
 // so the two hero elements read as one typographic family across
 // the top of the page.
 .seller-home__banner-title {

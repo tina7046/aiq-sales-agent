@@ -6,12 +6,12 @@
 // knowledge.scss / learnings.scss / tools.scss follow here. NOT
 // imported into index.scss, so no other page pays the parse cost.
 //
-// Load order on both pages is home.css → knowledge.css → skills.css.
-// The Skills surfaces borrow their shell from Knowledge (page
-// container, 48px header band, scrolling body, 50rem inner column,
-// and — on the detail page — the doc-detail header, editor chrome,
-// and `.hunter-agent-knowledge__article*` prose classes), all of
-// which live in knowledge.scss. Nothing below re-declares them.
+// Load order on the landing page is home.css → page.css →
+// knowledge.css → skills.css. page.css owns the shared column
+// (header band, scrolling body, 50rem inner column). The detail
+// page still borrows the doc-detail header, editor chrome, and
+// `.hunter-agent-knowledge__article*` prose classes from
+// knowledge.scss. Nothing below re-declares the column.
 //
 // Everything here is plain CSS with `var(--slds-*)` custom properties:
 // no Sass variables, mixins, or imports, which is why the block lifted
@@ -24,9 +24,9 @@
 // regress Skills and vice versa (confirmed decision 2026-07-31).
 //
 // Layout skeleton mirrors Scheduled: the `.seller-home__skills` right-
-// column class piggy-backs on `.seller-home__page` for its outer
-// column + header band + body scroll, and adds nothing of its own
-// today (parallel to `.seller-home__scheduled {}`).
+// column class piggy-backs on `.page` for its outer column + header
+// band + body scroll, and adds nothing of its own today (parallel
+// to `.seller-home__scheduled {}`).
 //
 // This block covers Steps 2-3 of the build:
 //   • Step 2 — structural grid + card body + tool chips + chevron
@@ -51,7 +51,7 @@
 
 .seller-home__skills {
   /* Intentionally empty — shared shell rules cascade from
-     `.seller-home__page`. Reserved for future Skills-only
+     `.page`. Reserved for future Skills-only
      overrides (e.g., a different body-inner max-width). */
 }
 
@@ -1347,6 +1347,44 @@
 // can't drift Skills mid-flight; if the two ever diverge on purpose,
 // this block already carries a distinct namespace to accommodate it.
 // ══════════════════════════════════════════════════════════════════════
+// Tabs + filter row. Sticks to the top of the scrolling body so
+// skill cards pass underneath. The fade sits just below the row
+// and lets cards dissolve instead of clipping against the bar.
+.seller-home__skills-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  background: var(--slds-g-color-surface-1, #ffffff);
+}
+
+.seller-home__skills-sticky-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-4, 1rem);
+}
+
+.seller-home__skills-sticky {
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: 1.75rem;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      var(--slds-g-color-surface-1, #ffffff),
+      transparent
+    );
+  }
+}
+
 .seller-home__skills-toolbar {
   display: flex;
   align-items: center;
@@ -1510,7 +1548,7 @@
   // 100%` here, the title would just ellipsize further and the
   // button would keep sharing line 1 — the wrap never triggers
   // because a shrinkable item never overflows.
-  .seller-home__page-header-title {
+  .page__title {
     flex: 1 1 100%;
   }
 

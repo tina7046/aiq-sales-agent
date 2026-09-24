@@ -34,8 +34,8 @@
     │  └───────────────────────────────────────────────────┘   │
     └──────────────────────────────────────────────────────────┘
 
-  All chrome (page shell, header band, body scroll) reuses Knowledge's
-  CSS by adopting the same `.seller-home__page-*` class stack.
+  All chrome (page shell, header band, body scroll) comes from page.css
+  (the `.page` column).
   Scheduled-only concerns (tabs, filter, workflow row) live under
   their own `.seller-home__scheduled-*` namespace in home.scss.
 
@@ -53,7 +53,7 @@
 
 {% block styles %}
   <link rel="stylesheet" href="/styles/home.css" />
-  <link rel="stylesheet" href="/styles/knowledge.css" />
+  <link rel="stylesheet" href="/styles/page.css" />
   {# Tools modal visuals — the left-nav Connections item opens it here. #}
   <link rel="stylesheet" href="/styles/tools.css" />
 {% endblock %}
@@ -61,24 +61,24 @@
 {% block content %}
   {# `.seller-home--scheduled` scopes the viewport-lock rule
      (`overflow: hidden`) to this page only, exactly like
-     `.seller-home--page` does for /knowledge.html. Without it
+     `.page-root` does for /knowledge.html. Without it
      the outer container would grow to fit its children and the
      body-section's `overflow-y: auto` would never engage.
 
-     We deliberately also apply `.seller-home--page` so this
+     We deliberately also apply `.page-root` so this
      page inherits Knowledge's already-tuned column widths, body
      scroll, and header-band styling without duplicating rules. The
      new `.seller-home--scheduled` class is reserved for
      Scheduled-only overrides (tab-row spacing, workflow-row
      layout). #}
-  <div class="seller-home seller-home--page seller-home--scheduled" data-sh-root>
+  <div class="seller-home page-root seller-home--scheduled" data-sh-root>
     {# Left navigation — same partial Seller Home + Knowledge use.
        `navActive = "schedules"` set above drives the highlight. #}
     {% include "_home_left_nav.html" %}
 
     {# ── Right column ────────────────────────────────────────────────
        Sibling to the left nav; fills the remaining width. Reuses
-       Knowledge's `.seller-home__page` class so the outer
+       the shared `.page` column so the outer
        column layout, header band, and body scroll behavior stay
        identical between the two surfaces. `role="main"` +
        `aria-label="Scheduled"` give AT users a meaningful region
@@ -86,7 +86,7 @@
        target (for skip-links) without pulling it into the natural
        tab order. #}
     <div
-      class="seller-home__page seller-home__scheduled"
+      class="page seller-home__scheduled"
       role="main"
       aria-label="{{ pageTitle }}"
       tabindex="-1"
@@ -97,7 +97,7 @@
          white surface, 48 px in practice. Only the `<h1>` is on
          this page (no right-anchored action per Figma). Wrapped in
          the same class so `padding-inline`, `min-height`, and
-         `border-bottom` come from `.seller-home__page-header`
+         `border-bottom` come from `.page__header`
          without duplication. #}
       {# ── Workspace (left column + detail panel) ──────────────────
          Flex row. The LEFT column stacks the page header + the
@@ -123,17 +123,23 @@
         <div class="seller-home__scheduled-main">
           {# ── Header band (48 px) ─────────────────────────────────
              Title left, primary action right — the shared
-             `.seller-home__page-header` already flexes with
+             `.page__header` already flexes with
              `justify-content: space-between`, so the button anchors
              to the trailing edge with no extra CSS (same contract the
              Skills header's "Create Skill" button uses). No routing
              yet: the button is a hook (`data-sh-scheduled-create`) a
              future creation flow can bind to via event delegation. #}
+          {# ── Body section (scrollable, 50 rem inner column) ────── #}
+          <section
+            class="page__body"
+            aria-label="{{ pageTitle }}"
+          >
+        <div class="page__center">
           <header
-            class="seller-home__page-header"
+            class="page__header"
             data-sh-scheduled-header
           >
-            <h1 class="seller-home__page-header-title">{{ header.heading }}</h1>
+            <h1 class="page__title">{{ header.heading }}</h1>
             <button
               type="button"
               class="slds-button slds-button_neutral seller-home__scheduled-new"
@@ -145,13 +151,7 @@
               {{ header.actionLabel }}
             </button>
           </header>
-
-          {# ── Body section (scrollable, 50 rem inner column) ────── #}
-          <section
-            class="seller-home__page-body"
-            aria-label="{{ pageTitle }}"
-          >
-        <div class="seller-home__page-body-inner">
+        <div class="page__inner">
           {# ── Educational banner ───────────────────────────────────
              Shared partial (also consumed by /skills.html). Copy +
              illustration path both come from scheduled.json →
@@ -380,6 +380,7 @@
           >
             {% include "_scheduled_workflow_list.html" %}
           </div>
+        </div>
         </div>
           </section>
         </div>{# /.seller-home__scheduled-main #}

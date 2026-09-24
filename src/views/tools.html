@@ -40,8 +40,8 @@
     │  └───────────────────────────────────────────────────┘   │
     └──────────────────────────────────────────────────────────┘
 
-  Chrome (page shell, header band, body scroll) reuses Knowledge's
-  already-tuned `.seller-home__page-*` class stack rather than
+  Chrome (page shell, header band, body scroll) comes from page.css
+  (the `.page` column) rather than
   inventing a third layout family — the same borrowing scheduled.html
   does. Tools-only concerns stay in tools.scss under `.tool-*`, which
   is also what styles the cards inside the modal.
@@ -60,17 +60,17 @@
 
 {% block styles %}
   <link rel="stylesheet" href="/styles/home.css" />
-  <link rel="stylesheet" href="/styles/knowledge.css" />
+  <link rel="stylesheet" href="/styles/page.css" />
   <link rel="stylesheet" href="/styles/tools.css" />
 {% endblock %}
 
 {% block content %}
-  {# `.seller-home--page` brings the viewport lock (`overflow:
+  {# `.page-root` brings the viewport lock (`overflow:
      hidden`) plus Knowledge's column widths and body scroll;
      `.seller-home--tools` is the hook for Tools-only overrides. Without
      the lock the outer container grows to fit its children and the
      body section's `overflow-y: auto` never engages. #}
-  <div class="seller-home seller-home--page seller-home--tools" data-sh-root>
+  <div class="seller-home page-root seller-home--tools" data-sh-root>
     {% include "_home_left_nav.html" %}
 
     {# Right column. Not a <main> element — the SLDS `<main
@@ -80,26 +80,27 @@
        programmatic focus target for skip-links without adding it to
        the tab order. #}
     <div
-      class="seller-home__page seller-home__tools"
+      class="page seller-home__tools"
       role="main"
       aria-label="{{ pageTitle }}"
       tabindex="-1"
     >
-      <header class="seller-home__page-header">
-        <h1 class="seller-home__page-header-title">{{ header.heading }}</h1>
-      </header>
-
       <section
-        class="seller-home__page-body"
+        class="page__body"
         aria-label="Tools"
       >
-        <div class="seller-home__page-body-inner">
+        <div class="page__center">
+        <header class="page__header">
+          <h1 class="page__title">{{ header.heading }}</h1>
+        </header>
+        <div class="page__inner">
           {# `true` makes the tiles interactive — each becomes a button
              carrying `data-tool-id`, and the delegated opener in
              tools_modal.js routes a click into the modal at that tool.
              Same macro the modal renders, so the page grid and the
              modal's panel 1 stay identical. #}
           {{ toolsContent.renderToolsContent(shared.toolsModal.featured, shared.toolsModal.tools, true, shared.toolsModal.categories) }}
+        </div>
         </div>
       </section>
     </div>

@@ -1,0 +1,150 @@
+// ══════════════════════════════════════════════════════════════════════
+// Shared page column — Knowledge, Skills, Scheduled, Tools
+// ----------------------------------------------------------------------
+// The pinned-header layout those pages share. Home's shell
+// (nav, composer, feed) stays in home.scss under `.seller-home`.
+// This file is the right column only: a viewport lock on the shell,
+// then header + scrolling body + a 50rem inner column.
+//
+//   • `.page-root` — on the `.seller-home` root. Locks the outer
+//     shell so nothing scrolls at page level.
+//   • `.page` — the right column. Replaces `.seller-home__main`
+//     on these pages. Plain white surface, no aurora gradient.
+//   • `.page__header` — 48px band. Title on the left, action on
+//     the right. Parallel to `.seller-home__conv-header`.
+//   • `.page__title` — the header's h1.
+//   • `.page__body` — the only scroll surface (`overflow-y: auto`).
+//   • `.page__inner` — content column capped at 50rem.
+//
+// Linked after home.css and before the page sheet
+// (knowledge.css, skills.css, tools.css).
+// ══════════════════════════════════════════════════════════════════════
+
+// ── Root — viewport lock ─────────────────────────────────────────────
+// Same trick `.seller-home--conversation` uses. Without this the outer
+// `.seller-home` grows to fit its children and the body section's
+// `overflow-y: auto` never engages (the page scrolls instead of the
+// body). All other Seller Home rules on `.seller-home` still apply —
+// only the outer overflow is overridden here.
+.page-root {
+  overflow: clip;
+}
+
+// ── Right column ─────────────────────────────────────────────────────
+// Sibling to `.seller-home__nav`, occupying the same slot in the outer
+// flex row that `.seller-home__main` uses on home.html. Header + body
+// stack so the header stays pinned while the body scrolls.
+//
+// `min-height: 0` + `min-width: 0` stop the child regions' intrinsic
+// sizes from forcing the flex parent past its container — the
+// flexbox "min-content escape" that would otherwise drop `overflow`
+// inside the body section.
+.page {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+  // 4px joint between the pinned header and the scroll surface,
+  // same gap `.seller-home__conv` uses.
+  gap: 1.5rem;
+
+  // Plain white surface — overrides the aurora gradient painted by
+  // the outer `.seller-home`.
+  background: var(--slds-g-color-surface-1, #ffffff);
+  padding-block: var(--slds-g-spacing-4, 1rem) 0;
+  padding-inline: var(--slds-g-spacing-4, 1rem);
+
+  // Programmatic focus target for skip-links (tabindex=-1 on the
+  // element) — hide the UA focus ring so keyboard focus doesn't paint
+  // a border around the whole page region.
+  &:focus {
+    outline: none;
+  }
+}
+
+// ── Header band — pinned, 48px ───────────────────────────────────────
+// Title on the left, primary action on the right. min-height 3rem
+// + spacing-2 (8px) block padding lands at 48px, and a long title
+// can wrap to two lines without cropping.
+.page__header {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 3rem; // 48px
+  display: flex;
+  align-items: center;
+  // Title anchors left, primary action anchors right. `gap` keeps a
+  // long title from overlapping the button.
+  justify-content: space-between;
+  gap: var(--slds-g-spacing-4, 1rem);
+  padding-top: 2rem;
+}
+
+.page__title {
+  // SLDS Titles/font-scale-3 Semibold. font-scale-3 (20px) is
+  // resolved through the SLDS token so the SLDS-2 `font-size-base`
+  // override can't shrink the header title.
+  margin: 0;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-4, 1.5rem); // 20px
+  font-weight: 590;
+  line-height: 1.75rem; // 28px
+  letter-spacing: 0;
+
+  // Long titles ellipsize instead of pushing the button off the
+  // viewport. `min-width: 0` lets the ellipsis bite.
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// ── Body — the only scroll surface ───────────────────────────────────
+// `min-height: 0` + `overflow-y: auto` are what enable scrolling
+// inside a flex column. The 50rem cap lives on `.page__inner` so the
+// scrollbar stays on this full-width element.
+.page__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  // Reserve the scrollbar track so the column doesn't jump when the
+  // list overflows. The header lives in this same scrollport, inside
+  // `.page__center`, so the gutter shrinks the title and the cards
+  // together instead of shoving only the cards sideways.
+  scrollbar-gutter: stable;
+}
+
+// Header and page content share this box, so a scrollbar can't
+// change one width without the other.
+.page__center {
+  width: 100%;
+  max-width: 50rem;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+// Direct child on Knowledge, Scheduled, and Tools. Skills nests the
+// header in its own sticky stack, so this doesn't apply there.
+.page__center > .page__header {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: var(--slds-g-color-surface-1, #ffffff);
+}
+
+// ── Inner column ─────────────────────────────────────────────────────
+// Width comes from `.page__center`. This wrapper only stacks the
+// blocks inside the column.
+.page__inner {
+  width: 100%;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-4, 1rem); // 16px
+}
