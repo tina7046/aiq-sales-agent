@@ -1,8 +1,8 @@
 {#
   Filter row under the Skills tabs and above the skill cards.
   Layout and class names come from skills_migrate.html, with the LWC
-  host tags removed. Search, the ownership chips, and sort are visual.
-  Status swaps to a chip when a statusLibrary label is picked.
+  host tags removed.   Search and sort are visual. Owner and Status swap to a chip
+  when a menu item is picked.
 #}
 <div class="c-vk-filter-row">
   <div class="c-vk-search-wrap">
@@ -22,15 +22,33 @@
   <div class="c-vk-spacer"></div>
   <div class="c-vk-right-group">
     <div class="c-ve-filters c-vk-filters">
-      <div class="c-ve-filter-trigger">
-        <button type="button" class="c-ve-chip" data-sh-ownership-chip aria-pressed="true">
-          <span class="c-ve-chip-label">Shared with me</span>
+      <div class="c-ve-filter-trigger" data-sh-owner-filter>
+        <button type="button" class="c-ve-filter-btn" data-filter="owner" data-sh-owner-btn aria-expanded="false" aria-haspopup="menu">
+          <span>Owner</span>
+          <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_xx-small">
+            <g>
+              <path d="M83 140h354c10 0 17 13 9 22L273 374c-6 8-19 8-25 0L73 162c-7-9-1-22 10-22"></path>
+            </g>
+          </svg>
         </button>
-      </div>
-      <div class="c-ve-filter-trigger">
-        <button type="button" class="c-ve-chip" data-sh-ownership-chip aria-pressed="true">
-          <span class="c-ve-chip-label">Owned by me</span>
+        <button type="button" class="c-ve-chip" data-filter="owner" data-sh-owner-chip hidden>
+          <span class="c-ve-chip-label" data-sh-owner-chip-label></span>
+          <span class="c-ve-chip-close" data-filter="owner" data-sh-owner-clear>
+            <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_xx-small">
+              <g>
+                <path d="M310 254l130-131c6-6 6-15 0-21l-20-21c-6-6-15-6-21 0L268 212a10 10 0 01-14 0L123 80c-6-6-15-6-21 0l-21 21c-6 6-6 15 0 21l131 131c4 4 4 10 0 14L80 399c-6 6-6 15 0 21l21 21c6 6 15 6 21 0l131-131a10 10 0 0114 0l131 131c6 6 15 6 21 0l21-21c6-6 6-15 0-21L310 268a10 10 0 010-14"></path>
+              </g>
+            </svg>
+          </span>
         </button>
+        <div class="c-ve-dropdown" data-sh-owner-menu hidden>
+          <button type="button" class="c-ve-dropdown-item" data-sh-owner-option data-owner-label="Owned by me">
+            <span>Owned by me</span>
+          </button>
+          <button type="button" class="c-ve-dropdown-item" data-sh-owner-option data-owner-label="Shared with me">
+            <span>Shared with me</span>
+          </button>
+        </div>
       </div>
       <div class="c-ve-filter-trigger" data-sh-status-filter>
         <button type="button" class="c-ve-filter-btn" data-filter="status" data-sh-status-btn aria-expanded="false" aria-haspopup="menu">

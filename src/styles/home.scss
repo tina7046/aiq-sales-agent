@@ -5024,6 +5024,10 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
     outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0176d3);
     outline-offset: 1px;
   }
+
+  &[hidden] {
+    display: none;
+  }
 }
 
 .seller-home__schedule-side-skill-icon {
@@ -5169,6 +5173,246 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
     z-index: 30;
     flex-basis: min(22.5rem, 100%);
     width: min(22.5rem, 100%);
+  }
+}
+
+// Edit-schedule dialog opened from a home feed row.
+.seller-home__schedule-edit {
+  .slds-modal__header,
+  .slds-modal__title {
+    text-align: start;
+  }
+
+  .slds-modal__content {
+    height: min(32rem, calc(100vh - 12rem));
+    max-height: min(32rem, calc(100vh - 12rem));
+  }
+
+  .slds-combobox__input,
+  .slds-combobox__form-element,
+  .slds-listbox__option {
+    cursor: pointer;
+  }
+
+  // Match the feed overflow menu, and pin the menu to the trigger's
+  // left edge. SLDS centers `.slds-dropdown` with a translate.
+  .slds-combobox .slds-dropdown {
+    left: 0;
+    right: auto;
+    transform: none;
+    width: 100%;
+    min-width: 100%;
+    max-width: none;
+    z-index: 5;
+    margin-block: 0.25rem 0;
+    padding: var(--slds-g-spacing-1, 0.25rem);
+    background: var(--slds-g-color-surface-container-1, #fff);
+    border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+    border-radius: var(--slds-g-radius-border-3);
+    box-shadow:
+      0 4px 12px 0 rgba(0, 0, 0, 0.12),
+      0 1px 3px 0 rgba(0, 0, 0, 0.08);
+  }
+
+  .slds-listbox__option {
+    text-align: start;
+    border-radius: var(--slds-g-radius-border-2, 0.5rem);
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    font-weight: var(--slds-g-font-weight-4, 400);
+    line-height: 1.0625rem;
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+
+    &:hover,
+    &:focus-visible {
+      background: var(--slds-g-color-brand-base-95, #eef4ff);
+      outline: none;
+    }
+  }
+}
+
+.seller-home__schedule-edit__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: clip;
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  padding: var(--slds-g-spacing-3, 0.75rem);
+
+  > .slds-form-element {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  > .slds-form-element .slds-form-element__control {
+    flex: 1 1 auto;
+    display: flex;
+    min-height: 0;
+  }
+}
+
+.seller-home__schedule-edit__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+}
+
+.seller-home__schedule-edit__label {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.125rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+.seller-home__schedule-edit__value {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.125rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  word-break: break-word;
+}
+
+.seller-home__schedule-edit__frequency {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+
+  > .slds-form-element {
+    flex: 0 0 auto;
+    width: auto;
+    margin: 0;
+  }
+
+  .slds-combobox_container {
+    width: 10rem;
+  }
+}
+
+.seller-home__schedule-edit__frequency-on {
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.125rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+.seller-home__schedule-edit__skill {
+  align-self: flex-start;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-1, 0.25rem);
+  min-block-size: 1.5rem;
+  padding-block: 2px;
+  padding-inline: 4px;
+  max-width: 100%;
+  background-color: #f3f3f3;
+  border: var(--slds-g-sizing-border-1, 1px) solid #e5e5e5;
+  border-radius: var(--slds-g-radius-border-pill, 15rem);
+  color: #2e2e2e;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    background-color: #e5e5e5;
+    text-decoration: none;
+  }
+
+  &:focus-visible {
+    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0176d3);
+    outline-offset: 1px;
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.seller-home__schedule-edit__skill-icon {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.seller-home__schedule-edit__skill-name {
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.0625rem;
+  color: #2e2e2e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.seller-home__schedule-edit__divider {
+  height: 0;
+  border: 0;
+  border-top: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+  margin-block: 0.4375rem;
+  width: 100%;
+}
+
+.seller-home__schedule-edit__instructions {
+  flex: 1 1 auto;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  resize: none;
+  overflow-y: auto;
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-3, 0.75rem);
+  padding: 1rem;
+}
+
+.seller-home__schedule-edit__details {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 1fr 1fr;
+  justify-items: start;
+  column-gap: 1.5rem;
+  row-gap: var(--slds-g-spacing-4, 1rem);
+  text-align: start;
+  padding: var(--slds-g-spacing-4, 1rem) 0 var(--slds-g-spacing-4, 1rem) 0.5rem;
+}
+
+.seller-home__schedule-edit__meta-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.seller-home__schedule-edit__meta-label {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-weight: var(--slds-g-font-weight-6, 590);
+  line-height: 1.0625rem;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+.seller-home__schedule-edit__meta-value {
+  margin: 0;
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.0625rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  word-break: break-word;
+
+  &.is-error {
+    color: var(--slds-g-color-error-1, #b60554);
   }
 }
 

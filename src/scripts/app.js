@@ -57,6 +57,69 @@ Array.from(dropdownButtons)
   )
 
 /**
+ * Opt-in comboboxes. The button binder above only sees a direct-child
+ * `.slds-button`. A trigger with `data-slds-combobox` opens from its
+ * combobox control, writes the chosen option into the field, and closes
+ * on an outside click. Header search menus do not carry the attribute.
+ */
+const comboboxTriggers = document.querySelectorAll('[data-slds-combobox]')
+
+const setComboboxOpen = (trigger, open) => {
+  const control = trigger.querySelector('[role="combobox"]')
+  if (open) {
+    Array.from(document.querySelectorAll('[data-slds-combobox].slds-is-open'))
+      .forEach((other) => { if (other !== trigger) setComboboxOpen(other, false) })
+  }
+  trigger.classList.toggle('slds-is-open', open)
+  if (control) control.setAttribute('aria-expanded', open ? 'true' : 'false')
+}
+
+Array.from(comboboxTriggers).forEach((trigger) => {
+  const control = trigger.querySelector('[role="combobox"]')
+  const list = trigger.querySelector('[role="listbox"]')
+  const hit = trigger.querySelector('.slds-combobox__form-element') || control
+  if (!control || !hit) return
+
+  const toggleFromControl = (event) => {
+    event.preventDefault()
+    event.stopPropagation()
+    setComboboxOpen(trigger, !trigger.classList.contains('slds-is-open'))
+  }
+
+  hit.addEventListener('click', toggleFromControl)
+  control.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    toggleFromControl(event)
+  })
+
+  if (!list) return
+  list.addEventListener('click', (event) => {
+    const option = event.target.closest('[role="option"]')
+    if (!option || !list.contains(option)) return
+    event.stopPropagation()
+    const label = option.querySelector('.slds-media__body span')
+    const text = label ? label.textContent.replace(/\s+/g, ' ').trim() : ''
+    const value = control.querySelector('.slds-truncate')
+    if (value) value.textContent = text
+    else if (control.tagName === 'INPUT') control.value = text
+    Array.from(list.querySelectorAll('[role="option"]')).forEach((item) => {
+      item.classList.remove('slds-is-selected')
+      item.setAttribute('aria-selected', 'false')
+    })
+    option.classList.add('slds-is-selected')
+    option.setAttribute('aria-selected', 'true')
+    setComboboxOpen(trigger, false)
+  })
+})
+
+document.addEventListener('click', (event) => {
+  Array.from(comboboxTriggers).forEach((trigger) => {
+    if (trigger.contains(event.target)) return
+    setComboboxOpen(trigger, false)
+  })
+})
+
+/**
  * Tabs
  * https://www.lightningdesignsystem.com/components/tabs/
  */

@@ -1057,6 +1057,281 @@
 
     // Connections modal — "View all" button in the composer footer.
     bindConnectionsModal()
+    bindFeedEditModal()
+  }
+
+  // Feed Edit dialog. Same fields as the Scheduled sidebar, filled from
+  // the row that opened it. Instructions describe when the run happens
+  // and where the result is delivered. Cancel discards; Save keeps the
+  // frequency, time, and instructions for that row.
+  var openFeedEditModal = function () {}
+
+  function bindFeedEditModal () {
+    var modal = document.querySelector('[data-sh-feed-edit-modal]')
+    var backdrop = document.querySelector('[data-sh-feed-edit-backdrop]')
+    if (!modal || !backdrop) return
+
+    var titleEl = modal.querySelector('[data-sh-feed-edit-title]')
+    var announceEl = modal.querySelector('[data-sh-feed-edit-announce]')
+    var freqEl = modal.querySelector('[data-sh-feed-edit-frequency]')
+    var freqList = modal.querySelector('[data-sh-feed-edit-frequency-list]')
+    var timeEl = modal.querySelector('[data-sh-feed-edit-time]')
+    var timeList = modal.querySelector('[data-sh-feed-edit-time-list]')
+    var deliveryEl = modal.querySelector('[data-sh-feed-edit-delivery]')
+    var skillEl = modal.querySelector('[data-sh-feed-edit-skill]')
+    var skillNameEl = modal.querySelector('[data-sh-feed-edit-skill-name]')
+    var instrEl = modal.querySelector('[data-sh-feed-edit-instructions]')
+    var createdEl = modal.querySelector('[data-sh-feed-edit-created]')
+    var lastRunEl = modal.querySelector('[data-sh-feed-edit-lastrun]')
+    var saveBtn = modal.querySelector('[data-sh-feed-edit-save]')
+    var closers = modal.querySelectorAll('[data-sh-feed-edit-close]')
+
+    var FREQ_OPTIONS = ['Hourly', 'Daily', 'Weekdays', 'Monthly']
+    var TIME_OPTIONS = (function () {
+      var out = []
+      for (var mins = 0; mins < 24 * 60; mins += 15) {
+        var h = Math.floor(mins / 60)
+        var m = mins % 60
+        var period = h < 12 ? 'AM' : 'PM'
+        var h12 = h % 12
+        if (h12 === 0) h12 = 12
+        out.push(h12 + ':' + (m < 10 ? '0' + m : m) + ' ' + period)
+      }
+      return out
+    })()
+
+    function readJson (id, fallback) {
+      var el = document.getElementById(id)
+      if (!el) return fallback
+      try { return JSON.parse(el.textContent || '') } catch (err) { return fallback }
+    }
+
+    var skillNames = readJson('sh-feed-edit-skills', {}) || {}
+    var byId = {}
+    readJson('sh-feed-edit-schedules', []).forEach(function (rec) {
+      if (rec && rec.id) byId[rec.id] = rec
+    })
+
+    var lastFocused = null
+    var draft = null
+    var opened = null
+    var activeRow = null
+    var SKILL_ROUTE = window.SH.userUrl('/skill_detail.html')
+    var CHECK_ICON = '<svg class="slds-icon slds-icon_x-small slds-listbox__icon-selected" aria-hidden="true"><use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use></svg>'
+
+    function writeControl (control, value) {
+      if (!control) return
+      if (control.tagName === 'INPUT') control.value = value || ''
+      else {
+        var trunc = control.querySelector('.slds-truncate')
+        if (trunc) trunc.textContent = value || ''
+      }
+    }
+
+    function readControl (control) {
+      if (!control) return ''
+      if (control.tagName === 'INPUT') return (control.value || '').trim()
+      var trunc = control.querySelector('.slds-truncate')
+      return trunc ? trunc.textContent.trim() : ''
+    }
+
+    function fillList (list, control, options, value) {
+      if (!list) return
+      var opts = options.slice()
+      if (value && opts.indexOf(value) < 0) opts.unshift(value)
+      list.innerHTML = ''
+      opts.forEach(function (label) {
+        var li = document.createElement('li')
+        li.setAttribute('role', 'presentation')
+        li.className = 'slds-listbox__item'
+        var option = document.createElement('div')
+        option.className = 'slds-media slds-listbox__option slds-listbox__option_plain slds-media_small'
+        option.setAttribute('role', 'option')
+        option.setAttribute('aria-selected', label === value ? 'true' : 'false')
+        if (label === value) option.classList.add('slds-is-selected')
+        var figure = document.createElement('span')
+        figure.className = 'slds-media__figure slds-listbox__option-icon'
+        figure.innerHTML = CHECK_ICON
+        var body = document.createElement('span')
+        body.className = 'slds-media__body'
+        var span = document.createElement('span')
+        span.title = label
+        span.textContent = label
+        body.appendChild(span)
+        option.appendChild(figure)
+        option.appendChild(body)
+        li.appendChild(option)
+        list.appendChild(li)
+      })
+      writeControl(control, value)
+    }
+
+    function statusWord (state) {
+      if (state === 'failed') return 'Failed'
+      if (state === 'paused') return 'Paused'
+      if (state === 'archived') return 'Archived'
+      return 'Completed'
+    }
+
+    function renderLastRun (record) {
+      if (!lastRunEl) return
+      var when = (record.lastRun || '').replace(/^Last run\s+/i, '')
+      var status = statusWord(record.state)
+      if (when) lastRunEl.textContent = status + ' ' + when
+      else lastRunEl.textContent = '—'
+      lastRunEl.classList.toggle('is-error', record.state === 'failed')
+    }
+
+    function closeComboboxes () {
+      toArray(modal.querySelectorAll('[data-slds-combobox]')).forEach(function (trigger) {
+        trigger.classList.remove('slds-is-open')
+        var control = trigger.querySelector('[role="combobox"]')
+        if (control) control.setAttribute('aria-expanded', 'false')
+      })
+    }
+
+    function populate (record) {
+      if (titleEl) titleEl.textContent = record.title || 'Edit'
+      fillList(freqList, freqEl, FREQ_OPTIONS, record.frequency)
+      fillList(timeList, timeEl, TIME_OPTIONS, record.time)
+      if (deliveryEl) deliveryEl.textContent = record.delivery || '—'
+      var skillName = record.skillName || skillNames[record.skillId] || ''
+      if (skillNameEl) skillNameEl.textContent = skillName
+      if (skillEl) {
+        if (skillName) {
+          skillEl.hidden = false
+          var href = record.skillId ? (SKILL_ROUTE + '?id=' + encodeURIComponent(record.skillId)) : SKILL_ROUTE
+          skillEl.setAttribute('href', href)
+          skillEl.setAttribute('aria-label', 'Uses Skill: ' + skillName + '. Open Skill details.')
+        } else {
+          skillEl.hidden = true
+        }
+      }
+      if (instrEl) instrEl.value = record.instructions || ''
+      if (createdEl) {
+        var created = record.createdAt || ''
+        if (record.createdBy) created = created ? (created + ' by ' + record.createdBy) : ('by ' + record.createdBy)
+        createdEl.textContent = created || '—'
+      }
+      renderLastRun(record)
+      if (announceEl) announceEl.textContent = 'Showing details for ' + (record.title || 'this schedule') + '.'
+    }
+
+    function replaceSlotTime (slot, prevTime, nextTime) {
+      if (!slot || !prevTime || prevTime === nextTime) return
+      var pattern = prevTime.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      var re = new RegExp(pattern)
+      ;['', '-default', '-paused', '-running', '-completed', '-scheduled', '-archived'].forEach(function (suffix) {
+        var attr = suffix ? ('data-sh-feed-slot' + suffix) : null
+        var value = attr ? slot.getAttribute(attr) : slot.textContent
+        if (value && re.test(value)) {
+          var next = value.replace(re, nextTime)
+          if (attr) slot.setAttribute(attr, next)
+          else slot.textContent = next
+        }
+      })
+    }
+
+    function replaceSlotFrequency (slot, prevFreq, nextFreq) {
+      if (!slot || !prevFreq || prevFreq === nextFreq) return
+      if (slot.textContent.trim() === prevFreq) slot.textContent = nextFreq
+      ;['default', 'completed', 'scheduled'].forEach(function (key) {
+        var attr = 'data-sh-feed-slot-' + key
+        if (slot.getAttribute(attr) === prevFreq) slot.setAttribute(attr, nextFreq)
+      })
+    }
+
+    function commit () {
+      if (!draft) return
+      draft.frequency = readControl(freqEl)
+      draft.time = readControl(timeEl)
+      if (instrEl) draft.instructions = instrEl.value
+      if (draft.id) byId[draft.id] = JSON.parse(JSON.stringify(draft))
+      if (activeRow && opened) {
+        replaceSlotFrequency(activeRow.querySelector('[data-sh-feed-slot="status"]'), opened.frequency, draft.frequency)
+        replaceSlotTime(activeRow.querySelector('[data-sh-feed-slot="time"]'), opened.time, draft.time)
+      }
+    }
+
+    function focusables () {
+      return toArray(modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+        .filter(function (el) { return !el.disabled && !el.hidden && el.getAttribute('aria-hidden') !== 'true' })
+    }
+
+    function open (returnTo, row) {
+      var id = row && row.getAttribute('data-sh-feed-item')
+      var base = (id && byId[id]) ? byId[id] : {
+        id: id || '',
+        title: 'Edit',
+        frequency: 'Daily',
+        time: '9:00 AM',
+        delivery: 'the home feed',
+        skillId: row ? (row.getAttribute('data-sh-feed-skill') || '') : '',
+        instructions: '',
+        createdBy: 'You',
+        lastRun: '',
+        state: row ? (row.getAttribute('data-sh-feed-state') || '') : ''
+      }
+      closeComboboxes()
+      draft = JSON.parse(JSON.stringify(base))
+      opened = JSON.parse(JSON.stringify(base))
+      activeRow = row || null
+      populate(draft)
+      lastFocused = returnTo || document.activeElement
+      modal.removeAttribute('hidden')
+      modal.classList.add('slds-fade-in-open')
+      backdrop.removeAttribute('hidden')
+      backdrop.classList.add('slds-backdrop_open')
+      setTimeout(function () {
+        if (titleEl) titleEl.focus()
+        else modal.focus()
+      }, 0)
+    }
+
+    function close () {
+      closeComboboxes()
+      modal.classList.remove('slds-fade-in-open')
+      backdrop.classList.remove('slds-backdrop_open')
+      modal.setAttribute('hidden', '')
+      backdrop.setAttribute('hidden', '')
+      draft = null
+      opened = null
+      activeRow = null
+      if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus()
+      lastFocused = null
+    }
+
+    if (saveBtn) {
+      saveBtn.addEventListener('click', function () {
+        commit()
+        close()
+      })
+    }
+    for (var i = 0; i < closers.length; i++) {
+      closers[i].addEventListener('click', close)
+    }
+    backdrop.addEventListener('click', close)
+    modal.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' || e.keyCode === 27) {
+        e.preventDefault()
+        close()
+        return
+      }
+      if (e.key !== 'Tab') return
+      var items = focusables()
+      if (!items.length) return
+      var first = items[0]
+      var last = items[items.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    })
+
+    openFeedEditModal = open
   }
 
   // ── Connections modal ──────────────────────────────────────────
@@ -2686,14 +2961,10 @@
         else if (actionId === 'pause' && row) changeFeedState(feedRoot, row, 'paused')
         else if (actionId === 'complete' && row) changeFeedState(feedRoot, row, 'completed')
         else if (actionId === 'schedule' && row) changeFeedState(feedRoot, row, 'scheduled')
-        // Edit opens the backing skill's detail page. The skill id rides
-        // on the row as `data-sh-feed-skill` (index.json → item.workflow.id);
-        // a row with no skill just falls through to the dispatch above.
-        else if (actionId === 'edit' && row) {
-          var feedSkillId = row.getAttribute('data-sh-feed-skill')
-          if (feedSkillId) {
-            window.location.href = window.SH.userUrl('/skill_detail.html?id=' + encodeURIComponent(feedSkillId))
-          }
+        else if (actionId === 'edit') {
+          var menuScope = closest(item, '[data-sh-feed-item-menu]')
+          var returnTo = menuScope && menuScope.querySelector('[data-sh-feed-item-menu-trigger]')
+          openFeedEditModal(returnTo || item, row)
         }
         return
       }

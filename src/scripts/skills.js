@@ -193,7 +193,6 @@
     skillActionRouter(gridRoot)
 
     bindStatusChip(root)
-    bindOwnershipChips(root)
 
     // Create Skill — navigate to the empty three-block canvas.
     // The button used to be a dead `data-sh-skills-create` hook;
@@ -1016,25 +1015,17 @@
     }
   }
 
-  // Shared with me / Owned by me toggle between the blue chip and the
-  // plain filter button. No filtering yet.
-  function bindOwnershipChips (root) {
-    var chips = root.querySelectorAll('[data-sh-ownership-chip]')
-    Array.prototype.forEach.call(chips, function (chip) {
-      chip.addEventListener('click', function () {
-        var selected = chip.classList.contains('c-ve-chip')
-        chip.classList.toggle('c-ve-chip', !selected)
-        chip.classList.toggle('c-ve-filter-btn', selected)
-        chip.setAttribute('aria-pressed', selected ? 'false' : 'true')
-      })
-    })
-  }
-
-  // Status starts as the filter button. Picking a statusLibrary label
-  // swaps it for the blue chip; the close control puts the button back.
+  // Owner and Status start as filter buttons. Picking a menu item
+  // swaps that control for the blue chip; the close control puts the
+  // button back. Only one item can be selected on each menu.
   function bindStatusChip (root) {
+    var ownerHost = root.querySelector('[data-sh-owner-filter]')
     var host = root.querySelector('[data-sh-status-filter]')
     var sortHost = root.querySelector('[data-sh-sort-filter]')
+    var ownerBtn = ownerHost && ownerHost.querySelector('[data-sh-owner-btn]')
+    var ownerChip = ownerHost && ownerHost.querySelector('[data-sh-owner-chip]')
+    var ownerLabel = ownerHost && ownerHost.querySelector('[data-sh-owner-chip-label]')
+    var ownerMenu = ownerHost && ownerHost.querySelector('[data-sh-owner-menu]')
     var btn = host && host.querySelector('[data-sh-status-btn]')
     var chip = host && host.querySelector('[data-sh-status-chip]')
     var label = host && host.querySelector('[data-sh-status-chip-label]')
@@ -1049,45 +1040,56 @@
     }
 
     function closeMenus () {
+      setMenu(ownerMenu, ownerBtn, false)
       setMenu(statusMenu, btn, false)
       setMenu(sortMenu, sortBtn, false)
     }
 
-    if (host) {
-      host.addEventListener('click', function (event) {
-        var option = closest(event.target, '[data-sh-status-option]')
-        if (option && host.contains(option)) {
+    function bindSwapMenu (menuHost, trigger, menu, chipEl, labelEl, optionSel, labelAttr, clearSel) {
+      if (!menuHost) return
+      menuHost.addEventListener('click', function (event) {
+        var option = closest(event.target, optionSel)
+        if (option && menuHost.contains(option)) {
           event.preventDefault()
-          var next = option.getAttribute('data-status-label') || option.textContent.trim()
-          if (label) label.textContent = next
-          if (btn) btn.hidden = true
-          if (chip) {
-            chip.hidden = false
-            chip.focus()
+          var next = option.getAttribute(labelAttr) || option.textContent.trim()
+          if (labelEl) labelEl.textContent = next
+          if (trigger) trigger.hidden = true
+          if (chipEl) {
+            chipEl.hidden = false
+            chipEl.focus()
           }
           closeMenus()
           return
         }
 
-        var clear = closest(event.target, '[data-sh-status-clear]')
-        if (clear && host.contains(clear)) {
+        var clear = closest(event.target, clearSel)
+        if (clear && menuHost.contains(clear)) {
           event.preventDefault()
-          if (chip) chip.hidden = true
-          if (btn) {
-            btn.hidden = false
-            btn.focus()
+          if (chipEl) chipEl.hidden = true
+          if (trigger) {
+            trigger.hidden = false
+            trigger.focus()
           }
           return
         }
 
-        if (btn && (event.target === btn || btn.contains(event.target))) {
+        if (trigger && (event.target === trigger || trigger.contains(event.target))) {
           event.preventDefault()
-          var willOpen = statusMenu && statusMenu.hidden
+          var willOpen = menu && menu.hidden
           closeMenus()
-          setMenu(statusMenu, btn, !!willOpen)
+          setMenu(menu, trigger, !!willOpen)
         }
       })
     }
+
+    bindSwapMenu(
+      ownerHost, ownerBtn, ownerMenu, ownerChip, ownerLabel,
+      '[data-sh-owner-option]', 'data-owner-label', '[data-sh-owner-clear]'
+    )
+    bindSwapMenu(
+      host, btn, statusMenu, chip, label,
+      '[data-sh-status-option]', 'data-status-label', '[data-sh-status-clear]'
+    )
 
     if (sortHost && sortBtn) {
       sortHost.addEventListener('click', function (event) {
@@ -1100,6 +1102,7 @@
     }
 
     document.addEventListener('click', function (event) {
+      if (ownerHost && ownerHost.contains(event.target)) return
       if (host && host.contains(event.target)) return
       if (sortHost && sortHost.contains(event.target)) return
       closeMenus()

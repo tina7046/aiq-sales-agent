@@ -4894,17 +4894,6 @@
   }
 }
 
-// Ownership toggles swap between the chip and the filter button.
-// The chip's end padding is tighter to leave room for a close icon,
-// which these two buttons don't have, so both states share one box.
-[data-sh-ownership-chip].c-ve-chip,
-[data-sh-ownership-chip].c-ve-filter-btn {
-  box-sizing: border-box;
-  padding: 0 var(--slds-g-spacing-4, 1rem);
-  border-width: var(--slds-g-sizing-border-1, 1px);
-  border-style: solid;
-}
-
 .c-ve-chip {
   display: inline-flex;
   align-items: center;
@@ -4991,6 +4980,13 @@
   top: calc(100% + 2px);
   right: 0;
   left: auto;
+
+  // Owner is the first control in the clipped filter row. A
+  // right-aligned menu grows out through overflow-x: clip.
+  &[data-sh-owner-menu] {
+    left: 0;
+    right: auto;
+  }
   z-index: 5;
   min-width: 10rem;
   margin: 0;

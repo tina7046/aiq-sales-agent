@@ -1,0 +1,183 @@
+{#
+  Edit dialog for a home-feed row.
+  Layout matches the finished schedule-edit lab. Instructions here are
+  about when the run happens and where the result goes. The skill keeps
+  its own instructions for what the agent does.
+
+  `#sh-feed-edit-schedules` is one record per feed.items row.
+  `#sh-feed-edit-skills` maps skill id → name.
+#}
+{% set skillsPack = readData("skills") %}
+{% set skillList = skillsPack.skills if skillsPack and skillsPack.skills else [] %}
+{% set feedItems = feed.items if feed and feed.items else [] %}
+<section
+  role="dialog"
+  tabindex="-1"
+  aria-modal="true"
+  aria-labelledby="feed-edit-modal-heading"
+  class="slds-modal slds-modal_small seller-home__schedule-edit"
+  data-sh-feed-edit-modal
+  hidden
+>
+  <div class="slds-modal__container">
+    <button type="button" class="slds-button slds-button_icon slds-modal__close" data-sh-feed-edit-close>
+      <svg class="slds-button__icon slds-button__icon_large" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+      </svg>
+      <span class="slds-assistive-text">Cancel and close</span>
+    </button>
+    <div class="slds-modal__header">
+      <h1 id="feed-edit-modal-heading" class="slds-modal__title slds-hyphenate" tabindex="-1" data-sh-feed-edit-title>Edit</h1>
+    </div>
+    <div class="slds-modal__content seller-home__schedule-edit__body" id="feed-edit-modal-content">
+      <div
+        class="slds-assistive-text"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-sh-feed-edit-announce
+      ></div>
+
+      <div class="seller-home__schedule-edit__field">
+        <label class="slds-form-element__label slds-p-left_xx-small" for="feed-edit-frequency" id="feed-edit-frequency-label">Frequency</label>
+        <div class="seller-home__schedule-edit__frequency">
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <div class="slds-combobox_container">
+                <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click" data-slds-combobox>
+                  <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right" role="none">
+                    <div
+                      role="combobox"
+                      tabindex="0"
+                      class="slds-input_faux slds-combobox__input"
+                      id="feed-edit-frequency"
+                      data-sh-feed-edit-frequency
+                      aria-labelledby="feed-edit-frequency-label"
+                      aria-controls="feed-edit-frequency-list"
+                      aria-expanded="false"
+                      aria-haspopup="listbox"
+                    >
+                      <span class="slds-truncate" data-sh-feed-edit-frequency-value></span>
+                    </div>
+                    <span class="slds-icon_container slds-icon-utility-down slds-input__icon slds-input__icon_right">
+                      <svg class="slds-icon slds-icon_x-small slds-icon-text-default" aria-hidden="true">
+                        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevrondown"></use>
+                      </svg>
+                    </span>
+                  </div>
+                  <div id="feed-edit-frequency-list" class="slds-dropdown slds-dropdown_length-5 slds-dropdown_fluid" role="listbox" aria-label="Frequency" tabindex="-1">
+                    <ul class="slds-listbox slds-listbox_vertical" role="presentation" data-sh-feed-edit-frequency-list></ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <span class="seller-home__schedule-edit__frequency-on">on</span>
+          <div class="slds-form-element">
+            <label class="slds-assistive-text" for="feed-edit-time" id="feed-edit-time-label">Time</label>
+            <div class="slds-form-element__control">
+              <div class="slds-combobox_container">
+                <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click" data-slds-combobox>
+                  <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right" role="none">
+                    <input
+                      class="slds-input slds-combobox__input"
+                      id="feed-edit-time"
+                      data-sh-feed-edit-time
+                      aria-labelledby="feed-edit-time-label"
+                      aria-autocomplete="list"
+                      aria-controls="feed-edit-time-list"
+                      aria-expanded="false"
+                      aria-haspopup="listbox"
+                      autocomplete="off"
+                      role="combobox"
+                      type="text"
+                    />
+                    <span class="slds-icon_container slds-input__icon slds-input__icon_right">
+                      <svg class="slds-icon slds-icon_x-small slds-icon-text-default" aria-hidden="true">
+                        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevrondown"></use>
+                      </svg>
+                    </span>
+                  </div>
+                  <div id="feed-edit-time-list" class="slds-dropdown slds-dropdown_length-5 slds-dropdown_fluid" role="listbox" aria-label="Time" tabindex="-1">
+                    <ul class="slds-listbox slds-listbox_vertical" role="presentation" data-sh-feed-edit-time-list></ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="seller-home__schedule-edit__divider" aria-hidden="true">
+
+      <div class="slds-form-element">
+        <label class="slds-form-element__label slds-p-left_xx-small" for="feed-edit-instructions">Instructions</label>
+        <div class="slds-form-element__control">
+          <textarea id="feed-edit-instructions" class="slds-textarea seller-home__schedule-edit__instructions" data-sh-feed-edit-instructions></textarea>
+        </div>
+      </div>
+
+      <hr class="seller-home__schedule-edit__divider" aria-hidden="true">
+
+      <div class="seller-home__schedule-edit__details">
+        <section class="seller-home__schedule-edit__field" aria-label="Delivery">
+          <p class="seller-home__schedule-edit__label">Delivery</p>
+          <p class="seller-home__schedule-edit__value" data-sh-feed-edit-delivery></p>
+        </section>
+        <section class="seller-home__schedule-edit__field" aria-label="Uses Skill">
+          <p class="seller-home__schedule-edit__label">Uses Skill</p>
+          <a class="seller-home__schedule-edit__skill" data-sh-feed-edit-skill href="#">
+            <svg class="seller-home__schedule-edit__skill-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="12" fill="#2f2cb7"></circle><g fill="#ffffff" transform="translate(5.2 5.2) scale(0.85)"><g transform="translate(0.616 0.9232)"><path fill-rule="evenodd" clip-rule="evenodd" d="M11.4591 0C12.434 0 13.2409 0.758083 13.3017 1.73107L13.8242 10.0922H13.8462C14.3702 10.0922 14.7692 10.5235 14.7692 11.0231V12.277C14.7692 13.2992 13.9569 14.1538 12.9231 14.1538H5.23077V14.153C5.21938 14.1532 5.20797 14.1538 5.19652 14.1538C4.19111 14.1538 3.39997 13.3304 3.38523 12.3402L2.92969 4.61538H0.923077C0.413277 4.61538 0 4.20212 0 3.69231V1.84615C0 0.826551 0.826551 0 1.84615 0H11.4591ZM7.0084 12.3119C7.0084 12.5253 6.97191 12.731 6.90535 12.9231H12.9231C13.2487 12.9231 13.5384 12.6482 13.5385 12.277V11.323H7.0084V12.3119ZM3.88643 1.23077C3.95646 1.42473 3.99597 1.63301 3.99911 1.84916L4.61418 12.2758L4.61538 12.2939V12.3119C4.61538 12.6638 4.88978 12.923 5.19652 12.9231C5.50326 12.9231 5.77763 12.6638 5.77763 12.3119V11.0231C5.77763 10.5235 6.17674 10.0923 6.70071 10.0922H12.591L12.0733 1.80769C12.053 1.4834 11.7841 1.23077 11.4591 1.23077H3.88643ZM1.84615 1.23077C1.50629 1.23077 1.23077 1.50629 1.23077 1.84615V3.38462H2.85726L2.77043 1.91316L2.76923 1.89513V1.8768C2.76917 1.50559 2.47945 1.23077 2.15385 1.23077H1.84615Z"></path></g><g transform="translate(5.8464 3.6928)"><path d="M2.80839 0.135688C2.89334 -0.0416965 3.14762 -0.0461579 3.23867 0.128181L3.8826 1.36166C4.07491 1.73298 4.3835 2.03049 4.76153 2.2096L6.01722 2.80997C6.19473 2.89483 6.1991 3.14889 6.02473 3.23993L4.79067 3.88387C4.41913 4.07609 4.12131 4.38437 3.94211 4.76218L3.34143 6.01729C3.25651 6.1947 3.00223 6.19917 2.91116 6.0248L2.26691 4.79132C2.07463 4.42006 1.7663 4.12249 1.38833 3.94338L0.135619 3.3427C-0.0416732 3.25778 -0.046135 3.00409 0.128111 2.91304L1.36217 2.2691C1.73371 2.07689 2.03147 1.76535 2.21073 1.3908L2.80839 0.135688Z"></path></g></g></svg>
+            <span class="seller-home__schedule-edit__skill-name" data-sh-feed-edit-skill-name></span>
+          </a>
+        </section>
+        <div class="seller-home__schedule-edit__meta-row">
+          <p class="seller-home__schedule-edit__meta-label">Created</p>
+          <p class="seller-home__schedule-edit__meta-value" data-sh-feed-edit-created></p>
+        </div>
+        <div class="seller-home__schedule-edit__meta-row">
+          <p class="seller-home__schedule-edit__meta-label">Last run</p>
+          <p class="seller-home__schedule-edit__meta-value" data-sh-feed-edit-lastrun></p>
+        </div>
+      </div>
+    </div>
+    <div class="slds-modal__footer">
+      <button type="button" class="slds-button slds-button_neutral" data-sh-feed-edit-close>Cancel</button>
+      <button type="button" class="slds-button slds-button_brand" data-sh-feed-edit-save>Save</button>
+    </div>
+  </div>
+</section>
+<div class="slds-backdrop" data-sh-feed-edit-backdrop role="presentation" hidden></div>
+<script type="application/json" id="sh-feed-edit-skills">
+{
+{% for skill in skillList %}
+  {{ skill.id | tojson | safe }}: {{ skill.name | tojson | safe }}{% if not loop.last %},{% endif %}
+{% endfor %}
+}
+</script>
+<script type="application/json" id="sh-feed-edit-schedules">
+[
+{% for item in feedItems %}
+{% set sched = item.schedule if item.schedule else {} %}
+{% set frequency = sched.frequency if sched.frequency else (item.cadence or "Daily") %}
+{% set time = sched.time if sched.time else "9:00 AM" %}
+{% set delivery = sched.delivery if sched.delivery else "the home feed" %}
+{% set title = item.titles.neutral if item.titles and item.titles.neutral else item.title %}
+{% set instructions = sched.instructions if sched.instructions else ("Run “" ~ title ~ "” " ~ frequency ~ " at " ~ time ~ ".\n\nDeliver the result via " ~ delivery ~ ".\n\nThese instructions cover when this runs and where the result is delivered. The skill keeps its own instructions for what the agent does.") %}
+{
+  "id": {{ item.id | tojson | safe }},
+  "title": {{ title | tojson | safe }},
+  "frequency": {{ frequency | tojson | safe }},
+  "time": {{ time | tojson | safe }},
+  "delivery": {{ delivery | tojson | safe }},
+  "skillId": {{ ((item.workflow.id if item.workflow else "") or "") | tojson | safe }},
+  "instructions": {{ instructions | tojson | safe }},
+  "createdAt": {{ (sched.createdAt or "") | tojson | safe }},
+  "createdBy": {{ (sched.createdBy or "You") | tojson | safe }},
+  "lastRun": {{ (item.lastRun or "") | tojson | safe }},
+  "state": {{ (item.state or "") | tojson | safe }},
+  "reconnect": {{ (sched.reconnect if sched.reconnect else none) | tojson | safe }}
+}{% if not loop.last %},{% endif %}
+{% endfor %}
+]
+</script>
