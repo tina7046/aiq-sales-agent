@@ -54,6 +54,10 @@
 {% block styles %}
   <link rel="stylesheet" href="/styles/home.css" />
   <link rel="stylesheet" href="/styles/page.css" />
+  {# Conversation-feed composer. Scheduled only borrows the box; the
+     bottom-anchored overlay rules are reset in home.scss so it sits
+     in the column between the header and the tabs. #}
+  <link rel="stylesheet" href="/styles/home_conversation.css" />
   {# Tools modal visuals — the left-nav Connections item opens it here. #}
   <link rel="stylesheet" href="/styles/tools.css" />
 {% endblock %}
@@ -122,13 +126,8 @@
       <div class="seller-home__scheduled-workspace" data-sh-scheduled-workspace>
         <div class="seller-home__scheduled-main">
           {# ── Header band (48 px) ─────────────────────────────────
-             Title left, primary action right — the shared
-             `.page__header` already flexes with
-             `justify-content: space-between`, so the button anchors
-             to the trailing edge with no extra CSS (same contract the
-             Skills header's "Create Skill" button uses). No routing
-             yet: the button is a hook (`data-sh-scheduled-create`) a
-             future creation flow can bind to via event delegation. #}
+             Title only. The New Schedule action was removed; creating
+             a schedule starts from the composer below. #}
           {# ── Body section (scrollable, 50 rem inner column) ────── #}
           <section
             class="page__body"
@@ -140,17 +139,135 @@
             data-sh-scheduled-header
           >
             <h1 class="page__title">{{ header.heading }}</h1>
-            <button
-              type="button"
-              class="slds-button slds-button_neutral seller-home__scheduled-new"
-              data-sh-scheduled-create
-            >
-              <svg class="slds-button__icon slds-button__icon_left" aria-hidden="true">
-                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
-              </svg>
-              {{ header.actionLabel }}
-            </button>
           </header>
+
+          {# Conversation-feed composer, in the scroll body between the
+             header and the tab set. Markup matches home_conversation.html
+             so the box, toolbar, and voice chrome stay one component.
+             Placeholder copy comes from scheduled.json → composer.
+             home.js's bindScheduledComposer owns empty-state + submit
+             here; the conversation page keeps bindConvComposer. #}
+          <form
+            class="seller-home__conv-composer"
+            data-sh-conv-composer
+            data-sh-scheduled-composer
+            novalidate
+          >
+            <div class="seller-home__conv-composer-inner">
+              <div class="seller-home__conv-composer-editor">
+                <div class="seller-home__conv-composer-content">
+                  <label id="seller-home-scheduled-composer-label" for="seller-home-scheduled-composer-input" class="slds-assistive-text">
+                    {{ composer.ariaLabel }}
+                  </label>
+                  <div
+                    id="seller-home-scheduled-composer-input"
+                    class="seller-home__conv-composer-textarea is-empty"
+                    contenteditable="true"
+                    role="textbox"
+                    aria-multiline="true"
+                    aria-labelledby="seller-home-scheduled-composer-label"
+                    data-sh-conv-composer-input
+                    data-placeholder="{{ composer.placeholder }}"
+                    spellcheck="true"
+                  ></div>
+                </div>
+
+                <div
+                  class="seller-home__conv-composer-toolbar"
+                  role="toolbar"
+                  aria-label="Composer actions"
+                >
+                  <div
+                    class="seller-home__conv-composer-slot seller-home__conv-composer-slot--start"
+                    role="group"
+                    aria-label="Attach and augment"
+                  >
+                    <button type="button" class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn seller-home__conv-composer-btn" title="Add" aria-label="Add">
+                      <svg class="slds-button__icon" aria-hidden="true">
+                        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
+                      </svg>
+                      <span class="slds-assistive-text">Add</span>
+                    </button>
+                  </div>
+
+                  <div
+                    class="seller-home__conv-composer-slot seller-home__conv-composer-slot--end"
+                    role="group"
+                    aria-label="Voice and send"
+                  >
+                    <button
+                      type="button"
+                      class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn seller-home__conv-composer-btn"
+                      title="Start voice input"
+                      aria-label="Start voice input"
+                      data-sh-conv-composer-mic
+                    >
+                      <svg class="slds-button__icon" aria-hidden="true">
+                        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#unmuted"></use>
+                      </svg>
+                      <span class="slds-assistive-text">Start voice input</span>
+                    </button>
+                    <button
+                      type="submit"
+                      class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn seller-home__conv-composer-btn seller-home__conv-composer-send"
+                      title="Send message"
+                      aria-label="Send message"
+                      data-sh-conv-composer-send
+                    >
+                      <svg class="slds-button__icon" aria-hidden="true">
+                        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#send"></use>
+                      </svg>
+                      <span class="slds-assistive-text">Send message</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  class="seller-home__conv-composer-recording"
+                  data-sh-conv-composer-recording
+                  hidden
+                >
+                  <div
+                    class="seller-home__conv-composer-waveform"
+                    data-sh-conv-composer-waveform
+                    role="img"
+                    aria-label="Live audio waveform"
+                  ></div>
+                  <div
+                    class="seller-home__conv-composer-recording-actions"
+                    role="group"
+                    aria-label="Voice input"
+                  >
+                    <button
+                      type="button"
+                      class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn seller-home__conv-composer-btn"
+                      title="Stop"
+                      aria-label="Stop recording"
+                      data-sh-conv-composer-mic-stop
+                    >
+                      <svg class="slds-button__icon" aria-hidden="true">
+                        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#stop"></use>
+                      </svg>
+                      <span class="slds-assistive-text">Stop recording</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn seller-home__conv-composer-btn seller-home__conv-composer-mic-confirm"
+                      title="Use recording"
+                      aria-label="Use recording"
+                      data-sh-conv-composer-mic-confirm
+                    >
+                      <svg class="slds-button__icon" aria-hidden="true">
+                        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+                      </svg>
+                      <span class="slds-assistive-text">Use recording</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+
         <div class="page__inner">
           {# ── Educational banner ───────────────────────────────────
              Shared partial (also consumed by /skills.html). Copy +
@@ -161,18 +278,17 @@
              labelledby id to this page so multiple banners could
              coexist without colliding.
 
-             This replaced the old intro paragraph + the "Schedule a
-             task" composer: `header.description` and the
-             `.seller-home__scheduled-description` rule are both gone,
-             and the page no longer includes `_home_composer.html`
-             (the composer config in scheduled.json is dormant). #}
+             The conversation-feed composer above this column replaced
+             the old intro paragraph. `header.description` and
+             `.seller-home__scheduled-description` are gone, and this
+             page no longer includes `_home_composer.html`. #}
           {% if banner and banner.title %}
             {% set bannerHeadingId = "seller-home-scheduled-banner-heading" %}
             {% set bannerVariant   = "scheduled" %}
             {% include "_seller_home_banner.html" %}
           {% endif %}
 
-          {# ── Tabs row (filter chips) + filter button ─────────────
+          {# ── Tabs row ────────────────────────────────────────────
              ARIA note: these are filter chips over one list, NOT
              SLDS tabpanel-swapping tabs. So we use `role="radiogroup"`
              + `role="radio"` per the WAI-ARIA authoring practices
@@ -193,7 +309,8 @@
              first-paint active row (server-side). URL hash drives
              the runtime active tab; `bindScheduled()` reads
              `location.hash` on load and updates the highlight +
-             list filter to match. #}
+             list filter to match. Archived is a tab alongside the
+             others, not an overflow view. #}
           <div
             class="seller-home__scheduled-toolbar"
             data-sh-scheduled-toolbar
@@ -250,101 +367,6 @@
                 </button>
               {% endfor %}
             </div>
-
-            {# ── Right-anchored controls: filter + overflow ──────
-               Both sit at the trailing edge. The filter icon-button
-               dispatches `sh:scheduled-filter` (future filter menu).
-               The overflow (⋮) menu holds views that don't earn a
-               visible tab — Archived — authored under
-               `tabs.overflow`; bindScheduled() filters the list to
-               the chosen view. #}
-            <div class="seller-home__scheduled-toolbar-actions">
-              <button
-                type="button"
-                class="slds-button slds-button_icon slds-button_icon-bare seller-home__scheduled-filter"
-                data-sh-scheduled-filter
-                title="{{ filterAction.label }}"
-                aria-label="{{ filterAction.label }}"
-              >
-                <svg class="slds-button__icon" aria-hidden="true">
-                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ filterAction.icon }}"></use>
-                </svg>
-                <span class="slds-assistive-text">{{ filterAction.label }}</span>
-              </button>
-
-              {% if tabs.overflow and (tabs.overflow | length) > 0 %}
-              <div class="seller-home__scheduled-overflow" data-sh-scheduled-overflow>
-                <button
-                  type="button"
-                  class="slds-button slds-button_icon slds-button_icon-bare seller-home__scheduled-overflow-trigger"
-                  data-sh-scheduled-overflow-trigger
-                  aria-haspopup="menu"
-                  aria-expanded="false"
-                  aria-controls="seller-home-scheduled-overflow-menu"
-                  title="{{ overflowAction.label | default('More views') }}"
-                  aria-label="{{ overflowAction.label | default('More views') }}"
-                >
-                  <svg class="slds-button__icon" aria-hidden="true">
-                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ overflowAction.icon | default('threedots_vertical') }}"></use>
-                  </svg>
-                  <span class="slds-assistive-text">{{ overflowAction.label | default('More views') }}</span>
-                </button>
-                <div
-                  class="seller-home__scheduled-overflow-menu"
-                  id="seller-home-scheduled-overflow-menu"
-                  role="menu"
-                  aria-label="More views"
-                  data-sh-scheduled-overflow-menu
-                  hidden
-                >
-                  <ul class="seller-home__scheduled-overflow-items" role="none">
-                    {% for view in tabs.overflow %}
-                    <li role="none">
-                      <button
-                        type="button"
-                        class="seller-home__scheduled-overflow-item"
-                        role="menuitem"
-                        data-sh-scheduled-view="{{ view.id }}"
-                        data-sh-scheduled-view-statuses="{{ view.statuses | join(',') }}"
-                      >
-                        {% if view.icon %}
-                        <svg class="seller-home__scheduled-overflow-item-icon" aria-hidden="true">
-                          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ view.icon }}"></use>
-                        </svg>
-                        {% endif %}
-                        <span class="seller-home__scheduled-overflow-item-label">{{ view.label }}</span>
-                      </button>
-                    </li>
-                    {% endfor %}
-                  </ul>
-                </div>
-              </div>
-              {% endif %}
-            </div>
-          </div>
-
-          {# ── Archived-view bar ───────────────────────────────────
-             Hidden until the Archived view is chosen from the ⋮ menu.
-             Gives the archived list a clear heading and a Back control
-             that returns to the last main tab. #}
-          <div
-            class="seller-home__scheduled-archived-bar"
-            data-sh-scheduled-archived-bar
-            hidden
-          >
-            <button
-              type="button"
-              class="slds-button slds-button_icon slds-button_icon-bare seller-home__scheduled-archived-back"
-              data-sh-scheduled-archived-back
-              aria-label="Back to schedules"
-              title="Back to schedules"
-            >
-              <svg class="slds-button__icon" aria-hidden="true">
-                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronleft"></use>
-              </svg>
-              <span class="slds-assistive-text">Back to schedules</span>
-            </button>
-            <h2 class="seller-home__scheduled-archived-title">Archived</h2>
           </div>
 
           {# ── Live-region — announces tab-switch results ─────────

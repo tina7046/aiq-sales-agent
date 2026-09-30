@@ -1053,6 +1053,7 @@
     var scheduledRoot = document.querySelector('[data-sh-scheduled-root]')
     if (scheduledRoot) {
       bindScheduled(scheduledRoot)
+      bindScheduledComposer(scheduledRoot)
     }
 
     // Connections modal — "View all" button in the composer footer.
@@ -1125,6 +1126,9 @@
       else {
         var trunc = control.querySelector('.slds-truncate')
         if (trunc) trunc.textContent = value || ''
+        // SLDS grays a faux combobox until it carries this class, which
+        // is why Frequency read lighter than the time input beside it.
+        control.classList.toggle('slds-combobox__input-value', !!value)
       }
     }
 
@@ -3663,6 +3667,85 @@
     })
   }
 
+  // Conversation-feed composer placed in the Scheduled body. The
+  // conversation page owns the full thread/voice controller
+  // (`bindConvComposer`); this one only keeps the box honest: placeholder
+  // class, plain-text paste, Enter to send, and a no-op empty submit so
+  // the form never reloads the page.
+  function bindScheduledComposer (root) {
+    var form = root.querySelector('[data-sh-scheduled-composer]')
+    var input = form && form.querySelector('[data-sh-conv-composer-input]')
+    var send = form && form.querySelector('[data-sh-conv-composer-send]')
+    if (!form || !input || !send) return
+
+    function composerText () {
+      var out = ''
+      for (var i = 0; i < input.childNodes.length; i++) {
+        var node = input.childNodes[i]
+        if (node.nodeType === 3) out += node.nodeValue
+        else if (node.nodeType === 1 && node.tagName === 'BR') out += '\n'
+        else if (node.nodeType === 1) out += node.textContent || ''
+      }
+      return out.replace(/\u00a0/g, ' ').replace(/\r/g, '')
+    }
+
+    function syncEmpty () {
+      if (composerText().trim()) input.classList.remove('is-empty')
+      else input.classList.add('is-empty')
+    }
+
+    function insertPlainText (text) {
+      var sel = window.getSelection ? window.getSelection() : null
+      if (!sel || !sel.rangeCount || !input.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+        input.appendChild(document.createTextNode(text))
+        return
+      }
+      var range = sel.getRangeAt(0)
+      range.deleteContents()
+      var node = document.createTextNode(text)
+      range.insertNode(node)
+      range.setStartAfter(node)
+      range.setEndAfter(node)
+      sel.removeAllRanges()
+      sel.addRange(range)
+    }
+
+    syncEmpty()
+
+    input.addEventListener('input', syncEmpty)
+
+    input.addEventListener('keydown', function (event) {
+      if (event.key !== 'Enter') return
+      if (event.isComposing || event.keyCode === 229) return
+      if (event.shiftKey) {
+        event.preventDefault()
+        insertPlainText('\n')
+        syncEmpty()
+        return
+      }
+      event.preventDefault()
+      if (typeof form.requestSubmit === 'function') form.requestSubmit()
+    })
+
+    input.addEventListener('paste', function (event) {
+      if (!event.clipboardData) return
+      event.preventDefault()
+      insertPlainText(event.clipboardData.getData('text/plain') || '')
+      syncEmpty()
+    })
+
+    form.addEventListener('submit', function (event) {
+      event.preventDefault()
+      var text = composerText().trim()
+      if (!text) return
+      document.dispatchEvent(new CustomEvent('sh:composer-submit', {
+        detail: { text: text, source: 'scheduled' }
+      }))
+      while (input.firstChild) input.removeChild(input.firstChild)
+      syncEmpty()
+    })
+  }
+
   function bindScheduled (root) {
     var tabsRoot = root.querySelector('[data-sh-scheduled-tabs]')
     var listRegion = root.querySelector('[data-sh-scheduled-list-region]')
@@ -4085,8 +4168,10 @@
     var menuList = panel.querySelector('[data-sh-schedule-menu-list]')
 
     // Body value slots (filled per schedule).
-    var freqSelectEl = panel.querySelector('[data-sh-sched-frequency]')
-    var timeSelectEl = panel.querySelector('[data-sh-sched-time]')
+    var freqEl = panel.querySelector('[data-sh-sched-frequency]')
+    var freqList = panel.querySelector('[data-sh-sched-frequency-list]')
+    var timeEl = panel.querySelector('[data-sh-sched-time]')
+    var timeList = panel.querySelector('[data-sh-sched-time-list]')
     var deliveryEl = panel.querySelector('[data-sh-sched-delivery]')
     var skillLinkEl = panel.querySelector('[data-sh-sched-skill-link]')
     var skillNameEl = panel.querySelector('[data-sh-sched-skill-name]')
@@ -4123,10 +4208,15 @@
     var SKILL_ROUTE = window.SH.userUrl(config.skillRoute || '/skill_detail.html')
     var activeTrigger = null
     var editing = false
+    // Last values written by Save (or loaded with the schedule). Cancel
+    // restores the form to this snapshot.
+    var saved = null
 
     // Frequency picklist + time picklist (15-minute increments). Built
-    // once; `fillSelect` keeps whatever value a schedule already carries
-    // even if it's off-list (e.g. "Fridays") by prepending it.
+    // once; `fillList` keeps whatever value a schedule already carries
+    // even if it's off-list (e.g. "Fridays") by prepending it. Option
+    // markup matches the home edit modal so app.js can write the
+    // chosen label back into the combobox.
     var FREQ_OPTIONS = ['Hourly', 'Daily', 'Weekdays', 'Monthly']
     var TIME_OPTIONS = (function buildTimeOptions () {
       var out = []
@@ -4140,19 +4230,64 @@
       }
       return out
     })()
+    var CHECK_ICON = '<svg class="slds-icon slds-icon_x-small slds-listbox__icon-selected" aria-hidden="true"><use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#check"></use></svg>'
 
-    function fillSelect (sel, options, value) {
-      if (!sel) return
+    function writeControl (control, value) {
+      if (!control) return
+      if (control.tagName === 'INPUT') control.value = value || ''
+      else {
+        var trunc = control.querySelector('.slds-truncate')
+        if (trunc) trunc.textContent = value || ''
+        // SLDS grays a faux combobox until it carries this class, which
+        // is why Frequency read lighter than the time input beside it.
+        control.classList.toggle('slds-combobox__input-value', !!value)
+      }
+    }
+
+    function readControl (control) {
+      if (!control) return ''
+      if (control.tagName === 'INPUT') return (control.value || '').trim()
+      var trunc = control.querySelector('.slds-truncate')
+      return trunc ? trunc.textContent.trim() : ''
+    }
+
+    function fillList (list, control, options, value) {
+      if (!list) return
       var opts = options.slice()
       if (value && opts.indexOf(value) < 0) opts.unshift(value)
-      sel.innerHTML = ''
+      list.innerHTML = ''
       opts.forEach(function (label) {
-        var op = document.createElement('option')
-        op.value = label
-        op.textContent = label
-        sel.appendChild(op)
+        var li = document.createElement('li')
+        li.setAttribute('role', 'presentation')
+        li.className = 'slds-listbox__item'
+        var option = document.createElement('div')
+        option.className = 'slds-media slds-listbox__option slds-listbox__option_plain slds-media_small'
+        option.setAttribute('role', 'option')
+        option.setAttribute('aria-selected', label === value ? 'true' : 'false')
+        if (label === value) option.classList.add('slds-is-selected')
+        var figure = document.createElement('span')
+        figure.className = 'slds-media__figure slds-listbox__option-icon'
+        figure.innerHTML = CHECK_ICON
+        var body = document.createElement('span')
+        body.className = 'slds-media__body'
+        var span = document.createElement('span')
+        span.title = label
+        span.textContent = label
+        body.appendChild(span)
+        option.appendChild(figure)
+        option.appendChild(body)
+        li.appendChild(option)
+        list.appendChild(li)
       })
-      if (value) sel.value = value
+      writeControl(control, value)
+    }
+
+    function closeComboboxes () {
+      toArray(panel.querySelectorAll('[data-slds-combobox]')).forEach(function (trigger) {
+        trigger.classList.remove('slds-is-open')
+        var control = trigger.querySelector('[role="combobox"]')
+        if (control) control.setAttribute('aria-expanded', 'false')
+      })
     }
 
     // The status-glyph / aria registry lives on the list root; the tab
@@ -4212,8 +4347,9 @@
     function populate (record) {
       if (titleEl) titleEl.textContent = record.title || 'Schedule'
       renderAlert(record)
-      fillSelect(freqSelectEl, FREQ_OPTIONS, record.frequency)
-      fillSelect(timeSelectEl, TIME_OPTIONS, record.time)
+      closeComboboxes()
+      fillList(freqList, freqEl, FREQ_OPTIONS, record.frequency)
+      fillList(timeList, timeEl, TIME_OPTIONS, record.time)
       if (deliveryEl) deliveryEl.textContent = record.delivery || '—'
 
       if (skillNameEl) skillNameEl.textContent = record.skillName || ''
@@ -4241,6 +4377,11 @@
 
       renderLastRun(record)
       renderMenu(record)
+      saved = {
+        frequency: record.frequency || '',
+        time: record.time || '',
+        instructions: record.instructions || ''
+      }
     }
 
     // Last run reads "<status> <when>", plain. When the run is viewable
@@ -4520,12 +4661,9 @@
 
     function exitEdit (save) {
       if (!instrDisplayEl || !instrEditEl) return
-      if (editing && save) {
-        var id = panel.getAttribute('data-sh-schedule-current')
-        var record = id ? detailsById[id] : null
-        if (record) record.instructions = instrEditEl.value
-        instrDisplayEl.textContent = instrEditEl.value
-      }
+      // Keep the edited text in the display only. The record updates
+      // when Save is pressed.
+      if (editing && save) instrDisplayEl.textContent = instrEditEl.value
       editing = false
       instrEditEl.hidden = true
       instrDisplayEl.hidden = false
@@ -4568,6 +4706,7 @@
       if (panel.hidden) return
       exitEdit(false)
       setMenuOpen(false)
+      closeComboboxes()
       panel.hidden = true
       panel.setAttribute('aria-hidden', 'true')
       panel.removeAttribute('data-sh-schedule-current')
@@ -4632,26 +4771,38 @@
       })
     }
 
-    // Editable Frequency / Time picklists — persist the choice to the
-    // record and repaint the card's cadence line so the change shows
-    // both in the panel and the list.
-    function onScheduleFieldChange (field, sel) {
+    // Frequency, time, and instructions stay in the form until Save.
+    // Cancel restores the last saved snapshot and leaves the card alone.
+    function commitSchedule () {
+      exitEdit(true)
       var id = panel.getAttribute('data-sh-schedule-current')
       var record = id ? detailsById[id] : null
       if (!record) return
-      record[field] = sel.value
+      var frequency = readControl(freqEl)
+      var time = readControl(timeEl)
+      if (frequency) record.frequency = frequency
+      if (time) record.time = time
+      record.instructions = instrDisplayEl ? instrDisplayEl.textContent : (record.instructions || '')
       updateCadence(rowFor(id), record, record.status)
+      saved = {
+        frequency: record.frequency || '',
+        time: record.time || '',
+        instructions: record.instructions || ''
+      }
     }
-    if (freqSelectEl) {
-      freqSelectEl.addEventListener('change', function () {
-        onScheduleFieldChange('frequency', freqSelectEl)
-      })
+    function revertSchedule () {
+      if (!saved) return
+      if (instrEditEl) instrEditEl.value = saved.instructions || ''
+      exitEdit(false)
+      closeComboboxes()
+      fillList(freqList, freqEl, FREQ_OPTIONS, saved.frequency)
+      fillList(timeList, timeEl, TIME_OPTIONS, saved.time)
+      if (instrDisplayEl) instrDisplayEl.textContent = saved.instructions || ''
     }
-    if (timeSelectEl) {
-      timeSelectEl.addEventListener('change', function () {
-        onScheduleFieldChange('time', timeSelectEl)
-      })
-    }
+    var saveBtn = panel.querySelector('[data-sh-schedule-panel-save]')
+    var cancelBtn = panel.querySelector('[data-sh-schedule-panel-cancel]')
+    if (saveBtn) saveBtn.addEventListener('click', commitSchedule)
+    if (cancelBtn) cancelBtn.addEventListener('click', revertSchedule)
 
     // Header overflow menu: open/close + action dispatch + roving keys.
     if (menuTrigger && menuList) {
@@ -4715,9 +4866,9 @@
       })
     }
 
-    // Instructions: click / Enter / Space to edit; blur saves; Escape
-    // cancels; Cmd/Ctrl+Enter commits. Escape + typing are kept from
-    // bubbling so they don't trip the panel's Escape-to-close.
+    // Instructions: click / Enter / Space to edit. Blur keeps the text
+    // in the display; Save commits it. Escape drops the in-progress
+    // edit. Escape + typing stay off the panel's Escape-to-close.
     if (instrDisplayEl) {
       instrDisplayEl.addEventListener('click', function () { enterEdit() })
       instrDisplayEl.addEventListener('keydown', function (event) {

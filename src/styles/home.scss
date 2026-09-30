@@ -3524,6 +3524,25 @@ $sh-feed-filter-hidden: (
      overrides. */
 }
 
+// The conversation-feed composer is reused here, but its stylesheet
+// pins it to the bottom of a relative column (`position: absolute`).
+// On Scheduled it is an in-flow block in `.page__center`, between the
+// header and the tab set, so drop the overlay, the fade, and the
+// footer padding. The editor, toolbar, and type stay as authored.
+.seller-home__scheduled .seller-home__conv-composer {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  pointer-events: auto;
+  background: none;
+}
+
+.seller-home__scheduled .seller-home__conv-composer-inner {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
 // (The 14/19 intro paragraph beneath the header was removed when
 // Scheduled adopted the shared educational banner. Its
 // `.seller-home__scheduled-description` selector was deleted with
@@ -3699,6 +3718,34 @@ $sh-feed-filter-hidden: (
   display: flex;
   flex-direction: column;
   gap: var(--slds-g-spacing-2, 0.5rem); // 8px between rows
+}
+
+// Hide rows that don't belong to the checked tab from first paint.
+// JS used to stamp `hidden` on DOMContentLoaded, so paused and
+// needs-attention rows flashed in the Active list before the filter
+// ran. Same fix as Knowledge
+// (`.page__inner:has([data-sh-knowledge-tab=...])`): `:has()` keys off
+// the `aria-checked` the radios already have from the server.
+.page__inner:has([data-sh-scheduled-tab="active"][aria-checked="true"])
+  .seller-home__scheduled-workflow-item:not(
+    [data-sh-workflow-status="scheduled"],
+    [data-sh-workflow-status="running"],
+    [data-sh-workflow-status="completed"]
+  ),
+.page__inner:has([data-sh-scheduled-tab="need_attention"][aria-checked="true"])
+  .seller-home__scheduled-workflow-item:not([data-sh-workflow-status="failed"]),
+.page__inner:has([data-sh-scheduled-tab="paused"][aria-checked="true"])
+  .seller-home__scheduled-workflow-item:not([data-sh-workflow-status="paused"]),
+.page__inner:has([data-sh-scheduled-tab="archived"][aria-checked="true"])
+  .seller-home__scheduled-workflow-item:not([data-sh-workflow-status="archived"]) {
+  display: none;
+}
+
+// JS tab sync still uses the `hidden` attribute. Spell `display: none`
+// here so a flex item cannot leave a gap — the user-agent `[hidden]`
+// rule loses to an author `display`.
+.seller-home__scheduled-workflow-item[hidden] {
+  display: none;
 }
 
 // Row wrapper. `position: relative` scopes the overflow menu's
@@ -4601,6 +4648,12 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
     -4px 0 4.4px rgba(0, 0, 0, 0.09),
     0 0 4.4px rgba(0, 0, 0, 0.09);
 
+  // `.page` pads the column 16px on the top and inline edges. Pull the
+  // rail back over that padding so it sits flush with the page's top
+  // and trailing edges. The list column keeps the inset.
+  margin-block-start: calc(-1 * var(--slds-g-spacing-4, 1rem));
+  margin-inline-end: calc(-1 * var(--slds-g-spacing-4, 1rem));
+
   &[hidden] {
     display: none;
   }
@@ -4748,11 +4801,29 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   padding: var(--slds-g-spacing-3, 0.75rem);
 }
 
+// SLDS docks this bar to the viewport. Keep the surface, shadow, and
+// button row, and pin it to the bottom of the panel column instead.
+.seller-home__schedule-side > .slds-docked-form-footer {
+  position: static;
+  inset: auto;
+  flex: 0 0 auto;
+  width: 100%;
+  z-index: auto;
+  box-sizing: border-box;
+  padding: var(--slds-g-spacing-3, 0.75rem);
+}
+
 // Section group (label over control), 4-px internal gap.
 .seller-home__schedule-side-field-group {
   display: flex;
   flex-direction: column;
   gap: var(--slds-g-spacing-1, 0.25rem);
+
+  // Author `display: flex` beats the user-agent `[hidden]` rule, so a
+  // hidden group (Delivery, for now) would still paint. This wins.
+  &[hidden] {
+    display: none;
+  }
 }
 
 // ── Error alert (Figma "Scoped Notification - Error", 13106:332987) ─
@@ -4909,6 +4980,20 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   align-items: center;
   flex-wrap: wrap;
   gap: var(--slds-g-spacing-2, 0.5rem);
+
+  // Share the row. The edit modal uses a fixed 10rem because its
+  // dialog is wider; here the two comboboxes split the panel width.
+  > .slds-form-element {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    margin: 0;
+  }
+
+  .slds-combobox_container,
+  .slds-combobox {
+    width: 100%;
+  }
 }
 
 .seller-home__schedule-side-frequency-on {
@@ -4919,75 +5004,6 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   color: var(--slds-g-color-on-surface-2, #2e2e2e);
 }
 
-// Editable picklist styled like the SLDS 2 input the Figma uses. The
-// bordered box is the container; the native <select> fills it (its own
-// chrome removed) and a sprite chevron sits at the trailing edge.
-.seller-home__schedule-side-input {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--slds-g-spacing-1, 0.25rem);
-
-  min-height: 2rem; // 32px — SLDS input height
-  padding-inline: var(--slds-g-spacing-2, 0.5rem);
-  padding-block: var(--slds-g-spacing-1, 0.25rem);
-
-  background: var(--slds-g-color-surface-1, #ffffff);
-  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-2, #c9c9c9);
-  border-radius: var(--slds-g-radius-border-2, 0.5rem); // 8px
-
-  // Focus ring driven by the inner <select>'s focus.
-  &:focus-within {
-    border-color: var(--slds-g-color-accent-2, #0250d9);
-    box-shadow: 0 0 0 1px var(--slds-g-color-accent-2, #0250d9);
-  }
-}
-
-.seller-home__schedule-side-input-select {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-
-  flex: 1 1 auto;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-
-  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
-  font-weight: var(--slds-g-font-weight-4, 400);
-  line-height: 1.125rem;
-  color: var(--slds-g-color-on-surface-2, #2e2e2e);
-  text-overflow: ellipsis;
-
-  &:focus,
-  &:focus-visible {
-    outline: none;
-  }
-
-  // Kill the legacy IE/Edge picklist arrow so only our chevron shows.
-  &::-ms-expand {
-    display: none;
-  }
-}
-
-.seller-home__schedule-side-input--picklist {
-  min-width: 8.75rem; // 140px — matches the Figma picklist width
-}
-
-.seller-home__schedule-side-input--time {
-  min-width: 6.25rem; // 100px — snug around "12:00 AM" + chevron
-}
-
-.seller-home__schedule-side-input-icon {
-  width: 0.875rem;
-  height: 0.875rem;
-  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
-  flex: 0 0 auto;
-  pointer-events: none; // clicks fall through to the <select>
-}
 
 // ── Uses-Skill chip (Figma 13068:331255) ──────────────────────────
 // Matches the skill editor's supporting-skill chip (skills.scss →
@@ -5168,6 +5184,12 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 @media (max-width: 48rem) {
   .seller-home__schedule-side {
     position: absolute;
+    // Insets are measured from `.page`'s padding edge, which is the
+    // outer edge of that padding, so 0 is already flush with the page
+    // box. Clear the docked negative margins so they don't pull the
+    // overlay past that edge.
+    margin-block-start: 0;
+    margin-inline-end: 0;
     inset-block: 0;
     inset-inline-end: 0;
     z-index: 30;
@@ -5188,14 +5210,19 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
     max-height: min(32rem, calc(100vh - 12rem));
   }
 
+}
+
+// Combobox popovers shared by the home edit modal and the Scheduled
+// side panel. Pin the menu to the trigger's left edge — SLDS centers
+// `.slds-dropdown` with a translate — and match the feed overflow menu.
+.seller-home__schedule-edit,
+.seller-home__schedule-side-frequency {
   .slds-combobox__input,
   .slds-combobox__form-element,
   .slds-listbox__option {
     cursor: pointer;
   }
 
-  // Match the feed overflow menu, and pin the menu to the trigger's
-  // left edge. SLDS centers `.slds-dropdown` with a translate.
   .slds-combobox .slds-dropdown {
     left: 0;
     right: auto;

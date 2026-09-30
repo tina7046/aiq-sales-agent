@@ -143,7 +143,7 @@
   list, same class children); only the interaction contract differs,
   the same way _home_knowledge_list.html handles it.
 #}
-{% macro renderScheduledWorkflowRow(workflow, statusTypes, actions) %}
+{% macro renderScheduledWorkflowRow(workflow, statusTypes, actions, defaultStatuses) %}
   {% set statusMeta = statusTypes[workflow.status] %}
   {% set statusLabel = statusMeta.label if statusMeta else workflow.status %}
   {# Prefixes for the two places the status reaches AT as words. Stamped
@@ -160,6 +160,11 @@
        a row authored as paused has no run state to go back to, so the
        toggle falls back to `scheduled`. #}
     {% if workflow.status != "paused" %}data-sh-workflow-status-default="{{ workflow.status }}"{% endif %}
+    {# First paint matches the active tab. CSS `:has(aria-checked)`
+       hides the rest as well; stamping `hidden` here matches what
+       bindScheduled writes and covers browsers without `:has()`.
+       Callers that omit `defaultStatuses` never hide. #}
+    {% if defaultStatuses and (defaultStatuses | length) > 0 and not (workflow.status in defaultStatuses) %}hidden{% endif %}
   >
     {{ renderStatusButton(workflow, statusMeta) }}
 
@@ -312,9 +317,17 @@
   data-sh-scheduled-workflow-list
   data-sh-workflow-status-types='{{ statusTypes | dump }}'
 >
+  {% set scheduledDefaultStatuses = [] %}
+  {% if tabs and tabs.items %}
+    {% for tab in tabs.items %}
+      {% if tab.id == tabs.defaultTabId %}
+        {% set scheduledDefaultStatuses = tab.statuses %}
+      {% endif %}
+    {% endfor %}
+  {% endif %}
   {% for workflow in workflows %}
     {% if not (workflow.hidden == true) %}
-      {{ renderScheduledWorkflowRow(workflow, statusTypes, rowActions) }}
+      {{ renderScheduledWorkflowRow(workflow, statusTypes, rowActions, scheduledDefaultStatuses) }}
     {% endif %}
   {% endfor %}
 </ul>

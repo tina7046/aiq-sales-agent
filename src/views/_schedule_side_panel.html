@@ -150,38 +150,83 @@
       </div>
     </div>
 
-    {# Frequency — editable picklists styled like the SLDS input the
-       Figma uses. The controller fills the options + current value and
-       persists the choice back to the schedule (and its card). #}
+    {# Frequency — same SLDS comboboxes as the home-feed edit modal
+       (faux picklist + searchable time). The controller fills the
+       lists and persists a choice back to the schedule and its card.
+       app.js opens and closes `[data-slds-combobox]`. #}
     <section class="seller-home__schedule-side-field-group" aria-label="Frequency">
-      <p class="seller-home__schedule-side-label">Frequency</p>
+      <p class="seller-home__schedule-side-label" id="schedule-side-frequency-label">Frequency</p>
       <div class="seller-home__schedule-side-frequency">
-        <span class="seller-home__schedule-side-input seller-home__schedule-side-input--picklist">
-          <select
-            class="seller-home__schedule-side-input-select"
-            data-sh-sched-frequency
-            aria-label="Frequency"
-          ></select>
-          <svg class="seller-home__schedule-side-input-icon" aria-hidden="true">
-            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevrondown"></use>
-          </svg>
-        </span>
+        <div class="slds-form-element">
+          <div class="slds-form-element__control">
+            <div class="slds-combobox_container">
+              <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click" data-slds-combobox>
+                <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right" role="none">
+                  <div
+                    role="combobox"
+                    tabindex="0"
+                    class="slds-input_faux slds-combobox__input"
+                    id="schedule-side-frequency"
+                    data-sh-sched-frequency
+                    aria-labelledby="schedule-side-frequency-label"
+                    aria-controls="schedule-side-frequency-list"
+                    aria-expanded="false"
+                    aria-haspopup="listbox"
+                  >
+                    <span class="slds-truncate" data-sh-sched-frequency-value></span>
+                  </div>
+                  <span class="slds-icon_container slds-icon-utility-down slds-input__icon slds-input__icon_right">
+                    <svg class="slds-icon slds-icon_x-small slds-icon-text-default" aria-hidden="true">
+                      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevrondown"></use>
+                    </svg>
+                  </span>
+                </div>
+                <div id="schedule-side-frequency-list" class="slds-dropdown slds-dropdown_length-5 slds-dropdown_fluid" role="listbox" aria-label="Frequency" tabindex="-1">
+                  <ul class="slds-listbox slds-listbox_vertical" role="presentation" data-sh-sched-frequency-list></ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <span class="seller-home__schedule-side-frequency-on">on</span>
-        <span class="seller-home__schedule-side-input seller-home__schedule-side-input--time">
-          <select
-            class="seller-home__schedule-side-input-select"
-            data-sh-sched-time
-            aria-label="Time"
-          ></select>
-          <svg class="seller-home__schedule-side-input-icon" aria-hidden="true">
-            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevrondown"></use>
-          </svg>
-        </span>
+        <div class="slds-form-element">
+          <label class="slds-assistive-text" for="schedule-side-time" id="schedule-side-time-label">Time</label>
+          <div class="slds-form-element__control">
+            <div class="slds-combobox_container">
+              <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click" data-slds-combobox>
+                <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right" role="none">
+                  <input
+                    class="slds-input slds-combobox__input"
+                    id="schedule-side-time"
+                    data-sh-sched-time
+                    aria-labelledby="schedule-side-time-label"
+                    aria-autocomplete="list"
+                    aria-controls="schedule-side-time-list"
+                    aria-expanded="false"
+                    aria-haspopup="listbox"
+                    autocomplete="off"
+                    role="combobox"
+                    type="text"
+                  />
+                  <span class="slds-icon_container slds-input__icon slds-input__icon_right">
+                    <svg class="slds-icon slds-icon_x-small slds-icon-text-default" aria-hidden="true">
+                      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevrondown"></use>
+                    </svg>
+                  </span>
+                </div>
+                <div id="schedule-side-time-list" class="slds-dropdown slds-dropdown_length-5 slds-dropdown_fluid" role="listbox" aria-label="Time" tabindex="-1">
+                  <ul class="slds-listbox slds-listbox_vertical" role="presentation" data-sh-sched-time-list></ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
-    {# Delivery #}
-    <section class="seller-home__schedule-side-field-group" aria-label="Delivery">
+    {# Delivery — kept in the markup and still filled by the panel
+       script, but hidden until the field is ready to show again. #}
+    <section class="seller-home__schedule-side-field-group" aria-label="Delivery" hidden>
       <p class="seller-home__schedule-side-label">Delivery</p>
       <p class="seller-home__schedule-side-value" data-sh-sched-delivery></p>
     </section>
@@ -202,8 +247,9 @@
 
     <hr class="seller-home__schedule-side-divider" aria-hidden="true" />
 
-    {# Instructions — click to edit in place; blur saves, Escape cancels.
-       The complete text stays readable without clipping in both states. #}
+    {# Instructions — click to edit in place. Blur closes the editor;
+       Save on the panel footer commits, Cancel restores the last
+       saved text. Escape drops the in-progress edit. #}
     <section class="seller-home__schedule-side-field-group" aria-label="Instructions">
       <p class="seller-home__schedule-side-label" id="schedule-side-instructions-label">Instructions</p>
       <div class="seller-home__schedule-side-instructions" data-sh-sched-instructions>
@@ -237,5 +283,15 @@
         <p class="seller-home__schedule-side-meta-value" data-sh-sched-lastrun></p>
       </div>
     </section>
+  </div>
+
+  {# Docked to the panel, not the viewport. SLDS pins
+     `.slds-docked-form-footer` to the window; the side-panel rule
+     puts it back in the column so it stays under the scrolling body.
+     Save commits frequency, time, and instructions. Cancel restores
+     the last saved values. #}
+  <div class="slds-docked-form-footer" role="group" aria-label="Save schedule changes">
+    <button type="button" class="slds-button slds-button_neutral" data-sh-schedule-panel-cancel>Cancel</button>
+    <button type="button" class="slds-button slds-button_brand" data-sh-schedule-panel-save>Save</button>
   </div>
 </aside>
