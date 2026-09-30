@@ -4638,6 +4638,15 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   gap: 0.25rem; // 4px — matches the knowledge header/body joint
 }
 
+// The panel's negative trailing margin eats `.page`'s 16px inset so
+// the rail can sit flush with the page edge. Without this, a column
+// narrower than 50rem runs into the panel. Only while the panel is
+// open — a closed panel leaves `.page`'s own trailing padding in place.
+.seller-home__scheduled-workspace:has(> .seller-home__schedule-side:not([hidden]))
+  > .seller-home__scheduled-main {
+  padding-inline-end: var(--slds-g-spacing-4, 1rem);
+}
+
 // Panel shell. Figma node 13068:330830 — soft left drop-shadow
 // (shadow-3-left), no hard border, so it reads as a floating rail over
 // the list. Reuses the Run-History panel's docked-aside framework.
@@ -4656,7 +4665,8 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 
   // `.page` pads the column 16px on the top and inline edges. Pull the
   // rail back over that padding so it sits flush with the page's top
-  // and trailing edges. The list column keeps the inset.
+  // and trailing edges. The list column gets that 16px back as
+  // padding while the panel is open.
   margin-block-start: calc(-1 * var(--slds-g-spacing-4, 1rem));
   margin-inline-end: calc(-1 * var(--slds-g-spacing-4, 1rem));
 
@@ -4817,6 +4827,29 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   z-index: auto;
   box-sizing: border-box;
   padding: var(--slds-g-spacing-3, 0.75rem);
+}
+
+// Saving state on the brand button: spinner beside "Saving...", both
+// visible while the button is disabled. The ring is light so it reads
+// on the brand fill.
+.seller-home__schedule-side > .slds-docked-form-footer [data-sh-schedule-panel-save] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+
+  .seller-home__schedule-side-save-spinner {
+    display: none;
+    width: 0.875rem;
+    height: 0.875rem;
+    border-width: 2px;
+    border-color: rgba(117, 117, 117, 0.35);
+    border-bottom-color: var(--slds-g-color-on-disabled-2, #757575);
+  }
+
+  &[aria-busy="true"] .seller-home__schedule-side-save-spinner {
+    display: inline-block;
+  }
 }
 
 // Section group (label over control), 4-px internal gap.
@@ -5147,6 +5180,13 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
     z-index: 30;
     flex-basis: min(22.5rem, 100%);
     width: min(22.5rem, 100%);
+  }
+
+  // Overlay covers the list; the page's own trailing padding is the
+  // inset, so don't add a second one.
+  .seller-home__scheduled-workspace:has(> .seller-home__schedule-side:not([hidden]))
+    > .seller-home__scheduled-main {
+    padding-inline-end: 0;
   }
 }
 

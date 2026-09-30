@@ -114,6 +114,14 @@
     return 'conv-draft-sched-' + String(skillId || '')
   }
 
+  // One conversation per workflow, so Open Chat on a schedule that has
+  // no thread yet always reopens the same session.
+  function workflowChatId (workflowId) {
+    var raw = String(workflowId || '')
+    var slug = raw.indexOf('wf-') === 0 ? raw.slice(3) : raw
+    return 'conv-wf-' + slug
+  }
+
   // Two well-known cadence presets. Chips echo these strings so the
   // responder can match on equality; free-text also lands here after
   // parsing so the summary reads the same regardless of input path.
@@ -364,6 +372,50 @@
       sourceType:          envelope.sourceType,
       sourceSkillId:       envelope.sourceSkillId,
       scheduledWorkflowId: envelope.scheduledWorkflowId,
+      createdAt:           envelope.createdAt,
+      updatedAt:           envelope.updatedAt
+    })
+    return {
+      convId:   envelope.id,
+      url:      window.SH.userUrl('/home_conversation.html?id=' + encodeURIComponent(envelope.id)),
+      envelope: envelope
+    }
+  }
+
+  // Open Chat on a schedule that has no conversation yet. Distinct from
+  // `createDraftForSkill`: that one starts the "schedule this skill"
+  // flow. This one opens an empty thread named for the workflow, and a
+  // second click lands on the same id.
+  function createWorkflowChat (workflow) {
+    if (!workflow || !workflow.id) return null
+    var convId = workflowChatId(workflow.id)
+    var title = workflow.title || 'Chat'
+    var existing = readDraft(convId)
+    var envelope = existing || {
+      v:                    1,
+      id:                   convId,
+      title:                title,
+      sourceType:           'workflow-chat',
+      sourceSkillId:        workflow.skillId || null,
+      composerDraftPrefix:  '',
+      composerDraft:        '',
+      composerDraftPills:   [],
+      seedMessages:         [],
+      scheduledWorkflowId:  workflow.id,
+      createdAt:            new Date().toISOString(),
+      updatedAt:            new Date().toISOString()
+    }
+    envelope.title = title
+    envelope.sourceType = 'workflow-chat'
+    envelope.scheduledWorkflowId = workflow.id
+    if (workflow.skillId) envelope.sourceSkillId = workflow.skillId
+    writeDraft(envelope)
+    upsertDraftListEntry({
+      conversationId:      envelope.id,
+      label:               title,
+      sourceType:          'workflow-chat',
+      sourceSkillId:       envelope.sourceSkillId,
+      scheduledWorkflowId: workflow.id,
       createdAt:           envelope.createdAt,
       updatedAt:           envelope.updatedAt
     })
@@ -701,6 +753,7 @@
     // Draft / envelope
     draftIdForSkill:      draftIdForSkill,
     createDraftForSkill:  createDraftForSkill,
+    createWorkflowChat:   createWorkflowChat,
     readDraft:            readDraft,
     writeDraft:           writeDraft,
     readComposerDraft:    readComposerDraft,

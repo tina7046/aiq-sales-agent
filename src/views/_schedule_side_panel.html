@@ -274,11 +274,13 @@
   {# Docked to the panel, not the viewport. SLDS pins
      `.slds-docked-form-footer` to the window; the side-panel rule
      puts it back in the column so it stays under the scrolling body.
-     Save commits frequency and time. The other button opens the
-     schedule's chat when one exists, and runs the schedule when it
-     does not. #}
+     Save commits frequency and time. Open Chat opens this
+     schedule's session, or starts one when it doesn't have one yet. #}
   <div class="slds-docked-form-footer" role="group" aria-label="Schedule actions">
     <button type="button" class="slds-button slds-button_neutral" data-sh-schedule-panel-secondary>Open Chat</button>
-    <button type="button" class="slds-button slds-button_brand" data-sh-schedule-panel-save>Save</button>
+    <button type="button" class="slds-button slds-button_brand" data-sh-schedule-panel-save disabled>
+      <span class="seller-home__schedule-side-save-spinner sh-spinner" aria-hidden="true"></span>
+      <span data-sh-schedule-panel-save-label>Save</span>
+    </button>
   </div>
 </aside>

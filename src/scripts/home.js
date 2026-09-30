@@ -4211,6 +4211,8 @@
     // Last values written by Save (or loaded with the schedule). Cancel
     // restores the form to this snapshot.
     var saved = null
+    var saving = false
+    var saveToken = 0
 
     // Frequency picklist + time picklist (15-minute increments). Built
     // once; `fillList` keeps whatever value a schedule already carries
@@ -4383,6 +4385,8 @@
         time: record.time || '',
         instructions: record.instructions || ''
       }
+      saveToken += 1
+      resetSaveButton()
     }
 
     // Last run reads "<status> <when>", plain. When the run is viewable
@@ -4471,26 +4475,28 @@
       syncFooterAction(record)
     }
 
-    // Footer stand-in for Cancel: Open Chat when this schedule already
-    // has a session, otherwise Run Now. Run Now follows the same block
-    // as the header menu (failed until Slack is reconnected, and never
-    // from Archived).
-    function syncFooterAction (record) {
+    // Footer always opens a chat. An existing session is reused; a
+    // schedule with none starts one, named for the workflow.
+    function syncFooterAction () {
       if (!footerActionBtn) return
-      var status = (record && record.status) || ''
-      var hasChat = !!(record && record.chatId)
-      footerActionBtn.textContent = hasChat ? 'Open Chat' : 'Run Now'
-      var blocked = !hasChat && (scheduleRunBlocked(status) || status === 'archived')
-      footerActionBtn.disabled = blocked
-      if (blocked) {
-        footerActionBtn.setAttribute('aria-disabled', 'true')
-        footerActionBtn.title = status === 'archived'
-          ? 'Archived schedules can’t be run.'
-          : 'Reconnect Slack before running this schedule.'
-      } else {
-        footerActionBtn.removeAttribute('aria-disabled')
-        footerActionBtn.removeAttribute('title')
+      footerActionBtn.textContent = 'Open Chat'
+      footerActionBtn.disabled = false
+      footerActionBtn.removeAttribute('aria-disabled')
+      footerActionBtn.removeAttribute('title')
+    }
+    function openWorkflowChat (record, id) {
+      if (record.chatId) {
+        window.location.href = CHAT_ROUTE + '?id=' + encodeURIComponent(record.chatId)
+        return
       }
+      var api = window.SellerHomeScheduling
+      var started = api && typeof api.createWorkflowChat === 'function'
+        ? api.createWorkflowChat(record)
+        : null
+      if (started && started.convId) record.chatId = started.convId
+      window.location.href = started && started.url
+        ? started.url
+        : CHAT_ROUTE + '?id=' + encodeURIComponent('conv-wf-' + id)
     }
 
     function visibleMenuItems () {
@@ -4631,9 +4637,7 @@
       if (actionId === 'run_now' && scheduleRunBlocked(record.status || '')) return
       switch (actionId) {
         case 'open_chat':
-          if (record.chatId) {
-            window.location.href = CHAT_ROUTE + '?id=' + encodeURIComponent(record.chatId)
-          }
+          openWorkflowChat(record, id)
           break
         case 'run_now':
           changeStatus(id, record, 'running')
@@ -4795,27 +4799,79 @@
       })
     }
 
-    // Frequency, time, and instructions stay in the form until Save.
-    // Cancel restores the last saved snapshot and leaves the card alone.
+    // Frequency and time stay in the form until Save. Save stays
+    // disabled until one of those differs from the last saved values.
+    function scheduleDirty () {
+      if (!saved) return false
+      return readControl(freqEl) !== (saved.frequency || '') ||
+        readControl(timeEl) !== (saved.time || '')
+    }
+    function syncSaveState () {
+      if (!saveBtn) return
+      if (saving) {
+        saveBtn.disabled = true
+        return
+      }
+      saveBtn.disabled = !scheduleDirty()
+    }
+    function resetSaveButton () {
+      saving = false
+      if (!saveBtn) return
+      saveBtn.removeAttribute('aria-busy')
+      var label = saveBtn.querySelector('[data-sh-schedule-panel-save-label]')
+      if (label) label.textContent = 'Save'
+      syncSaveState()
+    }
     function commitSchedule () {
-      exitEdit(true)
+      if (saving || !scheduleDirty()) return
       var id = panel.getAttribute('data-sh-schedule-current')
       var record = id ? detailsById[id] : null
       if (!record) return
       var frequency = readControl(freqEl)
       var time = readControl(timeEl)
-      if (frequency) record.frequency = frequency
-      if (time) record.time = time
-      record.instructions = instrDisplayEl ? instrDisplayEl.textContent : (record.instructions || '')
-      updateCadence(rowFor(id), record, record.status)
-      saved = {
-        frequency: record.frequency || '',
-        time: record.time || '',
-        instructions: record.instructions || ''
+      var token = ++saveToken
+      saving = true
+      saveBtn.disabled = true
+      saveBtn.setAttribute('aria-busy', 'true')
+      var label = saveBtn.querySelector('[data-sh-schedule-panel-save-label]')
+      if (label) label.textContent = 'Save'
+      window.setTimeout(function () {
+        if (frequency) record.frequency = frequency
+        if (time) record.time = time
+        updateCadence(rowFor(id), record, record.status)
+        var stillOpen = token === saveToken &&
+          panel.getAttribute('data-sh-schedule-current') === id
+        if (stillOpen) {
+          saved = {
+            frequency: record.frequency || '',
+            time: record.time || '',
+            instructions: record.instructions || ''
+          }
+          resetSaveButton()
+          close()
+        }
+        showScheduledToast('Changes saved successfully', 'success')
+      }, 3000)
+    }
+    function watchScheduleEdits (control) {
+      if (!control) return
+      var listId = control.getAttribute('aria-controls')
+      var list = listId && document.getElementById(listId)
+      if (list) {
+        list.addEventListener('click', function (event) {
+          if (!closest(event.target, '[role="option"]')) return
+          syncSaveState()
+        })
+      }
+      if (control.tagName === 'INPUT') {
+        control.addEventListener('input', syncSaveState)
+        control.addEventListener('change', syncSaveState)
       }
     }
     var saveBtn = panel.querySelector('[data-sh-schedule-panel-save]')
     var footerActionBtn = panel.querySelector('[data-sh-schedule-panel-secondary]')
+    watchScheduleEdits(freqEl)
+    watchScheduleEdits(timeEl)
     if (saveBtn) saveBtn.addEventListener('click', commitSchedule)
     if (footerActionBtn) {
       footerActionBtn.addEventListener('click', function () {
@@ -4823,7 +4879,7 @@
         var id = panel.getAttribute('data-sh-schedule-current')
         var record = id ? detailsById[id] : null
         if (!record) return
-        doAction(record.chatId ? 'open_chat' : 'run_now', record, id)
+        doAction('open_chat', record, id)
       })
     }
 

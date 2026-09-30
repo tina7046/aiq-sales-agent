@@ -510,7 +510,11 @@
     // It owns the thread mutations and the busy state, so the opening
     // sequence plays through the handle it returns rather than
     // reaching into the thread itself.
-    var conv = bindConvComposer(root, map, id, draftId)
+    // A workflow's Open Chat draft is an empty session, not the
+    // skill-scheduling flow. Passing it as the schedule id would answer
+    // the first send with "when should this run?".
+    var scheduleDraftId = draft && draft.sourceType === 'workflow-chat' ? null : draftId
+    var conv = bindConvComposer(root, map, id, scheduleDraftId)
     if (conv) conv.playOpening(query)
   }
 
