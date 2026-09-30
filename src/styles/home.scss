@@ -4144,14 +4144,19 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   z-index: 5;
 
   min-width: 10rem; // 160px
-  background: var(--slds-g-color-surface-container-1, #ffffff);
+  // Same shell as the home-feed row menu: inset padding so the rounded
+  // hover sits in a gutter, radius-border-3, and the same shadow.
+  padding: var(--slds-g-spacing-1, 0.25rem);
+  background: var(--slds-g-color-surface-container-1, #fff);
   border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
-  border-radius: var(--slds-g-radius-border-2, 0.5rem); // 8px
+  border-radius: var(--slds-g-radius-border-3);
   box-shadow:
     0 4px 12px 0 rgba(0, 0, 0, 0.12),
     0 1px 3px 0 rgba(0, 0, 0, 0.08);
 
-  padding-block: var(--slds-g-spacing-1, 0.25rem); // 4px vertical
+  &[hidden] {
+    display: none;
+  }
 }
 
 .seller-home__scheduled-workflow-menu-items {
@@ -4176,6 +4181,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   gap: var(--slds-g-spacing-2, 0.5rem); // 8px icon-to-label
 
   padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
   font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
   font-weight: var(--slds-g-font-weight-4, 400);
@@ -4184,10 +4190,10 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 
   transition: background-color 120ms ease, color 120ms ease;
 
+  // Brand tint on hover, matching the home-feed row menu.
   &:hover,
   &:focus-visible {
-    background: var(--slds-g-color-surface-container-2, #f3f3f3);
-    color: var(--slds-g-color-on-surface-3, #001e5b);
+    background: var(--slds-g-color-brand-base-95, #eef4ff);
     outline: none;
   }
 
@@ -4213,7 +4219,7 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 .seller-home__scheduled-workflow-menu-item-icon {
   width: 0.875rem;  // 14px
   height: 0.875rem; // 14px
-  fill: currentColor;
+  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
   flex: 0 0 auto;
 }
 
@@ -5076,64 +5082,10 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   width: 100%;
 }
 
-// ── Instructions box (Figma 13068:331137) — editable in place ─────
-.seller-home__schedule-side-instructions {
-  width: 100%;
-  padding: var(--slds-g-spacing-3, 0.75rem);
-  background: var(--slds-g-color-surface-1, #ffffff);
-  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
-  border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
-
-  &:focus-within {
-    border-color: var(--slds-g-color-accent-2, #0250d9);
-    box-shadow: 0 0 0 1px var(--slds-g-color-accent-2, #0250d9);
-  }
-}
-
-// Shared type for both display + edit states so the box doesn't jump.
-.seller-home__schedule-side-instructions-display,
-.seller-home__schedule-side-instructions-edit {
-  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: var(--slds-g-font-size-base, 0.8125rem); // 13px
-  font-weight: var(--slds-g-font-weight-4, 400);
-  line-height: 1.125rem; // 18px
-  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+// Plain description under the label. Same type as the other values,
+// with wrapping preserved so a multi-line description stays readable.
+.seller-home__schedule-side-description {
   white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.seller-home__schedule-side-instructions-display {
-  cursor: text;
-
-  &:focus-visible {
-    outline: var(--slds-g-sizing-border-2, 2px) solid var(--slds-g-color-accent-2, #0250d9);
-    outline-offset: 2px;
-    border-radius: var(--slds-g-radius-border-1, 0.25rem);
-  }
-
-  &[hidden] {
-    display: none;
-  }
-}
-
-.seller-home__schedule-side-instructions-edit {
-  display: block;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  resize: none;
-  overflow: hidden; // JS auto-grows to content so nothing clips
-
-  &:focus,
-  &:focus-visible {
-    outline: none;
-  }
-
-  &[hidden] {
-    display: none;
-  }
 }
 
 // ── Created + Last run (Figma 13068:331122) ───────────────────────

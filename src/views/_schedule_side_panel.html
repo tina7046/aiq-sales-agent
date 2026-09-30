@@ -247,27 +247,13 @@
 
     <hr class="seller-home__schedule-side-divider" aria-hidden="true" />
 
-    {# Instructions — click to edit in place. Blur closes the editor;
-       Save on the panel footer commits, Cancel restores the last
-       saved text. Escape drops the in-progress edit. #}
-    <section class="seller-home__schedule-side-field-group" aria-label="Instructions">
-      <p class="seller-home__schedule-side-label" id="schedule-side-instructions-label">Instructions</p>
-      <div class="seller-home__schedule-side-instructions" data-sh-sched-instructions>
-        <div
-          class="seller-home__schedule-side-instructions-display"
-          data-sh-sched-instr-display
-          role="button"
-          tabindex="0"
-          aria-labelledby="schedule-side-instructions-label"
-          title="Click to edit instructions"
-        ></div>
-        <textarea
-          class="seller-home__schedule-side-instructions-edit"
-          data-sh-sched-instr-edit
-          aria-label="Edit instructions"
-          hidden
-        ></textarea>
-      </div>
+    {# Description — read-only copy for the schedule. #}
+    <section class="seller-home__schedule-side-field-group" aria-label="Description">
+      <p class="seller-home__schedule-side-label" id="schedule-side-description-label">Description</p>
+      <p
+        class="seller-home__schedule-side-value seller-home__schedule-side-description"
+        data-sh-sched-instr-display
+      ></p>
     </section>
 
     <hr class="seller-home__schedule-side-divider" aria-hidden="true" />
@@ -288,10 +274,11 @@
   {# Docked to the panel, not the viewport. SLDS pins
      `.slds-docked-form-footer` to the window; the side-panel rule
      puts it back in the column so it stays under the scrolling body.
-     Save commits frequency, time, and instructions. Cancel restores
-     the last saved values. #}
-  <div class="slds-docked-form-footer" role="group" aria-label="Save schedule changes">
-    <button type="button" class="slds-button slds-button_neutral" data-sh-schedule-panel-cancel>Cancel</button>
+     Save commits frequency and time. The other button opens the
+     schedule's chat when one exists, and runs the schedule when it
+     does not. #}
+  <div class="slds-docked-form-footer" role="group" aria-label="Schedule actions">
+    <button type="button" class="slds-button slds-button_neutral" data-sh-schedule-panel-secondary>Open Chat</button>
     <button type="button" class="slds-button slds-button_brand" data-sh-schedule-panel-save>Save</button>
   </div>
 </aside>

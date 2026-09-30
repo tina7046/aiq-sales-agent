@@ -4377,6 +4377,7 @@
 
       renderLastRun(record)
       renderMenu(record)
+      syncFooterAction(record)
       saved = {
         frequency: record.frequency || '',
         time: record.time || '',
@@ -4467,6 +4468,29 @@
       // Nothing applies (e.g. an archived schedule) → hide the ⋮ trigger
       // rather than offer an empty menu.
       if (menuWrap) menuWrap.hidden = shown === 0
+      syncFooterAction(record)
+    }
+
+    // Footer stand-in for Cancel: Open Chat when this schedule already
+    // has a session, otherwise Run Now. Run Now follows the same block
+    // as the header menu (failed until Slack is reconnected, and never
+    // from Archived).
+    function syncFooterAction (record) {
+      if (!footerActionBtn) return
+      var status = (record && record.status) || ''
+      var hasChat = !!(record && record.chatId)
+      footerActionBtn.textContent = hasChat ? 'Open Chat' : 'Run Now'
+      var blocked = !hasChat && (scheduleRunBlocked(status) || status === 'archived')
+      footerActionBtn.disabled = blocked
+      if (blocked) {
+        footerActionBtn.setAttribute('aria-disabled', 'true')
+        footerActionBtn.title = status === 'archived'
+          ? 'Archived schedules can’t be run.'
+          : 'Reconnect Slack before running this schedule.'
+      } else {
+        footerActionBtn.removeAttribute('aria-disabled')
+        footerActionBtn.removeAttribute('title')
+      }
     }
 
     function visibleMenuItems () {
@@ -4713,13 +4737,13 @@
       clearSelected()
       var back = activeTrigger
       activeTrigger = null
-      // If the card the panel opened from was filtered out (paused /
-      // archived → gone from the current tab), returning focus to it
-      // would be a focus-into-nothing; fall back to the active tab.
-      var target = back
-      if (!target || target.offsetParent === null) {
-        target = root.querySelector('[data-sh-scheduled-tab][aria-checked="true"]') || null
-      }
+      // Don't return focus to the card. Its `:focus-within` surface is
+      // the same grey as `.is-selected`, so focusing it after close
+      // left the row looking selected. Land on the active tab instead,
+      // unless the card was filtered out of the list (then the tab is
+      // already the only sensible target).
+      var target = root.querySelector('[data-sh-scheduled-tab][aria-checked="true"]') || null
+      if (!target && back && back.offsetParent !== null) target = back
       if (target && typeof target.focus === 'function') {
         setTimeout(function () { target.focus() }, 0)
       }
@@ -4790,19 +4814,18 @@
         instructions: record.instructions || ''
       }
     }
-    function revertSchedule () {
-      if (!saved) return
-      if (instrEditEl) instrEditEl.value = saved.instructions || ''
-      exitEdit(false)
-      closeComboboxes()
-      fillList(freqList, freqEl, FREQ_OPTIONS, saved.frequency)
-      fillList(timeList, timeEl, TIME_OPTIONS, saved.time)
-      if (instrDisplayEl) instrDisplayEl.textContent = saved.instructions || ''
-    }
     var saveBtn = panel.querySelector('[data-sh-schedule-panel-save]')
-    var cancelBtn = panel.querySelector('[data-sh-schedule-panel-cancel]')
+    var footerActionBtn = panel.querySelector('[data-sh-schedule-panel-secondary]')
     if (saveBtn) saveBtn.addEventListener('click', commitSchedule)
-    if (cancelBtn) cancelBtn.addEventListener('click', revertSchedule)
+    if (footerActionBtn) {
+      footerActionBtn.addEventListener('click', function () {
+        if (footerActionBtn.disabled) return
+        var id = panel.getAttribute('data-sh-schedule-current')
+        var record = id ? detailsById[id] : null
+        if (!record) return
+        doAction(record.chatId ? 'open_chat' : 'run_now', record, id)
+      })
+    }
 
     // Header overflow menu: open/close + action dispatch + roving keys.
     if (menuTrigger && menuList) {
