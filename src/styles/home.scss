@@ -4708,12 +4708,19 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 }
 
 // Header action cluster (overflow ⋮ + close), right-anchored.
+// The buttons wear the composer icon-button classes, so they are 2rem
+// pills with no extra gap — the same spacing as the composer toolbar.
 .seller-home__schedule-side-actions {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--slds-g-spacing-1, 0.25rem);
+  gap: 0;
+}
+
+// Hold the composer's hover fill while the overflow menu is open.
+.seller-home__schedule-side-menu-trigger[aria-expanded="true"] {
+  background-color: var(--slds-g-color-palette-electric-blue-95, #edf4ff);
 }
 
 // ── Overflow (⋮) menu ─────────────────────────────────────────────
@@ -4728,12 +4735,14 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   top: calc(100% + 0.25rem);
   z-index: 20;
 
-  min-width: 11rem;
+  min-width: 10rem; // 160px, same as the workflow row menu
   padding: var(--slds-g-spacing-1, 0.25rem);
-  background: var(--slds-g-color-surface-1, #ffffff);
+  background: var(--slds-g-color-surface-container-1, #fff);
   border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
-  border-radius: var(--slds-g-radius-border-2, 0.5rem);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+  border-radius: var(--slds-g-radius-border-3);
+  box-shadow:
+    0 4px 12px 0 rgba(0, 0, 0, 0.12),
+    0 1px 3px 0 rgba(0, 0, 0, 0.08);
 
   &[hidden] {
     display: none;
@@ -4762,20 +4771,23 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   gap: var(--slds-g-spacing-2, 0.5rem);
 
   padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
-  border-radius: var(--slds-g-radius-border-1, 0.25rem);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
   font-weight: var(--slds-g-font-weight-4, 400);
-  line-height: 1.1875rem;
+  line-height: 1.0625rem; // 17px
   color: var(--slds-g-color-on-surface-2, #2e2e2e);
 
   transition: background-color 120ms ease, color 120ms ease;
 
   &:hover,
   &:focus-visible {
-    background: var(--slds-g-color-surface-container-2, #f3f3f3);
-    color: var(--slds-g-color-on-surface-3, #001e5b);
+    background: var(--slds-g-color-brand-base-95, #eef4ff);
     outline: none;
+  }
+
+  &:focus-visible {
+    box-shadow: inset var(--slds-g-sizing-border-3, 3px) 0 0 var(--slds-g-color-accent-2, #0250d9);
   }
 
   &[hidden] {
@@ -4800,8 +4812,13 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 .seller-home__schedule-side-menu-item-icon {
   width: 0.875rem;
   height: 0.875rem;
-  fill: currentColor;
+  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
   flex: 0 0 auto;
+}
+
+.seller-home__schedule-side-menu-item-label {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 // ── Body (Figma 13068:330833) — 12-px padding, 8-px section gap ────
