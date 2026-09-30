@@ -1568,6 +1568,14 @@ main.app-wrapper {
   block-size: var(--slds-g-sizing-9, 2rem);
   border-radius: var(--slds-g-radius-border-circle, 100%);
 
+  // SLDS resets bare icon buttons to a 4px radius on keyboard focus
+  // (`.slds-button_icon-bare:focus-visible`), which squares the focus
+  // ring. Restate the circle at the same specificity so the ring stays
+  // round. home.css loads after the SLDS sheet, so source order wins.
+  &:focus-visible {
+    border-radius: var(--slds-g-radius-border-circle, 100%);
+  }
+
   transition: background-color 120ms ease;
 
   // Send ships disabled and is the one button here that can be, so the
