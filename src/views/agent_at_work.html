@@ -170,9 +170,9 @@
 {# ES module. Mounts whichever background Home's gear last picked. #}
 <script type="module" src="/scripts/aaw_god_rays.js"></script>
 
-{# Global-header Setup (gear): pick the background shader and show/hide
-   the director. Same dropdown as Home; the panel toggle here is the
-   director, not Home's shader tuner. #}
+{# Home's Setup Menu lives in the header. This page appends the same
+   shader picks, and toggles the director instead of Home's tuner.
+   If the Setup Menu is missing, the gear still opens its own dropdown. #}
 <script>
 	(function () {
 		var SHADER_FORCE = 'simplex-2026-09-07';
@@ -189,6 +189,8 @@
 		var gearBtn = document.querySelector('.slds-global-actions__setup');
 		if (!gearBtn) return;
 		var trigger = gearBtn.closest('.slds-dropdown-trigger') || gearBtn.parentElement;
+		var setupMenu = trigger.querySelector('[data-sh-setup-dropdown]');
+		var setupList = setupMenu && setupMenu.querySelector('.slds-dropdown__list');
 
 		var SHADER_KEY = 'sh:shader';
 		var PANEL_KEY = 'aaw:directorControls';
@@ -211,12 +213,8 @@
 				'<span data-sh-check style="visibility:' + (on ? 'visible' : 'hidden') + '">' + check + '</span>' + label +
 				'</span></a></li>';
 		}
-		var dd = document.createElement('div');
-		dd.className = 'slds-dropdown slds-dropdown_right slds-dropdown_small';
-		dd.setAttribute('role', 'menu');
-		dd.style.display = 'none';
-		dd.innerHTML =
-			'<ul class="slds-dropdown__list" role="presentation">' +
+		var shaderMarkup =
+			'<li class="slds-has-divider_top-space" role="separator"></li>' +
 			'<li class="slds-dropdown__header slds-truncate" role="separator"><span>Background shader</span></li>' +
 			shaderItem('godrays', 'God Rays') +
 			shaderItem('mesh', 'Mesh') +
@@ -227,29 +225,39 @@
 			'<a href="#" role="menuitemcheckbox" aria-checked="' + (!panelHidden) + '" data-aaw-panel-toggle tabindex="0">' +
 			'<span class="slds-truncate" title="Show control panel">' +
 			'<span data-aaw-panel-check style="visibility:' + (panelHidden ? 'hidden' : 'visible') + '">' + check + '</span>Show control panel' +
-			'</span></a></li>' +
-			'</ul>';
-		trigger.appendChild(dd);
+			'</span></a></li>';
+		var dd;
+		if (setupList) {
+			setupList.insertAdjacentHTML('beforeend', shaderMarkup);
+			dd = setupMenu;
+		} else {
+			dd = document.createElement('div');
+			dd.className = 'slds-dropdown slds-dropdown_right slds-dropdown_small';
+			dd.setAttribute('role', 'menu');
+			dd.style.display = 'none';
+			dd.innerHTML = '<ul class="slds-dropdown__list" role="presentation">' + shaderMarkup + '</ul>';
+			trigger.appendChild(dd);
 
-		function open() { trigger.classList.add('slds-is-open'); dd.style.display = 'block'; gearBtn.setAttribute('aria-expanded', 'true'); }
-		function close() { trigger.classList.remove('slds-is-open'); dd.style.display = 'none'; gearBtn.setAttribute('aria-expanded', 'false'); }
+			function open() { trigger.classList.add('slds-is-open'); dd.style.display = 'block'; gearBtn.setAttribute('aria-expanded', 'true'); }
+			function close() { trigger.classList.remove('slds-is-open'); dd.style.display = 'none'; gearBtn.setAttribute('aria-expanded', 'false'); }
 
-		gearBtn.setAttribute('aria-haspopup', 'true');
-		gearBtn.setAttribute('aria-expanded', 'false');
-		gearBtn.setAttribute('title', 'Demo controls');
-		gearBtn.addEventListener('click', function (e) {
-			e.preventDefault(); e.stopPropagation();
-			dd.style.display === 'none' ? open() : close();
-		});
-		document.addEventListener('click', function (e) { if (!trigger.contains(e.target)) close(); });
-		document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+			gearBtn.setAttribute('aria-haspopup', 'true');
+			gearBtn.setAttribute('aria-expanded', 'false');
+			gearBtn.setAttribute('title', 'Demo controls');
+			gearBtn.addEventListener('click', function (e) {
+				e.preventDefault(); e.stopPropagation();
+				dd.style.display === 'none' ? open() : close();
+			});
+			document.addEventListener('click', function (e) { if (!trigger.contains(e.target)) close(); });
+			document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+		}
 
 		dd.addEventListener('click', function (e) {
 			var shaderEl = e.target.closest('[data-sh-shader]');
 			if (shaderEl) {
 				e.preventDefault();
 				var choice = shaderEl.getAttribute('data-sh-shader');
-				if (choice === activeShader) { close(); return; }
+				if (choice === activeShader) return;
 				lsSet(SHADER_KEY, choice);
 				location.assign(location.pathname);
 				return;

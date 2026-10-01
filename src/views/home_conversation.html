@@ -394,12 +394,19 @@
             See `expandRuns` in gulpfile.js. -#}
         {%- set _messages = expandRuns(_conv) -%}
         {%- set _stages   = (_conv.opening and _conv.opening.stages) or [] -%}
+        {%- set _connectedStages = (_conv.opening and _conv.opening.connectedStages) or [] -%}
 
         {#- Every message id the stages claim. Built by pushing into an
             array because neither Nunjucks `selectattr` nor `reject`
-            can express "id is in this list" here. -#}
+            can express "id is in this list" here. Connected-mailbox
+            stages are claimed too so they don't leak into inline. -#}
         {%- set _stagedIds = [] -%}
         {%- for _stage in _stages -%}
+          {%- for _mid in _stage.messageIds or [] -%}
+            {%- set _ = _stagedIds.push(_mid) -%}
+          {%- endfor -%}
+        {%- endfor -%}
+        {%- for _stage in _connectedStages -%}
           {%- for _mid in _stage.messageIds or [] -%}
             {%- set _ = _stagedIds.push(_mid) -%}
           {%- endfor -%}
@@ -433,6 +440,7 @@
       <template
         data-sh-conv-stage="{{ stage.id or loop.index0 }}"
         data-sh-conv-for="{{ _cid }}"
+        data-sh-conv-stage-when="{{ stage.when or '' }}"
         data-sh-conv-thinking-ms="{{ stage.thinkingMs }}"
         data-sh-conv-thinking-label="{{ stage.thinkingLabel or thinkingLabel }}"
       >
@@ -449,6 +457,22 @@
           {%- else -%}
             {{ convo.messageItem(msg) }}
           {%- endif -%}
+          {%- endif -%}
+        {%- endfor -%}
+      </template>
+        {% endfor %}
+
+        {% for stage in _connectedStages %}
+      <template
+        data-sh-conv-stage="{{ stage.id or loop.index0 }}"
+        data-sh-conv-for="{{ _cid }}"
+        data-sh-conv-stage-when="connected"
+        data-sh-conv-thinking-ms="{{ stage.thinkingMs }}"
+        data-sh-conv-thinking-label="{{ stage.thinkingLabel or thinkingLabel }}"
+      >
+        {%- for msg in _messages -%}
+          {%- if msg.id in (stage.messageIds or []) -%}
+            {{ convo.messageItem(msg) }}
           {%- endif -%}
         {%- endfor -%}
       </template>
@@ -745,6 +769,59 @@
       </form>
     </div>{# /.seller-home__conv #}
 
+    {# ── Expanded table pane ─────────────────────────────────────────
+       Where a prospect table goes when its chip's expand button is
+       pressed. Sibling of the conversation column (not a modal): the
+       thread stays on the left and this pane fills the rest, matching
+       Goal-Based-Agent / Coworker Grid's `ask_split` layout.
+
+       The content area is an empty host. The script CLONES the
+       rendered table in here (and writes row decisions back on close)
+       so the thread copy never reloads. One page-level pane rather
+       than one per table, because only one list can be expanded at a
+       time.
+
+       Ships `hidden` until home_conversation.js adds
+       `is-table-expanded` on the layout. #}
+    <aside
+      class="seller-home__conv-table-pane"
+      data-sh-conv-table-pane
+      hidden
+      role="region"
+      aria-labelledby="sh-conv-table-pane-title"
+    >
+      <header class="seller-home__conv-table-pane-header">
+        <div class="seller-home__conv-table-pane-titlegroup">
+          <h2
+            id="sh-conv-table-pane-title"
+            class="seller-home__conv-table-pane-title"
+            data-sh-conv-table-pane-title
+          >Expanded table</h2>
+          <p
+            class="seller-home__conv-table-pane-status"
+            data-sh-conv-table-pane-status
+            hidden
+          ></p>
+        </div>
+        <button
+          type="button"
+          class="slds-button slds-button_icon slds-button_icon-container slds-button_icon-x-small seller-home__conv-table-pane-close"
+          data-sh-conv-table-pane-close
+          aria-label="Collapse table"
+          title="Collapse table"
+        >
+          <svg class="slds-button__icon" aria-hidden="true">
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+          </svg>
+          <span class="slds-assistive-text">Collapse table</span>
+        </button>
+      </header>
+      <div
+        class="seller-home__conv-table-pane-body"
+        data-sh-conv-table-pane-host
+      ></div>
+    </aside>
+
     {# ── Workflow side panels ────────────────────────────────────────
        One per workflow-backed conversation, all rendered here as
        siblings of the thread column. Only the one matching the SSR
@@ -768,102 +845,8 @@
     </div>{# /.seller-home__conv-layout #}
   </div>
 
-  {# ── Expanded table dialog ─────────────────────────────────────
-     Where a prospect table goes when its chip's expand button is
-     pressed. The content area is an empty host, not a second copy of
-     the table: the script MOVES the rendered table in here and puts
-     it back on close.
-
-     That's the whole reason this is one page-level dialog rather than
-     one per table. A copy would be a second set of 37 rows with the
-     same row ids and its own reject buttons, so a prospect dropped in
-     the modal would still be in the batch in the thread — two truths
-     about the same list. Moving the node keeps every handler, every
-     decision, and the cadence card's subscription attached to it.
-
-     Outside `.seller-home` because `.slds-modal` is `position: fixed`:
-     any transformed ancestor would become its containing block and the
-     dialog would be sized against the app shell instead of the viewport.
-
-     `slds-modal_large` — 90% of the viewport, so the shaded backdrop
-     stays visible around it and the table underneath still reads as the
-     thread it came from. (`slds-modal_full` was the first cut: SLDS only
-     gives that modifier its edge-to-edge treatment below 30em, so on a
-     desktop viewport it needed enough overriding to cover the backdrop
-     completely — which is the one thing a modal shouldn't do.)
-
-     Ships hidden, in both senses — `hidden` takes it out of the
-     accessibility tree, and SLDS keeps `.slds-modal` invisible until
-     `slds-fade-in-open` is added. home_conversation.js owns both. #}
-  <section
-    class="slds-modal slds-modal_large seller-home__conv-table-modal"
-    role="dialog"
-    tabindex="-1"
-    aria-modal="true"
-    aria-labelledby="sh-conv-table-modal-heading"
-    data-sh-conv-table-modal
-    hidden
-  >
-    {# `t-modal` is the transitions.dev open/close hook (see the snippet
-       in home_conversation.scss). It belongs on the container rather
-       than the section above so the box scales without the full-viewport
-       click layer scaling with it. home_conversation.js drives the
-       `is-open` / `is-closing` pair. #}
-    <div class="slds-modal__container t-modal">
-      <button
-        type="button"
-        class="slds-button slds-button_icon slds-modal__close"
-        data-sh-conv-table-modal-close
-      >
-        <svg class="slds-button__icon slds-button__icon_large" aria-hidden="true">
-          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
-        </svg>
-        <span class="slds-assistive-text">Close expanded table</span>
-      </button>
-
-      {# Heading and count are written at open time from the table
-         being expanded — its `aria-label` and the chip's status line
-         — so this dialog stays generic. The placeholder text is what
-         a reader sees only if that write ever fails. #}
-      <div class="slds-modal__header">
-        <h1
-          id="sh-conv-table-modal-heading"
-          class="slds-modal__title slds-hyphenate"
-          tabindex="-1"
-          data-sh-conv-table-modal-title
-        >Expanded table</h1>
-        <p
-          class="seller-home__conv-table-modal-status"
-          data-sh-conv-table-modal-status
-        ></p>
-      </div>
-
-      <div
-        class="slds-modal__content slds-p-around_medium"
-        data-sh-conv-table-modal-host
-      ></div>
-
-      {# One action, and it isn't Save. Every control in the table
-         commits as it's clicked — the X drops a prospect from the
-         batch immediately, here as in the thread — so a Cancel /
-         Save pair would promise a staged edit that doesn't exist. #}
-      <div class="slds-modal__footer">
-        <button
-          type="button"
-          class="slds-button slds-button_neutral"
-          data-sh-conv-table-modal-done
-        >Done</button>
-      </div>
-    </div>
-  </section>
-  <div
-    class="slds-backdrop"
-    role="presentation"
-    data-sh-conv-table-modal-backdrop
-    hidden
-  ></div>
-
   {% include "_home_connections_modal.html" %}
+  {% include "_inbox_modal.html" %}
 
   {# Tools modal — opened by the composer's "View all", same as Seller
      Home. Catalog handed to the controller as JSON. #}
@@ -902,6 +885,10 @@
      global exists at boot; the page degrades to a normal conversation
      if it is absent. #}
   <script src="/scripts/schedule_conversation.js"></script>
+  {# Inbox gate: skipped-mailbox → connect prompt on Drafted proposals.
+     Loaded BEFORE home_conversation.js so `SellerHomeInbox` exists at
+     bind time. No-ops on threads without `inboxGate`. #}
+  <script src="/scripts/inbox_gate.js"></script>
 
   {# Shared reveal engine (`window.ShStream`) — agent prose streams in
      word by word and table rows cascade, the same motion the onboarding

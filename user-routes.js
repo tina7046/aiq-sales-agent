@@ -14,7 +14,10 @@ const SELLER_HTML = [
   'scheduled.html',
   'home_conversation.html',
   'memory.html',
-  'tools.html'
+  'tools.html',
+  'settings.html',
+  'onboarding.html',
+  'salesforce_go.html'
 ]
 
 const SELLER_FILE = new Set(SELLER_HTML)

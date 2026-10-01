@@ -352,6 +352,9 @@
        snapshot?: { … see _pipeline_snapshot.html },
        runId?:    String,  // the scheduled run this output came from
        rowsFrom?: String,  // id of the message owning the rows
+       chips?:    [ String ],        // suggested replies — a click
+                                     // sends the label (same as
+                                     // schedule chips)
        actions?:  [ { id, label } ]  // optional brand buttons after
                                      // the text. Visual only unless
                                      // a page wires the id.
@@ -393,6 +396,23 @@
   #}
   {% if msg.cadence and _rows | length > 0 %}
   {{ cadence.cadenceMessage(msg.cadence, _rows) }}
+  {% endif %}
+
+  {% if msg.chips and msg.chips | length > 0 %}
+  <div
+    class="seller-home__conv-msg-chips"
+    data-sh-conv-chips
+    role="group"
+    aria-label="Suggested replies"
+  >
+    {% for chip in msg.chips %}
+    <button
+      type="button"
+      class="slds-button slds-button_neutral seller-home__conv-msg-chip"
+      data-sh-conv-chip="{{ chip }}"
+    >{{ chip }}</button>
+    {% endfor %}
+  </div>
   {% endif %}
 
   {% if msg.actions and msg.actions | length > 0 %}
@@ -624,8 +644,8 @@
        workflowIcon:  String,    // utility sprite id, e.g. "apps"
        statusText:    String,    // secondary "12 prospects · 8 accounts · 12 drafts"
        expandsTable?: String     // a table `id` in this thread — adds a
-                                 // button that opens it in a dialog.
-                                 // Omit and no button renders.
+                                 // button that opens it in the right-hand
+                                 // split pane. Omit and no button renders.
      }
 #}
 {% macro workflowActivity(msg) %}
@@ -655,14 +675,16 @@
       the handler is delegated and the table may not exist yet: both
       arrive as a cloned message, in either order.
 
-      `statusText` rides along so the modal can repeat the count under
-      its heading. It's authored copy either way; passing it beats
-      reading it back out of the chip's live region at open time. -#}
+      `statusText` rides along so the split pane can repeat the count
+      under its heading. It's authored copy either way; passing it
+      beats reading it back out of the chip's live region at open
+      time. -#}
   {% if msg.expandsTable %}
   <button
     type="button"
     class="slds-button slds-button_icon slds-button_icon-border slds-button_icon-small seller-home__conv-msg-activity-expand"
     title="Expand table"
+    aria-expanded="false"
     data-sh-conv-expand="{{ msg.expandsTable }}"
     {% if msg.statusText %}data-sh-conv-expand-meta="{{ msg.statusText }}"{% endif %}
   >

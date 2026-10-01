@@ -1,0 +1,146 @@
+{% extends "_template.html" %}
+
+{#
+  Salesforce Go — feature catalog inside Seller Home.
+  Opened from the gear menu. Same shell as Knowledge / Skills:
+  left nav, 48px header, banner, 50rem column. Hunter onboarding
+  stays on the cloud logo.
+#}
+
+{% set navPrimary = readData("index").navPrimary %}
+{% set navFooter  = readData("index").navFooter %}
+{% set recents    = readData("index").recents %}
+
+{% block styles %}
+  <link rel="stylesheet" href="/styles/home.css" />
+  <link rel="stylesheet" href="/styles/knowledge.css" />
+  <link rel="stylesheet" href="/styles/salesforce_go.css" />
+  <link rel="stylesheet" href="/styles/tools.css" />
+{% endblock %}
+
+{% block content %}
+  <div class="seller-home seller-home--knowledge seller-home--go" data-sh-root>
+    {% include "_home_left_nav.html" %}
+
+    <div
+      class="seller-home__knowledge"
+      role="main"
+      aria-label="{{ pageTitle }}"
+      tabindex="-1"
+    >
+      <header class="seller-home__knowledge-header">
+        <h1 class="seller-home__knowledge-header-title">{{ header.heading }}</h1>
+      </header>
+
+      <section class="seller-home__knowledge-body" aria-label="{{ pageTitle }}">
+        <div class="seller-home__knowledge-body-inner">
+          {% if banner and banner.title %}
+            {% set bannerHeadingId = "seller-home-go-banner-heading" %}
+            {% set bannerVariant = "go" %}
+            {% include "_seller_home_banner.html" %}
+          {% endif %}
+
+          <div class="seller-home__knowledge-search">
+            <label class="slds-assistive-text" for="sgo-search">{{ search.label }}</label>
+            <span class="seller-home__knowledge-search-icon" aria-hidden="true">
+              <svg class="seller-home__knowledge-search-icon-svg" focusable="false">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#search"></use>
+              </svg>
+            </span>
+            <input
+              type="search"
+              id="sgo-search"
+              class="seller-home__knowledge-search-input"
+              placeholder="{{ search.placeholder }}"
+              autocomplete="off"
+              data-sgo-filter
+            />
+            <button
+              type="button"
+              class="seller-home__knowledge-search-clear"
+              data-sgo-clear
+              aria-label="{{ search.clearLabel }}"
+              hidden
+            >
+              <svg class="seller-home__knowledge-search-clear-icon" aria-hidden="true" focusable="false">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+              </svg>
+            </button>
+            <span class="slds-assistive-text" role="status" aria-live="polite" data-sgo-status></span>
+          </div>
+
+          <div class="seller-home__go-grid" data-sgo-grid>
+            {% for feature in features %}
+              <article
+                class="seller-home__go-card{% if feature.muted %} is-muted{% endif %}"
+                data-sgo-card
+                data-sgo-label="{{ feature.title }} {{ feature.description }} {{ feature.cloud }} {{ feature.status or '' }}"
+              >
+                <p class="seller-home__go-card-cloud">{{ feature.cloud }}</p>
+                <h2 class="seller-home__go-card-title">{{ feature.title }}</h2>
+                <p class="seller-home__go-card-body">{{ feature.description }}</p>
+                {% if feature.status %}
+                  <p class="slds-badge seller-home__go-status">{{ feature.status }}</p>
+                {% endif %}
+              </article>
+            {% endfor %}
+          </div>
+
+          <div class="seller-home__go-empty" data-sgo-empty hidden>
+            <h2 class="seller-home__go-empty-title">{{ search.emptyTitle }}</h2>
+            <p class="seller-home__go-empty-body">{{ search.emptyBody }}</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  {% include "_tools_modal.html" %}
+  <script type="application/json" id="sh-tools-config">
+    {{ { "tools": shared.toolsModal.tools } | tojson | safe }}
+  </script>
+{% endblock %}
+
+{% block scripts_extra %}
+  <script src="/scripts/home.js"></script>
+  <script src="/scripts/tools_filter.js"></script>
+  <script src="/scripts/vendor/gsap.min.js"></script>
+  <script type="module" src="/scripts/tools_modal.js"></script>
+  <script>
+    ;(function () {
+      var filter = document.querySelector('[data-sgo-filter]')
+      var clear = document.querySelector('[data-sgo-clear]')
+      var status = document.querySelector('[data-sgo-status]')
+      var cards = Array.prototype.slice.call(document.querySelectorAll('[data-sgo-card]'))
+      var empty = document.querySelector('[data-sgo-empty]')
+      if (!filter) return
+
+      function apply () {
+        var query = filter.value.trim().toLowerCase()
+        var shown = 0
+        cards.forEach(function (card) {
+          var label = (card.getAttribute('data-sgo-label') || '').toLowerCase()
+          var match = !query || label.indexOf(query) !== -1
+          card.hidden = !match
+          if (match) shown += 1
+        })
+        if (clear) clear.hidden = !query
+        if (empty) empty.hidden = shown !== 0
+        if (status) {
+          status.textContent = query
+            ? shown + ' feature' + (shown === 1 ? '' : 's')
+            : ''
+        }
+      }
+
+      filter.addEventListener('input', apply)
+      if (clear) {
+        clear.addEventListener('click', function () {
+          filter.value = ''
+          apply()
+          filter.focus()
+        })
+      }
+    })()
+  </script>
+{% endblock %}

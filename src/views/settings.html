@@ -1,0 +1,308 @@
+{% extends "_template.html" %}
+
+{#
+  Seller Home — Settings
+  =====================================================================
+  Who Hunter is in the product: identity and how Hunter talks to the
+  seller. Customer-facing voice stays in Knowledge
+  (`auto-learning-voice`). Skills, Connections, and Scheduled are
+  untouched.
+
+  Two densities, same route. The header avatar switcher (Rohan / Nima)
+  is the control — not an in-page toggle.
+
+    • Rep (Rohan)  — read-only org identity, private nickname, tone
+                     override, address-me, greeting energy.
+    • Admin (Nima) — editable org name + tagline, default tone,
+                     default greeting energy, pointer to Knowledge Voice.
+
+  Chrome copies Knowledge / Scheduled: `.seller-home--knowledge` for
+  the viewport lock, 48px header, 50rem column, white surface, tools
+  modal in the footer. Form rules live in settings.scss.
+#}
+
+{% set navPrimary = readData("index").navPrimary %}
+{% set navFooter  = readData("index").navFooter %}
+{% set recents    = readData("index").recents %}
+{% set isAdmin    = role == "admin" %}
+
+{% block styles %}
+  <link rel="stylesheet" href="/styles/home.css" />
+  <link rel="stylesheet" href="/styles/knowledge.css" />
+  <link rel="stylesheet" href="/styles/settings.css" />
+  <link rel="stylesheet" href="/styles/tools.css" />
+{% endblock %}
+
+{% block content %}
+  <div class="seller-home seller-home--knowledge seller-home--settings" data-sh-root>
+    {% include "_home_left_nav.html" %}
+
+    <div
+      class="seller-home__knowledge seller-home__settings"
+      role="main"
+      aria-label="{{ pageTitle }}"
+      tabindex="-1"
+    >
+      <header class="seller-home__knowledge-header">
+        <h1 class="seller-home__knowledge-header-title">{{ header.heading }}</h1>
+      </header>
+
+      <section
+        class="seller-home__knowledge-body"
+        aria-label="{{ header.heading }}"
+      >
+        <div class="seller-home__knowledge-body-inner">
+          <form
+            class="seller-home__settings-form"
+            data-sh-settings-form
+            data-sh-settings-role="{{ role }}"
+            novalidate
+          >
+            {% if isAdmin %}
+              {# ── Admin: org identity ─────────────────────────────── #}
+              <div class="seller-home__settings-identity">
+                <img
+                  class="seller-home__settings-avatar"
+                  src="{{ hunter.avatar }}"
+                  alt=""
+                />
+                <div class="seller-home__settings-identity-copy">
+                  <p class="seller-home__settings-avatar-hint">{{ copy.avatarStub }}</p>
+                </div>
+              </div>
+
+              <div class="slds-form-element">
+                <label class="slds-form-element__label" for="sh-settings-org-name">
+                  {{ copy.adminNameLabel }}
+                </label>
+                <div class="slds-form-element__control">
+                  <input
+                    type="text"
+                    id="sh-settings-org-name"
+                    class="slds-input"
+                    name="orgName"
+                    data-sh-settings-org-name
+                    value="{{ hunter.orgName }}"
+                    autocomplete="off"
+                  />
+                </div>
+              </div>
+
+              <div class="slds-form-element">
+                <label class="slds-form-element__label" for="sh-settings-tagline">
+                  {{ copy.adminTaglineLabel }}
+                </label>
+                <div class="slds-form-element__control">
+                  <input
+                    type="text"
+                    id="sh-settings-tagline"
+                    class="slds-input"
+                    name="tagline"
+                    data-sh-settings-tagline
+                    value="{{ hunter.tagline }}"
+                    autocomplete="off"
+                  />
+                </div>
+              </div>
+
+              <fieldset class="slds-form-element">
+                <legend class="slds-form-element__legend slds-form-element__label">
+                  {{ copy.adminToneLabel }}
+                </legend>
+                <div class="slds-form-element__control">
+                  <div class="slds-radio_button-group" role="radiogroup" aria-label="{{ copy.adminToneLabel }}">
+                    {% for tone in tones %}
+                      <span class="slds-button slds-radio_button">
+                        <input
+                          type="radio"
+                          name="defaultTone"
+                          id="sh-settings-tone-{{ tone.id }}"
+                          value="{{ tone.id }}"
+                          data-sh-settings-tone
+                          {% if tone.id == hunter.defaultTone %}checked{% endif %}
+                        />
+                        <label class="slds-radio_button__label" for="sh-settings-tone-{{ tone.id }}">
+                          <span class="slds-radio_faux">{{ tone.label }}</span>
+                        </label>
+                      </span>
+                    {% endfor %}
+                  </div>
+                </div>
+              </fieldset>
+
+              <div class="slds-form-element">
+                <div class="slds-form-element__control">
+                  <div class="slds-checkbox">
+                    <input
+                      type="checkbox"
+                      name="defaultGreetingEnergy"
+                      id="sh-settings-greeting"
+                      data-sh-settings-greeting
+                      {% if hunter.defaultGreetingEnergy %}checked{% endif %}
+                    />
+                    <label class="slds-checkbox__label" for="sh-settings-greeting">
+                      <span class="slds-checkbox_faux"></span>
+                      <span class="slds-form-element__label">{{ copy.adminGreetingLabel }}</span>
+                    </label>
+                  </div>
+                </div>
+                <div class="slds-form-element__help">{{ copy.adminGreetingHelp }}</div>
+              </div>
+
+              <div
+                class="slds-scoped-notification slds-media slds-media_center slds-scoped-notification_light seller-home__settings-voice"
+                role="status"
+              >
+                <div class="slds-media__figure">
+                  <span class="slds-icon_container slds-icon-utility-sparkles" title="information">
+                    <svg class="slds-icon slds-icon_x-small slds-icon-text-default" aria-hidden="true">
+                      <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#sparkles"></use>
+                    </svg>
+                    <span class="slds-assistive-text">information</span>
+                  </span>
+                </div>
+                <div class="slds-media__body">
+                  <p>{{ copy.voiceBody }}</p>
+                  <a href="{{ voiceKnowledge.href | appUrl }}">{{ copy.voiceLink }}</a>
+                </div>
+              </div>
+            {% else %}
+              {# ── Rep: personal overrides ─────────────────────────── #}
+              <div class="seller-home__settings-identity">
+                <img
+                  class="seller-home__settings-avatar"
+                  src="{{ hunter.avatar }}"
+                  alt=""
+                />
+                <div class="seller-home__settings-identity-copy">
+                  <p class="seller-home__settings-org-name" data-sh-settings-org-display>
+                    {{ hunter.orgName }}
+                  </p>
+                  <p class="seller-home__settings-identity-hint">{{ copy.identityHint }}</p>
+                </div>
+              </div>
+
+              <div class="slds-form-element">
+                <label class="slds-form-element__label" for="sh-settings-nickname">
+                  {{ copy.nicknameLabel }}
+                </label>
+                <div class="slds-form-element__control">
+                  <input
+                    type="text"
+                    id="sh-settings-nickname"
+                    class="slds-input"
+                    name="nickname"
+                    data-sh-settings-nickname
+                    placeholder="{{ copy.nicknamePlaceholder }}"
+                    autocomplete="off"
+                  />
+                </div>
+                <div class="slds-form-element__help">{{ copy.nicknameHelp }}</div>
+              </div>
+
+              <fieldset class="slds-form-element">
+                <legend class="slds-form-element__legend slds-form-element__label">
+                  {{ copy.toneLabel }}
+                </legend>
+                <div class="slds-form-element__control">
+                  <div class="slds-radio_button-group" role="radiogroup" aria-label="{{ copy.toneLabel }}">
+                    {% for tone in tones %}
+                      <span class="slds-button slds-radio_button">
+                        <input
+                          type="radio"
+                          name="tone"
+                          id="sh-settings-tone-{{ tone.id }}"
+                          value="{{ tone.id }}"
+                          data-sh-settings-tone
+                          {% if tone.id == hunter.defaultTone %}checked{% endif %}
+                        />
+                        <label class="slds-radio_button__label" for="sh-settings-tone-{{ tone.id }}">
+                          <span class="slds-radio_faux">{{ tone.label }}</span>
+                        </label>
+                      </span>
+                    {% endfor %}
+                  </div>
+                </div>
+                <div class="slds-form-element__help" data-sh-settings-tone-help>
+                  {{ copy.toneHelpPrefix }}
+                  {% for tone in tones %}{% if tone.id == hunter.defaultTone %} {{ tone.label }}{% endif %}{% endfor %}
+                </div>
+              </fieldset>
+
+              <div class="slds-form-element">
+                <label class="slds-form-element__label" for="sh-settings-address">
+                  {{ copy.addressLabel }}
+                </label>
+                <div class="slds-form-element__control">
+                  <div class="slds-select_container">
+                    <select
+                      id="sh-settings-address"
+                      class="slds-select"
+                      name="addressMe"
+                      data-sh-settings-address
+                    >
+                      {% for option in addressOptions %}
+                        <option
+                          value="{{ option.id }}"
+                          {% if option.id == "first_name" %}selected{% endif %}
+                        >{{ option.label }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="slds-form-element">
+                <div class="slds-form-element__control">
+                  <div class="slds-checkbox">
+                    <input
+                      type="checkbox"
+                      name="greetingEnergy"
+                      id="sh-settings-greeting"
+                      data-sh-settings-greeting
+                      {% if hunter.defaultGreetingEnergy %}checked{% endif %}
+                    />
+                    <label class="slds-checkbox__label" for="sh-settings-greeting">
+                      <span class="slds-checkbox_faux"></span>
+                      <span class="slds-form-element__label">{{ copy.greetingLabel }}</span>
+                    </label>
+                  </div>
+                </div>
+                <div class="slds-form-element__help">{{ copy.greetingHelp }}</div>
+              </div>
+
+              <p class="seller-home__settings-preview" data-sh-settings-preview></p>
+            {% endif %}
+
+            <div class="seller-home__settings-actions">
+              <button type="submit" class="slds-button slds-button_brand">
+                {{ copy.saveLabel }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  {% include "_tools_modal.html" %}
+  <script type="application/json" id="sh-tools-config">
+    {{ { "tools": shared.toolsModal.tools } | tojson | safe }}
+  </script>
+  <script type="application/json" id="sh-settings-defaults">
+    {{ {
+      "role": role,
+      "hunter": hunter,
+      "tones": tones,
+      "copy": copy,
+      "userName": currentUser.name
+    } | tojson | safe }}
+  </script>
+{% endblock %}
+
+{% block scripts_extra %}
+  <script src="/scripts/home.js"></script>
+  <script src="/scripts/tools_filter.js"></script>
+  <script src="/scripts/vendor/gsap.min.js"></script>
+  <script type="module" src="/scripts/tools_modal.js"></script>
+{% endblock %}

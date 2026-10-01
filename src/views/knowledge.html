@@ -328,7 +328,7 @@
               {% for tab in tabs.items %}
                 {% set count = 0 %}
                 {% for doc in documents %}
-                  {% if not (doc.hidden == true) %}
+                  {% if not (doc.hidden == true) and not doc.learnedProfile %}
                     {% if (doc.tab or "learnings") == tab.id %}{% set count = count + 1 %}{% endif %}
                   {% endif %}
                 {% endfor %}

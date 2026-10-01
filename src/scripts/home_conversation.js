@@ -20,10 +20,9 @@
 //     not focusable — see the binder for what that replaced. Kept
 //     independent so the table works as a standalone list even
 //     without a review controller attached.
-//   • Expanding a table: the button on a workflow-activity chip moves
-//     the table it names into the page's expanded-table dialog and back
-//     out again on close. It's a move, not a copy — see
-//     `bindTableExpand` for why that matters.
+//   • Expanding a table: the button on a workflow-activity chip clones
+//     the table it names into a right-hand split pane (conversation
+//     stays on the left). See `bindTableExpand`.
 //   • Cadence card: mounted from home_conversation_cadence.js, which
 //     owns the drafted sequences. Wired here only so build-time and
 //     runtime-injected messages go through one code path.
@@ -103,18 +102,17 @@
     signalCell:   '[data-sh-signal-fit]',
     signalBadge:  '.ptl-signal-badge',
     signalMore:   '[data-sh-signal-more]',
-    // Expanding a table into the large dialog. The trigger lives
-    // on a workflow-activity chip and carries the id of the table it
-    // opens; the dialog is a page-level singleton whose content area is
-    // the host the table is MOVED into. See `bindTableExpand`.
+    // Expanding a table into the right-hand split pane. The trigger
+    // lives on a workflow-activity chip and carries the id of the
+    // table it opens; the pane is a page-level singleton whose content
+    // area is the host the table is CLONED into. See `bindTableExpand`.
     convExpand:      '[data-sh-conv-expand]',
-    tableModal:      '[data-sh-conv-table-modal]',
-    tableModalBack:  '[data-sh-conv-table-modal-backdrop]',
-    tableModalHost:  '[data-sh-conv-table-modal-host]',
-    tableModalTitle: '[data-sh-conv-table-modal-title]',
-    tableModalMeta:  '[data-sh-conv-table-modal-status]',
-    tableModalClose: '[data-sh-conv-table-modal-close]',
-    tableModalDone:  '[data-sh-conv-table-modal-done]',
+    convLayout:      '[data-sh-conv-layout]',
+    tablePane:       '[data-sh-conv-table-pane]',
+    tablePaneHost:   '[data-sh-conv-table-pane-host]',
+    tablePaneTitle:  '[data-sh-conv-table-pane-title]',
+    tablePaneMeta:   '[data-sh-conv-table-pane-status]',
+    tablePaneClose:  '[data-sh-conv-table-pane-close]',
     // Outreach review (rendered by _home_outreach_review.html):
     reviewRoot:   '[data-sh-review-root]',
     // Confirmation dialog for "Approve all" (sibling of the review):
@@ -215,17 +213,11 @@
   // Class the review section toggles when the confirmation dialog
   // opens (mirrors SLDS `slds-fade-in-open` semantically).
   var DIALOG_OPEN_CLASS = 'is-open'
-  // The real SLDS pair, used by the expanded-table dialog: `.slds-modal`
-  // and `.slds-backdrop` both ship invisible and these are what the
-  // design system expects JS to add. (The review's dialog above predates
-  // it and paints its own open state — hence two spellings of "open".)
-  var MODAL_OPEN_CLASS    = 'slds-fade-in-open'
-  var BACKDROP_OPEN_CLASS = 'slds-backdrop_open'
-  // transitions.dev's modal hook (06-modal.md), on the dialog container
-  // inside `.slds-modal`. The `is-open` / `is-closing` classes it takes
-  // are only ever used compounded with `.t-modal`, so they don't collide
-  // with DIALOG_OPEN_CLASS above.
-  var MODAL_TRANSITION    = '.t-modal'
+  // Split-view class on `.seller-home__conv-layout` while a table is
+  // expanded on the right. Conversation column shrinks to a rail;
+  // the workflow side panel hides for the duration.
+  var TABLE_EXPANDED_CLASS = 'is-table-expanded'
+  var TABLE_SOURCE_HIDDEN_CLASS = 'is-expanded-elsewhere'
   // Class the composer carries while a scripted turn is in flight.
   var BUSY_CLASS = 'is-busy'
   // Composer is capturing a simulated voice input: toolbar hidden,
@@ -446,8 +438,9 @@
     bindMessageContent(document, map)
 
     // The expand-a-table path. Bound once for the page rather
-    // than per message: there's one dialog, and the trigger is found by
-    // delegation, so a chip cloned in mid-thread needs no re-wiring.
+    // than per message: there's one split pane, and the trigger is
+    // found by delegation, so a chip cloned in mid-thread needs no
+    // re-wiring.
     bindTableExpand()
 
     // Workflow drill-in. `switchPanel` first, so the layout is in its
@@ -599,12 +592,35 @@
     }
 
     // The opening sequence, likewise — play order is document order.
+    // A conversation with `connectedStages` (inbox already connected)
+    // and `when="gate"` stages picks one set from mailbox state.
     var stages = []
     if (convId) {
       var stageNodes = root.querySelectorAll(
         scopedSelector(SELECTORS.stageTemplate, convId)
       )
-      for (var s = 0; s < stageNodes.length; s++) stages.push(stageNodes[s])
+      var mailboxOn = window.SellerHomeInbox &&
+        typeof window.SellerHomeInbox.isConnected === 'function' &&
+        window.SellerHomeInbox.isConnected()
+      var splitOpening = false
+      for (var s0 = 0; s0 < stageNodes.length; s0++) {
+        var when0 = stageNodes[s0].getAttribute('data-sh-conv-stage-when') || ''
+        if (when0 === 'gate' || when0 === 'connected') splitOpening = true
+      }
+      for (var s = 0; s < stageNodes.length; s++) {
+        var when = stageNodes[s].getAttribute('data-sh-conv-stage-when') || ''
+        if (!splitOpening) {
+          stages.push(stageNodes[s])
+        } else if (mailboxOn && when === 'connected') {
+          stages.push(stageNodes[s])
+        } else if (!mailboxOn && when !== 'connected') {
+          stages.push(stageNodes[s])
+        }
+      }
+      if (window.SellerHomeInbox &&
+          typeof window.SellerHomeInbox.bindConversation === 'function') {
+        window.SellerHomeInbox.bindConversation(convId)
+      }
     }
 
     var convEntry = (convMap && convId && convMap[convId]) || null
@@ -614,6 +630,7 @@
     var state = {
       nextTurn: 0,   // index into `turns`
       sent: 0,       // how many messages the seller has sent
+      liveReply: 0,  // unique id suffix for live agent replies
       busy: false,   // a turn is mid-flight
       recording: false,
       // Check was pressed this session; the next Send applies the
@@ -846,6 +863,16 @@
         return
       }
 
+      // Skipped-mailbox send path: Hunter owns this thread until Inbox
+      // is connected (and through the enroll retry). Same echo + beat
+      // player as Schedule; replies come from inbox_gate.js.
+      if (window.SellerHomeInbox &&
+          typeof window.SellerHomeInbox.owns === 'function' &&
+          window.SellerHomeInbox.owns(convId)) {
+        runInboxGateTurn(text, userItem)
+        return
+      }
+
       // Confirmed mic send: same success toast (and delay) as Approve.
       if (pendingVoice) {
         setTimeout(function () {
@@ -1062,6 +1089,84 @@
       }, SCHEDULE_THINKING_MS)
     }
 
+    // Inbox-gate beats: thinking, then a schedule-shaped reply (prose +
+    // chips), optionally a Salesforce Inbox modal, then more beats from
+    // the modal result. Same busy / scroll / stream contract as Schedule.
+    function runInboxGateTurn (userText, anchor) {
+      var api = window.SellerHomeInbox
+      if (!api || typeof api.advance !== 'function') return
+      var payload
+      try {
+        payload = api.advance(convId, userText)
+      } catch (e) {
+        payload = {
+          beats: [{ thinkingMs: 400, reply: { text: 'Something went wrong connecting Inbox.' } }]
+        }
+      }
+      setBusy(true)
+      playInboxPayload(payload, anchor)
+    }
+
+    function playInboxPayload (payload, anchor) {
+      var api = window.SellerHomeInbox
+      var beats = (payload && payload.beats) || []
+      var openModal = !!(payload && payload.openModal)
+      var settle = anchor
+        ? function () { scrollAnchorToTop(anchor) }
+        : scrollToLatest
+
+      function finish () {
+        setBusy(false)
+        if (typeof input.focus === 'function') input.focus()
+      }
+
+      function nextBeat (i) {
+        if (i >= beats.length) {
+          if (openModal && api && typeof api.openConnectModal === 'function') {
+            api.openConnectModal(function (result) {
+              var follow
+              try {
+                follow = api.onModalResult(convId, result)
+              } catch (e) {
+                follow = {
+                  beats: [{ thinkingMs: 400, reply: { text: 'Something went wrong connecting Inbox.' } }]
+                }
+              }
+              if (!follow) {
+                finish()
+                return
+              }
+              playInboxPayload(follow, anchor)
+            })
+            return
+          }
+          finish()
+          return
+        }
+
+        var beat = beats[i] || {}
+        var delay = beat.thinkingMs != null ? beat.thinkingMs : 700
+        var indicator = appendThinking(beat.thinkingLabel || '')
+        settle()
+        window.setTimeout(function () {
+          if (indicator && indicator.parentNode) {
+            indicator.parentNode.removeChild(indicator)
+          }
+          if (beat.reply) {
+            var item = appendScheduleReply(beat.reply)
+            streamNode(item, settle, function () {
+              settle()
+              nextBeat(i + 1)
+            })
+          } else {
+            nextBeat(i + 1)
+          }
+        }, delay)
+      }
+
+      nextBeat(0)
+    }
+
     // The state-machine step, or null when schedule_conversation.js
     // isn't on the page. Resolved per call rather than held from bind
     // time so script order can't decide whether the flow works.
@@ -1078,7 +1183,7 @@
     function appendScheduleReply (reply) {
       var frag = cloneTemplate(scheduleTpl)
       if (!frag) return null
-      var id = 'msg-live-schedule-' + state.sent
+      var id = 'msg-live-schedule-' + state.sent + '-' + (state.liveReply++)
 
       var item = frag.querySelector('[data-sh-conv-item]')
       if (item) item.setAttribute('data-sh-conv-item', id)
@@ -1909,230 +2014,174 @@
   }
 
   // ──────────────────────────────────────────────────────────────
-  // Expand a table into a dialog
+  // Expand a table into a right-hand split pane
   // ──────────────────────────────────────────────────────────────
   // A workflow-activity chip can carry a button naming one of the
-  // thread's tables (`expandsTable` in the JSON). Pressing it MOVES that
-  // table out of the thread and into the dialog at the bottom of
-  // home_conversation.html; closing moves it back.
+  // thread's tables (`expandsTable` in the JSON). Pressing it clones
+  // that table into the pane beside the conversation — Goal-Based-Agent
+  // / Coworker Grid's `ask_split`: thread stays a left rail, the full
+  // list fills the rest. Not a modal: the composer and thread stay
+  // interactive, and there is no backdrop or focus trap.
   //
-  // The dialog gets a CLONE, not the table itself. Moving the real node
+  // The pane gets a CLONE, not the table itself. Moving the real node
   // out and back was the old design (one node, one source of truth), but
   // re-inserting a node on close made the thread re-lay-out its copy —
-  // it read as the prospect list "reloading" every time the dialog shut.
-  // Leaving the thread's own table untouched is the fix: nothing about it
-  // changes when the dialog opens or closes, so there is nothing to
-  // reload.
+  // it read as the prospect list "reloading" every time the split shut.
+  // Leaving the thread's own table untouched (and hiding it while the
+  // pane is open, so the rail isn't showing the same 17-column grid) is
+  // the fix.
   //
   // The clone stays live: its reject Xs are wired, so a drop still fires
   // the `sh:conv-row-decision` the cadence card listens for. It starts
   // from the thread table's current state (cloneNode copies each row's
-  // `data-sh-review-status`), and on close any drops made in the dialog
+  // `data-sh-review-status`), and on close any drops made in the pane
   // are written back to the thread table by row id — so the two copies
   // never disagree even though they're two nodes.
   //
-  // Only one table can be expanded at a time, so a single dialog and a
-  // single clone are sufficient.
+  // Only one table can be expanded at a time, so a single pane and a
+  // single clone are sufficient. Pressing the same chip again collapses.
   function bindTableExpand () {
-    var modal    = document.querySelector(SELECTORS.tableModal)
-    var backdrop = document.querySelector(SELECTORS.tableModalBack)
-    if (!modal || !backdrop) return
+    var layout = document.querySelector(SELECTORS.convLayout)
+    var pane   = document.querySelector(SELECTORS.tablePane)
+    if (!layout || !pane) return
 
-    var host  = modal.querySelector(SELECTORS.tableModalHost)
-    var title = modal.querySelector(SELECTORS.tableModalTitle)
-    var meta  = modal.querySelector(SELECTORS.tableModalMeta)
+    var host  = pane.querySelector(SELECTORS.tablePaneHost)
+    var title = pane.querySelector(SELECTORS.tablePaneTitle)
+    var meta  = pane.querySelector(SELECTORS.tablePaneMeta)
+    var closeBtn = pane.querySelector(SELECTORS.tablePaneClose)
     if (!host) return
 
-    // The box that actually animates — transitions.dev's `t-modal`
-    // (06-modal.md), on the container rather than the section. See the
-    // snippet in home_conversation.scss for why.
-    var container = modal.querySelector(MODAL_TRANSITION)
-
-    // Read the close duration off the same custom property the CSS
-    // uses, so retuning the token moves both the animation and the
-    // cleanup that waits on it. The fallback matches the snippet's
-    // default in case the stylesheet hasn't loaded.
-    var closeMs = parseFloat(
-      getComputedStyle(document.documentElement).getPropertyValue('--modal-close-dur')
-    ) || 150
-
-    // Per-open state: the CLONE currently in the dialog, the thread
-    // table it was cloned from (drops are written back to it on close),
-    // the trigger to hand focus back to, and the trap handler to unbind.
     var expanded    = null
     var source      = null
     var lastFocused = null
-    var trapHandler = null
-    // Non-null only while the close animation is playing. It's both the
-    // handle for the cleanup and the flag that a close is in flight.
-    var closeTimer  = null
+
+    function setTriggerState (tableId, isOpen) {
+      var buttons = document.querySelectorAll(SELECTORS.convExpand)
+      for (var i = 0; i < buttons.length; i++) {
+        var match = buttons[i].getAttribute('data-sh-conv-expand') === tableId
+        if (!match && isOpen) continue
+        if (match) {
+          buttons[i].setAttribute('aria-expanded', isOpen ? 'true' : 'false')
+          buttons[i].setAttribute('title', isOpen ? 'Collapse table' : 'Expand table')
+          var sr = buttons[i].querySelector('.slds-assistive-text')
+          if (sr) sr.textContent = isOpen ? 'Collapse table' : 'Expand table'
+        } else if (!isOpen) {
+          buttons[i].setAttribute('aria-expanded', 'false')
+        }
+      }
+    }
+
+    function stripStream (node) {
+      if (!node) return
+      if (node.classList) node.classList.remove('sh-stream-rows')
+      var streamNodes = node.querySelectorAll('.sh-stream-rows')
+      for (var sn = 0; sn < streamNodes.length; sn++) {
+        streamNodes[sn].classList.remove('sh-stream-rows')
+      }
+      var streamRows = node.querySelectorAll('tbody tr')
+      for (var srx = 0; srx < streamRows.length; srx++) {
+        streamRows[srx].style.animationDelay = ''
+      }
+    }
+
+    function syncBack () {
+      if (!expanded || !source) return
+      var rows = expanded.querySelectorAll(SELECTORS.convRow)
+      for (var i = 0; i < rows.length; i++) {
+        var id = rows[i].getAttribute('data-sh-conv-row-id')
+        if (!id) continue
+        var srcRow = source.querySelector('[data-sh-conv-row][data-sh-conv-row-id="' + id + '"]')
+        if (srcRow) paintRowStatus(srcRow, rows[i].getAttribute('data-sh-review-status') || null)
+      }
+    }
+
+    function discardClone () {
+      if (source) source.classList.remove(TABLE_SOURCE_HIDDEN_CLASS)
+      if (expanded && expanded.parentNode) expanded.parentNode.removeChild(expanded)
+      expanded = null
+      source = null
+      host.innerHTML = ''
+    }
+
+    function onEscape (event) {
+      if (event.key === 'Escape' || event.key === 'Esc') {
+        event.preventDefault()
+        close()
+      }
+    }
 
     function open (button) {
-      // Already open — ignore a second trigger rather than stacking a
-      // second clone in the dialog.
-      if (expanded) return
-
       var tableId = button.getAttribute('data-sh-conv-expand')
-      // Authored id going into an attribute selector: same rule as
-      // conversation ids, reject anything that isn't a plain slug.
       if (!tableId || !ID_PATTERN.test(tableId)) return
+
+      if (expanded && source && source.getAttribute('data-sh-conv-table') === tableId) {
+        close()
+        return
+      }
+
+      if (expanded) {
+        var prevId = source && source.getAttribute('data-sh-conv-table')
+        syncBack()
+        discardClone()
+        if (prevId) setTriggerState(prevId, false)
+      }
 
       var table = document.querySelector('[data-sh-conv-table="' + tableId + '"]')
       if (!table || !table.parentNode) return
 
-      // Title from the table's own accessible name (`table.ariaLabel`
-      // in the JSON), so the dialog says what it's showing without a
-      // second copy of that string. The count comes from the chip.
       var inner = table.querySelector('table[aria-label]')
       var label = inner && inner.getAttribute('aria-label')
       if (title && label) title.textContent = label
-      if (meta) meta.textContent = button.getAttribute('data-sh-conv-expand-meta') || ''
+      var status = button.getAttribute('data-sh-conv-expand-meta') || ''
+      if (meta) {
+        meta.textContent = status
+        if (status) meta.removeAttribute('hidden')
+        else meta.setAttribute('hidden', '')
+      }
 
-      // Clone into the dialog; the thread's table stays exactly where it
-      // is. `cloneNode(true)` copies each row's current
-      // `data-sh-review-status`, so a prospect already dropped in the
-      // thread shows dropped here too.
       source = table
       var clone = table.cloneNode(true)
-
-      // A clone re-entering the document restarts any CSS animation it
-      // still carries — drop the streaming-reveal class so the rows
-      // don't re-deal themselves as the dialog opens.
-      if (clone.classList) clone.classList.remove('sh-stream-rows')
-      var streamNodes = clone.querySelectorAll('.sh-stream-rows')
-      for (var sn = 0; sn < streamNodes.length; sn++) {
-        streamNodes[sn].classList.remove('sh-stream-rows')
-      }
-      var streamRows = clone.querySelectorAll('tbody tr')
-      for (var srx = 0; srx < streamRows.length; srx++) {
-        streamRows[srx].style.animationDelay = ''
-      }
+      stripStream(clone)
+      clone.classList.remove(TABLE_SOURCE_HIDDEN_CLASS)
 
       host.innerHTML = ''
       host.appendChild(clone)
       expanded = clone
+      table.classList.add(TABLE_SOURCE_HIDDEN_CLASS)
 
-      // Wire the clone's reject Xs — just the click, not the full
-      // `bindProspectTable`, whose document-level review listener would
-      // leak one per open on a node discarded at close. A drop still
-      // fires `sh:conv-row-decision`, so the cadence card reacts, and the
-      // thread table catches up from `finishClose`.
       clone.addEventListener('click', function (event) {
         var t = event.target
         if (t && t.closest) handleDecisionClick(t, clone)
       })
-
-      // The Signal column is a fixed 18rem in both places, so the fit
-      // the clone copied from the thread still holds. Re-run anyway: one
-      // pass over 37 cells, and the dialog can't then be where a future
-      // width change first clips a badge.
       fitSignalBadges(clone)
 
       lastFocused = button
+      layout.classList.add(TABLE_EXPANDED_CLASS)
+      pane.removeAttribute('hidden')
+      setTriggerState(tableId, true)
 
-      // Reveal first, animate second. Both surfaces come out of
-      // `display: none`, and a transition can't start from a box that
-      // was never laid out — so the `hidden` removals and the open
-      // classes have to be separated by a forced reflow. Without the
-      // `void` read the browser folds the two style changes into one
-      // recalc and the dialog just appears at full size.
-      modal.removeAttribute('hidden')
-      backdrop.removeAttribute('hidden')
-      // Defensive: if a previous close was cut short, the container
-      // would still be holding the closing scale and this open would
-      // start from there instead of from `--modal-scale`.
-      if (container) container.classList.remove('is-closing')
-      void modal.offsetHeight
+      document.removeEventListener('keydown', onEscape)
+      document.addEventListener('keydown', onEscape)
 
-      modal.classList.add(MODAL_OPEN_CLASS)
-      backdrop.classList.add(BACKDROP_OPEN_CLASS)
-      if (container) container.classList.add('is-open')
-
-      // setTimeout(0) so the browser's own default focus (the dialog
-      // becoming visible) doesn't land after ours — same reason the
-      // review's dialog defers it.
-      var closeBtn = modal.querySelector(SELECTORS.tableModalClose)
       setTimeout(function () {
         if (closeBtn) closeBtn.focus()
-        else modal.focus()
       }, 0)
-
-      trapHandler = createTrapHandler(modal, close)
-      document.addEventListener('keydown', trapHandler)
     }
 
-    // Close runs in two halves, because the dialog is still on screen
-    // for the length of its animation. This half is everything that
-    // must happen at the click: the keyboard goes back to the page, and
-    // the two surfaces start moving.
     function close () {
-      // A second Escape or click while the close is already playing
-      // would queue a second cleanup and restore the table twice.
-      if (closeTimer) return
+      if (!expanded) return
 
-      // Focus leaves before the animation does. Waiting would strand
-      // the keyboard inside a dialog that's on its way out, and the
-      // trap has to come off with it or Tab would still be captured.
-      if (trapHandler) {
-        document.removeEventListener('keydown', trapHandler)
-        trapHandler = null
-      }
+      var tableId = source && source.getAttribute('data-sh-conv-table')
+      document.removeEventListener('keydown', onEscape)
+
       if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus()
       lastFocused = null
 
-      // The dialog dips back to `--modal-scale-close` as it fades; the
-      // backdrop fades on the same clock (its open class comes off
-      // here, not in the cleanup, so the two move together).
-      if (container) {
-        container.classList.remove('is-open')
-        container.classList.add('is-closing')
-      }
-      backdrop.classList.remove(BACKDROP_OPEN_CLASS)
-
-      // With the close animation disabled (`--modal-close-dur: 0`) there
-      // is nothing to wait for: finish in the same task so the table is
-      // back in the thread the instant the dialog goes — no fade, and no
-      // frame where neither the dialog nor the thread shows it. A real
-      // duration still defers cleanup until the fade has played.
-      if (closeMs > 0) {
-        closeTimer = window.setTimeout(finishClose, closeMs)
-      } else {
-        finishClose()
-      }
-    }
-
-    // The other half — cleanup deferred until the dialog's fade (if any)
-    // has played. `hidden` resolves to `display: none`, so setting it up
-    // front would leave nothing to animate; writing the clone's drops
-    // back and discarding it waits here for the same reason. `expanded`
-    // stays set until this runs — it's the flag `open` tests to refuse a
-    // second trigger mid-close.
-    function finishClose () {
-      closeTimer = null
-
-      modal.setAttribute('hidden', '')
-      modal.classList.remove(MODAL_OPEN_CLASS)
-      backdrop.setAttribute('hidden', '')
-      // Back to the resting scale, or the next open would start from
-      // the closing state and skip its own animation.
-      if (container) container.classList.remove('is-closing')
-
-      // Write any drops made in the dialog back to the thread's table by
-      // row id so the two copies agree, then discard the clone. The
-      // thread table was never touched, so there is nothing to move home
-      // and nothing for it to re-lay-out — which is the whole point.
-      if (expanded && source) {
-        var rows = expanded.querySelectorAll(SELECTORS.convRow)
-        for (var i = 0; i < rows.length; i++) {
-          var id = rows[i].getAttribute('data-sh-conv-row-id')
-          if (!id) continue
-          var srcRow = source.querySelector('[data-sh-conv-row][data-sh-conv-row-id="' + id + '"]')
-          if (srcRow) paintRowStatus(srcRow, rows[i].getAttribute('data-sh-review-status') || null)
-        }
-      }
-      if (expanded && expanded.parentNode) expanded.parentNode.removeChild(expanded)
-      expanded = null
-      source = null
+      syncBack()
+      discardClone()
+      layout.classList.remove(TABLE_EXPANDED_CLASS)
+      pane.setAttribute('hidden', '')
+      if (tableId) setTriggerState(tableId, false)
     }
 
     document.addEventListener('click', function (event) {
@@ -2144,23 +2193,7 @@
       open(button)
     })
 
-    var closeBtn = modal.querySelector(SELECTORS.tableModalClose)
-    var doneBtn  = modal.querySelector(SELECTORS.tableModalDone)
     if (closeBtn) closeBtn.addEventListener('click', close)
-    if (doneBtn)  doneBtn.addEventListener('click', close)
-
-    // Click-outside-to-dismiss, and the listener that does it is on the
-    // MODAL, not the backdrop. `.slds-modal` is itself a transparent
-    // layer pinned to all four edges at a higher z-index than
-    // `.slds-backdrop`, so a click on the shaded gutter never reaches
-    // the backdrop — it lands on the section. Testing `target === modal`
-    // is what distinguishes the gutter from the dialog inside it. The
-    // backdrop keeps a listener anyway, for the SLDS versions where the
-    // stacking is the other way round.
-    modal.addEventListener('click', function (event) {
-      if (event.target === modal) close()
-    })
-    backdrop.addEventListener('click', close)
   }
 
   // ──────────────────────────────────────────────────────────────

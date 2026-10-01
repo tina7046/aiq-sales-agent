@@ -246,7 +246,12 @@
 					aria-label="Daily briefing"
 					data-sh-briefing-root
 				>
-					<h1 class="seller-home__briefing-heading">
+					<h1
+						class="seller-home__briefing-heading"
+						data-sh-briefing-heading
+						data-sh-briefing-heading-energy="{{ briefing.heading }}"
+						data-sh-briefing-heading-quiet="{{ briefing.headingQuiet or briefing.heading }}"
+					>
 						{{ briefing.heading }}
 					</h1>
 					{# `linkPhrase` is data, not markup, so the sentence stays one
@@ -256,6 +261,23 @@
 
 					   Because this branch bypasses autoescaping, `text` is treated
 					   as markup — write `&amp;` for a literal ampersand. #}
+					<div
+						class="slds-scoped-notification slds-media slds-media_center slds-scoped-notification_light seller-home__onboard-notice"
+						role="status"
+						data-sh-onboard-notice
+						hidden
+					>
+						<div class="slds-media__figure">
+							<span class="slds-icon_container slds-icon-utility-sparkles">
+								<svg class="slds-icon slds-icon_x-small slds-icon-text-default" aria-hidden="true">
+									<use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#sparkles"></use>
+								</svg>
+							</span>
+						</div>
+						<div class="slds-media__body">
+							<p data-sh-onboard-notice-copy>Hunter is learning this team in the background. The playbook shows up under Knowledge, on Learnings. You can prospect now.</p>
+						</div>
+					</div>
 					<p class="seller-home__briefing-text">
 						{%- if briefing.linkPhrase -%}
 							{%- set _linked = '<button type="button" class="seller-home__briefing-link">' + briefing.linkPhrase + '</button>' -%}
@@ -1327,11 +1349,9 @@
 		}
 	</script>
 
-	{# The global-header Setup (gear) icon opens a small demo-controls
-	   dropdown: pick the background shader (God Rays / Mesh — persisted and
-	   applied on reload) and show/hide the control panel. Plain (non-module)
-	   script so it runs at parse time, after the header + panel are in the
-	   DOM. Only wired here on Home, where the shaders + panel live; both
+	{# Home adds shader picks to the header Setup Menu (see
+	   `_template.html` + `setup_menu.js`). When that menu is absent,
+	   this script still opens its own dropdown from the gear. Both
 	   choices persist in localStorage (real preferences, not demo state). #}
 	<script>
 		(function () {
@@ -1358,6 +1378,8 @@
 			var gearBtn = document.querySelector('.slds-global-actions__setup');
 			if (!gearBtn) return;
 			var trigger = gearBtn.closest('.slds-dropdown-trigger') || gearBtn.parentElement;
+			var setupMenu = trigger.querySelector('[data-sh-setup-dropdown]');
+			var setupList = setupMenu && setupMenu.querySelector('.slds-dropdown__list');
 
 			var SHADER_KEY = 'sh:shader';        // 'godrays' | 'mesh'
 			var PANEL_KEY = 'sh:shaderControls'; // 'shown' | 'hidden'
@@ -1384,12 +1406,8 @@
 					'<span data-sh-check style="visibility:' + (on ? 'visible' : 'hidden') + '">' + check + '</span>' + label +
 					'</span></a></li>';
 			}
-			var dd = document.createElement('div');
-			dd.className = 'slds-dropdown slds-dropdown_right slds-dropdown_small';
-			dd.setAttribute('role', 'menu');
-			dd.style.display = 'none';
-			dd.innerHTML =
-				'<ul class="slds-dropdown__list" role="presentation">' +
+			var shaderMarkup =
+				'<li class="slds-has-divider_top-space" role="separator"></li>' +
 				'<li class="slds-dropdown__header slds-truncate" role="separator"><span>Background shader</span></li>' +
 				shaderItem('godrays', 'God Rays') +
 				shaderItem('mesh', 'Mesh') +
@@ -1400,23 +1418,32 @@
 				'<a href="#" role="menuitemcheckbox" aria-checked="' + (!panelHidden) + '" data-sh-panel-toggle tabindex="0">' +
 				'<span class="slds-truncate" title="Show control panel">' +
 				'<span data-sh-panel-check style="visibility:' + (panelHidden ? 'hidden' : 'visible') + '">' + check + '</span>Show control panel' +
-				'</span></a></li>' +
-				'</ul>';
-			trigger.appendChild(dd);
+				'</span></a></li>';
+			var dd;
+			if (setupList) {
+				setupList.insertAdjacentHTML('beforeend', shaderMarkup);
+				dd = setupMenu;
+			} else {
+				dd = document.createElement('div');
+				dd.className = 'slds-dropdown slds-dropdown_right slds-dropdown_small';
+				dd.setAttribute('role', 'menu');
+				dd.style.display = 'none';
+				dd.innerHTML = '<ul class="slds-dropdown__list" role="presentation">' + shaderMarkup + '</ul>';
+				trigger.appendChild(dd);
 
-			// ── Open / close ──────────────────────────────────────────────
-			function open() { trigger.classList.add('slds-is-open'); dd.style.display = 'block'; gearBtn.setAttribute('aria-expanded', 'true'); }
-			function close() { trigger.classList.remove('slds-is-open'); dd.style.display = 'none'; gearBtn.setAttribute('aria-expanded', 'false'); }
+				function open() { trigger.classList.add('slds-is-open'); dd.style.display = 'block'; gearBtn.setAttribute('aria-expanded', 'true'); }
+				function close() { trigger.classList.remove('slds-is-open'); dd.style.display = 'none'; gearBtn.setAttribute('aria-expanded', 'false'); }
 
-			gearBtn.setAttribute('aria-haspopup', 'true');
-			gearBtn.setAttribute('aria-expanded', 'false');
-			gearBtn.setAttribute('title', 'Demo controls');
-			gearBtn.addEventListener('click', function (e) {
-				e.preventDefault(); e.stopPropagation();
-				dd.style.display === 'none' ? open() : close();
-			});
-			document.addEventListener('click', function (e) { if (!trigger.contains(e.target)) close(); });
-			document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+				gearBtn.setAttribute('aria-haspopup', 'true');
+				gearBtn.setAttribute('aria-expanded', 'false');
+				gearBtn.setAttribute('title', 'Demo controls');
+				gearBtn.addEventListener('click', function (e) {
+					e.preventDefault(); e.stopPropagation();
+					dd.style.display === 'none' ? open() : close();
+				});
+				document.addEventListener('click', function (e) { if (!trigger.contains(e.target)) close(); });
+				document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+			}
 
 			// ── Actions ───────────────────────────────────────────────────
 			dd.addEventListener('click', function (e) {
@@ -1424,7 +1451,7 @@
 				if (shaderEl) {
 					e.preventDefault();
 					var choice = shaderEl.getAttribute('data-sh-shader');
-					if (choice === activeShader) { close(); return; }
+					if (choice === activeShader) return;
 					lsSet(SHADER_KEY, choice);
 					// Clean URL so the saved pick (not a stale ?shader=) wins.
 					location.assign(location.pathname);

@@ -1,0 +1,79 @@
+{#
+  Salesforce Inbox connection — popup opened from Hunter chat
+  =====================================================================
+  Baseline: a standalone SLDS modal (not embedded in the coworker
+  composer). Gmail and Outlook only. Wired by inbox_gate.js; open with
+  `SellerHomeInbox.openConnectModal(onResult)`.
+#}
+<section
+  class="slds-modal slds-modal_small seller-home__inbox-modal"
+  role="dialog"
+  tabindex="-1"
+  aria-modal="true"
+  aria-labelledby="sh-inbox-modal-title"
+  data-sh-inbox-modal
+  hidden
+>
+  <div class="slds-modal__container">
+    <button
+      type="button"
+      class="slds-button slds-button_icon slds-modal__close"
+      data-sh-inbox-modal-close
+    >
+      <svg class="slds-button__icon slds-button__icon_large" aria-hidden="true">
+        <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+      </svg>
+      <span class="slds-assistive-text">Cancel and close</span>
+    </button>
+
+    <div class="slds-modal__header">
+      <h1 class="slds-modal__title slds-hyphenate" id="sh-inbox-modal-title">Connect Salesforce Inbox</h1>
+    </div>
+
+    <div class="slds-modal__content slds-p-around_medium">
+      <p class="seller-home__inbox-modal-lede">
+        Hunter sends as you through Sales Engagement. Connect Gmail or Outlook.
+      </p>
+      <p class="seller-home__inbox-modal-error" data-sh-inbox-error hidden role="alert"></p>
+      <ul class="seller-home__inbox-providers" data-sh-inbox-providers>
+        <li class="seller-home__inbox-provider" data-sh-inbox-provider="gmail">
+          <span class="slds-icon_container slds-icon-utility-email seller-home__inbox-provider-icon" aria-hidden="true">
+            <svg class="slds-icon slds-icon_small slds-icon-text-default">
+              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#email"></use>
+            </svg>
+          </span>
+          <div class="seller-home__inbox-provider-copy">
+            <p class="seller-home__inbox-provider-name">Gmail</p>
+            <p class="seller-home__inbox-provider-hint">Personal or Google Workspace, if admin policy allows.</p>
+          </div>
+          <button
+            type="button"
+            class="slds-button slds-button_neutral"
+            data-sh-inbox-connect
+          >Connect</button>
+        </li>
+        <li class="seller-home__inbox-provider" data-sh-inbox-provider="outlook">
+          <span class="slds-icon_container slds-icon-utility-email seller-home__inbox-provider-icon" aria-hidden="true">
+            <svg class="slds-icon slds-icon_small slds-icon-text-default">
+              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#date_input"></use>
+            </svg>
+          </span>
+          <div class="seller-home__inbox-provider-copy">
+            <p class="seller-home__inbox-provider-name">Outlook</p>
+            <p class="seller-home__inbox-provider-hint">Microsoft 365 mailbox.</p>
+          </div>
+          <button
+            type="button"
+            class="slds-button slds-button_neutral"
+            data-sh-inbox-connect
+          >Connect</button>
+        </li>
+      </ul>
+    </div>
+
+    <div class="slds-modal__footer">
+      <button type="button" class="slds-button slds-button_neutral" data-sh-inbox-modal-close>Cancel</button>
+    </div>
+  </div>
+</section>
+<div class="slds-backdrop" data-sh-inbox-backdrop hidden></div>

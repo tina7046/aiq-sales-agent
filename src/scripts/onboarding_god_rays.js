@@ -120,6 +120,7 @@ if (bg) {
     // for index.html's `.seller-home__composer` anchor.
     const focalTarget = () => {
       const cards = [
+        document.querySelector('.seller-home__onboard-card:not([hidden])'),
         document.querySelector('.knowledge-banner'),
         document.querySelector('.onboarding-modal .morph-modal-container')
       ]

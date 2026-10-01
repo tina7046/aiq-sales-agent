@@ -1466,149 +1466,9 @@ $sh-conv-table-rows: 5.5;
   background: var(--slds-g-color-surface-container-1, #ffffff);
 }
 
-// ══════════════════════════════════════════════════════════════════════
-// Modal open / close — transitions.dev
-// ----------------------------------------------------------------------
-// Installed from the transitions-dev skill (06-modal.md). The three
-// `.t-modal` rules are verbatim and carry no project naming, so they can
-// move to a global stylesheet the moment a second page wants them. Only
-// the `:root` values and the glue further down are ours.
-//
-// The class goes on `.slds-modal__container` — the dialog box — and NOT
-// on `.slds-modal`. That outer section is a transparent layer pinned to
-// all four viewport edges whose job is catching gutter clicks
-// (home_conversation.js dismisses on `target === modal`). Scaling it
-// would scale the click target along with the box, and the snippet's
-// `pointer-events` toggling would fight the dismiss handler.
-//
-// SLDS already puts `transform: translate(0)` and a 0.1s transition on
-// the container. Both are overridden here — equal specificity, later
-// stylesheet — and that translate was a no-op to begin with.
-:root {
-  // Expand/collapse is instant — no scale or fade on open or close; the
-  // table dialog snaps in and out. These durations drive both the
-  // `.t-modal` transitions below AND the JS close timing (it reads
-  // `--modal-close-dur` to schedule the table's return to the thread), so
-  // zeroing them here — the conversation page's copy, which loads after
-  // and wins over the global default in index.scss — turns the whole
-  // interaction off in one place. Scale is pinned to 1 so nothing zooms
-  // even for a frame.
-  --modal-open-dur: 0ms;
-  --modal-close-dur: 0ms;
-  --modal-scale: 1;
-  --modal-scale-close: 1;
-  --modal-ease: cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.t-modal {
-  transform-origin: center;
-  transform: scale(var(--modal-scale));
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    transform var(--modal-open-dur) var(--modal-ease),
-    opacity   var(--modal-open-dur) var(--modal-ease);
-  will-change: transform, opacity;
-}
-.t-modal.is-open {
-  transform: scale(1);
-  opacity: 1;
-  pointer-events: auto;
-}
-.t-modal.is-closing {
-  transform: scale(var(--modal-scale-close));
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    transform var(--modal-close-dur) var(--modal-ease),
-    opacity   var(--modal-close-dur) var(--modal-ease);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .t-modal { transition: none !important; }
-}
-
-// ── Glue: the backdrop ────────────────────────────────────────────
-// A sibling of the dialog, so it can't pick the timing up by
-// inheritance — it gets the same tokens by hand. SLDS ships it at 0.4s
-// in both directions, which trails visibly behind a 250 / 150 dialog.
-//
-// `visibility` belongs in the list even though it isn't a fade. SLDS
-// flips it to `hidden` the moment the open class comes off, and an
-// untransitioned `visibility` applies instantly — the backdrop would
-// disappear on frame one and the opacity fade would never be seen.
-// Transitioning it holds `visible` for the whole duration, then flips.
-[data-sh-conv-table-modal-backdrop] {
-  transition:
-    opacity    var(--modal-close-dur) var(--modal-ease),
-    visibility var(--modal-close-dur) var(--modal-ease);
-
-  &.slds-backdrop_open {
-    transition:
-      opacity    var(--modal-open-dur) var(--modal-ease),
-      visibility var(--modal-open-dur) var(--modal-ease);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    &,
-    &.slds-backdrop_open {
-      transition: none;
-    }
-  }
-}
-
-// ── The same table, expanded ──────────────────────────────────────
-// The dialog the expand button moves the table into (see
-// home_conversation.html). It's the SAME element, so the two caps that
-// make it a well-behaved thread citizen — the 5.5-row max-height and
-// its 100% max-width against an 800 px column — are exactly what has
-// to be lifted while it's here. Both are overridden by ancestor, not
-// by a state class on the table: the table's presentation follows from
-// where it currently lives, and nothing has to be cleaned up if a move
-// back is ever interrupted.
-.seller-home__conv-table-modal {
-  // Nothing here sizes the dialog: `slds-modal_large` already lays its
-  // container out as a full-height flex column (close, header, content,
-  // footer) inset 90% of the viewport, and the content row is the one
-  // that grows. That's what the table needs — a box with a definite
-  // height — so this block only has to say how the table fills it.
-
-  // The container inside owns all the visible motion now (see the
-  // `.t-modal` block above), and opacity multiplies down the tree — so
-  // this section's own 0.1s SLDS fade would just be a second, faster
-  // curve layered under the first. Snapping it leaves one on screen.
-  // Safe because the open class goes on before the dialog has anything
-  // to show and comes off after it's gone; home_conversation.js
-  // sequences it.
-  transition: none;
-
-  // Under the heading, the chip's own count ("37 prospects · …").
-  .seller-home__conv-table-modal-status {
-    margin-top: var(--slds-g-spacing-1, 0.25rem);
-    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
-    line-height: 1rem;
-    color: var(--slds-g-color-on-surface-1, #5c5c5c);
-  }
-
-  // The one row of that column that grows, which is what gives the
-  // table a definite height to take 100% of. Scrolling stays the
-  // table's job (SLDS gives this `overflow-y: auto`, which would
-  // otherwise scroll the padding box and take the frozen header out of
-  // view with it), and `min-height: 0` lets the box be shorter than the
-  // 37 rows inside it instead of growing to fit them.
-  .slds-modal__content {
-    flex: 1 1 auto;
-    display: flex;
-    overflow: hidden;
-    min-height: 0;
-  }
-
-  .seller-home__conv-prospect-table {
-    flex: 1 1 auto;
-    min-height: 0;
-    max-height: 100%;
-    max-width: none;
-  }
+// ── Thread table hidden while its split-pane clone is showing ─────
+.seller-home__conv-prospect-table.is-expanded-elsewhere {
+  display: none;
 }
 
 // ── conv-003 (Meeting Next Steps) — a three-column cut of the prospect
@@ -4415,6 +4275,128 @@ $sh-linkedin-brand: #0a66c2;
     visibility: hidden;
     pointer-events: none;
   }
+
+  // Table expand (Goal-Based-Agent / Coworker Grid `ask_split`): the
+  // conversation shrinks to a 25rem rail and the table pane fills the
+  // rest. Workflow details hide for the duration so two right rails
+  // don't fight.
+  &.is-table-expanded {
+    .seller-home__conv {
+      flex: 0 0 25rem;
+      width: 25rem;
+      max-width: 25rem;
+      border-inline-end: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+    }
+
+    .seller-home__conv-header {
+      border-bottom: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+
+      &::after {
+        content: none;
+      }
+    }
+
+    .seller-home__conv-side {
+      display: none;
+    }
+
+    .connected-sources {
+      display: none;
+    }
+  }
+}
+
+// ── Expanded table pane ───────────────────────────────────────────────
+// Sibling of `.seller-home__conv`. Header lines up with the conversation
+// header band; the body is the only scroll surface so the cloned table
+// can drop its 5.5-row cap and fill the remaining height.
+.seller-home__conv-table-pane {
+  &[hidden] {
+    display: none;
+  }
+
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  background: var(--slds-g-color-surface-1, #ffffff);
+}
+
+.seller-home__conv-table-pane-header {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  min-height: 3rem; // 48px — matches `.seller-home__conv-header`
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-4, 1rem);
+
+  background: var(--slds-g-color-surface-1, #ffffff);
+  border-bottom: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+}
+
+.seller-home__conv-table-pane-titlegroup {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.125rem;
+}
+
+.seller-home__conv-table-pane-title {
+  margin: 0;
+  min-width: 0;
+
+  font-family: var(--slds-g-font-family-base, "SF Pro Display", "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-2, 1rem);
+  font-weight: var(--slds-g-font-weight-6, 600);
+  line-height: 1.5rem;
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seller-home__conv-table-pane-status {
+  margin: 0;
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  line-height: 1rem;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.seller-home__conv-table-pane-close {
+  flex: 0 0 auto;
+}
+
+.seller-home__conv-table-pane-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  padding: var(--slds-g-spacing-4, 1rem);
+
+  .seller-home__conv-prospect-table {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    max-width: none;
+    height: 100%;
+  }
 }
 
 // ── Panel shell ───────────────────────────────────────────────────────
@@ -5135,7 +5117,7 @@ $sh-linkedin-brand: #0a66c2;
 // conversation with no workflow gets an empty `data-sh-conv-workflow-id`
 // from `switchPanel`, so the button stays hidden there even though its
 // layout is collapsed.
-.seller-home__conv-layout.is-panel-collapsed[data-sh-conv-workflow-id]:not([data-sh-conv-workflow-id=""])
+.seller-home__conv-layout.is-panel-collapsed:not(.is-table-expanded)[data-sh-conv-workflow-id]:not([data-sh-conv-workflow-id=""])
   .seller-home__conv-header-reopen {
   display: inline-flex;
 }
@@ -5875,4 +5857,71 @@ $sh-linkedin-brand: #0a66c2;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+// ── Salesforce Inbox connect popup ────────────────────────────────
+// Opened from conv-draft-proposals when mailbox was skipped. Same
+// provider-row density as onboarding; scoped here because that page's
+// stylesheet is not loaded on the conversation.
+
+.seller-home__inbox-modal[hidden],
+.slds-backdrop[data-sh-inbox-backdrop][hidden] {
+  display: none;
+}
+
+.seller-home__inbox-modal .slds-modal__close {
+  color: var(--slds-g-color-on-surface-3, #032d60);
+}
+
+.seller-home__inbox-modal-lede {
+  margin: 0 0 var(--slds-g-spacing-4, 1rem);
+  color: var(--slds-g-color-on-surface-2, #444);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  line-height: 1.375rem;
+}
+
+.seller-home__inbox-modal-error {
+  margin: 0 0 var(--slds-g-spacing-4, 1rem);
+  color: var(--slds-g-color-error-base-40, #ba0517);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  line-height: 1.375rem;
+}
+
+.seller-home__inbox-providers {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+}
+
+.seller-home__inbox-provider {
+  display: flex;
+  align-items: center;
+  gap: var(--slds-g-spacing-3, 0.75rem);
+  padding: var(--slds-g-spacing-2, 0.5rem) 0;
+}
+
+.seller-home__inbox-provider-icon {
+  flex: 0 0 auto;
+}
+
+.seller-home__inbox-provider-copy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.seller-home__inbox-provider-name {
+  margin: 0;
+  color: var(--slds-g-color-on-surface-3, #001e5b);
+  font-size: var(--slds-g-font-size-base, 0.8125rem);
+  font-weight: var(--slds-g-font-weight-6, 590);
+}
+
+.seller-home__inbox-provider-hint {
+  margin: 0;
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  line-height: 1.125rem;
 }

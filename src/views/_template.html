@@ -26,7 +26,15 @@
     window.SH_USERS = {{ (usersCatalog or { users: [] }) | tojson | safe }};
     window.SH_USER = {{ currentUser | tojson | safe }};
   </script>
+  {# Empty on the local server. GitHub Pages sets this to the repo
+     path so /assets and /u/… resolve under the project site. #}
+  <script>window.SH_BASE = ''</script>
   <script src="/scripts/sh_user.js"></script>
+  {# First-run: send sellers through Hunter onboarding before Ask home.
+     Safe on every page — it no-ops unless this is a gated surface and
+     onboarding is unfinished. `?onboarding=0` skips. `?reset=1` is
+     left for home.js so demo state clears, then it routes here. #}
+  <script src="/scripts/onboarding_gate.js"></script>
 </head>
 <body>
 
@@ -314,13 +322,65 @@
               </div>
             </li>
             <li class="slds-global-actions__item">
-              <div class="slds-dropdown-trigger slds-dropdown-trigger_click">
-                <button class="slds-button slds-button_icon slds-button_icon slds-button_icon-container slds-button_icon-small slds-global-actions__setup slds-global-actions__item-action" aria-haspopup="true" title="Setup">
+              {# Gear opens the Setup Menu. Salesforce Go returns to the
+                 merged onboarding flow for this seller (`appUrl` keeps
+                 `/u/<id>/`). Same-tab: the external glyph matches the
+                 product menu; this prototype page is not a new window. #}
+              <div
+                class="slds-dropdown-trigger slds-dropdown-trigger_click sh-setup-menu"
+                data-sh-setup-menu
+              >
+                <button
+                  class="slds-button slds-button_icon slds-button_icon slds-button_icon-container slds-button_icon-small slds-global-actions__setup slds-global-actions__item-action"
+                  type="button"
+                  title="Setup"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  aria-controls="sh-setup-menu"
+                  data-sh-setup-trigger
+                >
                   <svg class="slds-button__icon slds-global-header__icon" aria-hidden="true">
                     <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#setup"></use>
                   </svg>
                   <span class="slds-assistive-text">Setup</span>
                 </button>
+                <div
+                  id="sh-setup-menu"
+                  class="slds-dropdown slds-dropdown_right slds-dropdown_actions t-dropdown sh-setup-menu__menu"
+                  data-origin="top-right"
+                  data-sh-setup-dropdown
+                  role="menu"
+                  aria-label="Setup Menu"
+                >
+                  <ul class="slds-dropdown__list" role="presentation">
+                    <li class="slds-dropdown__header slds-truncate" role="separator">
+                      <span>Setup Menu</span>
+                    </li>
+                    <li class="slds-dropdown__item" role="presentation">
+                      <a href="#" role="menuitem" tabindex="-1">
+                        <span class="slds-truncate" title="Setup">Setup</span>
+                      </a>
+                    </li>
+                    <li class="slds-dropdown__item" role="presentation">
+                      <a href="{{ '/salesforce_go.html' | appUrl }}" role="menuitem" tabindex="-1">
+                        <span class="slds-truncate" title="Salesforce Go">Salesforce Go</span>
+                        <svg class="slds-icon slds-icon_x-small slds-icon-text-default sh-setup-menu__external" aria-hidden="true">
+                          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#new_window"></use>
+                        </svg>
+                      </a>
+                    </li>
+                    <li class="slds-dropdown__item" role="presentation">
+                      <a href="#" role="menuitem" tabindex="-1">
+                        <span class="slds-truncate" title="Your Account">Your Account</span>
+                      </a>
+                    </li>
+                    <li class="slds-dropdown__item" role="presentation">
+                      <a href="#" role="menuitem" tabindex="-1">
+                        <span class="slds-truncate" title="Developer Console">Developer Console</span>
+                      </a>
+                    </li>
+                  </ul>
+                </div>
               </div>
             </li>
             <li class="slds-global-actions__item">
@@ -463,6 +523,7 @@
     {% endblock %}
   </main>
   <script src="/scripts/user_switcher.js"></script>
+  <script src="/scripts/setup_menu.js"></script>
   <script src="/scripts/app.js"></script>
   {# Shared pill tab bar (window.ShTabNav). Global rather than
      per-page: it auto-wires any [data-sh-tabnav] markup, and pages
@@ -472,5 +533,9 @@
   <script src="/scripts/vendor/svg4everybody.min.js"></script>
   <script>svg4everybody();</script>
   {% block scripts_extra %}{% endblock %}
+  {# Hunter identity prefs (nickname, tone, greeting). Loads last so
+     composer / briefing markup exists, and so agent-switch in home.js
+     can be patched via click without racing first paint. #}
+  <script src="/scripts/settings.js"></script>
 </body>
 </html>

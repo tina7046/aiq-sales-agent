@@ -2,6 +2,7 @@
 {
   "briefing": {
     "heading": "You're 80% to goal, Rohan 🚀",
+    "headingQuiet": "You're 80% to goal, Rohan",
     "text": "You’ve closed $1.6M of your $2M quota — President's Club is within reach. It looks like the top of funnel is light, so let's focus on increasing outreach to prospects.",
     "linkPhrase": "$1.6M of your $2M quota",
     "quotaPercent": 80,
@@ -4141,6 +4142,97 @@
           ]
         }
       ]
+    },
+    // Inbox gate for Drafted proposals. If onboarding skipped mailbox
+    // (`sh:onboarding:mailbox` === skipped / empty), opening fails
+    // gracefully: Sales Engagement is on, Salesforce Inbox is not.
+    // Product calls for the open questions (see inbox_gate.js):
+    //   • No → stop, offer Connect email / Remind me later
+    //   • Modal fail/timeout → one retry, then park
+    //   • Modal cancel/close → re-prompt once, then park
+    //   • Enroll after connect → 8 of 10 send; cadence limit on 2
+    "conv-draft-proposals": {
+      "id": "conv-draft-proposals",
+      "title": "Drafted proposals to send",
+      "subtitle": "Draft Proposals",
+      "workflow": {
+        "id": "sk-draft-proposals",
+        "label": "Draft Proposals"
+      },
+      "status": "completed",
+      "recentLabel": "Drafted proposals to send",
+      "inboxGate": true,
+      "messages": [
+        {
+          "id": "msg-dp-blocked",
+          "type": "workflow_activity",
+          "workflowLabel": "Enrollment blocked",
+          "workflowIcon": "warning",
+          "statusText": "Salesforce Inbox not connected · Sales Engagement enabled"
+        },
+        {
+          "id": "msg-dp-ask",
+          "type": "agent",
+          "text": "Your email is not connected. Do you want to connect your email?",
+          "chips": [
+            "Yes",
+            "Not now"
+          ]
+        },
+        {
+          "id": "msg-dp-ready",
+          "type": "agent",
+          "text": "I drafted 10 proposals. Sales Engagement is on and your mailbox is connected — enrolling them now and sending as you."
+        },
+        {
+          "id": "msg-dp-sent",
+          "type": "workflow_activity",
+          "workflowLabel": "Draft Proposals completed",
+          "workflowIcon": "apps",
+          "statusText": "10 enrolled · 10 first touches sent"
+        },
+        {
+          "id": "msg-dp-sent-ok",
+          "type": "agent",
+          "text": "All 10 are in the cadence. I’ll watch replies here."
+        }
+      ],
+      "opening": {
+        "stages": [
+          {
+            "id": "open-dp-gate",
+            "when": "gate",
+            "thinkingMs": 1800,
+            "thinkingLabel": "Enrolling 10 prospects in Sales Engagement…",
+            "messageIds": [
+              "msg-dp-blocked",
+              "msg-dp-ask"
+            ]
+          }
+        ],
+        "connectedStages": [
+          {
+            "id": "open-dp-ready",
+            "when": "connected",
+            "thinkingMs": 1400,
+            "thinkingLabel": "Enrolling 10 prospects and sending first touches…",
+            "messageIds": [
+              "msg-dp-ready"
+            ]
+          },
+          {
+            "id": "open-dp-sent",
+            "when": "connected",
+            "thinkingMs": 1600,
+            "thinkingLabel": "Sending as you…",
+            "messageIds": [
+              "msg-dp-sent",
+              "msg-dp-sent-ok"
+            ]
+          }
+        ]
+      },
+      "scriptedTurns": []
     }
   },
   "feed": {
@@ -4220,6 +4312,7 @@
       },
       {
         "id": "ri-02",
+        "conversationId": "conv-draft-proposals",
         "title": "Drafted proposals to send",
         "titles": {
           "running": "Drafting proposals to send",

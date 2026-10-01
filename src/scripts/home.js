@@ -897,7 +897,18 @@
     // opened is already in the list it renders, with no flash of a rail
     // that's missing the row you arrived on.
     if (nav) {
-      consumeResetFlag()
+      // Logo `?reset=1` wipes demo state *and* first-run so the next
+      // paint is onboarding, not an empty Home that has already been seen.
+      if (consumeResetFlag()) {
+        try {
+          window.localStorage.removeItem(sk('sh:onboarding:done'))
+          window.localStorage.removeItem(sk('sh:onboarding:team'))
+        } catch (e) {}
+        if (window.SH && typeof window.SH.userUrl === 'function') {
+          window.location.replace(window.SH.userUrl('/onboarding.html'))
+          return
+        }
+      }
       var current = currentConversation(root)
       // Landing on a conversation page means the seller opened it — record
       // it consumed BEFORE painting the rail so this workflow's "New" dot
@@ -4874,6 +4885,14 @@
       return t ? t.getAttribute('data-sh-knowledge-tab') : null
     }
 
+    function learnedTeamId () {
+      try {
+        return window.localStorage.getItem(sk('sh:onboarding:team')) || ''
+      } catch (e) {
+        return ''
+      }
+    }
+
     function applyFilter (rawQuery) {
       // Trim so trailing whitespace never zeroes out results.
       var query = (rawQuery == null ? '' : String(rawQuery)).trim().toLowerCase()
@@ -4886,6 +4905,10 @@
         // regardless of the query.
         var rowTab = row.getAttribute('data-sh-knowledge-doc-tab')
         var tabMatch = !tab || !rowTab || rowTab === tab
+        var learnedProfile = row.getAttribute('data-sh-learned-profile')
+        var learnedBaseline = row.hasAttribute('data-sh-learned-baseline')
+        if (learnedProfile && learnedProfile !== learnedTeamId()) tabMatch = false
+        if (learnedBaseline && learnedTeamId()) tabMatch = false
         var visible
         if (!tabMatch) {
           visible = false

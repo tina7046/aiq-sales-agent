@@ -24,11 +24,39 @@
     'scheduled.html': true,
     'home_conversation.html': true,
     'memory.html': true,
-    'tools.html': true
+    'tools.html': true,
+    'settings.html': true,
+    'onboarding.html': true,
+    'salesforce_go.html': true
+  }
+
+  function siteBase () {
+    var base = global.SH_BASE || ''
+    if (base.charAt(base.length - 1) === '/') base = base.slice(0, -1)
+    return base
+  }
+
+  function stripBase (pathname) {
+    var path = String(pathname || '')
+    var base = siteBase()
+    if (base && (path === base || path.indexOf(base + '/') === 0)) {
+      path = path.slice(base.length) || '/'
+    }
+    return path
+  }
+
+  function withBase (href) {
+    if (href == null || href === '') return href
+    var base = siteBase()
+    if (!base) return href
+    var raw = String(href)
+    if (raw.charAt(0) !== '/') return raw
+    if (raw === base || raw.indexOf(base + '/') === 0) return raw
+    return base + raw
   }
 
   function parseUserIdFromPath (pathname) {
-    var match = String(pathname || '').match(/^\/u\/([^/]+)(?:\/|$)/)
+    var match = stripBase(pathname).match(/^\/u\/([^/]+)(?:\/|$)/)
     return match ? decodeURIComponent(match[1]) : null
   }
 
@@ -43,17 +71,17 @@
     if (raw === '#' || raw.charAt(0) === '#') return raw
     if (/^(javascript:|mailto:|tel:)/i.test(raw)) return raw
     if (/^https?:\/\//i.test(raw)) return raw
-    if (raw.indexOf('/u/') === 0) return raw
+    if (raw.indexOf('/u/') === 0) return withBase(raw)
     if (
       raw.indexOf('/assets/') === 0 ||
       raw.indexOf('/styles/') === 0 ||
       raw.indexOf('/scripts/') === 0 ||
       raw.indexOf('/favicon') === 0
     ) {
-      return raw
+      return withBase(raw)
     }
     var id = userId || currentUserId()
-    if (!id) return raw
+    if (!id) return withBase(raw)
     if (raw.charAt(0) !== '/') return raw
 
     var qIndex = raw.indexOf('?')
@@ -64,8 +92,8 @@
     var path = raw.slice(0, cut)
     var rest = raw.slice(cut)
     var file = path.replace(/^\//, '')
-    if (!SELLER_PAGES[file]) return raw
-    return '/u/' + encodeURIComponent(id) + path + rest
+    if (!SELLER_PAGES[file]) return withBase(raw)
+    return withBase('/u/' + encodeURIComponent(id) + path + rest)
   }
 
   function urlForUser (userId, pathname, search, hash) {
@@ -78,7 +106,7 @@
     var h = hash == null
       ? (global.location && global.location.hash) || ''
       : hash
-    var scoped = String(path).match(/^\/u\/[^/]+(\/.*)?$/)
+    var scoped = stripBase(path).match(/^\/u\/[^/]+(\/.*)?$/)
     var rest
     if (scoped) {
       rest = scoped[1] || '/index.html'
@@ -88,7 +116,7 @@
       q = ''
       h = ''
     }
-    return '/u/' + encodeURIComponent(userId) + rest + q + h
+    return withBase('/u/' + encodeURIComponent(userId) + rest + q + h)
   }
 
   // `sh:recents` → `sh:<id>:recents`. Already-scoped keys pass through.
