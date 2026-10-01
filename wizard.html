@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Prototype: never serve a stale document from the browser cache so
+       data/markup edits always show up on reload (esp. in embedded browsers). -->
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Salesforce</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" type="image/png" href="/aiq-sales-agent/favicon.png" />
+
+  <!-- Prototype styles -->
+  <link rel="stylesheet" href="/aiq-sales-agent/styles/index.css" />
+  <link rel="stylesheet" href="/aiq-sales-agent/styles/slds2_agentic.css" />
+  <link rel="stylesheet" href="/aiq-sales-agent/styles/gc.css" />
+
+  
+
+  
+  <script>
+    window.SH_USERS = {"defaultUserId":"rohan","users":[{"id":"rohan","name":"Rohan","title":"Account Executive","role":"rep","avatar":"/aiq-sales-agent/assets/images/avatar2.jpg"},{"id":"nima","name":"Nima","title":"Admin","role":"admin","avatar":"/aiq-sales-agent/assets/images/avatar-nima.png"}]};
+    window.SH_USER = {"id":"rohan","name":"Rohan","title":"Account Executive","role":"rep","avatar":"/aiq-sales-agent/assets/images/avatar2.jpg"};
+  </script>
+  
+  <script>window.SH_BASE = '/aiq-sales-agent'</script>
+  <script src="/aiq-sales-agent/scripts/sh_user.js"></script>
+  
+  <script src="/aiq-sales-agent/scripts/onboarding_gate.js"></script>
+</head>
+<body>
+
+  <header class="slds-global-header_container">
+      <a href="javascript:void(0);" class="slds-assistive-text slds-assistive-text_focus">Skip to Navigation</a>
+      <a href="javascript:void(0);" class="slds-assistive-text slds-assistive-text_focus">Skip to Main Content</a>
+      <div class="slds-global-header slds-grid slds-grid_align-spread">
+        <div class="slds-global-header__item">
+          <div class="slds-global-header__logo">
+            
+            <a href="/index.html?reset=1" title="Salesforce — restart demo">
+              <img src="/aiq-sales-agent/assets/images/logo-noname.svg" style="width: 12.5rem;height: 1.75rem;background-size: contain;background-repeat: no-repeat;background-position: left center;"alt="Salesforce Logo" />
+            </a>
+          </div>
+        </div>
+        <div class="slds-global-header__item slds-global-header__item_search">
+          <div class="slds-form-element">
+            <label class="slds-form-element__label slds-assistive-text" for="combobox-id-1">Search Salesforce</label>
+            <div class="slds-form-element__control">
+              <div class="slds-combobox-group">
+                <div class="slds-combobox_object-switcher slds-combobox-addon_start">
+                  <div class="slds-form-element">
+                    <label class="slds-form-element__label slds-assistive-text" for="objectswitcher-combobox-id-1">Filter Search by:</label>
+                    <div class="slds-form-element__control">
+                      <div class="slds-combobox_container">
+                        <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click" aria-controls="primary-search-combobox-id-1" aria-expanded="false" aria-haspopup="listbox" role="combobox">
+                          <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right" role="none">
+                            <input type="text" class="slds-input slds-combobox__input slds-combobox__input-value" id="objectswitcher-combobox-id-1" aria-controls="objectswitcher-listbox-id-1" autoComplete="off" role="textbox" placeholder=" " value="Accounts"
+                            />
+                            <span class="slds-icon_container slds-icon-utility-down slds-input__icon slds-input__icon_right">
+                              <svg class="slds-icon slds-icon slds-icon_xx-small slds-icon-text-default" aria-hidden="true">
+                                <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#down"></use>
+                              </svg>
+                            </span>
+                          </div>
+                          <div id="objectswitcher-listbox-id-1" class="slds-dropdown slds-dropdown_length-5 slds-dropdown_x-small slds-dropdown_left" role="listbox">
+                            <ul class="slds-listbox slds-listbox_vertical" role="group" aria-label="Suggested for you">
+                              <li role="presentation" class="slds-listbox__item">
+                                <div id="object0" class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small" role="presentation">
+                                  <h3 class="slds-text-title_caps" role="presentation">Suggested for you</h3>
+                                </div>
+                              </li>
+                              <li role="presentation" class="slds-listbox__item">
+                                <div id="object1" class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small slds-is-selected" role="option">
+                                  <span class="slds-media__figure">
+                                    <svg class="slds-icon slds-icon_x-small slds-listbox__icon-selected" aria-hidden="true">
+                                      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+                                    </svg>
+                                  </span>
+                                  <span class="slds-media__body">
+                                    <span class="slds-truncate" title="Accounts">
+                                      <span class="slds-assistive-text">Current Selection:</span> Accounts</span>
+                                  </span>
+                                </div>
+                              </li>
+                              <li role="presentation" class="slds-listbox__item">
+                                <div id="object2" class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small" role="option">
+                                  <span class="slds-media__figure">
+                                    <svg class="slds-icon slds-icon_x-small slds-listbox__icon-selected" aria-hidden="true">
+                                      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+                                    </svg>
+                                  </span>
+                                  <span class="slds-media__body">
+                                    <span class="slds-truncate" title="Reports"> Reports</span>
+                                  </span>
+                                </div>
+                              </li>
+                              <li role="presentation" class="slds-listbox__item">
+                                <div id="object3" class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small" role="option">
+                                  <span class="slds-media__figure">
+                                    <svg class="slds-icon slds-icon_x-small slds-listbox__icon-selected" aria-hidden="true">
+                                      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+                                    </svg>
+                                  </span>
+                                  <span class="slds-media__body">
+                                    <span class="slds-truncate" title="Contacts"> Contacts</span>
+                                  </span>
+                                </div>
+                              </li>
+                              <li role="presentation" class="slds-listbox__item">
+                                <div id="object4" class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small" role="option">
+                                  <span class="slds-media__figure">
+                                    <svg class="slds-icon slds-icon_x-small slds-listbox__icon-selected" aria-hidden="true">
+                                      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+                                    </svg>
+                                  </span>
+                                  <span class="slds-media__body">
+                                    <span class="slds-truncate" title="Files"> Files</span>
+                                  </span>
+                                </div>
+                              </li>
+                              <li role="presentation" class="slds-listbox__item">
+                                <div id="object5" class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small" role="option">
+                                  <span class="slds-media__figure">
+                                    <svg class="slds-icon slds-icon_x-small slds-listbox__icon-selected" aria-hidden="true">
+                                      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+                                    </svg>
+                                  </span>
+                                  <span class="slds-media__body">
+                                    <span class="slds-truncate" title="Groups"> Groups</span>
+                                  </span>
+                                </div>
+                              </li>
+                              <li role="presentation" class="slds-listbox__item">
+                                <div id="object6" class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small" role="option">
+                                  <span class="slds-media__figure">
+                                    <svg class="slds-icon slds-icon_x-small slds-listbox__icon-selected" aria-hidden="true">
+                                      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+                                    </svg>
+                                  </span>
+                                  <span class="slds-media__body">
+                                    <span class="slds-truncate" title="Leads"> Leads</span>
+                                  </span>
+                                </div>
+                              </li>
+                              <li role="presentation" class="slds-listbox__item">
+                                <div id="object7" class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small" role="option">
+                                  <span class="slds-media__figure">
+                                    <svg class="slds-icon slds-icon_x-small slds-listbox__icon-selected" aria-hidden="true">
+                                      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+                                    </svg>
+                                  </span>
+                                  <span class="slds-media__body">
+                                    <span class="slds-truncate" title="Notes"> Notes</span>
+                                  </span>
+                                </div>
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="slds-combobox_container slds-combobox-addon_end">
+                  <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click" aria-expanded="false" aria-haspopup="listbox" id="primary-search-combobox-id-1" role="combobox">
+                    <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_left slds-global-search__form-element" role="none">
+                      <span class="slds-icon_container slds-icon-utility-search slds-input__icon slds-input__icon_left">
+                        <svg class="slds-icon slds-icon slds-icon_xx-small slds-icon-text-default" aria-hidden="true">
+                          <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#search"></use>
+                        </svg>
+                      </span>
+                      <input type="text" class="slds-input slds-combobox__input" id="combobox-id-1" aria-autocomplete="list" aria-controls="search-listbox-id-1" autoComplete="off" role="textbox" placeholder="Search..." />
+                    </div>
+                    <div id="search-listbox-id-1" class="slds-dropdown slds-dropdown_length-with-icon-7 slds-dropdown_fluid" role="listbox">
+                      <ul class="slds-listbox slds-listbox_vertical" role="group" aria-label="Recent Items">
+                        <li role="presentation" class="slds-listbox__item">
+                          <div id="option0" class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_center" role="presentation">
+                            <h3 class="slds-text-title_caps" role="presentation">Recent Items</h3>
+                          </div>
+                        </li>
+                        <li role="presentation" class="slds-listbox__item">
+                          <div id="option1" class="slds-media slds-listbox__option slds-listbox__option_entity slds-listbox__option_has-meta" role="option">
+                            <span class="slds-media__figure">
+                              <span class="slds-icon_container slds-icon-standard-opportunity">
+                                <svg class="slds-icon slds-icon_small" aria-hidden="true">
+                                  <use xlink:href="/aiq-sales-agent/assets/icons/standard-sprite/svg/symbols.svg#opportunity"></use>
+                                </svg>
+                              </span>
+                            </span>
+                            <span class="slds-media__body">
+                              <span class="slds-listbox__option-text slds-listbox__option-text_entity">Salesforce - 1,000 Licenses</span>
+                              <span class="slds-listbox__option-meta slds-listbox__option-meta_entity">Opportunity • Propecting</span>
+                            </span>
+                          </div>
+                        </li>
+                        <li role="presentation" class="slds-listbox__item">
+                          <div id="option2" class="slds-media slds-listbox__option slds-listbox__option_entity slds-listbox__option_has-meta" role="option">
+                            <span class="slds-media__figure">
+                              <span class="slds-icon_container slds-icon-standard-contact">
+                                <svg class="slds-icon slds-icon_small" aria-hidden="true">
+                                  <use xlink:href="/aiq-sales-agent/assets/icons/standard-sprite/svg/symbols.svg#contact"></use>
+                                </svg>
+                              </span>
+                            </span>
+                            <span class="slds-media__body">
+                              <span class="slds-listbox__option-text slds-listbox__option-text_entity">Art Vandelay</span>
+                              <span class="slds-listbox__option-meta slds-listbox__option-meta_entity">Contact • avandelay@vandelay.com</span>
+                            </span>
+                          </div>
+                        </li>
+                        <li role="presentation" class="slds-listbox__item">
+                          <div id="option3" class="slds-media slds-listbox__option slds-listbox__option_entity slds-listbox__option_has-meta" role="option">
+                            <span class="slds-media__figure">
+                              <span class="slds-icon_container slds-icon-standard-account">
+                                <svg class="slds-icon slds-icon_small" aria-hidden="true">
+                                  <use xlink:href="/aiq-sales-agent/assets/icons/standard-sprite/svg/symbols.svg#account"></use>
+                                </svg>
+                              </span>
+                            </span>
+                            <span class="slds-media__body">
+                              <span class="slds-listbox__option-text slds-listbox__option-text_entity">Vandelay Industries</span>
+                              <span class="slds-listbox__option-meta slds-listbox__option-meta_entity">Account • San Francisco</span>
+                            </span>
+                          </div>
+                        </li>
+                        <li role="presentation" class="slds-listbox__item">
+                          <div id="option4" class="slds-media slds-listbox__option slds-listbox__option_entity slds-listbox__option_has-meta" role="option">
+                            <span class="slds-media__figure">
+                              <span class="slds-icon_container slds-icon-standard-event">
+                                <svg class="slds-icon slds-icon_small" aria-hidden="true">
+                                  <use xlink:href="/aiq-sales-agent/assets/icons/standard-sprite/svg/symbols.svg#event"></use>
+                                </svg>
+                              </span>
+                            </span>
+                            <span class="slds-media__body">
+                              <span class="slds-listbox__option-text slds-listbox__option-text_entity">Salesforce UK 2016 Events</span>
+                              <span class="slds-listbox__option-meta slds-listbox__option-meta_entity">Event • $20,000</span>
+                            </span>
+                          </div>
+                        </li>
+                        <li role="presentation" class="slds-listbox__item">
+                          <div id="option5" class="slds-media slds-listbox__option slds-listbox__option_entity slds-listbox__option_has-meta" role="option">
+                            <span class="slds-media__figure">
+                              <span class="slds-icon_container slds-icon-standard-lead">
+                                <svg class="slds-icon slds-icon_small" aria-hidden="true">
+                                  <use xlink:href="/aiq-sales-agent/assets/icons/standard-sprite/svg/symbols.svg#lead"></use>
+                                </svg>
+                              </span>
+                            </span>
+                            <span class="slds-media__body">
+                              <span class="slds-listbox__option-text slds-listbox__option-text_entity">H.E. Pennypacker</span>
+                              <span class="slds-listbox__option-meta slds-listbox__option-meta_entity">Lead • Nursing</span>
+                            </span>
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <span class="slds-subtheme-agentic" style="margin-left: var(--slds-g-spacing-3, 0.75rem); flex-shrink: 0;">
+            <button type="button" class="slds-button slds-button_neutral">
+              <svg class="slds-button__icon slds-button__icon_left" aria-hidden="true">
+                <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#sparkles"></use>
+              </svg>
+              Ask
+            </button>
+          </span>
+        </div>
+        <div class="slds-global-header__item">
+          <ul class="slds-global-actions">
+            <li class="slds-global-actions__item">
+              <div class="slds-global-actions__favorites slds-dropdown-trigger slds-dropdown-trigger_click">
+                <div class="slds-button-group">
+                  <button class="slds-button slds-button_icon slds-global-actions__favorites-action slds-button_icon slds-button_icon-border slds-button_icon-small" aria-pressed="false" title="Toggle Favorites">
+                    <svg class="slds-button__icon" aria-hidden="true">
+                      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#favorite"></use>
+                    </svg>
+                    <span class="slds-assistive-text">Toggle Favorite</span>
+                  </button>
+                  <button class="slds-button slds-button_icon slds-global-actions__favorites-more slds-button_icon slds-button_icon-border slds-button_icon-small" title="View Favorites">
+                    <svg class="slds-button__icon" aria-hidden="true" style="height:12px;width:12px;">
+                      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#down"></use>
+                    </svg>
+                    <span class="slds-assistive-text">View Favorites</span>
+                  </button>
+                </div>
+              </div>
+            </li>
+            <li class="slds-global-actions__item">
+              <div class="slds-dropdown-trigger slds-dropdown-trigger_click">
+                <button class="slds-button slds-button_icon slds-button_icon slds-button_icon-container slds-button_icon-small slds-global-actions__task slds-global-actions__item-action" aria-haspopup="true" title="Global Actions">
+                  <svg class="slds-button__icon" aria-hidden="true" style="fill:white;">
+                    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Global Actions</span>
+                </button>
+              </div>
+            </li>
+            <li class="slds-global-actions__item">
+              <div class="slds-dropdown-trigger slds-dropdown-trigger_click">
+                <button class="slds-button slds-button_icon slds-button_icon slds-button_icon-container slds-button_icon-small slds-global-actions__help slds-global-actions__item-action" aria-haspopup="true" title="Help and Training">
+                  <svg class="slds-button__icon slds-global-header__icon" aria-hidden="true">
+                    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#question"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Help and Training</span>
+                </button>
+              </div>
+            </li>
+            <li class="slds-global-actions__item">
+              
+              <div
+                class="slds-dropdown-trigger slds-dropdown-trigger_click sh-setup-menu"
+                data-sh-setup-menu
+              >
+                <button
+                  class="slds-button slds-button_icon slds-button_icon slds-button_icon-container slds-button_icon-small slds-global-actions__setup slds-global-actions__item-action"
+                  type="button"
+                  title="Setup"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  aria-controls="sh-setup-menu"
+                  data-sh-setup-trigger
+                >
+                  <svg class="slds-button__icon slds-global-header__icon" aria-hidden="true">
+                    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#setup"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Setup</span>
+                </button>
+                <div
+                  id="sh-setup-menu"
+                  class="slds-dropdown slds-dropdown_right slds-dropdown_actions t-dropdown sh-setup-menu__menu"
+                  data-origin="top-right"
+                  data-sh-setup-dropdown
+                  role="menu"
+                  aria-label="Setup Menu"
+                >
+                  <ul class="slds-dropdown__list" role="presentation">
+                    <li class="slds-dropdown__header slds-truncate" role="separator">
+                      <span>Setup Menu</span>
+                    </li>
+                    <li class="slds-dropdown__item" role="presentation">
+                      <a href="#" role="menuitem" tabindex="-1">
+                        <span class="slds-truncate" title="Setup">Setup</span>
+                      </a>
+                    </li>
+                    <li class="slds-dropdown__item" role="presentation">
+                      <a href="/salesforce_go.html" role="menuitem" tabindex="-1">
+                        <span class="slds-truncate" title="Salesforce Go">Salesforce Go</span>
+                        <svg class="slds-icon slds-icon_x-small slds-icon-text-default sh-setup-menu__external" aria-hidden="true">
+                          <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#new_window"></use>
+                        </svg>
+                      </a>
+                    </li>
+                    <li class="slds-dropdown__item" role="presentation">
+                      <a href="#" role="menuitem" tabindex="-1">
+                        <span class="slds-truncate" title="Your Account">Your Account</span>
+                      </a>
+                    </li>
+                    <li class="slds-dropdown__item" role="presentation">
+                      <a href="#" role="menuitem" tabindex="-1">
+                        <span class="slds-truncate" title="Developer Console">Developer Console</span>
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </li>
+            <li class="slds-global-actions__item">
+              <div class="slds-dropdown-trigger slds-dropdown-trigger_click">
+                <button class="slds-button slds-button_icon slds-button_icon slds-button_icon-container slds-button_icon-small slds-global-actions__notifications slds-global-actions__item-action" title="no new notifications" aria-live="assertive" aria-atomic="true">
+                  <svg class="slds-button__icon slds-global-header__icon" aria-hidden="true">
+                    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#notification"></use>
+                  </svg>
+                  <span class="slds-assistive-text">no new notifications</span>
+                </button>
+                <span aria-hidden="true" class="slds-notification-badge">0</span>
+              </div>
+            </li>
+            <li class="slds-global-actions__item">
+              
+              
+              
+              <div
+                class="slds-dropdown-trigger slds-dropdown-trigger_click sh-user-switcher"
+                data-sh-user-switcher
+              >
+                <button
+                  class="slds-button slds-global-actions__avatar slds-global-actions__item-action"
+                  type="button"
+                  title="Rohan"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  aria-controls="sh-user-menu"
+                  data-sh-user-switcher-trigger
+                >
+                  <span class="slds-avatar slds-avatar_circle slds-avatar_medium">
+                    <img
+                      alt="Rohan"
+                      src="/aiq-sales-agent/assets/images/avatar2.jpg"
+                      title="Rohan"
+                    />
+                  </span>
+                </button>
+                <div
+                  id="sh-user-menu"
+                  class="slds-dropdown slds-dropdown_right slds-dropdown_actions t-dropdown sh-user-switcher__menu"
+                  data-origin="top-right"
+                  data-sh-user-menu
+                  role="menu"
+                  aria-label="Switch user"
+                >
+                  <ul class="slds-dropdown__list" role="presentation">
+                    
+                    
+                    <li class="slds-dropdown__item" role="presentation">
+                      <a
+                        href="/aiq-sales-agent/u/rohan/index.html"
+                        role="menuitem"
+                        tabindex="-1"
+                        data-sh-user-switch="rohan"
+                        aria-current="true"
+                      >
+                        <span class="sh-user-switcher__row">
+                          <span class="slds-avatar slds-avatar_circle slds-avatar_small sh-user-switcher__avatar">
+                            <img alt="" src="/aiq-sales-agent/assets/images/avatar2.jpg" />
+                          </span>
+                          <span class="sh-user-switcher__copy">
+                            <span class="slds-truncate" title="Rohan">Rohan</span>
+                            
+                            <span class="sh-user-switcher__title slds-truncate" title="Account Executive">Account Executive</span>
+                            
+                          </span>
+                          
+                          <svg class="sh-user-switcher__check" aria-hidden="true">
+                            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+                          </svg>
+                          
+                        </span>
+                      </a>
+                    </li>
+                    
+                    
+                    <li class="slds-dropdown__item" role="presentation">
+                      <a
+                        href="/aiq-sales-agent/u/nima/index.html"
+                        role="menuitem"
+                        tabindex="-1"
+                        data-sh-user-switch="nima"
+                        
+                      >
+                        <span class="sh-user-switcher__row">
+                          <span class="slds-avatar slds-avatar_circle slds-avatar_small sh-user-switcher__avatar">
+                            <img alt="" src="/aiq-sales-agent/assets/images/avatar-nima.png" />
+                          </span>
+                          <span class="sh-user-switcher__copy">
+                            <span class="slds-truncate" title="Nima">Nima</span>
+                            
+                            <span class="sh-user-switcher__title slds-truncate" title="Admin">Admin</span>
+                            
+                          </span>
+                          
+                        </span>
+                      </a>
+                    </li>
+                    
+                  </ul>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </header>
+
+
+
+ 
+  <div class="app-header-placeholder"></div>
+
+
+  <div class="slds-context-bar app-nav" style="padding-left: 0px;">
+        <div class="slds-context-bar__primary">
+          <div class="slds-context-bar__item slds-context-bar__dropdown-trigger slds-dropdown-trigger slds-dropdown-trigger_click slds-no-hover">
+            <div class="slds-context-bar__icon-action">
+              <button class="slds-button slds-icon-waffle_container slds-context-bar__button" title="Description of the icon when needed">
+                <span class="slds-icon-waffle">
+                  <span class="slds-r1"></span>
+                  <span class="slds-r2"></span>
+                  <span class="slds-r3"></span>
+                  <span class="slds-r4"></span>
+                  <span class="slds-r5"></span>
+                  <span class="slds-r6"></span>
+                  <span class="slds-r7"></span>
+                  <span class="slds-r8"></span>
+                  <span class="slds-r9"></span>
+                </span>
+                <span class="slds-assistive-text">Open App Launcher</span>
+              </button>
+            </div>
+            <span class="slds-context-bar__label-action slds-context-bar__app-name">
+              <span class="slds-truncate" title="App Name">Sales</span>
+            </span>
+          </div>
+        </div>
+        <nav class="slds-context-bar__secondary" role="navigation">
+          <ul class="slds-grid">
+            
+            <li class="slds-context-bar__item slds-is-active">
+              <a href="/index.html" class="slds-context-bar__label-action" title="Home">
+                <span class="slds-assistive-text">Current Page:</span>
+                <span class="slds-truncate" title="Home">Home</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+  </div>
+
+  <main class="app-wrapper slds-template_default">
+    
+<style scoped>
+	/* God-rays host: full-bleed fixed layer behind the wizard. White
+	   fallback shows if the shader fails to boot (WebGL error / CDN
+	   offline). aria-hidden decoration, so it ignores pointer events.
+
+	   Negative inset overscans the viewport on every side — bigger than
+	   the `blur(5px)` the shader applies — so the blur's soft edge falls
+	   offscreen instead of fading to transparent at the window border.
+	   Same trick as index.html's `.seller-home__god-rays` overscan. */
+	.wizard-bg {
+		position: fixed;
+		inset: -40px;
+		z-index: 0;
+		background: #ffffff;
+		pointer-events: none;
+	}
+
+	.wizard-shell {
+		--bg: #f4f4f0;
+		--surface: #ffffff;
+		--border: #c9c9c9;
+		--border-hover: #b0aea8;
+		--accent: #1a1a1a;
+		--accent-hover: #3a3a3a;
+		--text: #1a1a1a;
+		--muted: #999690;
+		--highlight: #0066ff;
+		--highlight2: #00aa66;
+		--font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
+		position: relative;
+		/* Above the shader host (z-index 0). */
+		z-index: 1;
+		/* Fill the scrollable content area and centre the card in it. */
+		min-height: 100%;
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 48px 24px;
+		box-sizing: border-box;
+
+		color: var(--text);
+		font-family: var(--font);
+		margin: 0 auto;
+	  }
+
+	  /* ── Steps ── */
+	  .step { display: none; flex-direction: column; gap: 24px; }
+	  .step.visible { display: flex; }
+
+	  /* Header: 3-column grid keeps title centred with back btn on left */
+	  .step-header {
+		display: grid;
+		grid-template-columns: 90px 1fr 90px;
+		align-items: center;
+		gap: 12px;
+	  }
+	  .header-back { display: flex; align-items: center; }
+	  .header-center {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+		gap: 3px;
+	  }
+
+	  .step-subtitle {
+		font-size: 11px;
+		font-weight: 500;
+		color: var(--muted);
+		letter-spacing: 0.13em;
+		text-transform: uppercase;
+	  }
+	  .step-title {
+		font-size: var(--slds-g-font-scale-4);
+		font-weight: 590;
+		line-height: 1.15;
+		letter-spacing: -0.02em;
+		color: var(--slds-g-color-on-surface-3);
+	  }
+
+	  /* ── Back button ── */
+	  .back-btn {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		background: none;
+		border: 1px solid var(--border);
+		color: var(--muted);
+		font-family: var(--font);
+		font-size: 12px;
+		font-weight: 500;
+		letter-spacing: 0.03em;
+		padding: 7px 13px;
+		border-radius: 6px;
+		cursor: pointer;
+		transition: border-color 0.2s, color 0.2s, background 0.2s;
+		white-space: nowrap;
+		opacity: 0;
+	  }
+	  .back-btn:hover {
+		border-color: var(--border-hover);
+		color: var(--text);
+		background: var(--surface);
+	  }
+	  .back-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+	  /* ── Grids ── */
+	  .tile-grid { display: grid; gap: 8px; }
+	  .grid-6x4 { grid-template-columns: repeat(4, 1fr); }
+	  /* Step 2: same tile size as step 1 — match col count so tiles are same width,
+		 then limit to 6 cols but only fill 2 rows (6 tiles in a 6-col grid = 1 row...
+		 use 3 cols × 2 rows to keep tiles square and similar visual weight) */
+	  .grid-3x2 { grid-template-columns: repeat(3, 1fr); max-width: 100%; }
+	  .grid-1x2 { grid-template-columns: repeat(2, 1fr); max-width: 100%; }
+
+	  /* ── Tiles ── */
+	  .tile {
+		/* aspect-ratio: 1; */
+		background: var(--surface);
+		border: 1px solid var(--slds-g-color-border-1, #C9C9C9);
+		border-radius: 20px;
+		cursor: pointer;
+		position: relative;
+		overflow: hidden;
+		display: flex;
+		justify-content: center;
+		padding: 10px;
+		opacity: 0;
+		height: 120px;
+		width: 200px;
+		transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+		will-change: opacity;
+	  }
+
+	  .tile-title{
+		color: var(--slds-g-color-on-surface-3, var(--lwc-colorTextDefault, #16325c));
+		font-weight: var(--sdr-guided-config-font-weight-6);
+		font-size: var(--slds-g-font-size-base);
+		line-height: var(--slds-g-font-lineheight-2);
+	  }
+	  /* confirm tiles: content aligned to top-left, not bottom */
+	  .confirm-tile { align-items: flex-start; padding: 14px; }
+	  .tile:hover {
+		border-color: var(--slds-g-color-surface-inverse-1);
+		border-width: 2px;
+		background: #fafafa;
+		box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+	  }
+	  .tile:active { background: #f9f9f7; }
+
+	  .tile-label {
+		font-size: 10px;
+		font-weight: 500;
+		color: var(--muted);
+		letter-spacing: 0.06em;
+		position: relative;
+		z-index: 1;
+		transition: color 0.18s;
+		font-variant-numeric: tabular-nums;
+	  }
+	  .tile:hover .tile-label { color: var(--text); }
+
+	  .tile-dot {
+		position: absolute;
+		top: 9px; right: 9px;
+		width: 5px; height: 5px;
+		border-radius: 50%;
+		background: var(--border);
+		transition: background 0.18s;
+	  }
+	  .tile:hover .tile-dot { background: var(--text); }
+
+	  /* ── Step 3 confirm ── */
+	  .confirm-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+	  /* confirm-tiles reuse .tile styles; extras below */
+	  .confirm-tile {
+		opacity: 0;
+		will-change: opacity;
+	  }
+	  .confirm-tile.hi {
+		border-color: rgba(0,102,255,0.25) !important;
+	  }
+	  .ctile-label {
+		font-size: 10px;
+		font-weight: 500;
+		color: var(--muted);
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		margin-bottom: 6px;
+	  }
+	  .ctile-value {
+		font-size: 18px;
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		color: var(--text);
+	  }
+	  .confirm-tile.hi .ctile-value { color: var(--highlight); }
+
+	  .cta-row { display: flex; justify-content: flex-end; opacity: 0; }
+	  .cta-btn {
+		background: var(--text);
+		color: #fff;
+		border: none;
+		font-family: var(--font);
+		font-weight: 600;
+		font-size: 13px;
+		letter-spacing: 0.02em;
+		padding: 13px 28px;
+		border-radius: 6px;
+		cursor: pointer;
+		transition: background 0.2s, box-shadow 0.2s;
+	  }
+	  .cta-btn:hover { background: #333; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+
+</style>
+
+
+
+<div class="wizard-bg" data-wizard-god-rays aria-hidden="true"></div>
+
+<div class="wizard-shell">
+
+	<!-- STEP 1 -->
+	<div class="step visible" id="step1">
+	  <div class="step-header">
+		<div class="header-back"></div>
+		<div class="header-center">
+		  <div class="step-subtitle">Step 1 of 3</div>
+		  <h2 class="step-title">What industry do you sell into?</h2>
+		</div>
+		<div></div>
+	  </div>
+	  <div class="tile-grid grid-6x4" id="grid1"></div>
+	</div>
+
+	<!-- STEP 2 -->
+	<div class="step" id="step2">
+	  <div class="step-header">
+		<div class="header-back">
+		  <button class="back-btn" id="back1">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+			Back
+		  </button>
+		</div>
+		<div class="header-center">
+		  <div class="step-subtitle">Step 2 of 3</div>
+		  <h2 class="step-title">What segment do you sell into?</h2>
+		</div>
+		<div></div>
+	  </div>
+	  <div class="tile-grid grid-3x2" id="grid2"></div>
+	</div>
+
+	<!-- STEP 3 -->
+	<div class="step" id="step3">
+	  <div class="step-header">
+		<div class="header-back">
+		  <button class="back-btn" id="back2">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+			Back
+		  </button>
+		</div>
+		<div class="header-center">
+		  <div class="step-subtitle">Step 3 of 3</div>
+		  <h2 class="step-title">How much should we generate for you?</h2>
+		</div>
+		<div></div>
+	  </div>
+	  <div class="tile-grid grid-3x2" id="grid3"></div>
+	</div>
+
+  </div>
+
+
+
+  </main>
+  <script src="/aiq-sales-agent/scripts/user_switcher.js"></script>
+  <script src="/aiq-sales-agent/scripts/setup_menu.js"></script>
+  <script src="/aiq-sales-agent/scripts/app.js"></script>
+  
+  <script src="/aiq-sales-agent/scripts/tab_nav.js"></script>
+  <script src="/aiq-sales-agent/scripts/vendor/svg4everybody.min.js"></script>
+  <script>svg4everybody();</script>
+  
+
+<script src="/aiq-sales-agent/scripts/vendor/gsap.min.js"></script>
+<script>
+/* ── Industry data ── */
+const industries = [
+  { name: 'Healthcare',          icon: 'custom1' },
+  { name: 'Financial Services',  icon: 'custom2' },
+  { name: 'Retail',              icon: 'custom3' },
+  { name: 'Manufacturing',       icon: 'custom4' },
+  { name: 'Technology',          icon: 'custom5' },
+  { name: 'Education',           icon: 'custom6' },
+  { name: 'Government',          icon: 'custom7' },
+  { name: 'Nonprofit',           icon: 'custom8' },
+  { name: 'Media',               icon: 'custom9' },
+  { name: 'Telecommunications',  icon: 'custom10' },
+  { name: 'Energy',              icon: 'custom11' },
+  { name: 'Transportation',      icon: 'custom12' },
+  { name: 'Real Estate',         icon: 'custom13' },
+  { name: 'Hospitality',         icon: 'custom14' },
+  { name: 'Agriculture',         icon: 'custom15' },
+  { name: 'Construction',        icon: 'custom16' },
+  { name: 'Insurance',           icon: 'custom17' },
+  { name: 'Pharmaceuticals',     icon: 'custom18' },
+  { name: 'Automotive',          icon: 'custom19' },
+  { name: 'Aerospace',           icon: 'custom20' },
+  { name: 'Legal',               icon: 'custom21' },
+  { name: 'Consulting',          icon: 'custom22' },
+  { name: 'Life Sciences',       icon: 'custom23' },
+  { name: 'Communications',      icon: 'custom24' }
+];
+
+/* ── Build grid 1 ── */
+const STEP1_TILE_COUNT = 14;
+const g1 = document.getElementById('grid1');
+industries.slice(0, STEP1_TILE_COUNT).forEach((industry) => {
+  const t = document.createElement('div');
+  t.className = 'tile';
+  t.innerHTML = `
+    <div class="slds-grid slds-grid_vertical slds-grid_align-center">
+      <div class="slds-col slds-text-align_center slds-m-bottom_small">
+        <div class="slds-icon_container slds-icon-standard-trailhead">
+          <svg class="slds-icon" aria-hidden="true">
+            <use xlink:href="/aiq-sales-agent/assets/icons/custom-sprite/svg/symbols.svg#${industry.icon}"></use>
+          </svg>
+        </div>
+      </div>
+      <div class="slds-col">
+        <div class="slds-col slds-text-align_center tile-title">${industry.name}</div>
+      </div>
+    </div>`;
+  t.addEventListener('click', () => goTo2());
+  g1.appendChild(t);
+});
+
+/* ── Segment data ── */
+const segments = [
+  { name: 'SMB',          icon: 'custom15' },
+  { name: 'Mid-Market',   icon: 'custom16' },
+  { name: 'Enterprise',   icon: 'custom17' }
+];
+
+/* ── Build grid 2 ── */
+const g2 = document.getElementById('grid2');
+segments.forEach((segment) => {
+  const t = document.createElement('div');
+  t.className = 'tile';
+  t.innerHTML = `
+    <div class="slds-grid slds-grid_vertical slds-grid_align-center">
+      <div class="slds-col slds-text-align_center slds-m-bottom_small">
+        <div class="slds-icon_container slds-icon-standard-trailhead">
+          <svg class="slds-icon" aria-hidden="true">
+            <use xlink:href="/aiq-sales-agent/assets/icons/custom-sprite/svg/symbols.svg#${segment.icon}"></use>
+          </svg>
+        </div>
+      </div>
+      <div class="slds-col">
+        <div class="slds-col slds-text-align_center tile-title">${segment.name}</div>
+      </div>
+    </div>`;
+  t.addEventListener('click', () => goTo3());
+  g2.appendChild(t);
+});
+
+/* ── Complexity data ── */
+const complexities = [
+  { name: 'Low',    icon: 'custom91' },
+  { name: 'Medium', icon: 'custom24' },
+  { name: 'High',   icon: 'custom11' }
+];
+
+/* ── Build grid 3 ── */
+const g3 = document.getElementById('grid3');
+complexities.forEach((item) => {
+  const t = document.createElement('div');
+  t.className = 'tile';
+  t.innerHTML = `
+    <div class="slds-grid slds-grid_vertical slds-grid_align-center">
+      <div class="slds-col slds-text-align_center slds-m-bottom_small">
+        <div class="slds-icon_container slds-icon-standard-trailhead">
+          <svg class="slds-icon" aria-hidden="true">
+            <use xlink:href="/aiq-sales-agent/assets/icons/custom-sprite/svg/symbols.svg#${item.icon}"></use>
+          </svg>
+        </div>
+      </div>
+      <div class="slds-col">
+        <div class="slds-col slds-text-align_center tile-title">${item.name}</div>
+      </div>
+    </div>`;
+  t.addEventListener('click', () => goDone());
+  g3.appendChild(t);
+});
+
+/* ── GSAP helpers ── */
+const ST = 0.04;
+
+function fadeStepOut(el, cb) {
+  gsap.to(el, { opacity: 0, duration: 0.2, ease: 'power1.in', onComplete: cb });
+}
+
+function tilesIn(tiles, cols, cb) {
+  gsap.set(tiles, { opacity: 0 });
+  gsap.to(tiles, {
+    opacity: 1,
+    duration: 0.1,
+    ease: 'power2.out',
+    stagger: function(index) {
+      const row = Math.floor(index / cols);
+      const col = index % cols;
+      return (row + col) * ST;
+    },
+    onComplete: cb
+  });
+}
+
+function backIn(btn) {
+  if (!btn) return;
+  gsap.fromTo(btn, { opacity: 0 }, { opacity: 1, duration: 0.22, ease: 'power2.out', delay: 0.06 });
+}
+
+function showStep(el) {
+  gsap.set(el, { opacity: 1 });
+  el.classList.add('visible');
+}
+
+/* ── Initial load ── */
+setTimeout(() => tilesIn(g1.querySelectorAll('.tile'), 4), 80);
+
+/* ── 1 → 2 ── */
+function goTo2() {
+  const s1 = document.getElementById('step1');
+  const s2 = document.getElementById('step2');
+  fadeStepOut(s1, () => {
+    s1.classList.remove('visible');
+    showStep(s2);
+    tilesIn(g2.querySelectorAll('.tile'), 3);
+    backIn(document.getElementById('back1'));
+  });
+}
+
+/* ── 2 → 3 ── */
+function goTo3() {
+  const s2 = document.getElementById('step2');
+  const s3 = document.getElementById('step3');
+  fadeStepOut(s2, () => {
+    s2.classList.remove('visible');
+    showStep(s3);
+    tilesIn(g3.querySelectorAll('.tile'), 3);
+    backIn(document.getElementById('back2'));
+  });
+}
+
+/* ── 3 → done ── */
+function goDone() {
+  const shell = document.querySelector('.wizard-shell');
+  gsap.to(shell, {
+    opacity: 0,
+    scale: 1.1,
+    duration: 0.3,
+    ease: 'power2.in',
+    transformOrigin: 'center center'
+  });
+}
+
+/* ── Back: 2 → 1 ── */
+document.getElementById('back1').addEventListener('click', () => {
+  const s1 = document.getElementById('step1');
+  const s2 = document.getElementById('step2');
+  fadeStepOut(s2, () => {
+    s2.classList.remove('visible');
+    showStep(s1);
+    tilesIn(g1.querySelectorAll('.tile'), 4);
+  });
+});
+
+/* ── Back: 3 → 2 ── */
+document.getElementById('back2').addEventListener('click', () => {
+  const s2 = document.getElementById('step2');
+  const s3 = document.getElementById('step3');
+  fadeStepOut(s3, () => {
+    s3.classList.remove('visible');
+    showStep(s2);
+    tilesIn(g2.querySelectorAll('.tile'), 3);
+    backIn(document.getElementById('back1'));
+  });
+});
+</script>
+
+
+<script type="module">
+	import {
+		ShaderMount,
+		godRaysFragmentShader,
+		getShaderColorFromString as toVec4,
+		getShaderNoiseTexture,
+		ShaderFitOptions,
+	} from 'https://cdn.jsdelivr.net/npm/@paper-design/shaders@0.0.77/+esm';
+
+	// Baked-in params — identical to index.html's DEFAULTS so the look
+	// matches the seller home. The panel that used to tune these lives
+	// only on index.html.
+	const DEFAULTS = {
+		colors: ['#148effa6', '#c3defebf', '#c380d1', '#33fff5', '#7ad8fa'],
+		colorsCount: 5,
+		colorBack: '#ffffff',
+		colorBloom: '#ffa8f3',
+		bloom: 0, intensity: 0, density: 0.06, spotty: 0.98,
+		midSize: 0.51, midIntensity: 0.24,
+		scale: 0.71, rotation: 152, offsetX: 0,
+		speed: 1.09, blur: 5,
+		wedge: 90, feather: 22,   // angular mask, degrees — CSS, not a shader uniform
+		hole: 0, holeFeather: 0,  // radial mask hole, vmin — 0 disables the layer
+		north: true, east: false, south: false, west: false,  // cones cleared of rays
+	};
+
+	// key → shader uniform (null = not a shader uniform)
+	const SLIDERS = [
+		['intensity', 'u_intensity'],
+		['density', 'u_density'],
+		['spotty', 'u_spotty'],
+		['midSize', 'u_midSize'],
+		['midIntensity', 'u_midIntensity'],
+		['bloom', 'u_bloom'],
+		['scale', 'u_scale'],
+		['rotation', 'u_rotation'],
+		['offsetX', 'u_offsetX'],
+	];
+
+	// Where the rays converge, as a fraction of the host height from its
+	// top. index.html measures this off the composer; the wizard has none,
+	// so it's a constant — a touch above centre, behind the card's title.
+	const FOCAL_Y_FRAC = 0.42;
+
+	const state = structuredClone(DEFAULTS);
+	const bg = document.querySelector('[data-wizard-god-rays]');
+
+	try {
+		// ShaderMount rejects a texture that hasn't decoded, so wait for it.
+		let noise;
+		try { noise = getShaderNoiseTexture(document); } catch { noise = getShaderNoiseTexture(); }
+		if (!(noise.complete && noise.naturalWidth)) {
+			if (typeof noise.decode === 'function') await noise.decode();
+			else await new Promise((ok, no) => {
+				noise.addEventListener('load', ok, { once: true });
+				noise.addEventListener('error', no, { once: true });
+			});
+		}
+
+		// Solve for the shader offset that puts the focal point at
+		// FOCAL_Y_FRAC of the host. Inverts focalY = h/2 + offsetY*max(w,h).
+		const focalOffsetY = () => {
+			const host = bg.getBoundingClientRect();
+			if (!host.width || !host.height) return 0;
+			return (FOCAL_Y_FRAC - 0.5) * host.height / Math.max(host.width, host.height);
+		};
+
+		let offsetY = focalOffsetY();
+
+		const uniformsFor = () => {
+			const u = {
+				u_noiseTexture: noise,
+				u_offsetY: offsetY,   // derived, not a slider — see focalOffsetY
+				// Always send all 5 slots (the shader declares vec4 u_colors[5]);
+				// u_colorsCount is what decides how many get used.
+				u_colors: state.colors.map(toVec4),
+				u_colorsCount: state.colorsCount,
+				u_colorBack: toVec4(state.colorBack),
+				u_colorBloom: toVec4(state.colorBloom),
+				u_fit: ShaderFitOptions.cover,
+				u_originX: 0.5, u_originY: 0.5,
+				u_worldWidth: 0, u_worldHeight: 0,
+			};
+			for (const [k, uni] of SLIDERS) if (uni) u[uni] = state[k];
+			return u;
+		};
+
+		const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+
+		const mount = new ShaderMount(
+			bg, godRaysFragmentShader, uniformsFor(), undefined,
+			reduce.matches ? 0 : state.speed, 0,
+			state.blur > 0 ? 1 : 2   // minPixelRatio
+		);
+		window.godRays = mount;
+
+		// Cone centres, in conic-gradient degrees (0 = 12 o'clock, clockwise).
+		const CONES = [['north', 0], ['east', 90], ['south', 180], ['west', 270]];
+
+		// Focal point as CSS percentages of the host, so the mask layers pin
+		// to it rather than the box centre. See index.html for the full
+		// derivation; with u_fit:cover and the god-rays' 1:1 world ratio,
+		// both axes reduce to 0.5 + offset / (side / longest).
+		const focalPct = () => {
+			const { width: w, height: h } = bg.getBoundingClientRect();
+			if (!w || !h) return { x: 50, y: 50 };
+			const longest = Math.max(w, h);
+			return {
+				x: (0.5 + state.offsetX / (w / longest)) * 100,
+				y: (0.5 + offsetY / (h / longest)) * 100,
+			};
+		};
+
+		// Two mask layers, intersected: the conic one clears the enabled cones
+		// (north here), the radial one punches a soft centre hole. Masking
+		// stays transparent, so it works over any background.
+		const applyMask = () => {
+			const layers = [];
+			const on = CONES.filter(([k]) => state[k]);
+			const { x: cx, y: cy } = focalPct();
+			const at = `${cx.toFixed(2)}% ${cy.toFixed(2)}%`;
+
+			if (on.length) {
+				const centers = on.map(([, deg]) => deg).sort((a, b) => a - b);
+
+				const gapAfter = (i) => {
+					const next = centers[(i + 1) % centers.length];
+					return ((next - centers[i]) % 360 + 360) % 360 || 360;
+				};
+
+				let minGap = 360, seam = 0, widest = -1;
+				for (let i = 0; i < centers.length; i++) {
+					const g = gapAfter(i);
+					minGap = Math.min(minGap, g);
+					if (g > widest) { widest = g; seam = centers[i] + g / 2; }
+				}
+				const limit = centers.length === 1 ? 179 : minGap / 2 - 0.5;
+				const w = Math.min(state.wedge, limit);
+				const f = Math.min(state.feather, limit - w);
+
+				const stops = [[0, '#000']];
+				for (const p of centers.map((c) => ((c - seam) % 360 + 360) % 360).sort((a, b) => a - b)) {
+					stops.push([p - w - f, '#000'], [p - w, 'transparent'],
+						[p + w, 'transparent'], [p + w + f, '#000']);
+				}
+				stops.push([360, '#000']);
+
+				layers.push(`conic-gradient(from ${seam}deg at ${at}, ` +
+					stops.map(([d, c]) => `${c} ${d}deg`).join(', ') + ')');
+			}
+
+			if (state.hole > 0) {
+				const r = state.hole;
+				const hf = Math.max(state.holeFeather, 0.1);
+				layers.push(`radial-gradient(circle at ${at}, transparent 0, transparent ${r}vmin, #000 ${r + hf}vmin)`);
+			}
+
+			const img = layers.length ? layers.join(', ') : 'none';
+			bg.style.maskImage = img;
+			bg.style.webkitMaskImage = img;
+			bg.style.maskComposite = layers.length > 1 ? 'intersect' : 'add';
+			bg.style.webkitMaskComposite = layers.length > 1 ? 'source-in' : 'source-over';
+		};
+
+		const push = () => {
+			offsetY = focalOffsetY();
+			mount.setUniforms(uniformsFor());
+			mount.setSpeed(reduce.matches ? 0 : state.speed);
+			bg.style.filter = `blur(${state.blur}px)`;
+			applyMask();
+			if (state.speed === 0 || reduce.matches) { try { mount.requestRender(); } catch { } }
+		};
+
+		reduce.addEventListener('change', push);
+
+		// Re-solve the offset and re-place the mask when the host resizes.
+		const syncFocal = () => {
+			offsetY = focalOffsetY();
+			mount.setUniforms({ u_offsetY: offsetY });
+			applyMask();
+		};
+		if (typeof ResizeObserver === 'function') {
+			new ResizeObserver(syncFocal).observe(bg);
+		}
+
+		push();
+	} catch (e) {
+		// Shader failed — the white `.wizard-bg` fallback stays, so the
+		// wizard is still usable. Log rather than surfacing UI chrome.
+		console.warn('Wizard god-rays shader failed to start:', e);
+	}
+</script>
+
+  
+  <script src="/aiq-sales-agent/scripts/settings.js"></script>
+</body>
+</html>
