@@ -2476,7 +2476,8 @@ main.app-wrapper {
   z-index: 2;
 }
 
-.seller-home__feed-item-status-group > .t-tt {
+.seller-home__feed-item-status-group > .t-tt,
+.seller-home__scheduled-status-group > .t-tt {
   position: absolute;
   bottom: calc(100% + 8px);
   left: 50%;
@@ -2494,7 +2495,8 @@ main.app-wrapper {
     translate var(--tt-move-dur) var(--tt-move-ease);
 }
 
-.seller-home__feed-item-status-group > .seller-home__feed-status-tip {
+.seller-home__feed-item-status-group > .seller-home__feed-status-tip,
+.seller-home__scheduled-status-group > .seller-home__feed-status-tip {
   border: 0;
   border-radius: var(--slds-g-radius-border-2, 0.5rem);
   box-shadow: var(--slds-g-shadow-3);
@@ -2512,7 +2514,10 @@ main.app-wrapper {
 
 .seller-home__feed-item-status-group:hover > .t-tt,
 .seller-home__feed-item-status-group > .t-tt-trigger:focus-visible + .t-tt,
-.seller-home__feed-item-status-group > .t-tt[data-show="true"] {
+.seller-home__feed-item-status-group > .t-tt[data-show="true"],
+.seller-home__scheduled-status-group:hover > .t-tt,
+.seller-home__scheduled-status-group > .t-tt-trigger:focus-visible + .t-tt,
+.seller-home__scheduled-status-group > .t-tt[data-show="true"] {
   opacity: 1;
   scale: 1;
   transition:
@@ -2526,7 +2531,8 @@ main.app-wrapper {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .seller-home__feed-item-status-group > .t-tt { transition: none !important; }
+  .seller-home__feed-item-status-group > .t-tt,
+  .seller-home__scheduled-status-group > .t-tt { transition: none !important; }
 }
 
 // All glyphs stack on the same centre; the rules below reveal two.
@@ -3736,16 +3742,12 @@ $sh-feed-filter-hidden: (
 // the `aria-checked` the radios already have from the server.
 .page__inner:has([data-sh-scheduled-tab="active"][aria-checked="true"])
   .seller-home__scheduled-workflow-item:not(
+    [data-sh-workflow-status="completed"],
     [data-sh-workflow-status="scheduled"],
-    [data-sh-workflow-status="running"],
-    [data-sh-workflow-status="completed"]
+    [data-sh-workflow-status="running"]
   ),
-.page__inner:has([data-sh-scheduled-tab="need_attention"][aria-checked="true"])
-  .seller-home__scheduled-workflow-item:not([data-sh-workflow-status="failed"]),
 .page__inner:has([data-sh-scheduled-tab="paused"][aria-checked="true"])
-  .seller-home__scheduled-workflow-item:not([data-sh-workflow-status="paused"]),
-.page__inner:has([data-sh-scheduled-tab="archived"][aria-checked="true"])
-  .seller-home__scheduled-workflow-item:not([data-sh-workflow-status="archived"]) {
+  .seller-home__scheduled-workflow-item:not([data-sh-workflow-status="paused"]) {
   display: none;
 }
 
@@ -3791,7 +3793,9 @@ $sh-feed-filter-hidden: (
 
   background: var(--slds-g-color-surface-1, #ffffff);
   border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+  // Same hairline as a Skills card: a 1px neutral-90 edge that
+  // darkens to neutral-80 on hover, with the fill staying white.
+  box-shadow: inset 0 0 0 1px var(--slds-g-color-neutral-base-90, #e5e5e5);
 
   // Card, not hyperlink — reset the browser's default `<a>` chrome
   // so the row reads as a surface. Same defense-in-depth
@@ -3801,7 +3805,7 @@ $sh-feed-filter-hidden: (
   color: inherit;
   text-decoration: none;
 
-  transition: background-color 120ms ease, box-shadow 120ms ease;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
 
   &:hover,
   &:focus,
@@ -3810,8 +3814,8 @@ $sh-feed-filter-hidden: (
   }
 
   &:hover {
-    background: var(--slds-g-color-surface-container-2, #f3f3f3);
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+    background: var(--slds-g-color-surface-1, #ffffff);
+    box-shadow: inset 0 0 0 1px var(--slds-g-color-neutral-base-80, #c9c9c9);
   }
 
   &:active {
@@ -3859,39 +3863,47 @@ $sh-feed-filter-hidden: (
 // The home feed's status control, dropped into this list's leading
 // cell — one workflow reads and behaves the same on both surfaces.
 // Chrome + glyph come from the shared `sh-status-*` mixins; the rest /
-// action glyph maps are scheduled-local (below) but now mirror the feed
-// exactly, including "completed" resting on the same green check.
+// action glyph maps are scheduled-local (below) and match the home
+// feed: a green dot at rest on a completed row, and Run / Stop / Resume
+// as the hover swap.
 //
-// Absolutely positioned instead of laid out in the row, because it's a
-// `<button>` and the row body is an `<a>` on linked rows — so the
-// template keeps it as a sibling and this drops it into the cell the
-// body's `padding-inline-start` reserves. Same arrangement the ⋮ menu
-// uses at the other end of the row.
-.seller-home__scheduled-status {
-  @include sh-status-button;
-
+// The group is absolutely positioned instead of laid out in the row,
+// because the control is a `<button>` and the row body is an `<a>` on
+// linked rows — so the template keeps it as a sibling and this drops
+// it into the cell the body's `padding-inline-start` reserves. The
+// tooltip hangs off the group, the same way the feed's does.
+.seller-home__scheduled-status-group {
   position: absolute;
-  // The row's own inline padding, so the button lands on the line the
-  // row starts its content on. Moves with that padding or it drifts.
   inset-inline-start: var(--slds-g-spacing-3, 0.75rem); // 12px
   top: 50%;
   transform: translateY(-50%);
   z-index: 2; // above the row body's full-row click surface
+  display: inline-flex;
+
+  &:hover,
+  &:focus-within {
+    z-index: 4;
+  }
+}
+
+.seller-home__scheduled-status {
+  @include sh-status-button;
+  position: relative;
 }
 
 // Card surface hover / focus. Keyed on the ITEM (not the row-open
 // overlay) so the treatment is identical whether the pointer is over the
 // row surface, the status glyph, the Reconnect button, or the overflow —
 // and `:focus-within` gives keyboard users the same cue without relying
-// on hover. Higher specificity than the is-selected outline below, so a
-// selected card also yields to this neutral surface on hover/focus.
-// Unlinked rows (inert draft rows) opt out via `:not(--unlinked)`.
-.seller-home__scheduled-workflow-item:hover
+// on hover. A selected card keeps its blue-95 fill, so hover doesn't
+// paint the white Skills treatment over it. Unlinked rows (inert draft
+// rows) opt out via `:not(--unlinked)`.
+.seller-home__scheduled-workflow-item:hover:not(.is-selected)
   .seller-home__scheduled-workflow-row:not(.seller-home__scheduled-workflow-row--unlinked),
-.seller-home__scheduled-workflow-item:focus-within
+.seller-home__scheduled-workflow-item:focus-within:not(.is-selected)
   .seller-home__scheduled-workflow-row:not(.seller-home__scheduled-workflow-row--unlinked) {
-  background: var(--slds-g-color-surface-container-2, #f3f3f3);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  background: var(--slds-g-color-surface-1, #ffffff);
+  box-shadow: inset 0 0 0 1px var(--slds-g-color-neutral-base-80, #c9c9c9);
 }
 
 .seller-home__scheduled-status-glyph {
@@ -3927,7 +3939,7 @@ $sh-feed-filter-hidden: (
 // exactly — "completed" rests on the same green check the feed
 // uses — so a workflow reads identically on both surfaces.
 $sh-scheduled-status-rest: (
-  completed: "check",
+  completed: "circle",
   running:   "spinner",
   scheduled: "clock",
   paused:    "pause",
@@ -3935,17 +3947,12 @@ $sh-scheduled-status-rest: (
   archived:  "archive",
 );
 
-// Action glyphs must (a) exist in the row's glyph preload list in
-// _scheduled_workflow_list.html and (b) match the action verb in
-// scheduled.json `statusTypes` (Pause / Resume / Retry / Restore).
-// The preload set is [check, clock, pause, play, warning, refresh,
-// archive], so "stop"/"circle" (from the main-side merge) are not
-// rendered — hence pause for running (verb "Pause") and refresh for
-// failed/archived (verbs "Retry"/"Restore").
+// Hover swap matches the home feed: Run (play) on scheduled and
+// completed, Stop on running, Resume (play) on paused.
 $sh-scheduled-status-action: (
-  completed: "pause",
-  running:   "pause",
-  scheduled: "pause",
+  completed: "play",
+  running:   "stop",
+  scheduled: "play",
   paused:    "play",
   failed:    "refresh",
   archived:  "refresh",
@@ -3958,9 +3965,9 @@ $sh-scheduled-status-action: (
   }
 }
 
-// Completed rows rest on a green check — scoped to the resting glyph so
-// the hover swap to the Run-now arrow (play) returns to grey.
-[data-sh-workflow-status="completed"] .seller-home__scheduled-status-glyph--check {
+// Completed rows rest on the same green dot as the home feed. Scoped to
+// the resting glyph so the hover swap to Run returns to grey.
+[data-sh-workflow-status="completed"] .seller-home__scheduled-status-glyph--circle {
   fill: var(--slds-g-color-palette-green-70, #45c65a);
 }
 
@@ -4092,8 +4099,8 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   opacity: 0;
   pointer-events: none;
 
-  // 32×32 box (icon centered) so the hover-gray is an even circle —
-  // matches the Knowledge tile + Ready-row kebabs. The wrapper is
+  // 32×32 box (icon centered) so the hover pill is an even circle,
+  // the same size as the composer icon buttons. The wrapper is
   // absolute-positioned and centered at right:1rem, already sized for
   // a 32-px trigger.
   display: inline-flex;
@@ -4107,24 +4114,24 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
     opacity 160ms ease,
     background-color 120ms ease;
 
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+
   .slds-button__icon {
-    fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+    fill: currentColor;
   }
 
-  // Match the Skills-list kebab: the card wash is #f3f3f3, so the
-  // trigger's own hover circle is one step darker (#e5e5e5,
-  // surface-container-3) to read as a distinct target on the lit card
-  // instead of dissolving into it. The card stays lit while the
-  // pointer is on the trigger via `.item:hover .row`.
+  // Same pill as the composer icon buttons: electric-blue-95 on hover
+  // or keyboard focus, one step darker while pressed. Held while the
+  // menu is open so the trigger still reads as the thing that opened it.
   &:hover,
   &:focus-visible,
   &[aria-expanded="true"] {
-    background-color: var(--slds-g-color-surface-container-3, #e5e5e5);
+    background-color: var(--slds-g-color-palette-electric-blue-95, #edf4ff);
     border-radius: var(--slds-g-radius-border-circle, 100%);
   }
 
   &:active {
-    background-color: #dbdbdb;
+    background-color: var(--slds-g-color-palette-electric-blue-90, #d6e6ff);
   }
 }
 
@@ -4452,13 +4459,11 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   color: var(--slds-g-color-error-1, #b60554);
 }
 
-// Selected state — the card whose panel is open keeps a neutral
-// surface + hairline (no brand-blue outline) so it stays gently
-// distinct beside the docked panel without a heavy border. The open
-// panel is the primary "this one" cue.
+// Selected state — the card whose panel is open. electric-blue-95, the
+// same fill the composer icon buttons use on hover.
 .seller-home__scheduled-workflow-item.is-selected .seller-home__scheduled-workflow-row {
-  background: var(--slds-g-color-surface-container-2, #f3f3f3);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  background: var(--slds-g-color-palette-electric-blue-95, #edf4ff);
+  box-shadow: inset 0 0 0 1px var(--slds-g-color-neutral-base-90, #e5e5e5);
 }
 
 // ── Toolbar right cluster (filter + overflow) ─────────────────────

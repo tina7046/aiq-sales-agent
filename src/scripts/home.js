@@ -3569,19 +3569,14 @@
     }
   }
 
-  // What pressing the status button turns the row into. Same rule the
-  // feed uses, including "resume returns to the last state that wasn't
-  // paused" so retrying an errored row and then pausing it doesn't
-  // resume back into the error.
+  // What pressing the status button turns the row into. Same swaps as
+  // the home feed: Run a scheduled or completed row, Stop a running one,
+  // Resume a paused one back to the state it left.
   function nextWorkflowStatus (item) {
     var status = item.getAttribute('data-sh-workflow-status')
-    // Same lifecycle as the home feed: Run now a scheduled/completed row,
-    // Stop a running one, Restart an archived one; a paused row resumes to
-    // its last real state; a failed one retries.
-    if (status === 'scheduled' || status === 'completed') return 'running'
-    if (status === 'running' || status === 'archived') return 'scheduled'
-    if (status === 'failed') return 'running'
     if (status === 'paused') return item.getAttribute('data-sh-workflow-status-default') || 'scheduled'
+    if (status === 'scheduled' || status === 'completed') return 'running'
+    if (status === 'running') return 'scheduled'
     return 'scheduled'
   }
 
@@ -3610,9 +3605,12 @@
     // what keeps the copy in scheduled.json.
     var toggle = item.querySelector('[data-sh-workflow-run-toggle]')
     if (toggle && meta.action) {
-      var action = meta.action + ' ' + name
-      toggle.setAttribute('aria-label', action)
-      toggle.setAttribute('title', action)
+      toggle.setAttribute('aria-label', meta.action + ' ' + name)
+      toggle.removeAttribute('title')
+      toggle.setAttribute('data-tooltip', meta.action)
+      var tip = toggle.parentElement &&
+        toggle.parentElement.querySelector('[data-sh-scheduled-status-tip]')
+      if (tip) tip.textContent = meta.action
     }
 
     if (!meta.label) return
@@ -4432,11 +4430,10 @@
     function menuItemVisible (id, record) {
       var status = record.status || ''
       switch (id) {
-        case 'run_now': return status !== 'archived'
-        case 'pause': return status !== 'paused' && status !== 'archived'
+        case 'run_now': return status === 'scheduled' || status === 'paused'
+        case 'pause': return status === 'scheduled' || status === 'running' || status === 'completed'
         case 'resume': return status === 'paused'
         case 'open_chat': return !!record.chatId
-        case 'archive': return status !== 'archived'
         default: return true
       }
     }
@@ -4992,6 +4989,31 @@
       close()
     })
 
+    // The status button and the row menu change state on the card. Keep
+    // the in-memory record, cadence line, and header menu on the same
+    // state. Panel-originated actions already did this in doAction.
+    function syncRecordStatus (id, status) {
+      var record = detailsById[id]
+      if (!record || !status || record.status === status) return
+      record.status = status
+      updateCadence(rowFor(id), record, status)
+      if (panel.getAttribute('data-sh-schedule-current') === id) renderMenu(record)
+    }
+
+    document.addEventListener('sh:workflow-run-toggle', function (event) {
+      var detail = event.detail || {}
+      if (!detail.workflowId || !detail.to) return
+      syncRecordStatus(detail.workflowId, detail.to)
+    })
+
+    document.addEventListener('sh:workflow-action', function (event) {
+      var detail = event.detail || {}
+      if (detail.source === 'schedule-panel' || !detail.workflowId) return
+      var row = rowFor(detail.workflowId)
+      if (!row) return
+      syncRecordStatus(detail.workflowId, row.getAttribute('data-sh-workflow-status') || '')
+    })
+
     return { open: open, close: close }
   }
 
@@ -5022,14 +5044,20 @@
     var openMenu = null
     var openTrigger = null
 
-    // Overflow actions that move the row to a new state — the same
-    // transitions the status button and the home feed make. `edit` isn't
-    // here, so it stays a dispatch-only placeholder.
+    // Overflow actions that move the row to a new state. `edit` isn't
+    // here, so it stays a dispatch-only placeholder. Resume has no fixed
+    // target — it returns to the row's last non-paused state.
     var WORKFLOW_ACTION_STATES = {
       run_now: 'running',
+      pause: 'paused',
       stop: 'scheduled',
       restart: 'scheduled',
       archive: 'archived'
+    }
+
+    function visibleMenuActions (menu) {
+      return toArray(menu.querySelectorAll('[data-sh-workflow-action]:not([disabled])'))
+        .filter(function (btn) { return btn.offsetParent !== null })
     }
 
     function setMenuState (trigger, menu, isOpen) {
@@ -5086,7 +5114,7 @@
               runNow.removeAttribute('title')
             }
           }
-          var first = menu.querySelector('[data-sh-workflow-action]:not([disabled])')
+          var first = visibleMenuActions(menu)[0]
           if (first) first.focus()
         }
         return
@@ -5122,6 +5150,9 @@
       // Apply the state change (if any), then let the caller refresh the
       // tab counts + re-filter so the row moves between tabs.
       var target = WORKFLOW_ACTION_STATES[actionId]
+      if (actionId === 'resume' && row) {
+        target = row.getAttribute('data-sh-workflow-status-default') || 'scheduled'
+      }
       if (target && row) {
         applyWorkflowStatus(row, target, readWorkflowStatusTypes(listRoot))
         if (onChange) onChange(row, actionId, target)
@@ -5152,7 +5183,7 @@
       if (!openMenu.contains(document.activeElement) &&
           openTrigger !== document.activeElement) return
 
-      var items = toArray(openMenu.querySelectorAll('[data-sh-workflow-action]:not([disabled])'))
+      var items = visibleMenuActions(openMenu)
       if (!items.length) return
       event.preventDefault()
       var idx = items.indexOf(document.activeElement)

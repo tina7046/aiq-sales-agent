@@ -72,9 +72,9 @@
 
     state       rest       hover / click
     ─────────   ────────   ─────────────────
-    completed   check      pause
-    running     spinner    pause
-    scheduled   clock      pause
+    completed   green dot  play        → runs
+    running     spinner    stop        → stops
+    scheduled   clock      play        → runs
     paused      pause      play        → resumes
     failed      warning    refresh     → retries
 
@@ -99,15 +99,18 @@
   the wording stays in scheduled.json.
 #}
 {% macro renderStatusButton(workflow, statusMeta) %}
-  {% set verb = statusMeta.action if statusMeta and statusMeta.action else "Pause" %}
+  {% set verb = statusMeta.action if statusMeta and statusMeta.action else "Run" %}
   {% set actionLabel = verb ~ " " ~ workflow.title %}
+  {% set tipId = "seller-home-scheduled-" ~ workflow.id ~ "-status-tip" %}
+  <span class="t-tt-group seller-home__scheduled-status-group">
   <button
     type="button"
-    class="seller-home__scheduled-status"
+    class="seller-home__scheduled-status t-tt-trigger"
     data-sh-workflow-run-toggle
     data-sh-workflow-stop
+    data-tooltip="{{ verb }}"
     aria-label="{{ actionLabel }}"
-    title="{{ actionLabel }}"
+    aria-describedby="{{ tipId }}"
   >
     {# The running glyph is the shared `.sh-spinner` ring (index.scss,
        linked on every page by _template.html), re-boxed to the glyph
@@ -116,7 +119,7 @@
       class="seller-home__scheduled-status-glyph seller-home__scheduled-status-glyph--spinner sh-spinner"
       aria-hidden="true"
     ></span>
-    {% for glyph in ["check", "clock", "pause", "play", "warning", "refresh", "archive"] %}
+    {% for glyph in ["circle", "clock", "pause", "play", "stop", "warning", "refresh"] %}
       <svg
         class="seller-home__scheduled-status-glyph seller-home__scheduled-status-glyph--{{ glyph }}"
         aria-hidden="true"
@@ -126,6 +129,16 @@
       </svg>
     {% endfor %}
   </button>
+  <div
+    class="slds-popover slds-popover_tooltip t-tt seller-home__feed-status-tip"
+    role="tooltip"
+    id="{{ tipId }}"
+    aria-hidden="true"
+    data-show="false"
+  >
+    <div class="slds-popover__body t-tt-text seller-home__feed-status-tip-label" data-sh-scheduled-status-tip>{{ verb }}</div>
+  </div>
+  </span>
 {% endmacro %}
 
 {#
@@ -268,7 +281,11 @@
       >
         <ul class="seller-home__scheduled-workflow-menu-items" role="none">
           {% for action in actions %}
-            <li role="none">
+            <li
+              role="none"
+              {%- if action.onlyForState %} data-sh-workflow-action-only="{{ action.onlyForState }}"{% endif %}
+              {%- if action.hideForState %} data-sh-workflow-action-not="{{ action.hideForState }}"{% endif %}
+            >
               <button
                 type="button"
                 class="seller-home__scheduled-workflow-menu-item"

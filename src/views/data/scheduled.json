@@ -37,16 +37,9 @@
         "id": "active",
         "label": "Active",
         "statuses": [
-          "scheduled",
+          "completed",
           "running",
-          "completed"
-        ]
-      },
-      {
-        "id": "need_attention",
-        "label": "Needs Attention",
-        "statuses": [
-          "failed"
+          "scheduled"
         ]
       },
       {
@@ -54,13 +47,6 @@
         "label": "Paused",
         "statuses": [
           "paused"
-        ]
-      },
-      {
-        "id": "archived",
-        "label": "Archived",
-        "statuses": [
-          "archived"
         ]
       }
     ]
@@ -72,15 +58,15 @@
     },
     "running": {
       "label": "Running now",
-      "action": "Pause"
+      "action": "Stop"
     },
     "completed": {
       "label": "Completed",
-      "action": "Pause"
+      "action": "Run"
     },
     "scheduled": {
       "label": "Scheduled",
-      "action": "Pause"
+      "action": "Run"
     },
     "paused": {
       "label": "Paused",
@@ -113,11 +99,6 @@
         "id": "open_chat",
         "label": "Open Chat",
         "icon": "socialshare"
-      },
-      {
-        "id": "archive",
-        "label": "Archive",
-        "icon": "archive"
       }
     ],
     "skillRoute": "/skill_detail.html",
@@ -132,22 +113,20 @@
     {
       "id": "run_now",
       "label": "Run now",
-      "icon": "play"
+      "icon": "play",
+      "onlyForState": "scheduled paused"
     },
     {
       "id": "pause",
       "label": "Pause",
-      "icon": "pause"
+      "icon": "pause",
+      "onlyForState": "completed scheduled running"
     },
     {
       "id": "resume",
       "label": "Resume",
-      "icon": "play"
-    },
-    {
-      "id": "archive",
-      "label": "Archive",
-      "icon": "archive"
+      "icon": "play",
+      "onlyForState": "paused"
     }
   ],
   "emptyState": {
