@@ -4515,15 +4515,10 @@
     // (shared `applyWorkflowStatus`), update its meta line, keep the
     // in-memory record in sync, refresh the overflow menu (Pause↔Resume)
     // and re-run the active tab filter + counts (without closing us).
-    // Active cadence rebuilt from the (editable) frequency + time, with
-    // the original "· Next run …" tail preserved so editing the picklists
-    // updates the card without losing its schedule-relative suffix.
+    // The list subline is the frequency alone. A running row shows how
+    // long it has been going instead.
     function scheduledCadence (record) {
-      var tail = ''
-      var c = record.cadence || ''
-      var idx = c.indexOf(' · ')
-      if (idx >= 0) tail = c.slice(idx)
-      return (record.frequency || '') + ' at ' + (record.time || '') + tail
+      return record.frequency || ''
     }
 
     // Repaint a failed row's meta as just the error message. The
@@ -4537,11 +4532,7 @@
     function updateCadence (row, record, status) {
       var meta = row && row.querySelector('.seller-home__scheduled-workflow-meta')
       if (!meta) return
-      var freq = (record.frequency || '').toLowerCase()
-      var time = record.time || ''
-      if (status === 'running') meta.textContent = 'Running now · Started at ' + time
-      else if (status === 'paused') meta.textContent = 'Paused · Previously ran ' + freq + ' at ' + time
-      else if (status === 'archived') meta.textContent = 'Archived'
+      if (status === 'running') meta.textContent = record.elapsed || 'Just started'
       else if (status === 'failed' && record.reconnect) renderReconnectMeta(meta, record)
       else meta.textContent = scheduledCadence(record)
     }
