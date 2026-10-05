@@ -230,6 +230,8 @@
   // would clear the rail but still treat every conversation as read,
   // painting them instantly instead of replaying them.
   var DEMO_SESSION_KEYS = [RECENTS_KEY, KNOWLEDGE_BANNER_KEY, 'sh:convSeen', 'sh:convOpeningContinued', FEED_CONSUMED_KEY, MARCUS_REPLY_KEY, 'sh:demoDay']
+  // See home.js — segment_tabs stores this key without sk().
+  var KNOWLEDGE_PROFILES_KEY = 'knowledge-profiles'
   var DEMO_LOCAL_KEYS = [DRAFT_LIST_KEY, 'sh:scheduledWorkflows:v1']
   var DEMO_LOCAL_PREFIXES = ['sh:convDraft:v1:', 'sh:convSched:v1:']
 
@@ -238,6 +240,7 @@
       for (var i = 0; i < DEMO_SESSION_KEYS.length; i++) {
         window.sessionStorage.removeItem(sk(DEMO_SESSION_KEYS[i]))
       }
+      window.sessionStorage.removeItem(KNOWLEDGE_PROFILES_KEY)
     } catch (e) {
       // Storage unavailable — nothing accumulated, nothing to clear.
     }

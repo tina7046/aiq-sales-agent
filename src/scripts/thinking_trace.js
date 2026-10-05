@@ -123,6 +123,7 @@
     var controlsOn = config.controls !== false;
     var autoCollapse = config.autoCollapse !== false;
     var onComplete = typeof config.onComplete === "function" ? config.onComplete : null;
+    var loop = !!config.loop;
     // Static label if provided; otherwise the header shows the real elapsed
     // time ("Worked for 12s") computed at finish.
     var completedLabel = config.completedLabel || null;
@@ -616,7 +617,15 @@
         );
         started += 1;
       }
-      if (!overviewRemaining.length && overviewInFlight === 0) finish();
+      if (!overviewRemaining.length && overviewInFlight === 0) {
+        if (loop && !finished) {
+          if (stepsEl) stepsEl.innerHTML = "";
+          paintUpcoming();
+          fillOverviewSlots();
+          return;
+        }
+        finish();
+      }
     };
 
     // ── Pause / Resume ─────────────────────────────────────────────
@@ -831,7 +840,11 @@
           settleStep();
           ti++;
           if (ti < steps.length) schedule(playTask, stepGapMs);
-          else finish();
+          else if (loop && !finished) {
+            if (stepsEl) stepsEl.innerHTML = "";
+            ti = 0;
+            schedule(playTask, stepGapMs);
+          } else finish();
         }, stepDurMs);
       });
     };

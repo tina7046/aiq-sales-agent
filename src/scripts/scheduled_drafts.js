@@ -181,7 +181,7 @@
     var cadence    = record.cadence || ''
 
     var item = document.createElement('li')
-    item.className = 'seller-home__scheduled-workflow-item'
+    item.className = 'seller-home__scheduled-workflow-item page-row-item'
     item.setAttribute('data-sh-workflow-item', '')
     item.setAttribute('data-sh-workflow-id', record.id)
     item.setAttribute('data-sh-workflow-status', statusKey)
@@ -204,7 +204,7 @@
 
     if (href) {
       body = document.createElement('a')
-      body.className = 'seller-home__scheduled-workflow-row'
+      body.className = 'seller-home__scheduled-workflow-row page-row'
       body.href = href
       body.setAttribute('data-sh-workflow-open', '')
       // Prefix stamped alongside the label so the status controller in
@@ -217,7 +217,7 @@
     } else {
       body = document.createElement('div')
       body.className = 'seller-home__scheduled-workflow-row ' +
-        'seller-home__scheduled-workflow-row--unlinked'
+        'seller-home__scheduled-workflow-row--unlinked page-row page-row--unlinked'
     }
     body.title = title
 

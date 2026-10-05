@@ -608,6 +608,10 @@
 //   • Chevron:       20px, icon-default (#747474)
 // ══════════════════════════════════════════════════════════════════════
 
+.seller-home__knowledge-profiles {
+  margin-bottom: 1rem;
+}
+
 .seller-home__knowledge-doc-list {
   // Native list reset. The section's `<section aria-label=
   // "Documents">` in knowledge.html labels the region, so no
@@ -678,72 +682,8 @@
   padding-block-start: var(--slds-g-spacing-4, 1rem); // 16px
   padding-block-end: var(--slds-g-spacing-3, .75rem); // 12px
 
-  background: var(--slds-g-color-surface-1, #ffffff);
-  border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
-
-  // Figma's `drop-shadow(0 0 1px rgba(0,0,0,0.16))` becomes an inset
-  // 1-px hairline. `inset` keeps the outline from bleeding beyond
-  // the radius corners and stops the shadow from stacking with the
-  // row gap into an accidental visual double-line.
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
-
-  // Reset the browser's default `<a>` chrome so the row reads as a
-  // card, not a hyperlink. Color inherits down into the name / meta
-  // spans via `currentColor` on the base rule below.
-  color: inherit;
-  text-decoration: none;
-
-  // Row-level state transitions. Only background + shadow move; the
-  // typography holds still to avoid text jitter on hover.
-  transition: background-color 120ms ease, box-shadow 120ms ease;
-
-  // Base stylesheet `slds2_agentic.css` ships a global
-  // `a:hover, a:focus-visible { text-decoration: underline }` rule
-  // whose pseudo-class specificity bump beats the resting
-  // `text-decoration: none` above once the row is hovered / focused.
-  // The doc row is styled as a CARD, not a hyperlink — so pin the
-  // decoration off on every interactive state. Same defense the
-  // left-nav item uses (see line ~461 for the sibling case).
-  &:hover,
-  &:focus,
-  &:focus-visible {
-    text-decoration: none;
-  }
-
-  // ── Hover ──
-  // Matches the Connections tiles (`.tool-card`): a drop shadow, no
-  // gray background wash. Keeps the resting hairline and layers the
-  // SLDS shadow-3 lift on top; the surface stays white.
-  &:hover {
-    box-shadow:
-      inset 0 0 0 1px rgba(0, 0, 0, 0.08),
-      var(--slds-g-shadow-3, 0 2px 3px 0 rgba(0, 0, 0, 0.16));
-  }
-
-  // ── Active (pressed) ──
-  // A shallower lift on mouse-down so the click still reads as a
-  // physical action, but still no gray fill.
-  &:active {
-    box-shadow:
-      inset 0 0 0 1px rgba(0, 0, 0, 0.12),
-      0 1px 2px 0 rgba(0, 0, 0, 0.16);
-  }
-
-  // ── Focus (keyboard) ──
-  // Brand-blue focus ring, `:focus-visible` so mouse clicks don't
-  // paint the ring. Uses the SLDS 2 focus shadow token so a future
-  // token retune (e.g. thicker ring, different color) flows through
-  // this row automatically. `outline: none` kills the UA's default
-  // ring since we're painting our own via box-shadow.
-  &:focus {
-    outline: none;
-  }
-  &:focus-visible {
-    outline: none;
-    box-shadow:
-      inset 0 0 0 1px rgba(0, 0, 0, 0.16),
-      0 0 0 2px var(--slds-g-color-accent-2, #0250d9);
-  }
+  // Card surface, hover, press, focus, and the unlinked rest state
+  // live on `.page-row` in page.scss.
 
   // ── Selected ("this row is currently open") ──
   // `aria-current="page"` mirrors the SLDS nav-item convention —
@@ -756,30 +696,6 @@
     box-shadow:
       inset 0 0 0 1px color-mix(in srgb, var(--slds-g-color-accent-2, #0250d9) 32%, transparent),
       inset 3px 0 0 var(--slds-g-color-accent-2, #0250d9);
-  }
-
-  // ── Unlinked variant ──
-  // Rendered as a `<div>` (not an `<a>`) when the doc opts out of
-  // drill-in via `linked: false`. Card surface + border + typography
-  // stay identical so linked / unlinked rows visually align in the
-  // same list, but the "leads somewhere" affordances are all
-  // suppressed:
-  //   • no pointer cursor
-  //   • no hover surface shift / border darken
-  //   • no active surface shift
-  //   • no focus-visible ring (the wrapper isn't focusable — it's a
-  //     `<div>` with no tabindex — so this rule is defensive)
-  // Chevron suppression happens at the template level (unlinked
-  // branch skips the chevron span entirely) so there's no residual
-  // 20 px right-side gap to fill here.
-  &--unlinked,
-  &--unlinked:hover,
-  &--unlinked:focus,
-  &--unlinked:active,
-  &--unlinked:focus-visible {
-    cursor: default;
-    background: var(--slds-g-color-surface-1, #ffffff);
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
   }
 }
 
@@ -948,6 +864,12 @@
   }
 }
 
+// Source icons stay in the markup. This hides the row on every
+// knowledge item until the line is brought back.
+.seller-home__knowledge-doc-sources {
+  display: none;
+}
+
 .seller-home__knowledge-doc-meta {
   font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
   font-size: 0.75rem; // 12px — Figma Display/1/Regular
@@ -1029,190 +951,25 @@
   fill: currentColor;
 }
 
-// ══════════════════════════════════════════════════════════════════════
-// Overflow menu (⋮ → Download / Delete)
-// ----------------------------------------------------------------------
-// Sibling of the anchor. Absolutely positioned inside the row's
-// coordinate space so the trigger sits in the anchor's reserved
-// right gutter (see the row block header for the coordinate map).
-//
-// Visual + interaction model mirrors the Ready-to-Review row menu:
-//   • Trigger uses SLDS 2's `.slds-button_icon_bare` chrome.
-//   • Trigger appears on row hover / focus-within, or when the menu
-//     is open (`aria-expanded="true"`), so the resting row stays
-//     visually clean per Figma. Keyboard users still reach the
-//     trigger via Tab because opacity: 0 doesn't remove it from the
-//     tab order — Tab-focus triggers `:focus-within` on the row,
-//     which reveals the trigger before it visibly gains focus.
-//   • Menu panel: SLDS 2 `container-1` surface, 8-px radius, drop-
-//     shadow, min-width 10rem. Right-aligned to the trigger.
-// ══════════════════════════════════════════════════════════════════════
-
-// Wrapper — anchors the coordinate space + gives the outside-click
-// detector a boundary. z-index above the anchor (which has none but
-// naturally sits at z: 0) so the trigger's click target stacks on
-// top of the anchor's hit region.
+// Overflow menu sits in the row's right gutter. The trigger, panel,
+// and item styles are `.page-row__menu*` in page.scss. This rule only
+// places the menu: the chevron owns the far edge, so the trigger sits
+// just inside it.
 .seller-home__knowledge-doc-menu {
   position: absolute;
   top: 50%;
-  right: 1rem; // 16px — far-right, aligned to where the (now-hidden) chevron sat
+  right: 1rem; // 16px
   transform: translateY(-50%);
   z-index: 2;
-}
-
-// Trigger — SLDS 2 bare icon button, 32×32 tap target.
-// Hidden by default; revealed on row hover / focus-within or when
-// the menu is open. Icon color stays at on-surface-1 muted gray so
-// it reads as chrome, not primary content.
-//
-// The bare variant ships size-less (`slds-button_icon-bare` sets no
-// width/height and `--slds-c-button-color-background-hover: none`),
-// so we give it the 32×32 box the layout gutter already reserves and
-// center the 14px ⋮ inside it. That box is what the hover-gray fills
-// as an even circle around the icon.
-.seller-home__knowledge-doc-menu-trigger {
-  opacity: 0;
-  pointer-events: none;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  inline-size: var(--slds-g-sizing-9, 2rem);  // 32px
-  block-size: var(--slds-g-sizing-9, 2rem);   // 32px
-  border-radius: var(--slds-g-radius-border-circle, 100%);
-
-  transition:
-    opacity 160ms ease,
-    background-color 120ms ease;
-
-  .slds-button__icon {
-    fill: var(--slds-g-color-on-surface-1, #5c5c5c);
-  }
-
-  // Hover-gray — the shell's standard hover surface,
-  // `--slds-g-color-surface-container-2` (#f3f3f3), the same neutral
-  // fill nav items and list rows use on hover. Also applied on
-  // keyboard focus and while the menu is open so the ⋮ reads as
-  // "active". `border-radius` is repeated on :focus-visible because
-  // SLDS's bare-icon focus rule otherwise swaps in its own radius.
-  &:hover,
-  &:focus-visible,
-  &[aria-expanded="true"] {
-    background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
-    border-radius: var(--slds-g-radius-border-circle, 100%);
-  }
-
-  // Pressed — one step darker (surface-container-3, #e5e5e5).
-  &:active {
-    background-color: var(--slds-g-color-surface-container-3, #e5e5e5);
-  }
-}
-
-// Reveal rules — hover on the row wrapper, keyboard focus anywhere
-// inside the row wrapper, or the menu being open. `focus-within`
-// picks up both the anchor's focus and the trigger's own focus, so
-// tabbing into the row or the trigger both count as "reveal".
-//
-// On coarse pointers (touch) `hover` doesn't reliably fire, so we
-// force the trigger visible for those devices via the media query
-// at the end of this block. Same logic Ready-to-Review uses.
-.seller-home__knowledge-doc-item:hover .seller-home__knowledge-doc-menu-trigger,
-.seller-home__knowledge-doc-item:focus-within .seller-home__knowledge-doc-menu-trigger,
-.seller-home__knowledge-doc-menu-trigger[aria-expanded="true"] {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-// Menu panel — drops below-right of the trigger. Anchored to the
-// trigger via `right: 0` on the menu wrapper's coordinate space so
-// the menu's right edge stays flush with the ⋮ regardless of row
-// width.
-.seller-home__knowledge-doc-menu-list {
-  position: absolute;
-  top: calc(100% + 0.25rem); // 4px gap below the trigger
-  right: 0;
-  z-index: 5;
-
-  min-width: 10rem; // 160px, matches Ready-to-Review menu
-  background: var(--slds-g-color-surface-container-1, #ffffff);
-  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
-  border-radius: var(--slds-g-radius-border-2, 0.5rem); // 8px
-  box-shadow:
-    0 4px 12px 0 rgba(0, 0, 0, 0.12),
-    0 1px 3px 0 rgba(0, 0, 0, 0.08);
-
-  padding-block: var(--slds-g-spacing-1, 0.25rem); // 4px vertical
-}
-
-.seller-home__knowledge-doc-menu-items {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-// Menu items — SLDS-adjacent hover / focus behavior. Cloned from
-// `.seller-home__feed-item-menu-item` so the two menus feel
-// identical; leading icon (utility sprite) matches the item's slug.
-.seller-home__knowledge-doc-menu-item {
-  appearance: none;
-  background: transparent;
-  border: 0;
-  margin: 0;
-  cursor: pointer;
-  text-align: start;
-  width: 100%;
-
-  display: flex;
-  align-items: center;
-  gap: var(--slds-g-spacing-2, 0.5rem); // 8px icon-to-label
-
-  padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
-  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
-  font-weight: var(--slds-g-font-weight-4, 400);
-  line-height: 1.0625rem; // 17px
-  color: var(--slds-g-color-on-surface-2, #2e2e2e);
-
-  transition: background-color 120ms ease, color 120ms ease;
-
-  &:hover,
-  &:focus-visible {
-    background: var(--slds-g-color-surface-container-2, #f3f3f3);
-    color: var(--slds-g-color-on-surface-3, #001e5b);
-    outline: none;
-  }
-
-  &:focus-visible {
-    box-shadow: inset 3px 0 0 var(--slds-g-color-accent-2, #0250d9);
-  }
-}
-
-.seller-home__knowledge-doc-menu-item-icon {
-  width: 0.875rem;  // 14px
-  height: 0.875rem; // 14px
-  fill: currentColor;
-  flex: 0 0 auto;
-}
-
-.seller-home__knowledge-doc-menu-item-label {
-  flex: 1 1 auto;
-  min-width: 0;
 }
 
 // Touch devices don't fire `:hover` reliably, so always show the
 // overflow trigger on coarse pointers. Same accessibility escape
 // hatch Ready-to-Review uses.
 @media (hover: none) {
-  .seller-home__knowledge-doc-menu-trigger {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  // Same escape hatch for the chevron — `:hover` never fires on
-  // coarse pointers, so without this a phone user would never see
-  // the "row leads somewhere" affordance.
+  // `:hover` never fires on coarse pointers, so keep the chevron
+  // visible. The overflow trigger's always-on rule lives with
+  // `.page-row__menu-trigger`.
   .seller-home__knowledge-doc-chevron {
     opacity: 1;
   }

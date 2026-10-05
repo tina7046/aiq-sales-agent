@@ -165,7 +165,7 @@
      copy of its own. #}
   {% set rowLabelPrefix = "Open details, " ~ workflow.title ~ ", " %}
   <li
-    class="seller-home__scheduled-workflow-item"
+    class="seller-home__scheduled-workflow-item page-row-item"
     data-sh-workflow-item
     data-sh-workflow-id="{{ workflow.id }}"
     data-sh-workflow-status="{{ workflow.status }}"
@@ -208,7 +208,7 @@
 
     {# Visible card surface. Inert `<div>` — the stretched button above
        owns click / keyboard / focus; this only paints the title + meta. #}
-      <div class="seller-home__scheduled-workflow-row" title="{{ workflow.title }}">
+      <div class="seller-home__scheduled-workflow-row page-row" title="{{ workflow.title }}">
       <span class="seller-home__scheduled-workflow-body">
         <span class="seller-home__scheduled-workflow-title">{{ workflow.title }}</span>
         <span class="seller-home__scheduled-workflow-meta">
@@ -252,13 +252,13 @@
        the outside-click dismisser doesn't fire on them. Menu id is
        namespaced with the workflow id so rows never share aria targets. #}
     <div
-      class="seller-home__scheduled-workflow-menu"
+      class="seller-home__scheduled-workflow-menu page-row__menu"
       data-sh-workflow-menu
       data-sh-workflow-stop
     >
       <button
         type="button"
-        class="slds-button slds-button_icon slds-button_icon-bare seller-home__scheduled-workflow-menu-trigger"
+        class="slds-button slds-button_icon slds-button_icon-bare seller-home__scheduled-workflow-menu-trigger page-row__menu-trigger"
         data-sh-workflow-menu-trigger
         aria-haspopup="menu"
         aria-expanded="false"
@@ -273,14 +273,14 @@
       </button>
 
       <div
-        class="seller-home__scheduled-workflow-menu-list"
+        class="seller-home__scheduled-workflow-menu-list page-row__menu-list"
         id="{{ menuId }}"
         role="menu"
         aria-label="Workflow actions"
         data-sh-workflow-menu-list
         hidden
       >
-        <ul class="seller-home__scheduled-workflow-menu-items" role="none">
+        <ul class="seller-home__scheduled-workflow-menu-items page-row__menu-items" role="none">
           {% for action in actions %}
             <li
               role="none"
@@ -289,16 +289,16 @@
             >
               <button
                 type="button"
-                class="seller-home__scheduled-workflow-menu-item"
+                class="seller-home__scheduled-workflow-menu-item page-row__menu-item"
                 role="menuitem"
                 data-sh-workflow-action="{{ action.id }}"
               >
                 {% if action.icon %}
-                  <svg class="seller-home__scheduled-workflow-menu-item-icon" aria-hidden="true">
+                  <svg class="seller-home__scheduled-workflow-menu-item-icon page-row__menu-item-icon" aria-hidden="true">
                     <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
                   </svg>
                 {% endif %}
-                <span class="seller-home__scheduled-workflow-menu-item-label">{{ action.label }}</span>
+                <span class="seller-home__scheduled-workflow-menu-item-label page-row__menu-item-label">{{ action.label }}</span>
               </button>
             </li>
           {% endfor %}

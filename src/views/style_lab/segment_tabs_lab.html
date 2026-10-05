@@ -1,0 +1,129 @@
+{% extends "_template.html" %}
+
+{#
+  Segment-tabs lab
+  =====================================================================
+  Served at /style_lab/segment_tabs_lab.html. The pill row and the
+  Add modal are the reusable component. This page only supplies a
+  contenteditable editor and the HTML a new tab starts with.
+#}
+
+{% block styles %}
+  <link rel="stylesheet" href="/styles/segment_tabs.css" />
+{% endblock %}
+
+{% block content %}
+  <div class="segment-tabs-lab">
+    <h1 class="slds-text-heading_medium slds-m-bottom_medium">Knowlege Profiles</h1>
+    {% include "_segment_tabs.html" %}
+    <div
+      class="segment-tabs-lab__editor"
+      contenteditable="true"
+      role="textbox"
+      aria-multiline="true"
+      aria-label="Instructions"
+      data-sh-segment-tabs-editor
+    ></div>
+  </div>
+{% endblock %}
+
+{% block scripts_extra %}
+  <script type="module">
+    import { initSegmentTabs } from "/scripts/segment_tabs.js";
+
+    var editorEl = document.querySelector("[data-sh-segment-tabs-editor]");
+    var root = document.querySelector("[data-sh-segment-tabs]");
+    var storageKey = "segment-tabs-lab";
+    var defaultTabs = [
+      {
+        name: "Org",
+        icon: "display_text",
+        content: "<p>Org instructions. Switch tabs to keep a separate draft.</p>"
+      },
+      {
+        name: "My profile",
+        icon: "display_text",
+        content: "<p>My profile instructions.</p>"
+      },
+      {
+        name: "Enterprise",
+        icon: "display_text",
+        content: "<p>Enterprise instructions.</p>"
+      }
+    ];
+
+    // Saved drafts keep the old "Default" pill. Rename it once and
+    // insert My profile ahead of Enterprise.
+    (function () {
+      var raw = sessionStorage.getItem(storageKey);
+      if (!raw) return;
+      var data;
+      try { data = JSON.parse(raw); } catch (e) { return; }
+      if (!data || !Array.isArray(data.tabs)) return;
+
+      var changed = false;
+      data.tabs.forEach(function (tab) {
+        if (!tab) return;
+        if ((tab.name === "My profile" || tab.name === "Org") && tab.icon !== "display_text") {
+          tab.icon = "display_text";
+          changed = true;
+        }
+      });
+      if (data.orgProfileReady) {
+        if (changed) sessionStorage.setItem(storageKey, JSON.stringify(data));
+        return;
+      }
+
+      data.tabs.forEach(function (tab) {
+        if (tab && tab.name === "Default") {
+          tab.name = "Org";
+          tab.icon = "display_text";
+        }
+      });
+
+      var hasProfile = data.tabs.some(function (tab) { return tab && tab.name === "My profile"; });
+      if (!hasProfile) {
+        var enterpriseIndex = data.tabs.findIndex(function (tab) { return tab && tab.name === "Enterprise"; });
+        var orgIndex = data.tabs.findIndex(function (tab) { return tab && tab.name === "Org"; });
+        var insertAt = enterpriseIndex !== -1
+          ? enterpriseIndex
+          : (orgIndex === -1 ? data.tabs.length : orgIndex + 1);
+        var next = data.nextId || (data.tabs.length + 1);
+        data.tabs.splice(insertAt, 0, {
+          id: "tab_" + next,
+          name: "My profile",
+          icon: "display_text",
+          content: "<p>My profile instructions.</p>"
+        });
+        data.nextId = next + 1;
+      }
+
+      data.orgProfileReady = true;
+      sessionStorage.setItem(storageKey, JSON.stringify(data));
+    })();
+
+    var tabsApi = initSegmentTabs(root, {
+      storageKey: storageKey,
+      editor: {
+        getContent: function () { return editorEl.innerHTML; },
+        setContent: function (html) { editorEl.innerHTML = html || ""; }
+      },
+      newTabContent: "<p>New instructions</p>",
+      initialTabs: defaultTabs
+    });
+
+    // In-place restart. stopImmediatePropagation keeps the header logo
+    // from leaving for /index.html?reset=1. reset() has to run first:
+    // a bare sessionStorage.removeItem is undone by beforeunload, which
+    // writes the open pills and editor HTML back as the page reloads.
+    var logo = document.querySelector("[data-sh-header-logo]");
+    if (logo) {
+      logo.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        tabsApi.reset();
+        window.location.reload();
+      }, true);
+    }
+  </script>
+{% endblock %}

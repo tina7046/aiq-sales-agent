@@ -126,7 +126,7 @@
     {
       "id": "knowledge",
       "label": "Knowledge",
-      "icon": "knowledge_base",
+      "icon": "display_text",
       "href": "/knowledge.html"
     }
   ],
@@ -150,7 +150,161 @@
       "icon": "settings"
     }
   ],
-  "conversations": {},
+  "conversations": {
+    "conv-knowledge-profile": {
+      "id": "conv-knowledge-profile",
+      "title": "Learning about New knowledge profile",
+      "subtitle": "Knowledge plan",
+      "workflow": {
+        "id": "knowledge-profile",
+        "label": "Knowledge profile"
+      },
+      "status": "in_progress",
+      "recentLabel": "Learning about New knowledge profile",
+      "messages": [
+        {
+          "id": "kp-lead",
+          "type": "agent",
+          "text": "Here's a **draft plan** to learn **New knowledge profile**. Hunter will draft learnings from the people you selected. Nothing starts until you approve."
+        },
+        {
+          "id": "kp-users",
+          "type": "insight",
+          "severity": "positive",
+          "heading": "Selected users",
+          "text": "The profile learns from these people. Their calls, email, and CRM history are the source for the learnings below.",
+          "tableTitle": "Users",
+          "table": {
+            "id": "kp-users",
+            "ariaLabel": "Users this profile will learn from",
+            "columns": [
+              { "id": "name", "label": "User" }
+            ],
+            "rows": [
+              { "id": "kp-user-placeholder", "name": "Selected user" }
+            ]
+          }
+        },
+        {
+          "id": "kp-learnings",
+          "type": "insight",
+          "severity": "neutral",
+          "rank": 1,
+          "heading": "What Hunter will learn",
+          "text": "Once you approve, Hunter drafts the learnings for this profile from those users.",
+          "tableTitle": "Learnings",
+          "table": {
+            "id": "kp-learnings-table",
+            "ariaLabel": "Learnings Hunter will draft",
+            "columns": [
+              { "id": "item", "label": "Learning" },
+              { "id": "detail", "label": "What Hunter will draft" }
+            ],
+            "rows": [
+              {
+                "id": "kp-learn-01",
+                "item": "Discovery themes",
+                "detail": "Problems, why-now, and the questions these users actually ask"
+              },
+              {
+                "id": "kp-learn-02",
+                "item": "Voice",
+                "detail": "Tone, structure, and sign-off from their customer-facing email"
+              },
+              {
+                "id": "kp-learn-03",
+                "item": "Follow-up patterns",
+                "detail": "How quickly they reply and what a good follow-up looks like"
+              },
+              {
+                "id": "kp-learn-04",
+                "item": "Territory notes",
+                "detail": "Accounts, motions, and deal shapes these users work"
+              }
+            ]
+          }
+        },
+        {
+          "id": "kp-activity",
+          "type": "workflow_activity",
+          "workflowLabel": "Learning",
+          "workflowIcon": "knowledge_base",
+          "statusText": "Pending approval"
+        },
+        {
+          "id": "kp-approve",
+          "type": "agent",
+          "text": "Approve this plan to snapshot the profile and start learning.",
+          "actions": [
+            {
+              "id": "approve-start",
+              "label": "Approve & start",
+              "approvedLabel": "Approved",
+              "toast": "Approved plan",
+              "activity": {
+                "messageId": "kp-activity",
+                "workflowLabel": "Learning",
+                "statusText": "Thinking"
+              },
+              "trace": {
+                "loop": true,
+                "showUpcoming": true,
+                "maxConcurrent": 2,
+                "thoughtLead": "The plan is approved. I'll snapshot the profile, then draft learnings from the selected users.",
+                "finalSummary": "Learning is underway. The new profile is on Knowledge, and I'll add learnings there as they land.",
+                "timings": {
+                  "leadMs": 400,
+                  "stepGapMs": 200,
+                  "staggerMs": 280,
+                  "totalMs": 12000
+                },
+                "steps": [
+                  {
+                    "label": "Snapshot the profile",
+                    "thought": "Lock the profile name and the selected users so learning has a record to write against.",
+                    "thoughtDone": "The profile is snapshotted.",
+                    "cycle": ["Saving the profile", "Recording the users", "Profile saved"],
+                    "substeps": [{ "source": "Salesforce", "label": "Salesforce" }]
+                  },
+                  {
+                    "label": "Read the selected users",
+                    "thought": "Pull recent calls, email, and CRM history for the people on this profile.",
+                    "thoughtDone": "Their recent work is in.",
+                    "cycle": ["Reading calls", "Reading email", "Reading CRM"],
+                    "substeps": [{ "source": "Salesforce", "label": "Salesforce" }]
+                  },
+                  {
+                    "label": "Draft the learnings",
+                    "thought": "Turn that history into discovery themes, voice, follow-up patterns, and territory notes.",
+                    "thoughtDone": "The learnings are drafted.",
+                    "cycle": ["Drafting themes", "Drafting voice", "Learnings ready"],
+                    "substeps": [{ "img": "/assets/images/nav-icons/skills.png", "label": "Knowledge" }]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "opening": {
+        "skipThinking": true,
+        "stages": [
+          {
+            "id": "kp-open-01",
+            "thinkingMs": 0,
+            "messageIds": [
+              "kp-lead",
+              "kp-users",
+              "kp-learnings",
+              "kp-activity",
+              "kp-approve"
+            ]
+          }
+        ]
+      },
+      "scriptedTurns": []
+    }
+  },
   "feed": {
     "heading": "Ready for review",
     "date": null,

@@ -1251,7 +1251,10 @@
       //
       // Marked before playing, not after: navigating away mid-reveal and
       // returning should land on the finished thread, not restart it.
-      var live = !!query || !hasPlayedOpening(convId)
+      // An approved knowledge plan stays in its thinking trace. Reopening
+      // it paints the plan at once instead of streaming back to Approve.
+      var kpThinking = root.getAttribute('data-sh-kp-thinking') === 'true'
+      var live = !kpThinking && (!!query || !hasPlayedOpening(convId))
       markOpeningPlayed(convId)
 
       if (!live) {
@@ -1261,6 +1264,7 @@
         if (stayAtTop) thread.scrollTop = 0
         else jumpToLatest()
         waitForSendResume(limit)
+        resumeKnowledgeThinking()
         return
       }
 
@@ -1299,6 +1303,7 @@
           if (stayAtTop) thread.scrollTop = 0
           setBusy(false)
           waitForSendResume(limit)
+          resumeKnowledgeThinking()
           return
         }
         appendTemplate(stages[i], convMap, {
@@ -1788,6 +1793,7 @@
       }
       var traceLi = document.createElement('li')
       traceLi.className = 'seller-home__conv-thread-item'
+      if (cfg.loop) traceLi.setAttribute('data-sh-kp-thinking-trace', '')
       var traceHost = document.createElement('div')
       traceLi.appendChild(traceHost)
       threadInner.appendChild(traceLi)
@@ -1802,7 +1808,50 @@
         showUpcoming: !!cfg.showUpcoming,
         maxConcurrent: cfg.maxConcurrent,
         thoughtLead: cfg.thoughtLead,
+        loop: !!cfg.loop,
         onComplete: function () { if (done) done() }
+      })
+    }
+
+    function knowledgeLearningTitle () {
+      var name = 'New knowledge profile'
+      try {
+        var draft = JSON.parse(sessionStorage.getItem('sh:knowledge-profile-draft') || 'null')
+        if (draft && draft.name) name = draft.name
+      } catch (e) { /* keep the placeholder */ }
+      return 'Learning about ' + name
+    }
+
+    function persistKnowledgeLearning () {
+      var record = {
+        title: knowledgeLearningTitle(),
+        conversationId: 'conv-knowledge-profile',
+        approved: true
+      }
+      try {
+        sessionStorage.setItem('sh:knowledge-profile-learning', JSON.stringify(record))
+        var draft = JSON.parse(sessionStorage.getItem('sh:knowledge-profile-draft') || 'null')
+        if (draft) {
+          draft.approved = true
+          sessionStorage.setItem('sh:knowledge-profile-draft', JSON.stringify(draft))
+        }
+      } catch (e) { /* the open tab still thinks; the feeds pick it up next time */ }
+      root.setAttribute('data-sh-kp-thinking', 'true')
+      try {
+        document.dispatchEvent(new CustomEvent('sh:knowledge-learning', { detail: record }))
+      } catch (e) { /* older browsers */ }
+    }
+
+    function resumeKnowledgeThinking () {
+      if (root.getAttribute('data-sh-kp-thinking') !== 'true') return
+      if (threadInner.querySelector('[data-sh-kp-thinking-trace]')) return
+      var action = findMessageAction('approve-start')
+      if (!action || !action.trace) return
+      action.trace.loop = true
+      setBusy(true)
+      appendTrace(action.trace, scrollToLatest, function () {
+        setBusy(false)
+        scrollToLatest()
       })
     }
 
@@ -1847,7 +1896,16 @@
       event.preventDefault()
       btn.disabled = true
       btn.setAttribute('aria-pressed', 'true')
-      if (action.approvedLabel) btn.textContent = action.approvedLabel
+      if (convId === 'conv-knowledge-profile') {
+        persistKnowledgeLearning()
+        if (action.trace) action.trace.loop = true
+        var actions = btn.parentNode
+        if (actions && actions.classList.contains('seller-home__conv-msg-actions')) {
+          actions.hidden = true
+        }
+      } else if (action.approvedLabel) {
+        btn.textContent = action.approvedLabel
+      }
       if (action.toast) showToast(action.toast)
       applyActivityPatch(action.activity)
       if (!canMountTrace(action.trace)) return

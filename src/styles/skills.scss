@@ -1331,21 +1331,12 @@
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// Skills toolbar — tab chips + right-anchored filter button.
+// Skills toolbar
 // ----------------------------------------------------------------------
-// Structural clone of `.seller-home__scheduled-toolbar` so Skills and
-// Scheduled read as one visual family across Seller Home. Every
-// selector below mirrors its `.seller-home__scheduled-*` counterpart
-// exactly — hairline weight, tab height, underline overlay trick,
-// count-pill palette. Skills-specific additions (filter-button
-// active-fill variant, count pill on the button, popover) are
-// additive layers below the parallel block.
-//
-// If a future revision moves either toolbar, the intent is to move
-// both together. Kept as duplicated selectors (per the 2026-07-31
-// decision) rather than a shared class so a Scheduled-only tweak
-// can't drift Skills mid-flight; if the two ever diverge on purpose,
-// this block already carries a distinct namespace to accommodate it.
+// The tab row itself is the Scheduled tab component
+// (`.seller-home__scheduled-toolbar` / `-tabs` / `-tab` in home.scss).
+// Skills markup adds those classes next to the `data-sh-skills-*`
+// hooks. What stays here is only the sticky bar the cards scroll under.
 // ══════════════════════════════════════════════════════════════════════
 // Tabs + filter row. Sticks to the top of the scrolling body so
 // skill cards pass underneath. The fade sits just below the row
@@ -1383,126 +1374,6 @@
       transparent
     );
   }
-}
-
-.seller-home__skills-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  // No `gap` between the tab group and the filter button — the tab
-  // group's own trailing padding + the filter button's own padding
-  // handle the visual separation. Matches Scheduled.
-  //
-  // 2026-08-12: the toolbar-wide bottom hairline was removed per
-  // Figma "Coworker – Skills" (node 9723:17372) — the design keeps
-  // the toolbar surface plain and lets the active-tab's own 3-px
-  // accent-blue underline stand alone. Scheduled still ships a
-  // hairline separator for its toolbar; Skills intentionally
-  // diverges so the card-shaped rows below breathe against a
-  // clean plane rather than a stacked-line composition.
-}
-
-.seller-home__skills-tabs {
-  display: flex;
-  gap: 0;
-  // No `margin-bottom: -1px` — the toolbar no longer carries a
-  // bottom border for the active tab's 3-px underline to overlay.
-  // The active tab's underline stands alone on the toolbar
-  // surface, exactly as the Figma reference paints it.
-}
-
-// ── Individual tab (filter chip) ──────────────────────────────────
-// Cloned from `.seller-home__scheduled-tab` verbatim. See that
-// block for the ARIA-vs-styling rationale.
-.seller-home__skills-tab {
-  appearance: none;
-  background: transparent;
-  border: 0;
-  // Reserved 3-px bottom border so switching between inactive /
-  // active states never reflows the row height.
-  border-bottom: 3px solid transparent;
-  padding: 0 var(--slds-g-spacing-3, 0.75rem);
-  margin: 0;
-  font: inherit;
-  cursor: pointer;
-
-  display: inline-flex;
-  align-items: center;
-  gap: var(--slds-g-spacing-2, 0.5rem);
-  height: 2.5rem;   // 40px
-  max-width: 15rem; // 240px cap so a long future label truncates
-  overflow: hidden;
-
-  color: var(--slds-g-color-on-surface-1, #5c5c5c);
-  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: var(--slds-g-font-scale-1, 0.875rem); // 14px
-  font-weight: var(--slds-g-font-weight-6, 590);
-  line-height: 1.1875rem; // 19px
-
-  transition: color 120ms ease, border-color 120ms ease;
-
-  &:hover {
-    color: var(--slds-g-color-on-surface-3, #001e5b);
-  }
-
-  // `:focus-visible` paints an inset ring so mouse clicks don't
-  // paint a persistent outline. Same accent-2 focus vocabulary
-  // Scheduled uses.
-  &:focus-visible {
-    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
-    outline-offset: -2px;
-    border-radius: 2px;
-  }
-
-  // Active state — brand-blue text + brand-blue underline. Applied
-  // both by CSS class (SSR first paint) AND by ARIA state
-  // (`aria-checked="true"` painted by the tab controller). Both
-  // selectors listed so a tab whose class flag drifts still shows
-  // the correct visual state.
-  &.is-active,
-  &[aria-checked="true"] {
-    color: var(--slds-g-color-accent-2, #0250d9);
-    border-bottom-color: var(--slds-g-color-border-accent-2, #0250d9);
-  }
-}
-
-.seller-home__skills-tab-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-// ── Count pill ───────────────────────────────────────────────────
-// Palette matches Scheduled exactly:
-//   Inactive: surface-container-3 (#E5E5E5) fill, on-surface-1 text
-//   Active:   info-container-1 (#D8E6FE) fill, on-info-1 (#0B5CAB) text
-// The active-state tint is deliberately LIGHT so the count pill
-// stays legible as a companion to the underline rather than
-// competing with it (a saturated fill would over-attract the eye).
-.seller-home__skills-tab-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.25rem;      // 20px — single digit still reads as a pill
-  padding-inline: 0.375rem;
-  height: 1.125rem;        // 18px
-  border-radius: 999px;
-
-  background: var(--slds-g-color-surface-container-3, #e5e5e5);
-  color: var(--slds-g-color-on-surface-1, #5c5c5c);
-  font-family: inherit;
-  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
-  font-weight: var(--slds-g-font-weight-6, 590);
-  line-height: 1;
-
-  transition: background-color 120ms ease, color 120ms ease;
-}
-
-.seller-home__skills-tab.is-active .seller-home__skills-tab-count,
-.seller-home__skills-tab[aria-checked="true"] .seller-home__skills-tab-count {
-  background: var(--slds-g-color-info-container-1, #d8e6fe);
-  color: var(--slds-g-color-on-info-1, #0b5cab);
 }
 
 // ── Empty-state variants ─────────────────────────────────────────

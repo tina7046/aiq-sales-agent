@@ -228,6 +228,12 @@
   // would clear the rail but still treat every conversation as read,
   // painting them instantly instead of replaying them.
   var DEMO_SESSION_KEYS = [RECENTS_KEY, KNOWLEDGE_BANNER_KEY, 'sh:convSeen', 'sh:convOpeningContinued', FEED_CONSUMED_KEY, MARCUS_REPLY_KEY, 'sh:demoDay']
+  // Knowledge profile pills. segment_tabs.js writes the literal key
+  // knowledge.html passes (`knowledge-profiles`), not a sk()-scoped one.
+  // Folding it into DEMO_SESSION_KEYS would look up
+  // `sh:<id>:knowledge-profiles` and leave the customized pills in place
+  // after the cloud reset.
+  var KNOWLEDGE_PROFILES_KEY = 'knowledge-profiles'
   var DEMO_LOCAL_KEYS = [DRAFT_LIST_KEY, 'sh:scheduledWorkflows:v1']
   var DEMO_LOCAL_PREFIXES = ['sh:convDraft:v1:', 'sh:convSched:v1:']
 
@@ -236,6 +242,9 @@
       for (var i = 0; i < DEMO_SESSION_KEYS.length; i++) {
         window.sessionStorage.removeItem(sk(DEMO_SESSION_KEYS[i]))
       }
+      window.sessionStorage.removeItem(KNOWLEDGE_PROFILES_KEY)
+      window.sessionStorage.removeItem('sh:knowledge-profile-draft')
+      window.sessionStorage.removeItem('sh:knowledge-profile-learning')
     } catch (e) {
       // Storage unavailable — nothing accumulated, nothing to clear.
     }
@@ -637,6 +646,176 @@
     }
   }
 
+  // A knowledge profile that has been approved stays in "Thinking".
+  // The same session shows up as a running row on Home and Scheduled,
+  // and the chat in Recents keeps the pulse.
+  var KP_LEARNING_KEY = 'sh:knowledge-profile-learning'
+  var KP_CONV_ID = 'conv-knowledge-profile'
+
+  function readKnowledgeLearning () {
+    try {
+      var raw = window.sessionStorage.getItem(KP_LEARNING_KEY)
+      var data = raw ? JSON.parse(raw) : null
+      if (!data || !data.approved || !data.title) return null
+      return data
+    } catch (e) {
+      return null
+    }
+  }
+
+  function learningHref () {
+    return window.SH.userUrl('/home_conversation.html?id=' + encodeURIComponent(KP_CONV_ID))
+  }
+
+  function stripCloneIds (rootEl) {
+    var nodes = rootEl.querySelectorAll('[id]')
+    for (var i = 0; i < nodes.length; i++) nodes[i].removeAttribute('id')
+  }
+
+  // Keep the cloned overflow menu and its aria links, but move every id
+  // off the donor row so two kebabs don't share one menu.
+  function retargetCloneIds (rootEl, prefix) {
+    var nodes = rootEl.querySelectorAll('[id]')
+    var map = {}
+    var i
+    for (i = 0; i < nodes.length; i++) {
+      map[nodes[i].id] = prefix + '-' + nodes[i].id
+      nodes[i].id = map[nodes[i].id]
+    }
+    var refs = rootEl.querySelectorAll('[aria-controls], [aria-describedby]')
+    for (i = 0; i < refs.length; i++) {
+      var el = refs[i]
+      ;['aria-controls', 'aria-describedby'].forEach(function (attr) {
+        var cur = el.getAttribute(attr)
+        if (cur && map[cur]) el.setAttribute(attr, map[cur])
+      })
+    }
+  }
+
+  function mountKnowledgeRecentPulse (data) {
+    var list = document.querySelector('[data-sh-recents-list]')
+    if (!list) return
+    var row = list.querySelector('[data-sh-recent-conv="' + KP_CONV_ID + '"]')
+    if (!row) {
+      recordRecent({
+        id: 'rec-' + KP_CONV_ID,
+        label: data.title,
+        conversationId: KP_CONV_ID,
+        query: null
+      })
+      row = document.createElement('button')
+      row.type = 'button'
+      row.className = 'seller-home__nav-recent seller-home__nav-recent--linked'
+      row.setAttribute('data-sh-nav-href', learningHref())
+      row.setAttribute('data-sh-recent-conv', KP_CONV_ID)
+      row.setAttribute('role', 'listitem')
+      row.setAttribute('data-sh-recent', 'rec-' + KP_CONV_ID)
+      row.title = data.title
+      var mono = recentMonogram(data.title)
+      if (mono) {
+        var monoEl = document.createElement('span')
+        monoEl.className = 'seller-home__nav-recent-mono'
+        monoEl.setAttribute('aria-hidden', 'true')
+        monoEl.textContent = mono
+        row.appendChild(monoEl)
+      }
+      var label = document.createElement('span')
+      label.className = 'seller-home__nav-recent-label'
+      label.textContent = data.title
+      row.appendChild(label)
+      list.insertBefore(row, list.firstChild)
+    }
+    if (row.querySelector('.seller-home__nav-recent-status--running')) return
+    row.classList.add('seller-home__nav-recent--running')
+    appendRecentStatus(row, { status: 'running', label: data.title })
+  }
+
+  function mountKnowledgeFeedRow (data) {
+    var list = document.querySelector('.seller-home__feed-list')
+    if (!list || list.querySelector('[data-sh-kp-learning]')) return
+    var source = list.querySelector('[data-sh-feed-state="running"]')
+    if (!source) return
+    var item = source.closest('[data-sh-feed-list-item]')
+    if (!item) return
+    var clone = item.cloneNode(true)
+    clone.removeAttribute('hidden')
+    clone.setAttribute('data-sh-kp-learning', '')
+    var article = clone.querySelector('[data-sh-feed-item]')
+    if (article) {
+      article.setAttribute('data-sh-feed-item', 'kp-learning')
+      article.setAttribute('data-sh-feed-state', 'running')
+    }
+    retargetCloneIds(clone, 'kp-learning')
+    var feedToggle = clone.querySelector('[data-sh-feed-run-toggle]')
+    if (feedToggle) feedToggle.setAttribute('aria-label', 'Stop ' + data.title)
+    var title = clone.querySelector('[data-sh-feed-item-title]')
+    if (title) {
+      title.textContent = data.title
+      title.setAttribute('data-sh-feed-item-link', 'kp-learning')
+      title.setAttribute('data-sh-nav-href', learningHref())
+      var slots = ['default', 'paused', 'running', 'completed', 'scheduled', 'archived']
+      for (var s = 0; s < slots.length; s++) {
+        title.setAttribute('data-sh-feed-slot-' + slots[s], data.title)
+      }
+    }
+    var status = clone.querySelector('.seller-home__feed-item-desc-status')
+    if (status) status.textContent = 'Thinking'
+    var time = clone.querySelector('.seller-home__feed-item-desc-time')
+    if (time) time.textContent = ''
+    var sep = clone.querySelector('.seller-home__feed-item-desc-sep')
+    if (sep) sep.setAttribute('hidden', '')
+    var outputs = clone.querySelector('.seller-home__feed-item-outputs')
+    if (outputs && outputs.parentNode) outputs.parentNode.removeChild(outputs)
+    if (article) article.classList.remove('seller-home__feed-item--has-outputs')
+    var header = list.querySelector('[data-sh-feed-group="running"]')
+    if (header && header.nextSibling) list.insertBefore(clone, header.nextSibling)
+    else list.insertBefore(clone, list.firstChild)
+  }
+
+  function mountKnowledgeScheduleRow (data) {
+    var list = document.querySelector('.seller-home__scheduled-workflow-list')
+    if (!list || list.querySelector('[data-sh-kp-learning]')) return
+    var source = list.querySelector('[data-sh-workflow-status="running"]')
+    if (!source) return
+    var clone = source.cloneNode(true)
+    clone.removeAttribute('hidden')
+    clone.setAttribute('data-sh-kp-learning', '')
+    clone.setAttribute('data-sh-workflow-id', 'kp-learning')
+    clone.setAttribute('data-sh-workflow-status', 'running')
+    stripCloneIds(clone)
+    var menus = clone.querySelectorAll('[data-sh-workflow-menu]')
+    for (var m = 0; m < menus.length; m++) menus[m].parentNode.removeChild(menus[m])
+    var schedToggle = clone.querySelector('[data-sh-workflow-run-toggle]')
+    if (schedToggle) schedToggle.setAttribute('aria-label', 'Stop ' + data.title)
+    var title = clone.querySelector('.seller-home__scheduled-workflow-title')
+    if (title) title.textContent = data.title
+    var meta = clone.querySelector('.seller-home__scheduled-workflow-meta')
+    if (meta) meta.textContent = 'Thinking'
+    var open = clone.querySelector('[data-sh-schedule-open]')
+    if (open) {
+      open.setAttribute('aria-label', 'Open ' + data.title)
+      open.addEventListener('click', function (event) {
+        event.preventDefault()
+        event.stopPropagation()
+        window.location.assign(learningHref())
+      }, true)
+    }
+    list.insertBefore(clone, list.firstChild)
+    var count = document.querySelector('[data-sh-scheduled-tab="active"] [data-sh-scheduled-tab-count]')
+    if (count) {
+      var n = parseInt(count.textContent, 10)
+      if (isFinite(n)) count.textContent = String(n + 1)
+    }
+  }
+
+  function mountKnowledgeLearning () {
+    var data = readKnowledgeLearning()
+    if (!data) return
+    mountKnowledgeFeedRow(data)
+    mountKnowledgeScheduleRow(data)
+    mountKnowledgeRecentPulse(data)
+  }
+
   function renderRecents (root, list, activeId) {
     var listEl = root.querySelector('[data-sh-recents-list]')
     if (!listEl) return
@@ -909,6 +1088,8 @@
       var recents = current ? recordRecent(current) : readRecents()
       var activeConvId = current ? current.conversationId : null
       renderRecents(nav, withWorkflowSessions(withDraftRecents(recents)), activeConvId)
+      mountKnowledgeLearning()
+      document.addEventListener('sh:knowledge-learning', mountKnowledgeLearning)
 
       // Confirming a schedule renames its conversation — "Schedule
       // Pipeline Snapshot" becomes "Pipeline Snapshot",
@@ -5741,6 +5922,12 @@
       if (container.parentNode) container.remove()
     }, duration)
   }
+
+  // Knowledge's segment-tabs module is deferred and reads
+  // `knowledge-profiles` before DOMContentLoaded. A refresh has to
+  // drop that store first, or the custom profile is already on screen
+  // and gets written back on the next unload.
+  if (isReload()) clearDemoState()
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init)

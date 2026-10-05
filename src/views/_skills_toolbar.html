@@ -19,10 +19,9 @@
 #}
 
 {# ── Skills toolbar (tabs + filter button) ─────────────────────────
-   Structural clone of Scheduled's toolbar, namespaced separately
-   (`.seller-home__skills-*`) so a Scheduled-only tweak can't
-   accidentally regress Skills and vice versa (duplicate-not-shared
-   strategy, confirmed decision 2026-07-31).
+   Uses the Scheduled tab classes (`.seller-home__scheduled-tab*`)
+   so both pages share one tab style. The `seller-home__skills-*`
+   classes stay for the Skills controller's label lookup.
 
    ARIA note: these are filter chips over one list, NOT SLDS
    tabpanel-swapping tabs. So we use `role="radiogroup"` +
@@ -43,12 +42,12 @@
    `bindSkills()` reads `location.hash` on load and updates the
    highlight + row filter to match. #}
 <div
-  class="seller-home__skills-toolbar"
+  class="seller-home__scheduled-toolbar seller-home__skills-toolbar"
   data-sh-skills-toolbar
 >
   {# ── Tab chips ────────────────────────────────────── #}
   <div
-    class="seller-home__skills-tabs"
+    class="seller-home__scheduled-tabs seller-home__skills-tabs"
     role="radiogroup"
     aria-label="Filter skills by collection"
     data-sh-skills-tabs
@@ -78,7 +77,7 @@
       {% set isActive = (tab.id == tabs.defaultTabId) %}
       <button
         type="button"
-        class="seller-home__skills-tab{% if isActive %} is-active{% endif %}"
+        class="seller-home__scheduled-tab seller-home__skills-tab{% if isActive %} is-active{% endif %}"
         role="radio"
         aria-checked="{% if isActive %}true{% else %}false{% endif %}"
         aria-controls="seller-home-skills-list"
@@ -89,9 +88,9 @@
            Matches the WAI-ARIA radiogroup keyboard convention. #}
         tabindex="{% if isActive %}0{% else %}-1{% endif %}"
       >
-        <span class="seller-home__skills-tab-label">{{ tab.label }}</span>
+        <span class="seller-home__scheduled-tab-label seller-home__skills-tab-label">{{ tab.label }}</span>
         <span
-          class="seller-home__skills-tab-count"
+          class="seller-home__scheduled-tab-count seller-home__skills-tab-count"
           data-sh-skills-tab-count
           aria-hidden="true"
         >{{ count }}</span>

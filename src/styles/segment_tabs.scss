@@ -1,0 +1,205 @@
+// Segment tabs — pill row ported from the AOP editor.
+// The modal itself is SLDS. These rules only cover the pills.
+
+.sh-segment-tabs__list {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+// Match the tools category pills (ShTabNav): white chip, 1px border,
+// blue-95 when selected, weight 400. Padding stays at 0 so the leading
+// icon keeps its previous inset from the pill edge.
+.sh-segment-tabs__pill {
+  height: 1.875rem;
+  padding: 0;
+  background-color: #fff;
+  fill: var(--slds-g-color-on-surface-3);
+  border-radius: var(--slds-g-radius-border-2);
+  color: var(--slds-g-color-on-surface-3);
+  font-size: var(--slds-g-font-size-base, 13px);
+  border: 1px solid var(--slds-g-color-border-1);
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.75rem;
+  cursor: pointer;
+}
+
+// The label link is SLDS’s bordered pill action. That border draws a
+// second capsule inside our pill, so the link is only the hit target.
+.sh-segment-tabs__pill > .slds-pill__action {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  border-radius: var(--slds-g-radius-border-2);
+  height: 100%;
+  color: inherit;
+}
+
+.sh-segment-tabs__pill > .slds-pill__action:hover,
+.sh-segment-tabs__pill > .slds-pill__action:focus,
+.sh-segment-tabs__pill > .slds-pill__action:focus-visible,
+.sh-segment-tabs__pill > .slds-pill__action:active {
+  color: inherit;
+  text-decoration: none;
+}
+
+.sh-segment-tabs__pill .slds-pill__action:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+// The leading icon sits on top of the label link. Let the click
+// fall through to that link so the icon selects the pill.
+.sh-segment-tabs__pill > .slds-pill__icon_container {
+  pointer-events: none;
+}
+
+// Click focuses the label, so a plain :focus-within ring stays until
+// the next click outside. Keep it only while the pointer is on the
+// pill; keyboard focus still gets the ring via :focus-visible.
+.sh-segment-tabs__pill:focus-within:hover,
+.sh-segment-tabs__pill:has(:focus-visible) {
+  outline: 2px solid var(--slds-g-color-brand-base-30, #0176d3);
+  outline-offset: -2px;
+  border-radius: var(--slds-g-radius-border-2);
+}
+
+.sh-segment-tabs__pill--active {
+  background-color: var(--slds-g-color-brand-base-95, #eef4ff);
+  border-color: var(--slds-g-color-brand-base-95, #eef4ff);
+  color: var(--slds-g-color-on-surface-3);
+}
+
+.sh-segment-tabs__pill--add {
+  inline-size: 1.875rem;
+  block-size: 1.875rem;
+  padding: 0;
+  justify-content: center;
+
+  > .slds-pill__action {
+    inline-size: 100%;
+    block-size: 100%;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .slds-icon {
+    display: block;
+  }
+}
+
+.sh-segment-tabs__overflow {
+  position: relative;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+}
+
+// `.slds-pill__action` reserves a wide end padding for an absolutely
+// positioned remove button. The chevron is in the row now, so that
+// padding is just empty space between the label and the icon.
+.sh-segment-tabs__pill:has(.sh-segment-tabs__overflow) > .slds-pill__action {
+  padding-inline-end: var(--slds-g-spacing-1, 0.25rem);
+  margin-inline-end: 0;
+}
+
+// The button also carries `.slds-pill__remove`, which is built for a
+// close "×": content-box padding and flex-start pin the glyph left of
+// the hover circle, and absolute positioning pulls it out of the pill.
+.sh-segment-tabs__overflow > .slds-pill__remove {
+  position: static;
+  transform: none;
+  box-sizing: border-box;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  padding: 0;
+  margin-inline-end: var(--slds-g-spacing-1, 0.25rem);
+  justify-content: center;
+  border-radius: var(--slds-g-radius-border-circle, 50%);
+}
+
+// Same panel and items as `.page-row__menu-list` on a knowledge row.
+.sh-segment-tabs__overflow .slds-dropdown {
+  min-width: 10rem;
+  max-width: none;
+  margin-top: 0.25rem;
+  padding: var(--slds-g-spacing-1, 0.25rem);
+  background: var(--slds-g-color-surface-container-1, #fff);
+  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: var(--slds-g-radius-border-3);
+  box-shadow:
+    0 4px 12px 0 rgba(0, 0, 0, 0.12),
+    0 1px 3px 0 rgba(0, 0, 0, 0.08);
+}
+
+.sh-segment-tabs__overflow .slds-dropdown__list {
+  margin: 0;
+  padding: 0;
+}
+
+.sh-segment-tabs__overflow .slds-dropdown__item > a {
+  justify-content: flex-start;
+  gap: var(--slds-g-spacing-2, 0.5rem);
+  padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
+  border-radius: var(--slds-g-radius-border-2, 0.5rem);
+  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+  font-weight: var(--slds-g-font-weight-4, 400);
+  line-height: 1.0625rem;
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  text-decoration: none;
+}
+
+.sh-segment-tabs__overflow .slds-dropdown__item > a:hover,
+.sh-segment-tabs__overflow .slds-dropdown__item > a:focus,
+.sh-segment-tabs__overflow .slds-dropdown__item > a:focus-visible,
+.sh-segment-tabs__overflow .slds-dropdown__item > a:active {
+  background: var(--slds-g-color-brand-base-95, #eef4ff);
+  color: var(--slds-g-color-on-surface-2, #2e2e2e);
+  text-decoration: none;
+  outline: none;
+}
+
+.sh-segment-tabs__overflow .slds-dropdown__item > a:focus-visible {
+  box-shadow: inset var(--slds-g-sizing-border-3, 3px) 0 0 var(--slds-g-color-accent-2, #0250d9);
+}
+
+.sh-segment-tabs__menu-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
+  flex: 0 0 auto;
+}
+
+// Lab page chrome. The component itself is the pill row and modal;
+// this only lays out the scratch page that hosts them.
+html:has(.segment-tabs-lab) {
+  background-color: #fff;
+}
+
+.segment-tabs-lab {
+  max-width: 48rem;
+  margin: 2rem auto;
+  padding: 0 1.5rem 3rem;
+}
+
+.segment-tabs-lab__editor {
+  min-height: 12rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--slds-g-color-border-1, #c9c9c9);
+  border-radius: 0.5rem;
+  background: #fff;
+  font-size: 0.875rem;
+  line-height: 1.5;
+
+  &:focus {
+    outline: 2px solid var(--slds-g-color-accent-2, #0250d9);
+    outline-offset: 2px;
+  }
+}

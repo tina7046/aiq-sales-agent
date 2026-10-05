@@ -3566,40 +3566,20 @@ $sh-feed-filter-hidden: (
 // ══════════════════════════════════════════════════════════════════════
 // Toolbar — tab chips + right-anchored filter button.
 // ----------------------------------------------------------------------
-// One row that anchors the tab group on the left and the circular
-// filter icon-button on the right. Uses the same 40-px block that
-// Ready-to-Review's tab bar uses so the two surfaces feel like
-// siblings; the bottom hairline that separates tabs from list content
-// comes from the tab's own `border-bottom` (active) — not the toolbar
-// wrapper — so the underline sits inside the tab row rather than
-// spanning the full width of the composer / description above.
+// One row that anchors the tab group on the left. Scheduled and Skills
+// both use these classes. The active tab's own 3px accent underline is
+// the only rule under the labels — the toolbar itself has no bottom
+// border, matching the Skills page.
 // ══════════════════════════════════════════════════════════════════════
 .seller-home__scheduled-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  // No `gap` between the tab group and the filter button — the tab
-  // group's own trailing padding + the filter button's own padding
-  // handle the visual separation. `justify-content: space-between`
-  // pushes the two flex children to opposite edges regardless of the
-  // width in between, matching the Figma layout at every viewport.
-
-  // 4-px reserved bottom "hairline lane" sits UNDER the active-tab
-  // border so the active border-bottom paints on top of the toolbar
-  // border, forming the classic "tab-under-a-line" look without
-  // requiring the tab to negative-margin over its parent. A tab that
-  // ISN'T active leaves the toolbar's own border visible in its slot.
-  border-bottom: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
 }
 
 .seller-home__scheduled-tabs {
   display: flex;
   gap: 0;
-  // Sit the tab row's baseline flush with the toolbar's bottom border
-  // so an active tab's own bottom border overlays the toolbar border.
-  // 1-px negative-margin trick — same convention SLDS's own
-  // `.slds-tabs_default__nav` uses.
-  margin-bottom: -1px;
 }
 
 // ── Individual tab (filter chip) ──────────────────────────────────
@@ -3715,7 +3695,7 @@ $sh-feed-filter-hidden: (
   }
 
   // Hover/active surface shares the exact treatment the per-row ⋮
-  // trigger uses (see `.seller-home__scheduled-workflow-menu-trigger`)
+  // trigger uses (see `.page-row__menu-trigger` in page.scss)
   // so the toolbar and row controls read as one family — see the
   // shared box rule below.
 }
@@ -3765,11 +3745,9 @@ $sh-feed-filter-hidden: (
   list-style: none;
 }
 
-// ── Workflow row body — full-row click target ─────────────────────
-// Card surface + hairline + hover / focus / active states cloned
-// from `.seller-home__knowledge-doc-row` so both lists share one
-// visual vocabulary. Row height is 56 px, radius 12 px, inline
-// padding 16 px each side.
+// ── Workflow row body ─────────────────────────────────────────────
+// Layout only. The card surface, hover, press, focus, and unlinked
+// rest state are `.page-row` in page.scss.
 .seller-home__scheduled-workflow-row {
   display: flex;
   align-items: center;
@@ -3790,73 +3768,6 @@ $sh-feed-filter-hidden: (
   padding-inline-start: 2.625rem; // 42px = 12 + 20 + 10
   padding-inline-end: var(--slds-g-spacing-3, 0.75rem); // 12px
   padding-block: 0;
-
-  background: var(--slds-g-color-surface-1, #ffffff);
-  border-radius: var(--slds-g-radius-border-3, 0.75rem); // 12px
-  // Same hairline as a Skills card: a 1px neutral-90 edge that
-  // darkens to neutral-80 on hover, with the fill staying white.
-  box-shadow: inset 0 0 0 1px var(--slds-g-color-neutral-base-90, #e5e5e5);
-
-  // Card, not hyperlink — reset the browser's default `<a>` chrome
-  // so the row reads as a surface. Same defense-in-depth
-  // `.seller-home__knowledge-doc-row` uses against the global
-  // `a:hover { text-decoration: underline }` rule shipped by
-  // `slds2_agentic.css`.
-  color: inherit;
-  text-decoration: none;
-
-  transition: background-color 0.15s ease, box-shadow 0.15s ease;
-
-  &:hover,
-  &:focus,
-  &:focus-visible {
-    text-decoration: none;
-  }
-
-  &:hover {
-    background: var(--slds-g-color-surface-1, #ffffff);
-    box-shadow: inset 0 0 0 1px var(--slds-g-color-neutral-base-80, #c9c9c9);
-  }
-
-  &:active {
-    background: var(--slds-g-color-surface-container-3, #ebebeb);
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16);
-  }
-
-  &:focus {
-    outline: none;
-  }
-  &:focus-visible {
-    outline: none;
-    box-shadow:
-      inset 0 0 0 1px rgba(0, 0, 0, 0.16),
-      0 0 0 2px var(--slds-g-color-accent-2, #0250d9);
-  }
-
-  // ── Unlinked variant ──
-  // Rendered as a `<div>` (not an `<a>`) when the workflow opts
-  // out of drill-in via `linked: false`. Card surface + border +
-  // typography stay identical so linked / unlinked rows visually
-  // align in the same list, but the "leads somewhere" affordances
-  // are all suppressed:
-  //   • no pointer cursor
-  //   • no hover surface shift / border darken
-  //   • no active surface shift
-  //   • no focus-visible ring (the wrapper isn't focusable — it's
-  //     a `<div>` with no tabindex — so this rule is defensive)
-  // Every row in scheduled.json ships with `linked: false` today
-  // because the detail view is a future increment; the branch
-  // remains in place so individual rows can flip on once the
-  // detail page exists.
-  &--unlinked,
-  &--unlinked:hover,
-  &--unlinked:focus,
-  &--unlinked:active,
-  &--unlinked:focus-visible {
-    cursor: default;
-    background: var(--slds-g-color-surface-1, #ffffff);
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
-  }
 }
 
 // ── Status button (left) ──────────────────────────────────────────
@@ -3889,21 +3800,6 @@ $sh-feed-filter-hidden: (
 .seller-home__scheduled-status {
   @include sh-status-button;
   position: relative;
-}
-
-// Card surface hover / focus. Keyed on the ITEM (not the row-open
-// overlay) so the treatment is identical whether the pointer is over the
-// row surface, the status glyph, the Reconnect button, or the overflow —
-// and `:focus-within` gives keyboard users the same cue without relying
-// on hover. A selected card keeps its neutral-95 fill, so hover doesn't
-// paint the white Skills treatment over it. Unlinked rows (inert draft
-// rows) opt out via `:not(--unlinked)`.
-.seller-home__scheduled-workflow-item:hover:not(.is-selected)
-  .seller-home__scheduled-workflow-row:not(.seller-home__scheduled-workflow-row--unlinked),
-.seller-home__scheduled-workflow-item:focus-within:not(.is-selected)
-  .seller-home__scheduled-workflow-row:not(.seller-home__scheduled-workflow-row--unlinked) {
-  background: var(--slds-g-color-surface-1, #ffffff);
-  box-shadow: inset 0 0 0 1px var(--slds-g-color-neutral-base-80, #c9c9c9);
 }
 
 .seller-home__scheduled-status-glyph {
@@ -4054,19 +3950,9 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   max-width: 100%;
 }
 
-// ══════════════════════════════════════════════════════════════════════
-// Overflow menu — mirrors `.seller-home__knowledge-doc-menu` block.
-// Cloned rather than shared because the position math differs
-// (Scheduled has no chevron column — the trigger sits closer to the
-// row's right edge — so `right: 0.75rem` here vs `right: 3rem` on
-// Knowledge). Reveal contract, panel drop, item hover states, and
-// aria conventions are otherwise identical.
-// ══════════════════════════════════════════════════════════════════════
-.seller-home__scheduled-workflow-menu {
-  display: inline-flex;
-  align-items: center;
-}
-
+// Overflow placement. Trigger, panel, and items are `.page-row__menu*`
+// in page.scss. Authored rows keep the menu in the actions cluster;
+// draft rows pin it to the row's right edge.
 // Authored rows: the menu rides inside the flex `.actions` cluster.
 // `position: relative` makes it the anchor for the dropdown
 // (`.menu-list`, absolute below).
@@ -4093,163 +3979,6 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 .seller-home__scheduled-workflow-item:has(> .seller-home__scheduled-workflow-menu)
   .seller-home__scheduled-workflow-body {
   margin-inline-end: 2.75rem; // 44px (32 overflow + 12 gap)
-}
-
-.seller-home__scheduled-workflow-menu-trigger {
-  opacity: 0;
-  pointer-events: none;
-
-  // 32×32 box (icon centered) so the hover pill is an even circle,
-  // the same size as the composer icon buttons. The wrapper is
-  // absolute-positioned and centered at right:1rem, already sized for
-  // a 32-px trigger.
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  inline-size: var(--slds-g-sizing-9, 2rem);  // 32px
-  block-size: var(--slds-g-sizing-9, 2rem);   // 32px
-  border-radius: var(--slds-g-radius-border-circle, 100%);
-
-  transition:
-    opacity 160ms ease,
-    background-color 120ms ease;
-
-  color: var(--slds-g-color-on-surface-1, #5c5c5c);
-
-  .slds-button__icon {
-    fill: currentColor;
-  }
-
-  // Same pill as the composer icon buttons: electric-blue-95 on hover
-  // or keyboard focus, one step darker while pressed. Held while the
-  // menu is open so the trigger still reads as the thing that opened it.
-  &:hover,
-  &:focus-visible,
-  &[aria-expanded="true"] {
-    background-color: var(--slds-g-color-palette-electric-blue-95, #edf4ff);
-    border-radius: var(--slds-g-radius-border-circle, 100%);
-  }
-
-  &:active {
-    background-color: var(--slds-g-color-palette-electric-blue-90, #d6e6ff);
-  }
-}
-
-// On a selected (neutral-95) row the blue pill disappears into the
-// grey, so the hover circle is white instead.
-.seller-home__scheduled-workflow-item.is-selected .seller-home__scheduled-workflow-menu-trigger:hover,
-.seller-home__scheduled-workflow-item.is-selected .seller-home__scheduled-workflow-menu-trigger:focus-visible,
-.seller-home__scheduled-workflow-item.is-selected .seller-home__scheduled-workflow-menu-trigger[aria-expanded="true"],
-.seller-home__scheduled-workflow-item.is-selected .seller-home__scheduled-workflow-menu-trigger:active {
-  background-color: var(--slds-g-color-neutral-base-100, #ffffff);
-}
-
-.seller-home__scheduled-workflow-item:hover .seller-home__scheduled-workflow-menu-trigger,
-.seller-home__scheduled-workflow-item:focus-within .seller-home__scheduled-workflow-menu-trigger,
-.seller-home__scheduled-workflow-menu-trigger[aria-expanded="true"] {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-// Touch devices have no hover to reveal the overflow, so keep it
-// permanently visible there — matching how the always-on Reconnect
-// button stays reachable without a pointer.
-@media (hover: none) {
-  .seller-home__scheduled-workflow-menu-trigger {
-    opacity: 1;
-    pointer-events: auto;
-  }
-}
-
-.seller-home__scheduled-workflow-menu-list {
-  position: absolute;
-  top: calc(100% + 0.25rem); // 4px gap below the trigger
-  right: 0;
-  z-index: 5;
-
-  min-width: 10rem; // 160px
-  // Same shell as the home-feed row menu: inset padding so the rounded
-  // hover sits in a gutter, radius-border-3, and the same shadow.
-  padding: var(--slds-g-spacing-1, 0.25rem);
-  background: var(--slds-g-color-surface-container-1, #fff);
-  border: var(--slds-g-sizing-border-1, 1px) solid var(--slds-g-color-border-1, #c9c9c9);
-  border-radius: var(--slds-g-radius-border-3);
-  box-shadow:
-    0 4px 12px 0 rgba(0, 0, 0, 0.12),
-    0 1px 3px 0 rgba(0, 0, 0, 0.08);
-
-  &[hidden] {
-    display: none;
-  }
-}
-
-.seller-home__scheduled-workflow-menu-items {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.seller-home__scheduled-workflow-menu-item {
-  appearance: none;
-  background: transparent;
-  border: 0;
-  margin: 0;
-  cursor: pointer;
-  text-align: start;
-  width: 100%;
-
-  display: flex;
-  align-items: center;
-  gap: var(--slds-g-spacing-2, 0.5rem); // 8px icon-to-label
-
-  padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
-  border-radius: var(--slds-g-radius-border-2, 0.5rem);
-  font-family: var(--slds-g-font-family-base, "SF Pro", -apple-system, "Segoe UI", sans-serif);
-  font-size: var(--slds-g-font-scale-neg-1, 0.75rem); // 12px
-  font-weight: var(--slds-g-font-weight-4, 400);
-  line-height: 1.0625rem; // 17px
-  color: var(--slds-g-color-on-surface-2, #2e2e2e);
-
-  transition: background-color 120ms ease, color 120ms ease;
-
-  // Brand tint on hover, matching the home-feed row menu.
-  &:hover,
-  &:focus-visible {
-    background: var(--slds-g-color-brand-base-95, #eef4ff);
-    outline: none;
-  }
-
-  &:focus-visible {
-    box-shadow: inset var(--slds-g-sizing-border-3, 3px) 0 0 var(--slds-g-color-accent-2, #0250d9);
-  }
-
-  // Disabled — e.g. Run now while a blocking issue remains. Muted, no
-  // hover/press affordance, but still shown so the path stays visible.
-  &:disabled,
-  &[aria-disabled="true"] {
-    color: var(--slds-g-color-on-surface-1, #5c5c5c);
-    cursor: default;
-    opacity: 0.5;
-  }
-  &:disabled:hover,
-  &[aria-disabled="true"]:hover {
-    background: transparent;
-    color: var(--slds-g-color-on-surface-1, #5c5c5c);
-  }
-}
-
-.seller-home__scheduled-workflow-menu-item-icon {
-  width: 0.875rem;  // 14px
-  height: 0.875rem; // 14px
-  fill: var(--slds-g-color-on-surface-1, #5c5c5c);
-  flex: 0 0 auto;
-}
-
-.seller-home__scheduled-workflow-menu-item-label {
-  flex: 1 1 auto;
-  min-width: 0;
 }
 
 // ── Empty state ───────────────────────────────────────────────────
@@ -4281,16 +4010,6 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
   font-weight: var(--slds-g-font-weight-4, 400);
   line-height: 1.3;
   color: var(--slds-g-color-on-surface-1, #5c5c5c);
-}
-
-// Touch devices don't fire `:hover` reliably, so always show the
-// overflow trigger on coarse pointers. Same escape hatch Knowledge
-// uses.
-@media (hover: none) {
-  .seller-home__scheduled-workflow-menu-trigger {
-    opacity: 1;
-    pointer-events: auto;
-  }
 }
 
 // Narrow-viewport tuning — tighten the gap between the text body and
@@ -4466,12 +4185,6 @@ $sh-scheduled-status-preview: ".seller-home__scheduled-status:not([data-sh-workf
 .seller-home__scheduled-workflow-item[data-sh-workflow-status="failed"]
   .seller-home__scheduled-workflow-meta {
   color: var(--slds-g-color-error-1, #b60554);
-}
-
-// Selected state — the card whose panel is open. neutral-95.
-.seller-home__scheduled-workflow-item.is-selected .seller-home__scheduled-workflow-row {
-  background: var(--slds-g-color-neutral-base-95, #f3f3f3);
-  box-shadow: inset 0 0 0 1px var(--slds-g-color-neutral-base-90, #e5e5e5);
 }
 
 // ── Toolbar right cluster (filter + overflow) ─────────────────────

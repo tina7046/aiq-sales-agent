@@ -1,0 +1,118 @@
+{#
+  Segment tabs
+  =====================================================================
+  Pill row plus the name modal. JS in /scripts/segment_tabs.js fills
+  the list and wires Add / Edit / Delete. Each tab’s HTML lives with
+  the caller’s editor, not in this markup.
+
+  Drop the partial where the pills should sit, then call
+  initSegmentTabs(root, { storageKey, editor, newTabContent, initialTabs }).
+#}
+<div class="sh-segment-tabs" data-sh-segment-tabs>
+  <div
+    class="sh-segment-tabs__list"
+    data-sh-segment-tabs-list
+    role="toolbar"
+    aria-label="Instruction sets"
+  ></div>
+
+  <section
+    class="slds-modal slds-hide"
+    role="dialog"
+    tabindex="-1"
+    aria-modal="true"
+    aria-label="Add Knowledge Profile"
+    data-sh-segment-tabs-modal
+  >
+    <div class="slds-modal__container">
+      <button
+        type="button"
+        class="slds-button slds-button_icon slds-modal__close"
+        data-sh-segment-tabs-close
+      >
+        <svg class="slds-button__icon slds-button__icon_large" aria-hidden="true">
+          <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+        </svg>
+        <span class="slds-assistive-text">Cancel and close</span>
+      </button>
+      <div class="slds-modal__header">
+        <h1 class="slds-modal__title slds-hyphenate" tabindex="-1" data-sh-segment-tabs-heading>Add Knowledge Profile</h1>
+      </div>
+      <div class="slds-modal__content slds-p-around_medium">
+        <div class="slds-form-element">
+          <label class="slds-form-element__label">
+            <abbr class="slds-required" title="required" aria-hidden="true">* </abbr>Name
+          </label>
+          <div class="slds-form-element__control">
+            <input
+              type="text"
+              required
+              class="slds-input"
+              data-sh-segment-tabs-input
+            />
+          </div>
+        </div>
+        <div class="slds-form-element slds-m-top_medium" role="group" aria-labelledby="sh-segment-picklist-label">
+          <span id="sh-segment-picklist-label" class="slds-form-element__label slds-form-element__legend">Users</span>
+          <div class="slds-form-element__control">
+            <div class="slds-dueling-list">
+              <div class="slds-dueling-list__column slds-dueling-list__column_responsive">
+                <span class="slds-form-element__label" id="sh-segment-picklist-available-label">Available</span>
+                <div class="slds-dueling-list__options">
+                  <ul
+                    class="slds-listbox slds-listbox_vertical"
+                    role="listbox"
+                    aria-labelledby="sh-segment-picklist-available-label"
+                    aria-multiselectable="true"
+                    data-sh-segment-tabs-available
+                  >
+                    {% for person in shared.knowledgeProfileUsers %}
+                    <li role="presentation" class="slds-listbox__item">
+                      <div class="slds-listbox__option slds-listbox__option_plain slds-media slds-media_small slds-media_inline" aria-selected="false" role="option" tabindex="{% if loop.first %}0{% else %}-1{% endif %}" data-sh-profile-user="{{ person.id }}">
+                        <span class="slds-media__body">
+                          <span class="slds-truncate" title="{{ person.name }}">{{ person.name }}</span>
+                        </span>
+                      </div>
+                    </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              </div>
+              <div class="slds-dueling-list__column">
+                <button type="button" class="slds-button slds-button_icon slds-button_icon-container" title="Move selection to Selected" data-sh-segment-tabs-move-selected disabled>
+                  <svg class="slds-button__icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#right"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Move selection to Selected</span>
+                </button>
+                <button type="button" class="slds-button slds-button_icon slds-button_icon-container" title="Move selection to Available" data-sh-segment-tabs-move-available disabled>
+                  <svg class="slds-button__icon" aria-hidden="true">
+                    <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#left"></use>
+                  </svg>
+                  <span class="slds-assistive-text">Move selection to Available</span>
+                </button>
+              </div>
+              <div class="slds-dueling-list__column slds-dueling-list__column_responsive">
+                <span class="slds-form-element__label" id="sh-segment-picklist-selected-label">Selected</span>
+                <div class="slds-dueling-list__options">
+                  <ul
+                    class="slds-listbox slds-listbox_vertical"
+                    role="listbox"
+                    aria-labelledby="sh-segment-picklist-selected-label"
+                    aria-multiselectable="true"
+                    data-sh-segment-tabs-selected
+                  ></ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slds-modal__footer">
+        <button type="button" class="slds-button slds-button_neutral" data-sh-segment-tabs-cancel>Cancel</button>
+        <button type="button" class="slds-button slds-button_brand" data-sh-segment-tabs-save disabled>Start learning</button>
+      </div>
+    </div>
+  </section>
+  <div class="slds-backdrop slds-hide" role="presentation" data-sh-segment-tabs-backdrop></div>
+</div>

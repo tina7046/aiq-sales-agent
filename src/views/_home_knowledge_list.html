@@ -112,22 +112,24 @@
      build doesn't parse those tests. #}
   {% set isLinked = not (doc.linked == false) %}
   {% set rowTab = doc.tab or 'learnings' %}
+  {% set rowProfile = doc.profile or 'my-profile' %}
   <li
-    class="seller-home__knowledge-doc-item"
+    class="seller-home__knowledge-doc-item page-row-item"
     data-sh-knowledge-doc-item
     data-sh-knowledge-doc-name="{{ doc.name }}"
     data-sh-knowledge-doc-type="{{ doc.type }}"
     data-sh-knowledge-doc-tab="{{ rowTab }}"
+    data-sh-knowledge-profile="{{ rowProfile }}"
     {% if doc.learnedOn %}data-sh-memory-learned-on="{{ doc.learnedOn }}"{% endif %}
     {# First paint matches the active tab. CSS also hides the inactive
        tab via `:has(aria-checked)`, but stamping `hidden` here covers
        no-`:has()` browsers and matches what bindKnowledgeSearch writes.
        Callers that omit `defaultTabId` (memory.html) never hide. #}
-    {% if defaultTabId and not (rowTab == defaultTabId) %}hidden{% endif %}
+    {% if defaultTabId and not (rowProfile == defaultTabId) %}hidden{% endif %}
   >
     {% if isLinked %}
     <a
-      class="seller-home__knowledge-doc-row"
+      class="seller-home__knowledge-doc-row page-row"
       href="{{ docHref | appUrl }}"
       title="{{ doc.name }}"
       {# The badge is appended to the accessible name because `aria-label`
@@ -147,7 +149,7 @@
        but the aria-label drops the "Open document," prefix since
        activation no longer opens anything. #}
     <div
-      class="seller-home__knowledge-doc-row seller-home__knowledge-doc-row--unlinked"
+      class="seller-home__knowledge-doc-row seller-home__knowledge-doc-row--unlinked page-row page-row--unlinked"
       title="{{ doc.name }}"
       aria-label="{{ doc.name }}{% if doc.badge %}, {{ doc.badge }}{% endif %}"
     >
@@ -270,13 +272,13 @@
     #}
     {% set menuId = "knowledge-doc-" ~ doc.id ~ "-menu" %}
     <div
-      class="seller-home__knowledge-doc-menu"
+      class="seller-home__knowledge-doc-menu page-row__menu"
       data-sh-knowledge-doc-menu
       data-sh-knowledge-doc-stop
     >
       <button
         type="button"
-        class="slds-button slds-button_icon slds-button_icon-bare seller-home__knowledge-doc-menu-trigger"
+        class="slds-button slds-button_icon slds-button_icon-bare seller-home__knowledge-doc-menu-trigger page-row__menu-trigger"
         data-sh-knowledge-doc-menu-trigger
         aria-haspopup="menu"
         aria-expanded="false"
@@ -291,28 +293,28 @@
       </button>
 
       <div
-        class="seller-home__knowledge-doc-menu-list"
+        class="seller-home__knowledge-doc-menu-list page-row__menu-list"
         id="{{ menuId }}"
         role="menu"
         aria-label="Document actions"
         data-sh-knowledge-doc-menu-list
         hidden
       >
-        <ul class="seller-home__knowledge-doc-menu-items" role="none">
+        <ul class="seller-home__knowledge-doc-menu-items page-row__menu-items" role="none">
           {% for action in actions %}
             <li role="none">
               <button
                 type="button"
-                class="seller-home__knowledge-doc-menu-item"
+                class="seller-home__knowledge-doc-menu-item page-row__menu-item"
                 role="menuitem"
                 data-sh-knowledge-doc-action="{{ action.id }}"
               >
                 {% if action.icon %}
-                  <svg class="seller-home__knowledge-doc-menu-item-icon" aria-hidden="true">
+                  <svg class="seller-home__knowledge-doc-menu-item-icon page-row__menu-item-icon" aria-hidden="true">
                     <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#{{ action.icon }}"></use>
                   </svg>
                 {% endif %}
-                <span class="seller-home__knowledge-doc-menu-item-label">{{ action.label }}</span>
+                <span class="seller-home__knowledge-doc-menu-item-label page-row__menu-item-label">{{ action.label }}</span>
               </button>
             </li>
           {% endfor %}
@@ -352,12 +354,9 @@
     Nunjucks `== true` vs `is sameas true`: the plain equality is
     tolerated by the older Nunjucks build this project uses.
   #}
-  {% set knowledgeDefaultTab = "learnings" %}
-  {% if tabs and tabs.defaultTabId %}
-    {% set knowledgeDefaultTab = tabs.defaultTabId %}
-  {% endif %}
+  {% set knowledgeDefaultTab = "org" %}
   {% for doc in documents %}
-    {% if not (doc.hidden == true) %}
+    {% if not (doc.hidden == true) and not (doc.tab == "sources") %}
       {{ renderKnowledgeDocRow(doc, documentActions, knowledgeDefaultTab) }}
     {% endif %}
   {% endfor %}

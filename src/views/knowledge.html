@@ -18,7 +18,7 @@
   Layout skeleton — mirrors home_conversation.html:
     ┌──────────────────────────────────────────────────────────┐
     │  ┌ header (48px, flex-shrink 0) ─────────────────────┐   │
-    │  │ Knowledge                    [+ New Knowledge]    │   │
+    │  │ Knowledge                                         │   │
     │  ├───────────────────────────────────────────────────┤   │
     │  │ body <section> (flex: 1 1 auto, scroll surface)   │   │
     │  │                                                   │   │
@@ -70,6 +70,7 @@
   <link rel="stylesheet" href="/styles/home.css" />
   <link rel="stylesheet" href="/styles/page.css" />
   <link rel="stylesheet" href="/styles/knowledge.css" />
+  <link rel="stylesheet" href="/styles/segment_tabs.css" />
   {# Tools modal visuals — the left-nav Connections item opens it here. #}
   <link rel="stylesheet" href="/styles/tools.css" />
 {% endblock %}
@@ -105,39 +106,10 @@
       tabindex="-1"
     >
       {# ── Header band (48px) ───────────────────────────────────────
-         Figma frame 8931:383002 ("Title") — title on the left,
-         brand-outline "+ New Knowledge" pill on the right. Structural
-         parallel to `.seller-home__conv-header`: flex-shrink 0,
-         plain white surface, `min-height: 3rem` + `padding-block:
-         spacing-2` lands at exactly 48px in practice.
-
-         The button is a stub — clicking it will dispatch
-         `sh:knowledge-new` in a later phase so a future consumer can
-         wire real routing (new-doc creation flow) without touching
-         this template. Same event-delegation contract used by the
-         composer / briefing-popover actions.
-
-         Button styling comes entirely from SLDS 2 — the button uses
-         `slds-button` (base) + `slds-button_neutral` (variant) so it
-         inherits the whole SLDS 2 button system: 32-px height (line-
-         height 30 + 1-px borders), spacing-4 (16 px) inline padding,
-         `--slds-g-radius-border-pill` radius, `surface-container-1`
-         (white) background, `border-2` (neutral gray) border, and
-         `accent-2` (brand blue) text via `--slds-s-button-color`.
-         Hover / active / focus-visible states are all owned by the
-         SLDS 2 rules (`--slds-c-button-color-background-hover`,
-         `--slds-g-shadow-insetinverse-focus-1`, etc.) so dark-mode
-         and future token retunes flow through automatically.
-
-         The extra `seller-home__knowledge-new` class is retained as
-         a page-specific hook — no rules attached today, but keeps a
-         single place to hang tuning later without editing SLDS.
-
-         Icon markup mirrors the project's standard SLDS pattern
-         (`slds-button__icon slds-button__icon_left` from
-         _knowledge_header_actions.html, _write_messaging_body.html,
-         etc.) so the 8-px icon-to-label gap is owned by the shared
-         SLDS utility, not a bespoke gap rule on the button. #}
+         Title on the left. Structural parallel to
+         `.seller-home__conv-header`: flex-shrink 0, plain white
+         surface, `min-height: 3rem` + `padding-block: spacing-2`
+         lands at exactly 48px in practice. #}
       {# ── Body section ─────────────────────────────────────────────
          The only scrollable region on the page (`overflow-y: auto`)
          so the header stays pinned. `min-height: 0` + `flex: 1 1
@@ -162,16 +134,6 @@
           data-sh-knowledge-header
         >
           <h1 class="page__title">{{ header.heading }}</h1>
-          <button
-            type="button"
-            class="slds-button slds-button_neutral seller-home__knowledge-new"
-            data-sh-knowledge-new
-          >
-            <svg class="slds-button__icon slds-button__icon_left" aria-hidden="true">
-              <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
-            </svg>
-            {{ newKnowledgeLabel }}
-          </button>
         </header>
         <div class="page__inner">
           {# ── Banner ───────────────────────────────────────────────
@@ -310,91 +272,8 @@
                • The field is a sibling of the doc-list slot below;
                  it stays mounted (never re-rendered) so keyboard
                  focus is preserved across every filter update. #}
-          {# ── Tabs + search toolbar ────────────────────────────────
-             The Learnings / Sources tabs filter the document list; the
-             search field sits on the right of the SAME row. Styling
-             reuses the Scheduled page's toolbar + tab classes so the two
-             surfaces read as one visual family. Like Scheduled, the tabs
-             are a `radiogroup` (they filter one list rather than swap
-             panels). Per-tab counts are rendered server-side by
-             iterating `documents`; `bindKnowledgeTabs` in home.js drives
-             activation + filtering at runtime. #}
-          <div class="seller-home__scheduled-toolbar seller-home__knowledge-toolbar" data-sh-knowledge-toolbar>
-            <div
-              class="seller-home__scheduled-tabs"
-              role="radiogroup"
-              aria-label="Filter knowledge"
-              data-sh-knowledge-tabs
-            >
-              {% for tab in tabs.items %}
-                {% set count = 0 %}
-                {% for doc in documents %}
-                  {% if not (doc.hidden == true) %}
-                    {% if (doc.tab or "learnings") == tab.id %}{% set count = count + 1 %}{% endif %}
-                  {% endif %}
-                {% endfor %}
-                {% set isActive = (tab.id == tabs.defaultTabId) %}
-                <button
-                  type="button"
-                  class="seller-home__scheduled-tab{% if isActive %} is-active{% endif %}"
-                  role="radio"
-                  aria-checked="{% if isActive %}true{% else %}false{% endif %}"
-                  aria-controls="seller-home-knowledge-list"
-                  data-sh-knowledge-tab="{{ tab.id }}"
-                  tabindex="{% if isActive %}0{% else %}-1{% endif %}"
-                >
-                  <span class="seller-home__scheduled-tab-label">{{ tab.label }}</span>
-                  <span class="seller-home__scheduled-tab-count" aria-hidden="true">{{ count }}</span>
-                  <span class="slds-assistive-text">{{ count }} item{% if count != 1 %}s{% endif %}</span>
-                </button>
-              {% endfor %}
-            </div>
-
-            {# Search field — right side of the toolbar row. #}
-            <div class="seller-home__knowledge-search" data-sh-knowledge-search-field>
-              <label class="slds-assistive-text" for="knowledge-search">{{ search.label }}</label>
-
-              <span class="seller-home__knowledge-search-icon" aria-hidden="true">
-                <svg class="seller-home__knowledge-search-icon-svg" focusable="false">
-                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#search"></use>
-                </svg>
-              </span>
-
-              <input
-                type="search"
-                id="knowledge-search"
-                class="seller-home__knowledge-search-input"
-                placeholder="{{ search.placeholder }}"
-                autocomplete="off"
-                autocorrect="off"
-                autocapitalize="off"
-                spellcheck="false"
-                data-sh-knowledge-search
-              />
-
-              <button
-                type="button"
-                class="seller-home__knowledge-search-clear"
-                data-sh-knowledge-search-clear
-                aria-label="{{ search.clearLabel }}"
-                title="{{ search.clearLabel }}"
-                hidden
-              >
-                <svg class="seller-home__knowledge-search-clear-icon" aria-hidden="true" focusable="false">
-                  <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
-                </svg>
-                <span class="slds-assistive-text">{{ search.clearLabel }}</span>
-              </button>
-
-              {# Visually hidden result-count live region. #}
-              <span
-                class="slds-assistive-text"
-                role="status"
-                aria-live="polite"
-                aria-atomic="true"
-                data-sh-knowledge-search-status
-              ></span>
-            </div>
+          <div class="seller-home__knowledge-profiles">
+            {% include "_segment_tabs.html" %}
           </div>
 
           {# ── Document list ────────────────────────────────────────
@@ -427,6 +306,67 @@
      state. Its Briefing / Composer / Ready-to-Review handlers no-op
      on this page because those roots don't exist. #}
   <script src="/scripts/home.js"></script>
+  <script type="module">
+    import { initSegmentTabs } from "/scripts/segment_tabs.js";
+
+    var tabsRoot = document.querySelector("[data-sh-segment-tabs]");
+    var list = document.querySelector("[data-sh-knowledge-doc-list]");
+    var empty = document.querySelector("[data-sh-knowledge-empty]");
+
+    function applyProfile(id) {
+      if (!list) return;
+      var rows = list.querySelectorAll("[data-sh-knowledge-doc-item]");
+      var visible = 0;
+      for (var i = 0; i < rows.length; i++) {
+        var match = rows[i].getAttribute("data-sh-knowledge-profile") === id;
+        if (match) {
+          rows[i].removeAttribute("hidden");
+          visible++;
+        } else {
+          rows[i].setAttribute("hidden", "");
+        }
+      }
+      if (visible === 0) list.setAttribute("hidden", "");
+      else list.removeAttribute("hidden");
+      if (empty) {
+        if (visible === 0) empty.removeAttribute("hidden");
+        else empty.setAttribute("hidden", "");
+      }
+    }
+
+    document.addEventListener("sh:segment-tabs-changed", function (event) {
+      var detail = event.detail || {};
+      if (detail.root && detail.root !== tabsRoot) return;
+      applyProfile(detail.activeTabId);
+    });
+
+    initSegmentTabs(tabsRoot, {
+      storageKey: "knowledge-profiles",
+      editor: {
+        getContent: function () { return ""; },
+        setContent: function () {}
+      },
+      newTabContent: "",
+      onCreate: function (tab, users) {
+        try {
+          sessionStorage.setItem("sh:knowledge-profile-draft", JSON.stringify({
+            profileId: tab.id,
+            name: tab.name,
+            users: users || []
+          }));
+        } catch (err) { /* the chat still opens on the placeholder plan */ }
+        var href = "/home_conversation.html?id=conv-knowledge-profile";
+        window.location.href = window.SH && window.SH.userUrl
+          ? window.SH.userUrl(href)
+          : href;
+      },
+      initialTabs: [
+        { id: "org", name: "Org", icon: "display_text", content: "" },
+        { id: "my-profile", name: "My profile", icon: "display_text", content: "" },
+        { id: "enterprise", name: "Enterprise", icon: "display_text", content: "" }
+      ]
+    });
+  </script>
 
   {# Tools modal (left-nav Connections). GSAP loads before the controller,
      which reads it off the global; tools_filter.js drives the category bar. #}
