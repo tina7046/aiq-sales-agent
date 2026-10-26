@@ -9,7 +9,7 @@
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Salesforce</title>
+  <title>{% block title %}Salesforce{% endblock %}</title>
   <meta name="robots" content="noindex, nofollow" />
   <link rel="icon" type="image/png" href="/favicon.png" />
 
@@ -28,8 +28,9 @@
   </script>
   <script src="/scripts/sh_user.js"></script>
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
 
+  {% block chrome %}
   <header class="slds-global-header_container">
       <a href="javascript:void(0);" class="slds-assistive-text slds-assistive-text_focus">Skip to Navigation</a>
       <a href="javascript:void(0);" class="slds-assistive-text slds-assistive-text_focus">Skip to Main Content</a>
@@ -453,17 +454,20 @@
                button now lives on the Salesforce cloud logo in the global
                header above (it carries `?reset=1`; see `consumeResetFlag`
                in home.js). The left nav's "New chat" also points here
-               WITHOUT the flag — starting a new chat shouldn't erase the
-               ones before it. #}
+               WITHOUT the flag. Starting a new chat should not erase the
+               ones before it. Pages can replace this list. #}
+            {% block context_nav %}
             <li class="slds-context-bar__item slds-is-active">
               <a href="{{ '/index.html' | appUrl }}" class="slds-context-bar__label-action" title="Home">
                 <span class="slds-assistive-text">Current Page:</span>
                 <span class="slds-truncate" title="Home">Home</span>
               </a>
             </li>
+            {% endblock %}
           </ul>
         </nav>
   </div>
+  {% endblock %}
 
   <main class="app-wrapper slds-template_default">
     {% block content %}

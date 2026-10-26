@@ -1,0 +1,280 @@
+{% extends "_template.html" %}
+
+{#
+  Approval queue
+  =====================================================================
+  A rep lands here to allow or reject what Hunter wants to write to
+  Salesforce. Every record is the same shape:
+
+    header     name (a link only when the record already exists)
+    gray       what is already true, and is not being changed
+    blue       the only fields Hunter will write
+
+  Updates and creates share that stack. Creates have no name link,
+  because there is no record yet. Data lives in approvals.json.
+#}
+
+{% block title %}Approvals · Salesforce{% endblock %}
+
+{% block body_class %}appr-bare{% endblock %}
+
+{# This queue is the whole page. No global header, no app nav. #}
+{% block chrome %}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/styles/approvals.css" />
+{% endblock %}
+
+{% macro valueLink(text, recordId, href) -%}
+{%- if recordId -%}
+<button type="button" class="appr-link" data-appr-open="{{ recordId }}">{{ text }}</button>
+{%- elif href -%}
+<a class="appr-link" href="{{ href }}" target="_blank" rel="noopener noreferrer">{{ text }}</a>
+{%- else -%}
+{{ text }}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro objIcon(icon, label) %}
+<span class="slds-icon_container slds-icon-standard-{{ icon }} appr-icon" title="{{ label }}">
+  <svg class="slds-icon" aria-hidden="true">
+    <use xlink:href="/assets/icons/standard-sprite/svg/symbols.svg#{{ icon }}"></use>
+  </svg>
+  <span class="slds-assistive-text">{{ label }}</span>
+</span>
+{% endmacro %}
+
+{% block content %}
+<div class="appr" data-appr-root>
+  <div class="appr__inner">
+
+    <header class="appr-run">
+      <div class="appr-run__head">
+        <div>
+          <h1>{{ run.title }}</h1>
+          <p class="appr-run__meta">
+            <span data-appr-waiting>{{ run.total }}</span> waiting on you
+            <span class="appr-run__dot" aria-hidden="true">·</span>
+            {{ run.staged }}
+          </p>
+        </div>
+        <button type="button" class="appr-btn appr-btn--outline" data-appr-view-run>View run</button>
+      </div>
+      <p class="appr-run__guide">{{ run.guide }}</p>
+      <p class="appr-run__done" data-appr-done hidden>You are caught up. Undo a row if you want to look again.</p>
+      <div class="appr-filters" role="group" aria-label="Filter actions">
+        <button type="button" class="appr-filter" data-appr-filter="all" aria-pressed="true">All <span data-appr-count="all">{{ run.total }}</span></button>
+        <button type="button" class="appr-filter" data-appr-filter="waiting" aria-pressed="false">Waiting <span data-appr-count="waiting">{{ run.total }}</span></button>
+        <button type="button" class="appr-filter" data-appr-filter="allowed" aria-pressed="false">Allowed <span data-appr-count="allowed">0</span></button>
+        <button type="button" class="appr-filter" data-appr-filter="rejected" aria-pressed="false">Rejected <span data-appr-count="rejected">0</span></button>
+      </div>
+    </header>
+
+    {% for section in sections %}
+    <section class="appr-section" data-appr-section>
+      <h2>{{ section.title }}</h2>
+      <p class="appr-section__lede">{{ section.lede }}</p>
+      <p class="appr-section__empty" data-appr-section-empty hidden>Nothing in this set matches the filter.</p>
+
+      {% for group in section.groups %}
+      <section
+        class="appr-group"
+        data-appr-group
+        data-action="{{ group.action }}"
+        data-object="{{ group.object }}"
+        data-noun="{{ group.noun }}"
+        data-noun-plural="{{ group.nounPlural }}"
+      >
+        <header class="appr-group__head">
+          <button
+            type="button"
+            class="appr-group__toggle"
+            data-appr-group-toggle
+            aria-expanded="false"
+            aria-controls="appr-group-{{ group.id }}"
+          >
+            <span class="appr-chevron" aria-hidden="true">
+              <svg>
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
+              </svg>
+            </span>
+            <span class="appr-badge appr-badge--{{ group.action }}">{{ "New" if group.action == "create" else "Update" }}</span>
+            {{ objIcon(group.icon, group.object) }}
+            <span class="appr-group__title">{{ group.object }}</span>
+            <span class="appr-group__count" data-appr-group-waiting>{{ group.records | length }} waiting</span>
+          </button>
+        </header>
+        {% set batchScope = "the " ~ group.noun ~ " below" if group.records | length == 1 else "all " ~ (group.records | length) ~ " " ~ group.nounPlural ~ " below" %}
+        <div class="appr-group__body" id="appr-group-{{ group.id }}" data-appr-group-body hidden>
+          <div class="appr-group__batch-row">
+            <div class="appr-group__batch">
+              <p class="appr-group__batch-label">For {{ batchScope }}</p>
+              <div class="appr-group__batch-actions">
+                <button type="button" class="appr-btn appr-btn--brand" data-appr-group-decide="always" aria-label="Allow always for {{ batchScope }}">Allow always</button>
+                <button type="button" class="appr-btn appr-btn--outline" data-appr-group-decide="allow" aria-label="Allow once for {{ batchScope }}">Allow once</button>
+                <button type="button" class="appr-btn appr-btn--reject" data-appr-group-decide="reject" aria-label="Reject {{ batchScope }}">Reject</button>
+              </div>
+            </div>
+          </div>
+          <p class="appr-banner" data-appr-banner hidden></p>
+
+        {% for record in group.records %}
+        <article
+          class="appr-record{% if record.open %} is-open{% endif %}"
+          data-appr-record
+          data-record-id="{{ record.id }}"
+          data-name="{{ record.name }}"
+          data-decision=""
+        >
+          <div class="appr-record__top">
+            <button
+              type="button"
+              class="appr-chevron"
+              data-appr-toggle
+              aria-expanded="{{ 'true' if record.open else 'false' }}"
+              aria-controls="appr-detail-{{ record.id }}"
+            >
+              <svg aria-hidden="true">
+                <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
+              </svg>
+              <span class="slds-assistive-text">Show what Hunter will write for {{ record.name }}</span>
+            </button>
+            {{ objIcon(group.icon, group.object) }}
+            <div class="appr-record__identity">
+              <div class="appr-record__name-row">
+                {% if record.openable %}
+                <button type="button" class="appr-name" data-appr-open="{{ record.id }}">{{ record.name }}</button>
+                {% else %}
+                <span class="appr-name">{{ record.name }}</span>
+                <span class="appr-badge appr-badge--create">New</span>
+                {% endif %}
+              </div>
+              {% if group.action == "update" %}
+              <p class="appr-record__summary">
+                <span class="appr-record__summary-kicker">Today</span>
+                <span>{{ record.summary }}</span>
+              </p>
+              {% else %}
+              <p class="appr-record__summary">
+                <span class="appr-record__summary-kicker">No record to open</span>
+              </p>
+              {% endif %}
+            </div>
+            <div class="appr-record__actions" data-appr-actions>
+              <div class="appr-record__buttons" data-appr-buttons>
+                <button type="button" class="appr-btn appr-btn--brand" data-appr-decide="always" title="Approve this record and turn allow always on for this object">Allow always</button>
+                <button type="button" class="appr-btn appr-btn--outline" data-appr-decide="allow">Allow once</button>
+                <button type="button" class="appr-btn appr-btn--reject" data-appr-decide="reject">Reject</button>
+              </div>
+              <div class="appr-record__status" data-appr-status hidden>
+                <span class="appr-status" data-appr-status-label></span>
+                <button type="button" class="appr-btn appr-btn--quiet" data-appr-undo>Undo</button>
+              </div>
+            </div>
+          </div>
+
+          <p class="appr-deltas{% if group.action == 'create' %} appr-deltas--create{% endif %}">
+            <span class="appr-deltas__kicker">{{ "Will create" if group.action == "create" else "Changing" }}</span>
+            <span class="appr-deltas__text" title="{{ record.deltaSummary }}">{{ record.deltaSummary }}</span>
+          </p>
+
+          <div class="appr-record__detail" id="appr-detail-{{ record.id }}" data-appr-detail {% if not record.open %}hidden{% endif %}>
+            {% if group.action == "update" %}
+            <div class="appr-well appr-well--today">
+              <h4 class="appr-well__title">In Salesforce today</h4>
+              <div class="appr-facts">
+                {% for field in record.context %}
+                <div class="appr-fact">
+                  <span class="appr-fact__label">{{ field.label }}</span>
+                  <span class="appr-fact__value">{{ valueLink(field.text, field.recordId, field.href) }}</span>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="appr-well appr-well--write">
+              <h4 class="appr-well__title">Hunter is changing</h4>
+              <p class="appr-why">{{ record.why }}</p>
+              {% for change in record.changes %}
+              <div class="appr-diff-block">
+                <h5 class="appr-diff-block__field">{{ change.field }}</h5>
+                <div class="appr-diff">
+                  <div class="appr-diff__col">
+                    <span class="appr-diff__label">Now</span>
+                    {% if change.before %}
+                    <p class="appr-clamp" data-appr-clamp>{{ change.before }}</p>
+                    <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                    {% else %}
+                    <p class="appr-empty">Empty</p>
+                    {% endif %}
+                  </div>
+                  <div class="appr-diff__col appr-diff__col--after">
+                    <span class="appr-diff__label">After you approve</span>
+                    <p class="appr-clamp" data-appr-clamp>{{ change.after }}</p>
+                    <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <div class="appr-well appr-well--today">
+              <h4 class="appr-well__title">Not in Salesforce yet</h4>
+              <p class="appr-why">There is no record to open. Approving this creates it.</p>
+            </div>
+            <div class="appr-well appr-well--write">
+              <h4 class="appr-well__title">Hunter will create</h4>
+              <p class="appr-why">{{ record.why }}</p>
+              <dl class="appr-write-list">
+                {% for change in record.changes %}
+                <dt>{{ change.field }}</dt>
+                <dd>
+                  {% if change.field == "Description" %}
+                  <p class="appr-clamp" data-appr-clamp>{{ change.after }}</p>
+                  <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                  {% else %}
+                  {{ valueLink(change.after, change.afterRecordId, change.afterHref) }}
+                  {% endif %}
+                </dd>
+                {% endfor %}
+              </dl>
+            </div>
+            {% endif %}
+          </div>
+        </article>
+        {% endfor %}
+        </div>
+      </section>
+      {% endfor %}
+    </section>
+    {% endfor %}
+  </div>
+
+  <div class="appr-drawer" data-appr-drawer hidden>
+    <button type="button" class="appr-drawer__backdrop" data-appr-drawer-close tabindex="-1" aria-label="Close"></button>
+    <div class="appr-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="appr-drawer-title" tabindex="-1">
+      <header class="appr-drawer__header">
+        <button type="button" class="appr-btn appr-btn--quiet appr-drawer__back" data-appr-drawer-back hidden>Back</button>
+        <div class="appr-drawer__heading">
+          <p class="appr-drawer__kicker" data-appr-drawer-kicker></p>
+          <h2 id="appr-drawer-title" data-appr-drawer-title></h2>
+        </div>
+        <button type="button" class="appr-icon-btn" data-appr-drawer-close aria-label="Close">
+          <svg aria-hidden="true">
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+          </svg>
+        </button>
+      </header>
+      <div class="appr-drawer__body" data-appr-drawer-body></div>
+      <footer class="appr-drawer__footer" data-appr-drawer-footer hidden></footer>
+    </div>
+  </div>
+
+  <div class="appr-toast" data-appr-toast role="status" hidden></div>
+</div>
+
+<script id="appr-data" type="application/json">{{ { run: run, sections: sections } | tojson | safe }}</script>
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="/scripts/approvals.js?v=6"></script>
+{% endblock %}
