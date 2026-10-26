@@ -18,7 +18,7 @@
  *      silently doing nothing. See SYNTHETIC_TABS.
  *
  * Requires GSAP 3.x on the global `gsap` (vendored at
- * /aiq-sales-agent/scripts/vendor/gsap.min.js) — load it before this module.
+ * /scripts/vendor/gsap.min.js) — load it before this module.
  *
  * ES module rather than this project's usual IIFE because MorphSurface
  * and AVAILABLE_TOOLS are both ES modules in the source and rewriting

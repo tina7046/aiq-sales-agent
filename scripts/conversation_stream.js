@@ -212,12 +212,18 @@
   }
 
   // Build the reveal order for one or more appended nodes.
+  // Seller Home messages use `.seller-home__conv-msg`; lab / custom
+  // surfaces pass a body node that isn't that class, so we walk it
+  // directly instead of no-oping.
   function buildUnits (root) {
     var units = []
     normalizeRoots(root).forEach(function (node) {
-      messageBodies(node).forEach(function (body) {
-        walk(body, units, 0)
-      })
+      var bodies = messageBodies(node)
+      if (bodies.length) {
+        bodies.forEach(function (body) { walk(body, units, 0) })
+        return
+      }
+      walk(node, units, 0)
     })
     return units
   }
@@ -249,10 +255,11 @@
   // Take the animation back off once it has played, so the reveal is
   // genuinely one-shot.
   //
-  // It has to come off, not just finish: the expanded-table pane clones
-  // this node, and a clone re-entering the document restarts any CSS
-  // animation still attached — which read as the prospect list
-  // re-dealing itself every time the split opened.
+  // It has to come off, not just finish: these nodes get MOVED later. The
+  // expanded-table dialog lifts a table out of the thread and puts it
+  // back on close, and re-inserting a node restarts any CSS animation
+  // still attached to it — which read as the prospect list re-dealing
+  // itself every time the dialog opened and again when it closed.
   //
   // Safe to strip because both animations end on the value the element
   // has naturally (fully opaque), so removing them changes nothing on

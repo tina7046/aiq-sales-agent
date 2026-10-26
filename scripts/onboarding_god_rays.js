@@ -5,7 +5,7 @@
    views/index.html, plus that page's live Controls panel.
 
    Isolated from Seller Home on purpose:
-     • mounts on `[data-onboarding-god-rays]`, never `[data-sh-god-rays]`
+     • mounts on `[data-onboarding-shader-host]`, never `[data-sh-shader-host]`
      • panel ids are `onboarding-*`, never `#panel`
      • state lives in this module; nothing is written to localStorage
        or to `window.godRays`
@@ -92,7 +92,7 @@ function el (tag, className) {
   return node
 }
 
-const bg = document.querySelector('[data-onboarding-god-rays]')
+const bg = document.querySelector('[data-onboarding-shader-host]')
 const panel = document.getElementById('onboarding-panel')
 const errEl = document.getElementById('onboarding-shader-err')
 
@@ -120,7 +120,6 @@ if (bg) {
     // for index.html's `.seller-home__composer` anchor.
     const focalTarget = () => {
       const cards = [
-        document.querySelector('.seller-home__onboard-card:not([hidden])'),
         document.querySelector('.knowledge-banner'),
         document.querySelector('.onboarding-modal .morph-modal-container')
       ]

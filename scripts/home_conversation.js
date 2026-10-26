@@ -20,9 +20,10 @@
 //     not focusable — see the binder for what that replaced. Kept
 //     independent so the table works as a standalone list even
 //     without a review controller attached.
-//   • Expanding a table: the button on a workflow-activity chip clones
-//     the table it names into a right-hand split pane (conversation
-//     stays on the left). See `bindTableExpand`.
+//   • Expanding a table: the button on a workflow-activity chip moves
+//     the table it names into the page's expanded-table dialog and back
+//     out again on close. It's a move, not a copy — see
+//     `bindTableExpand` for why that matters.
 //   • Cadence card: mounted from home_conversation_cadence.js, which
 //     owns the drafted sequences. Wired here only so build-time and
 //     runtime-injected messages go through one code path.
@@ -98,21 +99,22 @@
     convReject:   '[data-sh-conv-reject]',
     // Signal cells. The template renders every signal as a badge and
     // `fitSignalBadges` decides how many survive; `signalMore` is the
-    // "+N more" that reports the rest.
+    // "+N" that reports the rest.
     signalCell:   '[data-sh-signal-fit]',
     signalBadge:  '.ptl-signal-badge',
     signalMore:   '[data-sh-signal-more]',
-    // Expanding a table into the right-hand split pane. The trigger
-    // lives on a workflow-activity chip and carries the id of the
-    // table it opens; the pane is a page-level singleton whose content
-    // area is the host the table is CLONED into. See `bindTableExpand`.
+    // Expanding a table into the large dialog. The trigger lives
+    // on a workflow-activity chip and carries the id of the table it
+    // opens; the dialog is a page-level singleton whose content area is
+    // the host the table is MOVED into. See `bindTableExpand`.
     convExpand:      '[data-sh-conv-expand]',
-    convLayout:      '[data-sh-conv-layout]',
-    tablePane:       '[data-sh-conv-table-pane]',
-    tablePaneHost:   '[data-sh-conv-table-pane-host]',
-    tablePaneTitle:  '[data-sh-conv-table-pane-title]',
-    tablePaneMeta:   '[data-sh-conv-table-pane-status]',
-    tablePaneClose:  '[data-sh-conv-table-pane-close]',
+    tableModal:      '[data-sh-conv-table-modal]',
+    tableModalBack:  '[data-sh-conv-table-modal-backdrop]',
+    tableModalHost:  '[data-sh-conv-table-modal-host]',
+    tableModalTitle: '[data-sh-conv-table-modal-title]',
+    tableModalMeta:  '[data-sh-conv-table-modal-status]',
+    tableModalClose: '[data-sh-conv-table-modal-close]',
+    tableModalDone:  '[data-sh-conv-table-modal-done]',
     // Outreach review (rendered by _home_outreach_review.html):
     reviewRoot:   '[data-sh-review-root]',
     // Confirmation dialog for "Approve all" (sibling of the review):
@@ -131,6 +133,8 @@
     composerMic:       '[data-sh-conv-composer-mic]',
     composerRecording: '[data-sh-conv-composer-recording]',
     composerWaveform:  '[data-sh-conv-composer-waveform]',
+    // In-thread action (e.g. Approve & start on a drafted plan).
+    convAction:       '[data-sh-conv-action]',
     composerMicStop:   '[data-sh-conv-composer-mic-stop]',
     composerMicConfirm: '[data-sh-conv-composer-mic-confirm]',
     userTemplate:     '[data-sh-conv-user-template]',
@@ -167,6 +171,10 @@
   // demo restarts (the Home tab's reset, or a refresh) — so a restart
   // genuinely replays every conversation from scratch.
   var CONV_SEEN_KEY = 'sh:convSeen'
+  // Conversations that paused after the first opening stage and then
+  // resumed (Marcus reply: Send on the draft). Separate from convSeen so
+  // a return before Send still holds the rest of the feed.
+  var CONV_CONTINUED_KEY = 'sh:convOpeningContinued'
 
   function sk (key) {
     return (window.SH && typeof window.SH.storageKey === 'function')
@@ -210,14 +218,52 @@
     }
   }
 
+  function readContinuedConversations () {
+    try {
+      var raw = window.sessionStorage.getItem(sk(CONV_CONTINUED_KEY))
+      if (!raw) return []
+      var parsed = JSON.parse(raw)
+      return Object.prototype.toString.call(parsed) === '[object Array]' ? parsed : []
+    } catch (e) {
+      return []
+    }
+  }
+
+  function hasContinuedOpening (convId) {
+    if (!convId) return false
+    var list = readContinuedConversations()
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] === convId) return true
+    }
+    return false
+  }
+
+  function markOpeningContinued (convId) {
+    if (!convId) return
+    try {
+      var list = readContinuedConversations()
+      for (var i = 0; i < list.length; i++) {
+        if (list[i] === convId) return
+      }
+      list.push(convId)
+      window.sessionStorage.setItem(sk(CONV_CONTINUED_KEY), JSON.stringify(list))
+    } catch (e) { /* silent */ }
+  }
+
   // Class the review section toggles when the confirmation dialog
   // opens (mirrors SLDS `slds-fade-in-open` semantically).
   var DIALOG_OPEN_CLASS = 'is-open'
-  // Split-view class on `.seller-home__conv-layout` while a table is
-  // expanded on the right. Conversation column shrinks to a rail;
-  // the workflow side panel hides for the duration.
-  var TABLE_EXPANDED_CLASS = 'is-table-expanded'
-  var TABLE_SOURCE_HIDDEN_CLASS = 'is-expanded-elsewhere'
+  // The real SLDS pair, used by the expanded-table dialog: `.slds-modal`
+  // and `.slds-backdrop` both ship invisible and these are what the
+  // design system expects JS to add. (The review's dialog above predates
+  // it and paints its own open state — hence two spellings of "open".)
+  var MODAL_OPEN_CLASS    = 'slds-fade-in-open'
+  var BACKDROP_OPEN_CLASS = 'slds-backdrop_open'
+  // transitions.dev's modal hook (06-modal.md), on the dialog container
+  // inside `.slds-modal`. The `is-open` / `is-closing` classes it takes
+  // are only ever used compounded with `.t-modal`, so they don't collide
+  // with DIALOG_OPEN_CLASS above.
+  var MODAL_TRANSITION    = '.t-modal'
   // Class the composer carries while a scripted turn is in flight.
   var BUSY_CLASS = 'is-busy'
   // Composer is capturing a simulated voice input: toolbar hidden,
@@ -225,7 +271,7 @@
   var RECORDING_CLASS = 'is-recording'
   // Hardcoded transcript inserted when the seller confirms a recording.
   // Overridden per conversation by `voiceInput.transcript`.
-  var DEFAULT_VOICE_TRANSCRIPT = 'Hunter, I actually met Maya who\'s a coworker of Marcus at Dreamforce, and she wanted to stay close to this evaluation. Can we mention her in the email?'
+  var DEFAULT_VOICE_TRANSCRIPT = 'Hey Hunter, I actually met their new CRO, Maya, at Dreamforce. She wanted to stay close to this evaluation. Can we mention her in the email?'
   // Short beat after a confirmed voice send, before the cadence card
   // starts its own regenerating stencil.
   var VOICE_THINKING_MS = 1200
@@ -438,9 +484,8 @@
     bindMessageContent(document, map)
 
     // The expand-a-table path. Bound once for the page rather
-    // than per message: there's one split pane, and the trigger is
-    // found by delegation, so a chip cloned in mid-thread needs no
-    // re-wiring.
+    // than per message: there's one dialog, and the trigger is found by
+    // delegation, so a chip cloned in mid-thread needs no re-wiring.
     bindTableExpand()
 
     // Workflow drill-in. `switchPanel` first, so the layout is in its
@@ -465,7 +510,11 @@
     // It owns the thread mutations and the busy state, so the opening
     // sequence plays through the handle it returns rather than
     // reaching into the thread itself.
-    var conv = bindConvComposer(root, map, id, draftId)
+    // A workflow's Open Chat draft is an empty session, not the
+    // skill-scheduling flow. Passing it as the schedule id would answer
+    // the first send with "when should this run?".
+    var scheduleDraftId = draft && draft.sourceType === 'workflow-chat' ? null : draftId
+    var conv = bindConvComposer(root, map, id, scheduleDraftId)
     if (conv) conv.playOpening(query)
   }
 
@@ -592,35 +641,12 @@
     }
 
     // The opening sequence, likewise — play order is document order.
-    // A conversation with `connectedStages` (inbox already connected)
-    // and `when="gate"` stages picks one set from mailbox state.
     var stages = []
     if (convId) {
       var stageNodes = root.querySelectorAll(
         scopedSelector(SELECTORS.stageTemplate, convId)
       )
-      var mailboxOn = window.SellerHomeInbox &&
-        typeof window.SellerHomeInbox.isConnected === 'function' &&
-        window.SellerHomeInbox.isConnected()
-      var splitOpening = false
-      for (var s0 = 0; s0 < stageNodes.length; s0++) {
-        var when0 = stageNodes[s0].getAttribute('data-sh-conv-stage-when') || ''
-        if (when0 === 'gate' || when0 === 'connected') splitOpening = true
-      }
-      for (var s = 0; s < stageNodes.length; s++) {
-        var when = stageNodes[s].getAttribute('data-sh-conv-stage-when') || ''
-        if (!splitOpening) {
-          stages.push(stageNodes[s])
-        } else if (mailboxOn && when === 'connected') {
-          stages.push(stageNodes[s])
-        } else if (!mailboxOn && when !== 'connected') {
-          stages.push(stageNodes[s])
-        }
-      }
-      if (window.SellerHomeInbox &&
-          typeof window.SellerHomeInbox.bindConversation === 'function') {
-        window.SellerHomeInbox.bindConversation(convId)
-      }
+      for (var s = 0; s < stageNodes.length; s++) stages.push(stageNodes[s])
     }
 
     var convEntry = (convMap && convId && convMap[convId]) || null
@@ -630,7 +656,6 @@
     var state = {
       nextTurn: 0,   // index into `turns`
       sent: 0,       // how many messages the seller has sent
-      liveReply: 0,  // unique id suffix for live agent replies
       busy: false,   // a turn is mid-flight
       recording: false,
       // Check was pressed this session; the next Send applies the
@@ -761,12 +786,9 @@
       }
     })
 
-    // Record names in a data table are real anchors so they get the
-    // browser's own hover / focus / active states and a tab stop. They
-    // have nowhere to go, though — there's no deal record in the
-    // prototype — so their click is swallowed here rather than letting
-    // `href="#"` push a hash onto the URL and jump the thread to the
-    // top. Same arrangement home.js uses for an unlinked review card.
+    // Record names used to be `href="#"` anchors. They're buttons now
+    // so the browser never paints a URL tooltip. Keep this swallow for
+    // any leftover hash link in a scripted reply.
     //
     // Delegated from the thread so a table that arrives inside a stage
     // or a scripted reply is covered without re-binding.
@@ -774,7 +796,7 @@
       var link = event.target && event.target.closest
         ? event.target.closest('[data-sh-conv-record-link]')
         : null
-      if (link && (link.getAttribute('href') || '#') === '#') {
+      if (link && link.tagName === 'A' && (link.getAttribute('href') || '#') === '#') {
         event.preventDefault()
       }
     })
@@ -860,16 +882,6 @@
       // to confirm, or the confirmation itself.
       if (scheduleDraftId && scheduleResponder()) {
         runScheduleTurn(text, userItem)
-        return
-      }
-
-      // Skipped-mailbox send path: Hunter owns this thread until Inbox
-      // is connected (and through the enroll retry). Same echo + beat
-      // player as Schedule; replies come from inbox_gate.js.
-      if (window.SellerHomeInbox &&
-          typeof window.SellerHomeInbox.owns === 'function' &&
-          window.SellerHomeInbox.owns(convId)) {
-        runInboxGateTurn(text, userItem)
         return
       }
 
@@ -1089,84 +1101,6 @@
       }, SCHEDULE_THINKING_MS)
     }
 
-    // Inbox-gate beats: thinking, then a schedule-shaped reply (prose +
-    // chips), optionally a Salesforce Inbox modal, then more beats from
-    // the modal result. Same busy / scroll / stream contract as Schedule.
-    function runInboxGateTurn (userText, anchor) {
-      var api = window.SellerHomeInbox
-      if (!api || typeof api.advance !== 'function') return
-      var payload
-      try {
-        payload = api.advance(convId, userText)
-      } catch (e) {
-        payload = {
-          beats: [{ thinkingMs: 400, reply: { text: 'Something went wrong connecting Inbox.' } }]
-        }
-      }
-      setBusy(true)
-      playInboxPayload(payload, anchor)
-    }
-
-    function playInboxPayload (payload, anchor) {
-      var api = window.SellerHomeInbox
-      var beats = (payload && payload.beats) || []
-      var openModal = !!(payload && payload.openModal)
-      var settle = anchor
-        ? function () { scrollAnchorToTop(anchor) }
-        : scrollToLatest
-
-      function finish () {
-        setBusy(false)
-        if (typeof input.focus === 'function') input.focus()
-      }
-
-      function nextBeat (i) {
-        if (i >= beats.length) {
-          if (openModal && api && typeof api.openConnectModal === 'function') {
-            api.openConnectModal(function (result) {
-              var follow
-              try {
-                follow = api.onModalResult(convId, result)
-              } catch (e) {
-                follow = {
-                  beats: [{ thinkingMs: 400, reply: { text: 'Something went wrong connecting Inbox.' } }]
-                }
-              }
-              if (!follow) {
-                finish()
-                return
-              }
-              playInboxPayload(follow, anchor)
-            })
-            return
-          }
-          finish()
-          return
-        }
-
-        var beat = beats[i] || {}
-        var delay = beat.thinkingMs != null ? beat.thinkingMs : 700
-        var indicator = appendThinking(beat.thinkingLabel || '')
-        settle()
-        window.setTimeout(function () {
-          if (indicator && indicator.parentNode) {
-            indicator.parentNode.removeChild(indicator)
-          }
-          if (beat.reply) {
-            var item = appendScheduleReply(beat.reply)
-            streamNode(item, settle, function () {
-              settle()
-              nextBeat(i + 1)
-            })
-          } else {
-            nextBeat(i + 1)
-          }
-        }, delay)
-      }
-
-      nextBeat(0)
-    }
-
     // The state-machine step, or null when schedule_conversation.js
     // isn't on the page. Resolved per call rather than held from bind
     // time so script order can't decide whether the flow works.
@@ -1183,7 +1117,7 @@
     function appendScheduleReply (reply) {
       var frag = cloneTemplate(scheduleTpl)
       if (!frag) return null
-      var id = 'msg-live-schedule-' + state.sent + '-' + (state.liveReply++)
+      var id = 'msg-live-schedule-' + state.sent
 
       var item = frag.querySelector('[data-sh-conv-item]')
       if (item) item.setAttribute('data-sh-conv-item', id)
@@ -1279,8 +1213,31 @@
         appendUserMessage(query)
       }
 
+      var openingCfg = (convMap && convMap[convId] && convMap[convId].opening) || null
+      // Found new prospects (conv-001) stays pinned at the top of the
+      // thread. Other feeds still follow the newest message so a long
+      // history lands on the latest run.
+      var stayAtTop = !!(openingCfg && openingCfg.stayAtTop)
+      function openingScroll () {
+        if (stayAtTop) thread.scrollTop = 0
+        else scrollToLatest()
+      }
+
+      // Drafted reply to Marcus Chen plays the thread, then waits for
+      // Send before the records. Other conversations have
+      // no pause, so `limit` is every stage.
+      var pauseAfter = openingCfg && openingCfg.resumeOnSend
+        ? parseInt(openingCfg.pauseAfter, 10)
+        : NaN
+      if (!isFinite(pauseAfter) || pauseAfter < 0) pauseAfter = 0
+      var waitingOnSend = !!(openingCfg && openingCfg.resumeOnSend &&
+        pauseAfter > 0 && pauseAfter < stages.length &&
+        !hasContinuedOpening(convId))
+      var limit = waitingOnSend ? pauseAfter : stages.length
+
       if (!stages.length) {
-        jumpToLatest()
+        if (stayAtTop) thread.scrollTop = 0
+        else jumpToLatest()
         return
       }
 
@@ -1294,40 +1251,32 @@
       //
       // Marked before playing, not after: navigating away mid-reveal and
       // returning should land on the finished thread, not restart it.
-      var live = !!query || !hasPlayedOpening(convId)
+      // An approved knowledge plan stays in its thinking trace. Reopening
+      // it paints the plan at once instead of streaming back to Approve.
+      var kpThinking = root.getAttribute('data-sh-kp-thinking') === 'true'
+      var live = !kpThinking && (!!query || !hasPlayedOpening(convId))
       markOpeningPlayed(convId)
 
       if (!live) {
-        for (var i = 0; i < stages.length; i++) {
+        for (var i = 0; i < limit; i++) {
           appendTemplate(stages[i], convMap)
         }
-        jumpToLatest()
+        if (stayAtTop) thread.scrollTop = 0
+        else jumpToLatest()
+        waitForSendResume(limit)
+        resumeKnowledgeThinking()
         return
       }
 
       setBusy(true)
 
       // A conversation whose opening carries a `trace` plays the reusable
-      // ThinkingTrace as its single thinking phase (connect tools, then load
-      // skills, then fold into a completed header). Once it collapses the
-      // answer streams in stage by stage, with no per-stage thinking rows.
-      var openingCfg = (convMap && convMap[convId] && convMap[convId].opening) || null
+      // ThinkingTrace as its thinking phase, then streams the answer.
+      // With resumeOnSend the trace waits for Send instead of playing
+      // on load, so the draft can sit still until the user acts.
       var traceCfg = openingCfg && openingCfg.trace
-      if (traceCfg && window.ThinkingTrace && typeof window.ThinkingTrace.mount === 'function') {
-        var traceLi = document.createElement('li')
-        traceLi.className = 'seller-home__conv-thread-item'
-        var traceHost = document.createElement('div')
-        traceLi.appendChild(traceHost)
-        threadInner.appendChild(traceLi)
-        scrollToLatest()
-        window.ThinkingTrace.mount(traceHost, {
-          completedLabel: traceCfg.completedLabel,
-          steps: traceCfg.steps,
-          timings: traceCfg.timings,
-          controls: false,
-          autoCollapse: true,
-          onComplete: function () { revealStages(0) }
-        })
+      if (!waitingOnSend && canMountTrace(traceCfg)) {
+        appendTrace(traceCfg, openingScroll, function () { revealStages(0) })
         return
       }
 
@@ -1340,8 +1289,9 @@
 
       // Normal path: each stage thinks, then drops its messages.
       function next (i) {
-        if (i >= stages.length) {
+        if (i >= limit) {
           setBusy(false)
+          waitForSendResume(limit)
           return
         }
         playBeat(stages[i], function () { next(i + 1) })
@@ -1349,15 +1299,52 @@
 
       // skipThinking streams the same way, with no thinking row in front.
       function revealStages (i) {
+        if (i >= limit) {
+          if (stayAtTop) thread.scrollTop = 0
+          setBusy(false)
+          waitForSendResume(limit)
+          resumeKnowledgeThinking()
+          return
+        }
+        appendTemplate(stages[i], convMap, {
+          stream: true,
+          streamSpeed: openingCfg && openingCfg.stream && openingCfg.stream.speed,
+          scroll: openingScroll,
+          onDone: function () { revealStages(i + 1) }
+        })
+      }
+
+      function waitForSendResume (from) {
+        if (!waitingOnSend || from >= stages.length) return
+        function onSent (event) {
+          var d = event.detail || {}
+          if (d.decision !== 'approve') return
+          var src = event.target
+          if (!src || !src.closest || !src.closest('[data-sh-cadence-thread]')) return
+          document.removeEventListener(EVT_DECISION, onSent)
+          waitingOnSend = false
+          markOpeningContinued(convId)
+          setBusy(true)
+          if (canMountTrace(traceCfg)) {
+            appendTrace(traceCfg, scrollToLatest, function () { revealRest(from) })
+            return
+          }
+          revealRest(from)
+        }
+        document.addEventListener(EVT_DECISION, onSent)
+      }
+
+      function revealRest (i) {
         if (i >= stages.length) {
           setBusy(false)
+          scrollToLatest()
           return
         }
         appendTemplate(stages[i], convMap, {
           stream: true,
           streamSpeed: openingCfg && openingCfg.stream && openingCfg.stream.speed,
           scroll: scrollToLatest,
-          onDone: function () { revealStages(i + 1) }
+          onDone: function () { revealRest(i + 1) }
         })
       }
     }
@@ -1771,9 +1758,10 @@
     // question they just asked keeps it on screen and lets the answer
     // fill in underneath, from the top.
     //
-    // The opening sequence deliberately keeps scrollToLatest: its last
-    // stage ends on the suggested next steps, and those are meant to be
-    // what's on screen once the thread finishes loading.
+    // The opening sequence keeps scrollToLatest on every feed except
+    // Found new prospects, which sets `opening.stayAtTop` so the
+    // prospect table stays in view instead of chasing the cadence and
+    // next-steps that land below the fold.
     function scrollAnchorToTop (anchor) {
       if (!anchor || typeof anchor.getBoundingClientRect !== 'function') {
         return scrollToLatest()
@@ -1792,6 +1780,141 @@
 
       scrollThreadTo(top)
     }
+
+    function canMountTrace (cfg) {
+      return !!(cfg && window.ThinkingTrace &&
+        typeof window.ThinkingTrace.mount === 'function')
+    }
+
+    function appendTrace (cfg, scroll, done) {
+      if (!canMountTrace(cfg)) {
+        if (done) done()
+        return
+      }
+      var traceLi = document.createElement('li')
+      traceLi.className = 'seller-home__conv-thread-item'
+      if (cfg.loop) traceLi.setAttribute('data-sh-kp-thinking-trace', '')
+      var traceHost = document.createElement('div')
+      traceLi.appendChild(traceHost)
+      threadInner.appendChild(traceLi)
+      if (typeof scroll === 'function') scroll()
+      window.ThinkingTrace.mount(traceHost, {
+        completedLabel: cfg.completedLabel,
+        finalSummary: cfg.finalSummary,
+        steps: cfg.steps,
+        timings: cfg.timings,
+        controls: cfg.controls === true,
+        autoCollapse: cfg.autoCollapse !== false,
+        showUpcoming: !!cfg.showUpcoming,
+        maxConcurrent: cfg.maxConcurrent,
+        thoughtLead: cfg.thoughtLead,
+        loop: !!cfg.loop,
+        onComplete: function () { if (done) done() }
+      })
+    }
+
+    function knowledgeLearningTitle () {
+      var name = 'New knowledge profile'
+      try {
+        var draft = JSON.parse(sessionStorage.getItem('sh:knowledge-profile-draft') || 'null')
+        if (draft && draft.name) name = draft.name
+      } catch (e) { /* keep the placeholder */ }
+      return 'Learning about ' + name
+    }
+
+    function persistKnowledgeLearning () {
+      var record = {
+        title: knowledgeLearningTitle(),
+        conversationId: 'conv-knowledge-profile',
+        approved: true
+      }
+      try {
+        sessionStorage.setItem('sh:knowledge-profile-learning', JSON.stringify(record))
+        var draft = JSON.parse(sessionStorage.getItem('sh:knowledge-profile-draft') || 'null')
+        if (draft) {
+          draft.approved = true
+          sessionStorage.setItem('sh:knowledge-profile-draft', JSON.stringify(draft))
+        }
+      } catch (e) { /* the open tab still thinks; the feeds pick it up next time */ }
+      root.setAttribute('data-sh-kp-thinking', 'true')
+      try {
+        document.dispatchEvent(new CustomEvent('sh:knowledge-learning', { detail: record }))
+      } catch (e) { /* older browsers */ }
+    }
+
+    function resumeKnowledgeThinking () {
+      if (root.getAttribute('data-sh-kp-thinking') !== 'true') return
+      if (threadInner.querySelector('[data-sh-kp-thinking-trace]')) return
+      var action = findMessageAction('approve-start')
+      if (!action || !action.trace) return
+      action.trace.loop = true
+      setBusy(true)
+      appendTrace(action.trace, scrollToLatest, function () {
+        setBusy(false)
+        scrollToLatest()
+      })
+    }
+
+    function findMessageAction (actionId) {
+      if (!actionId || !convEntry) return null
+      var msgs = convEntry.messages || []
+      for (var i = 0; i < msgs.length; i++) {
+        var actions = msgs[i].actions || []
+        for (var a = 0; a < actions.length; a++) {
+          if (actions[a] && actions[a].id === actionId) return actions[a]
+        }
+      }
+      return null
+    }
+
+    function applyActivityPatch (patch) {
+      if (!patch || !patch.messageId) return
+      var el = threadInner.querySelector('[data-sh-conv-msg="' + patch.messageId + '"]')
+      if (!el) return
+      if (patch.workflowLabel) {
+        var label = el.querySelector('.seller-home__conv-msg-activity-label')
+        if (label) label.textContent = patch.workflowLabel
+        el.setAttribute('aria-label', patch.workflowLabel)
+      }
+      if (patch.statusText) {
+        var status = el.querySelector('.seller-home__conv-msg-activity-status')
+        if (status) status.textContent = patch.statusText
+      }
+    }
+
+    // Approve & start (and any later in-thread action): toast, lock
+    // the button, then play the action's thinking trace. Data lives
+    // on the message's `actions[]` entry so other conversations can
+    // reuse the hook without a new code path.
+    thread.addEventListener('click', function (event) {
+      var btn = event.target && event.target.closest
+        ? event.target.closest(SELECTORS.convAction)
+        : null
+      if (!btn || !thread.contains(btn) || btn.disabled) return
+      var action = findMessageAction(btn.getAttribute('data-sh-conv-action'))
+      if (!action) return
+      event.preventDefault()
+      btn.disabled = true
+      btn.setAttribute('aria-pressed', 'true')
+      if (convId === 'conv-knowledge-profile') {
+        persistKnowledgeLearning()
+        if (action.trace) action.trace.loop = true
+        var actions = btn.parentNode
+        if (actions && actions.classList.contains('seller-home__conv-msg-actions')) {
+          actions.hidden = true
+        }
+      } else if (action.approvedLabel) {
+        btn.textContent = action.approvedLabel
+      }
+      if (action.toast) showToast(action.toast)
+      applyActivityPatch(action.activity)
+      if (!canMountTrace(action.trace)) return
+      setBusy(true)
+      appendTrace(action.trace, scrollToLatest, function () {
+        setBusy(false)
+        scrollToLatest()
+      })
+    })
 
     return { playOpening: playOpening }
   }
@@ -1882,7 +2005,7 @@
 
   // ── Signal badges ───────────────────────────────────────────────
   // Shows as many signal badges as the cell's line budget allows and
-  // collapses the rest into "+N more".
+  // collapses the rest into "+N".
   //
   // Runtime rather than template because it's a question about rendered
   // width: "290+ SDRs" and "New Head of Enterprise Americas (Katie
@@ -1916,10 +2039,18 @@
 
     // Start from everything showing, so a re-fit isn't biased by what
     // the last one hid — on a re-fit the cell may have got wider, and
-    // a badge hidden at the old width has to be allowed back.
+    // a badge hidden at the old width has to be allowed back. The last-
+    // shown slot is the same: a previous pass may have pinched the
+    // trailing badge to leave room for a counter that this pass doesn't
+    // need.
     var i
-    for (i = 0; i < badges.length; i++) badges[i].hidden = false
+    for (i = 0; i < badges.length; i++) {
+      badges[i].hidden = false
+      badges[i].classList.remove('is-last-shown')
+      badges[i].classList.remove('is-multiline')
+    }
     if (more) more.hidden = true
+    cell.style.removeProperty('--ptl-more-slot')
 
     // Put the clip back, because the budget is read off it below and a
     // re-fit arrives with `is-fitted` already set from the first pass —
@@ -1936,7 +2067,11 @@
     var budget = parseFloat(window.getComputedStyle(cell).maxHeight)
     // The clip is missing or `none`: nothing to fit against, so show
     // everything rather than guess at a height and hide good content.
-    if (!budget) { cell.classList.add('is-fitted'); return }
+    if (!budget) {
+      cell.classList.add('is-fitted')
+      markMultilineBadges(badges)
+      return
+    }
 
     // Drops the clip. From here the fitter is what bounds the height,
     // and it does it by hiding whole badges — the clip would cut one
@@ -1948,31 +2083,99 @@
     // own pill: three such badges are three lines by any count and
     // twice the height they're supposed to be. Measuring the box is
     // the only reading that can't be fooled by that.
-    if (cell.getBoundingClientRect().height <= budget) return
-
-    // Over budget, so a counter is coming and it takes room on the last
-    // line. Reveal it BEFORE choosing what to drop, or the last badge
-    // kept would be one the counter then pushes over the edge.
-    //
-    // Reserve it at its widest — every badge but one hidden — so the
-    // width can only shrink as the real count is settled. Sizing it
-    // from a placeholder and growing later would re-wrap the line the
-    // fitter just finished measuring.
-    if (more) {
-      more.hidden = false
-      more.textContent = '+' + (badges.length - 1) + ' more'
+    if (cell.getBoundingClientRect().height <= budget) {
+      markMultilineBadges(badges)
+      return
     }
+
+    // Paints "+N" and pinches the last visible badge so the
+    // counter shares that badge's line instead of wrapping onto a new
+    // one. A two-line last badge plus a counter-only line is what used
+    // to blow the 80px budget and collapse the cell to a single pill
+    // with empty width beside it.
+    //
+    // `reserveAt` is the label to paint when we're still hiding — the
+    // widest count, every badge but one dropped — so the slot can only
+    // shrink once the real remainder is known. Growing it later would
+    // re-wrap the line we just finished measuring.
+    function setOverflow (shownCount, reserveAt) {
+      for (var b = 0; b < badges.length; b++) {
+        badges[b].classList.remove('is-last-shown')
+      }
+      var hiddenCount = badges.length - shownCount
+      var labelCount = reserveAt != null ? reserveAt : hiddenCount
+      if (!more || (hiddenCount <= 0 && reserveAt == null)) {
+        if (more) {
+          more.hidden = true
+          more.textContent = ''
+        }
+        cell.style.removeProperty('--ptl-more-slot')
+        return
+      }
+      more.hidden = false
+      more.textContent = '+' + labelCount
+      cell.style.setProperty(
+        '--ptl-more-slot',
+        more.getBoundingClientRect().width + 'px'
+      )
+      badges[shownCount - 1].classList.add('is-last-shown')
+    }
+
+    // Over budget, so a counter is coming. Reveal it at its widest and
+    // slot it onto the last badge BEFORE choosing what to drop, or the
+    // last badge kept would be one the counter then pushes over.
+    var shown = badges.length
+    setOverflow(shown, badges.length - 1)
 
     // Hide from the end until it fits. Re-measured each time rather
     // than computed, because removing one badge can pull the next line
     // up whole and change the answer by more than one item.
-    var shown = badges.length
     while (shown > 1 && cell.getBoundingClientRect().height > budget) {
       shown--
       badges[shown].hidden = true
+      setOverflow(shown, badges.length - 1)
     }
 
-    if (more) more.textContent = '+' + (badges.length - shown) + ' more'
+    // Real remainder, which is never wider than the reservation. The
+    // last badge may unwrap a line now that its slot shrank, and that
+    // leftover is what the refill below spends.
+    setOverflow(shown)
+
+    // Pack leftover width: try hidden badges back, in order, now that
+    // the counter is its real size and sitting on the last occupied
+    // line. Stop at the first one that doesn't fit — skipping it to
+    // reach a later shorter one would reorder the signals.
+    while (shown < badges.length) {
+      badges[shown].hidden = false
+      shown++
+      setOverflow(shown)
+      if (cell.getBoundingClientRect().height <= budget) continue
+      shown--
+      badges[shown].hidden = true
+      setOverflow(shown)
+      break
+    }
+
+    markMultilineBadges(badges)
+  }
+
+  // One-line badges keep SLDS's `align-items: center`. A wrapped
+  // label is ~38px against ~26px for a single line; above that split
+  // the mark pins to the first line so it doesn't sit in the middle
+  // of both. Hidden badges drop the class so a re-fit that unwraps
+  // them doesn't inherit the last pass.
+  function markMultilineBadges (badges) {
+    for (var i = 0; i < badges.length; i++) {
+      var badge = badges[i]
+      if (badge.hidden) {
+        badge.classList.remove('is-multiline')
+        continue
+      }
+      badge.classList.toggle(
+        'is-multiline',
+        badge.getBoundingClientRect().height > 32
+      )
+    }
   }
 
   // ── Row decisions ───────────────────────────────────────────────
@@ -2014,174 +2217,231 @@
   }
 
   // ──────────────────────────────────────────────────────────────
-  // Expand a table into a right-hand split pane
+  // Expand a table into a dialog
   // ──────────────────────────────────────────────────────────────
   // A workflow-activity chip can carry a button naming one of the
-  // thread's tables (`expandsTable` in the JSON). Pressing it clones
-  // that table into the pane beside the conversation — Goal-Based-Agent
-  // / Coworker Grid's `ask_split`: thread stays a left rail, the full
-  // list fills the rest. Not a modal: the composer and thread stay
-  // interactive, and there is no backdrop or focus trap.
+  // thread's tables (`expandsTable` in the JSON). Pressing it MOVES that
+  // table out of the thread and into the dialog at the bottom of
+  // home_conversation.html; closing moves it back.
   //
-  // The pane gets a CLONE, not the table itself. Moving the real node
+  // The dialog gets a CLONE, not the table itself. Moving the real node
   // out and back was the old design (one node, one source of truth), but
   // re-inserting a node on close made the thread re-lay-out its copy —
-  // it read as the prospect list "reloading" every time the split shut.
-  // Leaving the thread's own table untouched (and hiding it while the
-  // pane is open, so the rail isn't showing the same 17-column grid) is
-  // the fix.
+  // it read as the prospect list "reloading" every time the dialog shut.
+  // Leaving the thread's own table untouched is the fix: nothing about it
+  // changes when the dialog opens or closes, so there is nothing to
+  // reload.
   //
   // The clone stays live: its reject Xs are wired, so a drop still fires
   // the `sh:conv-row-decision` the cadence card listens for. It starts
   // from the thread table's current state (cloneNode copies each row's
-  // `data-sh-review-status`), and on close any drops made in the pane
+  // `data-sh-review-status`), and on close any drops made in the dialog
   // are written back to the thread table by row id — so the two copies
   // never disagree even though they're two nodes.
   //
-  // Only one table can be expanded at a time, so a single pane and a
-  // single clone are sufficient. Pressing the same chip again collapses.
+  // Only one table can be expanded at a time, so a single dialog and a
+  // single clone are sufficient.
   function bindTableExpand () {
-    var layout = document.querySelector(SELECTORS.convLayout)
-    var pane   = document.querySelector(SELECTORS.tablePane)
-    if (!layout || !pane) return
+    var modal    = document.querySelector(SELECTORS.tableModal)
+    var backdrop = document.querySelector(SELECTORS.tableModalBack)
+    if (!modal || !backdrop) return
 
-    var host  = pane.querySelector(SELECTORS.tablePaneHost)
-    var title = pane.querySelector(SELECTORS.tablePaneTitle)
-    var meta  = pane.querySelector(SELECTORS.tablePaneMeta)
-    var closeBtn = pane.querySelector(SELECTORS.tablePaneClose)
+    var host  = modal.querySelector(SELECTORS.tableModalHost)
+    var title = modal.querySelector(SELECTORS.tableModalTitle)
+    var meta  = modal.querySelector(SELECTORS.tableModalMeta)
     if (!host) return
 
+    // The box that actually animates — transitions.dev's `t-modal`
+    // (06-modal.md), on the container rather than the section. See the
+    // snippet in home_conversation.scss for why.
+    var container = modal.querySelector(MODAL_TRANSITION)
+
+    // Read the close duration off the same custom property the CSS
+    // uses, so retuning the token moves both the animation and the
+    // cleanup that waits on it. The fallback matches the snippet's
+    // default in case the stylesheet hasn't loaded.
+    var closeMs = parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue('--modal-close-dur')
+    ) || 150
+
+    // Per-open state: the CLONE currently in the dialog, the thread
+    // table it was cloned from (drops are written back to it on close),
+    // the trigger to hand focus back to, and the trap handler to unbind.
     var expanded    = null
     var source      = null
     var lastFocused = null
-
-    function setTriggerState (tableId, isOpen) {
-      var buttons = document.querySelectorAll(SELECTORS.convExpand)
-      for (var i = 0; i < buttons.length; i++) {
-        var match = buttons[i].getAttribute('data-sh-conv-expand') === tableId
-        if (!match && isOpen) continue
-        if (match) {
-          buttons[i].setAttribute('aria-expanded', isOpen ? 'true' : 'false')
-          buttons[i].setAttribute('title', isOpen ? 'Collapse table' : 'Expand table')
-          var sr = buttons[i].querySelector('.slds-assistive-text')
-          if (sr) sr.textContent = isOpen ? 'Collapse table' : 'Expand table'
-        } else if (!isOpen) {
-          buttons[i].setAttribute('aria-expanded', 'false')
-        }
-      }
-    }
-
-    function stripStream (node) {
-      if (!node) return
-      if (node.classList) node.classList.remove('sh-stream-rows')
-      var streamNodes = node.querySelectorAll('.sh-stream-rows')
-      for (var sn = 0; sn < streamNodes.length; sn++) {
-        streamNodes[sn].classList.remove('sh-stream-rows')
-      }
-      var streamRows = node.querySelectorAll('tbody tr')
-      for (var srx = 0; srx < streamRows.length; srx++) {
-        streamRows[srx].style.animationDelay = ''
-      }
-    }
-
-    function syncBack () {
-      if (!expanded || !source) return
-      var rows = expanded.querySelectorAll(SELECTORS.convRow)
-      for (var i = 0; i < rows.length; i++) {
-        var id = rows[i].getAttribute('data-sh-conv-row-id')
-        if (!id) continue
-        var srcRow = source.querySelector('[data-sh-conv-row][data-sh-conv-row-id="' + id + '"]')
-        if (srcRow) paintRowStatus(srcRow, rows[i].getAttribute('data-sh-review-status') || null)
-      }
-    }
-
-    function discardClone () {
-      if (source) source.classList.remove(TABLE_SOURCE_HIDDEN_CLASS)
-      if (expanded && expanded.parentNode) expanded.parentNode.removeChild(expanded)
-      expanded = null
-      source = null
-      host.innerHTML = ''
-    }
-
-    function onEscape (event) {
-      if (event.key === 'Escape' || event.key === 'Esc') {
-        event.preventDefault()
-        close()
-      }
-    }
+    var trapHandler = null
+    // Non-null only while the close animation is playing. It's both the
+    // handle for the cleanup and the flag that a close is in flight.
+    var closeTimer  = null
 
     function open (button) {
+      // Already open — ignore a second trigger rather than stacking a
+      // second clone in the dialog.
+      if (expanded) return
+
       var tableId = button.getAttribute('data-sh-conv-expand')
+      // Authored id going into an attribute selector: same rule as
+      // conversation ids, reject anything that isn't a plain slug.
       if (!tableId || !ID_PATTERN.test(tableId)) return
-
-      if (expanded && source && source.getAttribute('data-sh-conv-table') === tableId) {
-        close()
-        return
-      }
-
-      if (expanded) {
-        var prevId = source && source.getAttribute('data-sh-conv-table')
-        syncBack()
-        discardClone()
-        if (prevId) setTriggerState(prevId, false)
-      }
 
       var table = document.querySelector('[data-sh-conv-table="' + tableId + '"]')
       if (!table || !table.parentNode) return
 
+      // Title from the table's own accessible name (`table.ariaLabel`
+      // in the JSON), so the dialog says what it's showing without a
+      // second copy of that string. The count comes from the chip.
       var inner = table.querySelector('table[aria-label]')
       var label = inner && inner.getAttribute('aria-label')
       if (title && label) title.textContent = label
-      var status = button.getAttribute('data-sh-conv-expand-meta') || ''
-      if (meta) {
-        meta.textContent = status
-        if (status) meta.removeAttribute('hidden')
-        else meta.setAttribute('hidden', '')
-      }
+      if (meta) meta.textContent = button.getAttribute('data-sh-conv-expand-meta') || ''
 
+      // Clone into the dialog; the thread's table stays exactly where it
+      // is. `cloneNode(true)` copies each row's current
+      // `data-sh-review-status`, so a prospect already dropped in the
+      // thread shows dropped here too.
       source = table
       var clone = table.cloneNode(true)
-      stripStream(clone)
-      clone.classList.remove(TABLE_SOURCE_HIDDEN_CLASS)
+
+      // A clone re-entering the document restarts any CSS animation it
+      // still carries — drop the streaming-reveal class so the rows
+      // don't re-deal themselves as the dialog opens.
+      if (clone.classList) clone.classList.remove('sh-stream-rows')
+      var streamNodes = clone.querySelectorAll('.sh-stream-rows')
+      for (var sn = 0; sn < streamNodes.length; sn++) {
+        streamNodes[sn].classList.remove('sh-stream-rows')
+      }
+      var streamRows = clone.querySelectorAll('tbody tr')
+      for (var srx = 0; srx < streamRows.length; srx++) {
+        streamRows[srx].style.animationDelay = ''
+      }
 
       host.innerHTML = ''
       host.appendChild(clone)
       expanded = clone
-      table.classList.add(TABLE_SOURCE_HIDDEN_CLASS)
 
+      // Wire the clone's reject Xs — just the click, not the full
+      // `bindProspectTable`, whose document-level review listener would
+      // leak one per open on a node discarded at close. A drop still
+      // fires `sh:conv-row-decision`, so the cadence card reacts, and the
+      // thread table catches up from `finishClose`.
       clone.addEventListener('click', function (event) {
         var t = event.target
         if (t && t.closest) handleDecisionClick(t, clone)
       })
-      fitSignalBadges(clone)
 
       lastFocused = button
-      layout.classList.add(TABLE_EXPANDED_CLASS)
-      pane.removeAttribute('hidden')
-      setTriggerState(tableId, true)
 
-      document.removeEventListener('keydown', onEscape)
-      document.addEventListener('keydown', onEscape)
+      // Reveal first, animate second. Both surfaces come out of
+      // `display: none`, and a transition can't start from a box that
+      // was never laid out — so the `hidden` removals and the open
+      // classes have to be separated by a forced reflow. Without the
+      // `void` read the browser folds the two style changes into one
+      // recalc and the dialog just appears at full size.
+      modal.removeAttribute('hidden')
+      backdrop.removeAttribute('hidden')
+      // Defensive: if a previous close was cut short, the container
+      // would still be holding the closing scale and this open would
+      // start from there instead of from `--modal-scale`.
+      if (container) container.classList.remove('is-closing')
+      void modal.offsetHeight
 
+      modal.classList.add(MODAL_OPEN_CLASS)
+      backdrop.classList.add(BACKDROP_OPEN_CLASS)
+      if (container) container.classList.add('is-open')
+
+      // After the dialog has a width. The clone copied the thread's
+      // `hidden` badges, but the Signal column is 20% of a fixed table
+      // here, not the thread's 18rem — so leftover width (and which
+      // labels wrap) is a different answer, and the fitter has to run
+      // against this layout rather than the one it cloned.
+      fitSignalBadges(clone)
+
+      // setTimeout(0) so the browser's own default focus (the dialog
+      // becoming visible) doesn't land after ours — same reason the
+      // review's dialog defers it.
+      var closeBtn = modal.querySelector(SELECTORS.tableModalClose)
       setTimeout(function () {
         if (closeBtn) closeBtn.focus()
+        else modal.focus()
       }, 0)
+
+      trapHandler = createTrapHandler(modal, close)
+      document.addEventListener('keydown', trapHandler)
     }
 
+    // Close runs in two halves, because the dialog is still on screen
+    // for the length of its animation. This half is everything that
+    // must happen at the click: the keyboard goes back to the page, and
+    // the two surfaces start moving.
     function close () {
-      if (!expanded) return
+      // A second Escape or click while the close is already playing
+      // would queue a second cleanup and restore the table twice.
+      if (closeTimer) return
 
-      var tableId = source && source.getAttribute('data-sh-conv-table')
-      document.removeEventListener('keydown', onEscape)
-
+      // Focus leaves before the animation does. Waiting would strand
+      // the keyboard inside a dialog that's on its way out, and the
+      // trap has to come off with it or Tab would still be captured.
+      if (trapHandler) {
+        document.removeEventListener('keydown', trapHandler)
+        trapHandler = null
+      }
       if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus()
       lastFocused = null
 
-      syncBack()
-      discardClone()
-      layout.classList.remove(TABLE_EXPANDED_CLASS)
-      pane.setAttribute('hidden', '')
-      if (tableId) setTriggerState(tableId, false)
+      // The dialog dips back to `--modal-scale-close` as it fades; the
+      // backdrop fades on the same clock (its open class comes off
+      // here, not in the cleanup, so the two move together).
+      if (container) {
+        container.classList.remove('is-open')
+        container.classList.add('is-closing')
+      }
+      backdrop.classList.remove(BACKDROP_OPEN_CLASS)
+
+      // With the close animation disabled (`--modal-close-dur: 0`) there
+      // is nothing to wait for: finish in the same task so the table is
+      // back in the thread the instant the dialog goes — no fade, and no
+      // frame where neither the dialog nor the thread shows it. A real
+      // duration still defers cleanup until the fade has played.
+      if (closeMs > 0) {
+        closeTimer = window.setTimeout(finishClose, closeMs)
+      } else {
+        finishClose()
+      }
+    }
+
+    // The other half — cleanup deferred until the dialog's fade (if any)
+    // has played. `hidden` resolves to `display: none`, so setting it up
+    // front would leave nothing to animate; writing the clone's drops
+    // back and discarding it waits here for the same reason. `expanded`
+    // stays set until this runs — it's the flag `open` tests to refuse a
+    // second trigger mid-close.
+    function finishClose () {
+      closeTimer = null
+
+      modal.setAttribute('hidden', '')
+      modal.classList.remove(MODAL_OPEN_CLASS)
+      backdrop.setAttribute('hidden', '')
+      // Back to the resting scale, or the next open would start from
+      // the closing state and skip its own animation.
+      if (container) container.classList.remove('is-closing')
+
+      // Write any drops made in the dialog back to the thread's table by
+      // row id so the two copies agree, then discard the clone. The
+      // thread table was never touched, so there is nothing to move home
+      // and nothing for it to re-lay-out — which is the whole point.
+      if (expanded && source) {
+        var rows = expanded.querySelectorAll(SELECTORS.convRow)
+        for (var i = 0; i < rows.length; i++) {
+          var id = rows[i].getAttribute('data-sh-conv-row-id')
+          if (!id) continue
+          var srcRow = source.querySelector('[data-sh-conv-row][data-sh-conv-row-id="' + id + '"]')
+          if (srcRow) paintRowStatus(srcRow, rows[i].getAttribute('data-sh-review-status') || null)
+        }
+      }
+      if (expanded && expanded.parentNode) expanded.parentNode.removeChild(expanded)
+      expanded = null
+      source = null
     }
 
     document.addEventListener('click', function (event) {
@@ -2193,7 +2453,23 @@
       open(button)
     })
 
+    var closeBtn = modal.querySelector(SELECTORS.tableModalClose)
+    var doneBtn  = modal.querySelector(SELECTORS.tableModalDone)
     if (closeBtn) closeBtn.addEventListener('click', close)
+    if (doneBtn)  doneBtn.addEventListener('click', close)
+
+    // Click-outside-to-dismiss, and the listener that does it is on the
+    // MODAL, not the backdrop. `.slds-modal` is itself a transparent
+    // layer pinned to all four edges at a higher z-index than
+    // `.slds-backdrop`, so a click on the shaded gutter never reaches
+    // the backdrop — it lands on the section. Testing `target === modal`
+    // is what distinguishes the gutter from the dialog inside it. The
+    // backdrop keeps a listener anyway, for the SLDS versions where the
+    // stacking is the other way round.
+    modal.addEventListener('click', function (event) {
+      if (event.target === modal) close()
+    })
+    backdrop.addEventListener('click', close)
   }
 
   // ──────────────────────────────────────────────────────────────

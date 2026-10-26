@@ -117,18 +117,34 @@
   // it. Only the accessible name is per-row. Returns null on an empty
   // list, and the row renders without a status button rather than with
   // an empty one.
-  function cloneStatusButton (listEl, meta, title) {
-    var donor = listEl.querySelector('[data-sh-workflow-run-toggle]')
-    if (!donor) return null
-    var button = donor.cloneNode(true)
+  function cloneStatusButton (listEl, meta, title, workflowId) {
+    var donorBtn = listEl.querySelector('[data-sh-workflow-run-toggle]')
+    if (!donorBtn) return null
+    var donor = donorBtn.parentNode &&
+      donorBtn.parentNode.classList &&
+      donorBtn.parentNode.classList.contains('seller-home__scheduled-status-group')
+      ? donorBtn.parentNode
+      : donorBtn
+    var node = donor.cloneNode(true)
+    var button = node.getAttribute('data-sh-workflow-run-toggle') !== null
+      ? node
+      : node.querySelector('[data-sh-workflow-run-toggle]')
+    if (!button) return null
 
-    // The donor may have been clicked before it was copied.
     button.removeAttribute('data-sh-workflow-hover-latched')
+    button.removeAttribute('title')
 
-    var label = (meta.action || 'Pause') + ' ' + title
-    button.setAttribute('aria-label', label)
-    button.setAttribute('title', label)
-    return button
+    var verb = meta.action || 'Run'
+    button.setAttribute('aria-label', verb + ' ' + title)
+    button.setAttribute('data-tooltip', verb)
+
+    var tipId = 'seller-home-scheduled-' + (workflowId || title) + '-status-tip'
+    button.setAttribute('aria-describedby', tipId)
+    var pop = node.querySelector ? node.querySelector('[role="tooltip"]') : null
+    if (pop) pop.id = tipId
+    var tip = node.querySelector ? node.querySelector('[data-sh-scheduled-status-tip]') : null
+    if (tip) tip.textContent = verb
+    return node
   }
 
   // The ⋮ menu, lifted off whichever row the page already rendered.
@@ -165,7 +181,7 @@
     var cadence    = record.cadence || ''
 
     var item = document.createElement('li')
-    item.className = 'seller-home__scheduled-workflow-item'
+    item.className = 'seller-home__scheduled-workflow-item page-row-item'
     item.setAttribute('data-sh-workflow-item', '')
     item.setAttribute('data-sh-workflow-id', record.id)
     item.setAttribute('data-sh-workflow-status', statusKey)
@@ -188,7 +204,7 @@
 
     if (href) {
       body = document.createElement('a')
-      body.className = 'seller-home__scheduled-workflow-row'
+      body.className = 'seller-home__scheduled-workflow-row page-row'
       body.href = href
       body.setAttribute('data-sh-workflow-open', '')
       // Prefix stamped alongside the label so the status controller in
@@ -201,14 +217,14 @@
     } else {
       body = document.createElement('div')
       body.className = 'seller-home__scheduled-workflow-row ' +
-        'seller-home__scheduled-workflow-row--unlinked'
+        'seller-home__scheduled-workflow-row--unlinked page-row page-row--unlinked'
     }
     body.title = title
 
     // Status button — a SIBLING of the row body, before it, the way the
     // row template orders them: it's a `<button>` and the body can be an
     // `<a>`, and this way the tab order matches the reading order.
-    var status = cloneStatusButton(listEl, statusMeta, title)
+    var status = cloneStatusButton(listEl, statusMeta, title, record.id)
     if (status) item.appendChild(status)
 
     var bodyText = document.createElement('span')

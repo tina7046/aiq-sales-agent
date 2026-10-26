@@ -27,9 +27,9 @@
 //     Flip re-sort. Also an inline overflow menu (Escape /
 //     click-outside close, Arrow-Up/Down within menu) and delegated
 //     row-click handling. The visible interactive element is the title
-//     inside each row's heading — an `<a>` where the row leads
-//     somewhere, a `<button>` where it doesn't — stretched over the
-//     row in CSS, so the browser owns navigation. Rows dispatch
+//     inside each row's heading — a `<button>` stretched over the row
+//     in CSS so hover never shows a URL preview. Destinations live on
+//     `data-sh-nav-href`; the click handler follows them. Rows dispatch
 //     `sh:feed-item-select`; menu items dispatch
 //     `sh:feed-item-action` / `sh:feed-overflow-action`; the status
 //     button dispatches `sh:feed-run-toggle`.
@@ -102,7 +102,7 @@
   var STORAGE_KEY = 'sh:navCollapsed'
 
   // Scope every demo/preference key to the URL user (`sh:rohan:recents`).
-  // Two tabs on different /aiq-sales-agent/u/<id>/ paths share an origin otherwise.
+  // Two tabs on different /u/<id>/ paths share an origin otherwise.
   function sk (key) {
     return (window.SH && typeof window.SH.storageKey === 'function')
       ? window.SH.storageKey(key)
@@ -227,7 +227,13 @@
   // already played their opening. It belongs in this list or a restart
   // would clear the rail but still treat every conversation as read,
   // painting them instantly instead of replaying them.
-  var DEMO_SESSION_KEYS = [RECENTS_KEY, KNOWLEDGE_BANNER_KEY, 'sh:convSeen', FEED_CONSUMED_KEY, MARCUS_REPLY_KEY]
+  var DEMO_SESSION_KEYS = [RECENTS_KEY, KNOWLEDGE_BANNER_KEY, 'sh:convSeen', 'sh:convOpeningContinued', FEED_CONSUMED_KEY, MARCUS_REPLY_KEY, 'sh:demoDay']
+  // Knowledge profile pills. segment_tabs.js writes the literal key
+  // knowledge.html passes (`knowledge-profiles`), not a sk()-scoped one.
+  // Folding it into DEMO_SESSION_KEYS would look up
+  // `sh:<id>:knowledge-profiles` and leave the customized pills in place
+  // after the cloud reset.
+  var KNOWLEDGE_PROFILES_KEY = 'knowledge-profiles'
   var DEMO_LOCAL_KEYS = [DRAFT_LIST_KEY, 'sh:scheduledWorkflows:v1']
   var DEMO_LOCAL_PREFIXES = ['sh:convDraft:v1:', 'sh:convSched:v1:']
 
@@ -236,6 +242,9 @@
       for (var i = 0; i < DEMO_SESSION_KEYS.length; i++) {
         window.sessionStorage.removeItem(sk(DEMO_SESSION_KEYS[i]))
       }
+      window.sessionStorage.removeItem(KNOWLEDGE_PROFILES_KEY)
+      window.sessionStorage.removeItem('sh:knowledge-profile-draft')
+      window.sessionStorage.removeItem('sh:knowledge-profile-learning')
     } catch (e) {
       // Storage unavailable — nothing accumulated, nothing to clear.
     }
@@ -600,7 +609,7 @@
   // the highlight doesn't depend on script order.
   // Trailing state indicator for a Recents row — the runtime twin of the
   // `renderRecentStatus` macro in _home_left_nav.html. `running` clones
-  // the shared-spinner <template> the nav ships (so the markup lives in
+  // the pulse <template> the nav ships (so the markup lives in
   // one place); `completed` ("New") appends a green dot + an assistive-text
   // sibling. Every node carries `data-sh-recent-indicator` so
   // `updateNavSessionStatus` can strip the old indicator before swapping.
@@ -637,6 +646,176 @@
     }
   }
 
+  // A knowledge profile that has been approved stays in "Thinking".
+  // The same session shows up as a running row on Home and Scheduled,
+  // and the chat in Recents keeps the pulse.
+  var KP_LEARNING_KEY = 'sh:knowledge-profile-learning'
+  var KP_CONV_ID = 'conv-knowledge-profile'
+
+  function readKnowledgeLearning () {
+    try {
+      var raw = window.sessionStorage.getItem(KP_LEARNING_KEY)
+      var data = raw ? JSON.parse(raw) : null
+      if (!data || !data.approved || !data.title) return null
+      return data
+    } catch (e) {
+      return null
+    }
+  }
+
+  function learningHref () {
+    return window.SH.userUrl('/home_conversation.html?id=' + encodeURIComponent(KP_CONV_ID))
+  }
+
+  function stripCloneIds (rootEl) {
+    var nodes = rootEl.querySelectorAll('[id]')
+    for (var i = 0; i < nodes.length; i++) nodes[i].removeAttribute('id')
+  }
+
+  // Keep the cloned overflow menu and its aria links, but move every id
+  // off the donor row so two kebabs don't share one menu.
+  function retargetCloneIds (rootEl, prefix) {
+    var nodes = rootEl.querySelectorAll('[id]')
+    var map = {}
+    var i
+    for (i = 0; i < nodes.length; i++) {
+      map[nodes[i].id] = prefix + '-' + nodes[i].id
+      nodes[i].id = map[nodes[i].id]
+    }
+    var refs = rootEl.querySelectorAll('[aria-controls], [aria-describedby]')
+    for (i = 0; i < refs.length; i++) {
+      var el = refs[i]
+      ;['aria-controls', 'aria-describedby'].forEach(function (attr) {
+        var cur = el.getAttribute(attr)
+        if (cur && map[cur]) el.setAttribute(attr, map[cur])
+      })
+    }
+  }
+
+  function mountKnowledgeRecentPulse (data) {
+    var list = document.querySelector('[data-sh-recents-list]')
+    if (!list) return
+    var row = list.querySelector('[data-sh-recent-conv="' + KP_CONV_ID + '"]')
+    if (!row) {
+      recordRecent({
+        id: 'rec-' + KP_CONV_ID,
+        label: data.title,
+        conversationId: KP_CONV_ID,
+        query: null
+      })
+      row = document.createElement('button')
+      row.type = 'button'
+      row.className = 'seller-home__nav-recent seller-home__nav-recent--linked'
+      row.setAttribute('data-sh-nav-href', learningHref())
+      row.setAttribute('data-sh-recent-conv', KP_CONV_ID)
+      row.setAttribute('role', 'listitem')
+      row.setAttribute('data-sh-recent', 'rec-' + KP_CONV_ID)
+      row.title = data.title
+      var mono = recentMonogram(data.title)
+      if (mono) {
+        var monoEl = document.createElement('span')
+        monoEl.className = 'seller-home__nav-recent-mono'
+        monoEl.setAttribute('aria-hidden', 'true')
+        monoEl.textContent = mono
+        row.appendChild(monoEl)
+      }
+      var label = document.createElement('span')
+      label.className = 'seller-home__nav-recent-label'
+      label.textContent = data.title
+      row.appendChild(label)
+      list.insertBefore(row, list.firstChild)
+    }
+    if (row.querySelector('.seller-home__nav-recent-status--running')) return
+    row.classList.add('seller-home__nav-recent--running')
+    appendRecentStatus(row, { status: 'running', label: data.title })
+  }
+
+  function mountKnowledgeFeedRow (data) {
+    var list = document.querySelector('.seller-home__feed-list')
+    if (!list || list.querySelector('[data-sh-kp-learning]')) return
+    var source = list.querySelector('[data-sh-feed-state="running"]')
+    if (!source) return
+    var item = source.closest('[data-sh-feed-list-item]')
+    if (!item) return
+    var clone = item.cloneNode(true)
+    clone.removeAttribute('hidden')
+    clone.setAttribute('data-sh-kp-learning', '')
+    var article = clone.querySelector('[data-sh-feed-item]')
+    if (article) {
+      article.setAttribute('data-sh-feed-item', 'kp-learning')
+      article.setAttribute('data-sh-feed-state', 'running')
+    }
+    retargetCloneIds(clone, 'kp-learning')
+    var feedToggle = clone.querySelector('[data-sh-feed-run-toggle]')
+    if (feedToggle) feedToggle.setAttribute('aria-label', 'Stop ' + data.title)
+    var title = clone.querySelector('[data-sh-feed-item-title]')
+    if (title) {
+      title.textContent = data.title
+      title.setAttribute('data-sh-feed-item-link', 'kp-learning')
+      title.setAttribute('data-sh-nav-href', learningHref())
+      var slots = ['default', 'paused', 'running', 'completed', 'scheduled', 'archived']
+      for (var s = 0; s < slots.length; s++) {
+        title.setAttribute('data-sh-feed-slot-' + slots[s], data.title)
+      }
+    }
+    var status = clone.querySelector('.seller-home__feed-item-desc-status')
+    if (status) status.textContent = 'Thinking'
+    var time = clone.querySelector('.seller-home__feed-item-desc-time')
+    if (time) time.textContent = ''
+    var sep = clone.querySelector('.seller-home__feed-item-desc-sep')
+    if (sep) sep.setAttribute('hidden', '')
+    var outputs = clone.querySelector('.seller-home__feed-item-outputs')
+    if (outputs && outputs.parentNode) outputs.parentNode.removeChild(outputs)
+    if (article) article.classList.remove('seller-home__feed-item--has-outputs')
+    var header = list.querySelector('[data-sh-feed-group="running"]')
+    if (header && header.nextSibling) list.insertBefore(clone, header.nextSibling)
+    else list.insertBefore(clone, list.firstChild)
+  }
+
+  function mountKnowledgeScheduleRow (data) {
+    var list = document.querySelector('.seller-home__scheduled-workflow-list')
+    if (!list || list.querySelector('[data-sh-kp-learning]')) return
+    var source = list.querySelector('[data-sh-workflow-status="running"]')
+    if (!source) return
+    var clone = source.cloneNode(true)
+    clone.removeAttribute('hidden')
+    clone.setAttribute('data-sh-kp-learning', '')
+    clone.setAttribute('data-sh-workflow-id', 'kp-learning')
+    clone.setAttribute('data-sh-workflow-status', 'running')
+    stripCloneIds(clone)
+    var menus = clone.querySelectorAll('[data-sh-workflow-menu]')
+    for (var m = 0; m < menus.length; m++) menus[m].parentNode.removeChild(menus[m])
+    var schedToggle = clone.querySelector('[data-sh-workflow-run-toggle]')
+    if (schedToggle) schedToggle.setAttribute('aria-label', 'Stop ' + data.title)
+    var title = clone.querySelector('.seller-home__scheduled-workflow-title')
+    if (title) title.textContent = data.title
+    var meta = clone.querySelector('.seller-home__scheduled-workflow-meta')
+    if (meta) meta.textContent = 'Thinking'
+    var open = clone.querySelector('[data-sh-schedule-open]')
+    if (open) {
+      open.setAttribute('aria-label', 'Open ' + data.title)
+      open.addEventListener('click', function (event) {
+        event.preventDefault()
+        event.stopPropagation()
+        window.location.assign(learningHref())
+      }, true)
+    }
+    list.insertBefore(clone, list.firstChild)
+    var count = document.querySelector('[data-sh-scheduled-tab="active"] [data-sh-scheduled-tab-count]')
+    if (count) {
+      var n = parseInt(count.textContent, 10)
+      if (isFinite(n)) count.textContent = String(n + 1)
+    }
+  }
+
+  function mountKnowledgeLearning () {
+    var data = readKnowledgeLearning()
+    if (!data) return
+    mountKnowledgeFeedRow(data)
+    mountKnowledgeScheduleRow(data)
+    mountKnowledgeRecentPulse(data)
+  }
+
   function renderRecents (root, list, activeId) {
     var listEl = root.querySelector('[data-sh-recents-list]')
     if (!listEl) return
@@ -654,7 +833,8 @@
       if (!r.conversationId && !r.feedId) continue
 
       var hasConv = !!r.conversationId
-      var a = document.createElement('a')
+      var a = document.createElement('button')
+      a.type = 'button'
       a.className = 'seller-home__nav-recent' +
         (hasConv ? ' seller-home__nav-recent--linked' : '') +
         (r.status === 'running' ? ' seller-home__nav-recent--running' : '')
@@ -663,14 +843,14 @@
         // Carry the original query back. The thread only renders the
         // seller's own bubble when `?q=` is present, so dropping it here
         // would reopen a row labelled with what they typed onto a thread
-        // that starts on the agent.
-        a.href = window.SH.userUrl('/home_conversation.html?id=' + encodeURIComponent(r.conversationId) +
-          (r.query ? '&q=' + encodeURIComponent(r.query) : ''))
+        // that starts on the agent. Destination lives on data-sh-nav-href
+        // (not href) so hover never shows a URL preview.
+        a.setAttribute('data-sh-nav-href', window.SH.userUrl('/home_conversation.html?id=' + encodeURIComponent(r.conversationId) +
+          (r.query ? '&q=' + encodeURIComponent(r.query) : '')))
         a.setAttribute('data-sh-recent-conv', r.conversationId)
       } else {
         // Workflow with no conversation yet — present but inert, matching
         // the template's unlinked branch.
-        a.href = '#'
         a.setAttribute('data-sh-nav-noroute', '')
       }
       a.setAttribute('role', 'listitem')
@@ -765,21 +945,15 @@
   }
 
   // ── Today's date ────────────────────────────────────────────────
-  // Re-stamp every `[data-sh-today]` element from the browser's clock.
-  //
-  // The build already wrote today's date into the markup (see the
-  // `today()` global in gulpfile.js), but `dist` is a static bundle —
-  // a deploy from last week would keep serving last week's date. This
-  // is the half that makes it live.
+  // Re-stamp every `[data-sh-today]` element from the browser clock.
+  // Pages that pin `feed.date` omit `data-sh-today` and stay put
+  // (agent_at_work.html owns its own ladder).
   //
   // Format is "Mon July 13", matching the review header's design.
   // `formatToParts` rather than `format` because en-US inserts a comma
   // after the weekday. Deliberately duplicated from the gulpfile: the
   // build and the browser each need their own copy, and six lines is
   // cheaper than a shared-module build step in a no-bundler project.
-  //
-  // Elements the author pinned to a fixed date aren't tagged, so
-  // there's nothing here to opt them out of.
   function formatToday (date) {
     if (!window.Intl || typeof window.Intl.DateTimeFormat !== 'function') return null
     try {
@@ -801,7 +975,8 @@
   }
 
   function stampToday (root) {
-    var text = formatToday(new Date())
+    var day = new Date()
+    var text = formatToday(day)
     if (!text) return
     var nodes = root.querySelectorAll('[data-sh-today]')
     for (var i = 0; i < nodes.length; i++) {
@@ -810,7 +985,7 @@
 
     // Short date prefix — "Aug 10" style, for output pills that
     // carry `data-sh-today-short`.
-    var shortDate = formatTodayShort(new Date())
+    var shortDate = formatTodayShort(day)
     if (!shortDate) return
     var shortNodes = root.querySelectorAll('[data-sh-today-short]')
     for (var j = 0; j < shortNodes.length; j++) {
@@ -865,7 +1040,7 @@
     // restore animate.
     releasePreload(root)
 
-    // Correct any build-time date stamp to the browser's today.
+    // Correct any build-time date stamp to the live calendar day.
     stampToday(root)
 
     var toggle = root.querySelector('[data-sh-nav-toggle]')
@@ -874,7 +1049,13 @@
       // the classes the inline script set. Idempotent by design — the
       // classes are already correct, so this changes nothing visually
       // and no transition fires even before the thaw above lands.
-      applyState(root, toggle, readCollapsed())
+      // `data-sh-nav-default-collapsed` forces a closed first paint
+      // (agent-at-work lab) without reading Home's stored preference.
+      applyState(
+        root,
+        toggle,
+        root.hasAttribute('data-sh-nav-default-collapsed') ? true : readCollapsed()
+      )
 
       toggle.addEventListener('click', function (event) {
         event.preventDefault()
@@ -897,18 +1078,7 @@
     // opened is already in the list it renders, with no flash of a rail
     // that's missing the row you arrived on.
     if (nav) {
-      // Logo `?reset=1` wipes demo state *and* first-run so the next
-      // paint is onboarding, not an empty Home that has already been seen.
-      if (consumeResetFlag()) {
-        try {
-          window.localStorage.removeItem(sk('sh:onboarding:done'))
-          window.localStorage.removeItem(sk('sh:onboarding:team'))
-        } catch (e) {}
-        if (window.SH && typeof window.SH.userUrl === 'function') {
-          window.location.replace(window.SH.userUrl('/onboarding.html'))
-          return
-        }
-      }
+      consumeResetFlag()
       var current = currentConversation(root)
       // Landing on a conversation page means the seller opened it — record
       // it consumed BEFORE painting the rail so this workflow's "New" dot
@@ -918,6 +1088,8 @@
       var recents = current ? recordRecent(current) : readRecents()
       var activeConvId = current ? current.conversationId : null
       renderRecents(nav, withWorkflowSessions(withDraftRecents(recents)), activeConvId)
+      mountKnowledgeLearning()
+      document.addEventListener('sh:knowledge-learning', mountKnowledgeLearning)
 
       // Confirming a schedule renames its conversation — "Schedule
       // Pipeline Snapshot" becomes "Pipeline Snapshot",
@@ -940,15 +1112,46 @@
       })
     }
 
-    // Nav rows with no destination yet (Skills, Tools, Feedback and
-    // Settings) render as `href="#"` so they stay real links — focusable,
-    // and styled by the same rules as routed rows. The macro tags them
-    // `data-sh-nav-noroute`; swallow the click so the URL doesn't collect
-    // a hash and the page doesn't jump to the top.
+    // Every left-nav row is a `<button>` so hover never shows a URL
+    // preview. Destinations live on `data-sh-nav-href`; this handler
+    // follows them. Cmd/Ctrl/Shift-click and middle-click open a new
+    // tab, matching what an `<a>` would do. `[data-sh-tools-open]` is
+    // left alone so tools_modal.js can open the modal instead.
     if (nav) {
+      function navHrefFrom (el) {
+        return el && el.getAttribute('data-sh-nav-href')
+      }
+
+      function followNavHref (href, newTab) {
+        if (!href) return
+        if (newTab) {
+          window.open(href, '_blank')
+          return
+        }
+        window.location.assign(href)
+      }
+
       nav.addEventListener('click', function (event) {
         var placeholder = closest(event.target, '[data-sh-nav-noroute]')
-        if (placeholder) event.preventDefault()
+        if (placeholder) {
+          event.preventDefault()
+          return
+        }
+        var row = closest(event.target, '[data-sh-nav-href]')
+        if (!row || row.hasAttribute('data-sh-tools-open')) return
+        var href = navHrefFrom(row)
+        if (!href) return
+        followNavHref(href, event.metaKey || event.ctrlKey || event.shiftKey)
+      })
+
+      nav.addEventListener('auxclick', function (event) {
+        if (event.button !== 1) return
+        var row = closest(event.target, '[data-sh-nav-href]')
+        if (!row || row.hasAttribute('data-sh-tools-open')) return
+        var href = navHrefFrom(row)
+        if (!href) return
+        event.preventDefault()
+        followNavHref(href, true)
       })
     }
 
@@ -1031,10 +1234,289 @@
     var scheduledRoot = document.querySelector('[data-sh-scheduled-root]')
     if (scheduledRoot) {
       bindScheduled(scheduledRoot)
+      bindScheduledComposer(scheduledRoot)
     }
 
     // Connections modal — "View all" button in the composer footer.
     bindConnectionsModal()
+    bindFeedEditModal()
+  }
+
+  // Feed Edit dialog. Same fields as the Scheduled sidebar, filled from
+  // the row that opened it. Instructions describe when the run happens
+  // and where the result is delivered. Cancel discards; Save keeps the
+  // frequency, time, and instructions for that row.
+  var openFeedEditModal = function () {}
+
+  function bindFeedEditModal () {
+    var modal = document.querySelector('[data-sh-feed-edit-modal]')
+    var backdrop = document.querySelector('[data-sh-feed-edit-backdrop]')
+    if (!modal || !backdrop) return
+
+    var titleEl = modal.querySelector('[data-sh-feed-edit-title]')
+    var announceEl = modal.querySelector('[data-sh-feed-edit-announce]')
+    var freqEl = modal.querySelector('[data-sh-feed-edit-frequency]')
+    var freqList = modal.querySelector('[data-sh-feed-edit-frequency-list]')
+    var timeEl = modal.querySelector('[data-sh-feed-edit-time]')
+    var timeList = modal.querySelector('[data-sh-feed-edit-time-list]')
+    var deliveryEl = modal.querySelector('[data-sh-feed-edit-delivery]')
+    var skillEl = modal.querySelector('[data-sh-feed-edit-skill]')
+    var skillNameEl = modal.querySelector('[data-sh-feed-edit-skill-name]')
+    var instrEl = modal.querySelector('[data-sh-feed-edit-instructions]')
+    var createdEl = modal.querySelector('[data-sh-feed-edit-created]')
+    var lastRunEl = modal.querySelector('[data-sh-feed-edit-lastrun]')
+    var saveBtn = modal.querySelector('[data-sh-feed-edit-save]')
+    var closers = modal.querySelectorAll('[data-sh-feed-edit-close]')
+
+    var FREQ_OPTIONS = ['Hourly', 'Daily', 'Weekdays', 'Monthly']
+    var TIME_OPTIONS = (function () {
+      var out = []
+      for (var mins = 0; mins < 24 * 60; mins += 15) {
+        var h = Math.floor(mins / 60)
+        var m = mins % 60
+        var period = h < 12 ? 'AM' : 'PM'
+        var h12 = h % 12
+        if (h12 === 0) h12 = 12
+        out.push(h12 + ':' + (m < 10 ? '0' + m : m) + ' ' + period)
+      }
+      return out
+    })()
+
+    function readJson (id, fallback) {
+      var el = document.getElementById(id)
+      if (!el) return fallback
+      try { return JSON.parse(el.textContent || '') } catch (err) { return fallback }
+    }
+
+    var skillNames = readJson('sh-feed-edit-skills', {}) || {}
+    var byId = {}
+    readJson('sh-feed-edit-schedules', []).forEach(function (rec) {
+      if (rec && rec.id) byId[rec.id] = rec
+    })
+
+    var lastFocused = null
+    var draft = null
+    var opened = null
+    var activeRow = null
+    var SKILL_ROUTE = window.SH.userUrl('/skill_detail.html')
+    var CHECK_ICON = '<svg class="slds-icon slds-icon_x-small slds-listbox__icon-selected" aria-hidden="true"><use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use></svg>'
+
+    function writeControl (control, value) {
+      if (!control) return
+      if (control.tagName === 'INPUT') control.value = value || ''
+      else {
+        var trunc = control.querySelector('.slds-truncate')
+        if (trunc) trunc.textContent = value || ''
+        // SLDS grays a faux combobox until it carries this class, which
+        // is why Frequency read lighter than the time input beside it.
+        control.classList.toggle('slds-combobox__input-value', !!value)
+      }
+    }
+
+    function readControl (control) {
+      if (!control) return ''
+      if (control.tagName === 'INPUT') return (control.value || '').trim()
+      var trunc = control.querySelector('.slds-truncate')
+      return trunc ? trunc.textContent.trim() : ''
+    }
+
+    function fillList (list, control, options, value) {
+      if (!list) return
+      var opts = options.slice()
+      if (value && opts.indexOf(value) < 0) opts.unshift(value)
+      list.innerHTML = ''
+      opts.forEach(function (label) {
+        var li = document.createElement('li')
+        li.setAttribute('role', 'presentation')
+        li.className = 'slds-listbox__item'
+        var option = document.createElement('div')
+        option.className = 'slds-media slds-listbox__option slds-listbox__option_plain slds-media_small'
+        option.setAttribute('role', 'option')
+        option.setAttribute('aria-selected', label === value ? 'true' : 'false')
+        if (label === value) option.classList.add('slds-is-selected')
+        var figure = document.createElement('span')
+        figure.className = 'slds-media__figure slds-listbox__option-icon'
+        figure.innerHTML = CHECK_ICON
+        var body = document.createElement('span')
+        body.className = 'slds-media__body'
+        var span = document.createElement('span')
+        span.title = label
+        span.textContent = label
+        body.appendChild(span)
+        option.appendChild(figure)
+        option.appendChild(body)
+        li.appendChild(option)
+        list.appendChild(li)
+      })
+      writeControl(control, value)
+    }
+
+    function statusWord (state) {
+      if (state === 'failed') return 'Failed'
+      if (state === 'paused') return 'Paused'
+      if (state === 'archived') return 'Archived'
+      return 'Completed'
+    }
+
+    function renderLastRun (record) {
+      if (!lastRunEl) return
+      var when = (record.lastRun || '').replace(/^Last run\s+/i, '')
+      var status = statusWord(record.state)
+      if (when) lastRunEl.textContent = status + ' ' + when
+      else lastRunEl.textContent = '—'
+      lastRunEl.classList.toggle('is-error', record.state === 'failed')
+    }
+
+    function closeComboboxes () {
+      toArray(modal.querySelectorAll('[data-slds-combobox]')).forEach(function (trigger) {
+        trigger.classList.remove('slds-is-open')
+        var control = trigger.querySelector('[role="combobox"]')
+        if (control) control.setAttribute('aria-expanded', 'false')
+      })
+    }
+
+    function populate (record) {
+      if (titleEl) titleEl.textContent = record.title || 'Edit'
+      fillList(freqList, freqEl, FREQ_OPTIONS, record.frequency)
+      fillList(timeList, timeEl, TIME_OPTIONS, record.time)
+      if (deliveryEl) deliveryEl.textContent = record.delivery || '—'
+      var skillName = record.skillName || skillNames[record.skillId] || ''
+      if (skillNameEl) skillNameEl.textContent = skillName
+      if (skillEl) {
+        if (skillName) {
+          skillEl.hidden = false
+          var href = record.skillId ? (SKILL_ROUTE + '?id=' + encodeURIComponent(record.skillId)) : SKILL_ROUTE
+          skillEl.setAttribute('href', href)
+          skillEl.setAttribute('aria-label', 'Uses Skill: ' + skillName + '. Open Skill details.')
+        } else {
+          skillEl.hidden = true
+        }
+      }
+      if (instrEl) instrEl.value = record.instructions || ''
+      if (createdEl) {
+        var created = record.createdAt || ''
+        if (record.createdBy) created = created ? (created + ' by ' + record.createdBy) : ('by ' + record.createdBy)
+        createdEl.textContent = created || '—'
+      }
+      renderLastRun(record)
+      if (announceEl) announceEl.textContent = 'Showing details for ' + (record.title || 'this schedule') + '.'
+    }
+
+    function replaceSlotTime (slot, prevTime, nextTime) {
+      if (!slot || !prevTime || prevTime === nextTime) return
+      var pattern = prevTime.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      var re = new RegExp(pattern)
+      ;['', '-default', '-paused', '-running', '-completed', '-scheduled', '-archived'].forEach(function (suffix) {
+        var attr = suffix ? ('data-sh-feed-slot' + suffix) : null
+        var value = attr ? slot.getAttribute(attr) : slot.textContent
+        if (value && re.test(value)) {
+          var next = value.replace(re, nextTime)
+          if (attr) slot.setAttribute(attr, next)
+          else slot.textContent = next
+        }
+      })
+    }
+
+    function replaceSlotFrequency (slot, prevFreq, nextFreq) {
+      if (!slot || !prevFreq || prevFreq === nextFreq) return
+      if (slot.textContent.trim() === prevFreq) slot.textContent = nextFreq
+      ;['default', 'completed', 'scheduled'].forEach(function (key) {
+        var attr = 'data-sh-feed-slot-' + key
+        if (slot.getAttribute(attr) === prevFreq) slot.setAttribute(attr, nextFreq)
+      })
+    }
+
+    function commit () {
+      if (!draft) return
+      draft.frequency = readControl(freqEl)
+      draft.time = readControl(timeEl)
+      if (instrEl) draft.instructions = instrEl.value
+      if (draft.id) byId[draft.id] = JSON.parse(JSON.stringify(draft))
+      if (activeRow && opened) {
+        replaceSlotFrequency(activeRow.querySelector('[data-sh-feed-slot="status"]'), opened.frequency, draft.frequency)
+        replaceSlotTime(activeRow.querySelector('[data-sh-feed-slot="time"]'), opened.time, draft.time)
+      }
+    }
+
+    function focusables () {
+      return toArray(modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+        .filter(function (el) { return !el.disabled && !el.hidden && el.getAttribute('aria-hidden') !== 'true' })
+    }
+
+    function open (returnTo, row) {
+      var id = row && row.getAttribute('data-sh-feed-item')
+      var base = (id && byId[id]) ? byId[id] : {
+        id: id || '',
+        title: 'Edit',
+        frequency: 'Daily',
+        time: '9:00 AM',
+        delivery: 'the home feed',
+        skillId: row ? (row.getAttribute('data-sh-feed-skill') || '') : '',
+        instructions: '',
+        createdBy: 'You',
+        lastRun: '',
+        state: row ? (row.getAttribute('data-sh-feed-state') || '') : ''
+      }
+      closeComboboxes()
+      draft = JSON.parse(JSON.stringify(base))
+      opened = JSON.parse(JSON.stringify(base))
+      activeRow = row || null
+      populate(draft)
+      lastFocused = returnTo || document.activeElement
+      modal.removeAttribute('hidden')
+      modal.classList.add('slds-fade-in-open')
+      backdrop.removeAttribute('hidden')
+      backdrop.classList.add('slds-backdrop_open')
+      setTimeout(function () {
+        if (titleEl) titleEl.focus()
+        else modal.focus()
+      }, 0)
+    }
+
+    function close () {
+      closeComboboxes()
+      modal.classList.remove('slds-fade-in-open')
+      backdrop.classList.remove('slds-backdrop_open')
+      modal.setAttribute('hidden', '')
+      backdrop.setAttribute('hidden', '')
+      draft = null
+      opened = null
+      activeRow = null
+      if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus()
+      lastFocused = null
+    }
+
+    if (saveBtn) {
+      saveBtn.addEventListener('click', function () {
+        commit()
+        close()
+      })
+    }
+    for (var i = 0; i < closers.length; i++) {
+      closers[i].addEventListener('click', close)
+    }
+    backdrop.addEventListener('click', close)
+    modal.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' || e.keyCode === 27) {
+        e.preventDefault()
+        close()
+        return
+      }
+      if (e.key !== 'Tab') return
+      var items = focusables()
+      if (!items.length) return
+      var first = items[0]
+      var last = items[items.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    })
+
+    openFeedEditModal = open
   }
 
   // ── Connections modal ──────────────────────────────────────────
@@ -1510,6 +1992,14 @@
     // static placeholder isn't left in an ambiguous half-typed state
     // when the user starts typing.
     bindPlaceholderTypewriter(textarea)
+
+    var restingPlaceholder = textarea.getAttribute('placeholder') || ''
+    textarea.addEventListener('focus', function () {
+      textarea.placeholder = ''
+    })
+    textarea.addEventListener('blur', function () {
+      if (!textarea.value.trim()) textarea.placeholder = restingPlaceholder
+    })
 
     textarea.addEventListener('input', function () {
       autosize(textarea)
@@ -2109,9 +2599,8 @@
   // newlines) never enables Send. Matches the intent — "enable
   // after non-whitespace text".
   function updateSendState (textarea, sendBtn) {
-    var hasText = textarea.value.trim().length > 0
-    sendBtn.disabled = !hasText
-    sendBtn.setAttribute('aria-disabled', hasText ? 'false' : 'true')
+    sendBtn.disabled = false
+    sendBtn.setAttribute('aria-disabled', 'false')
   }
 
   // Build the URL Send navigates to, or null when this composer has no
@@ -2194,6 +2683,12 @@
   }
 
   function applyFeedState (row, state) {
+    // One-shot Home rows (e.g. Nima's Hunter setup plan) stay in the
+    // Active/completed group. Opening the thread still consumes the
+    // Recents "New" dot; the row itself never moves to Scheduled.
+    if (state === 'scheduled' && row.hasAttribute('data-sh-feed-stay-home')) {
+      state = 'completed'
+    }
     var home = row.getAttribute('data-sh-feed-state-default') || 'scheduled'
     var toggle = row.querySelector('[data-sh-feed-run-toggle]')
     var title = row.querySelector('[data-sh-feed-item-title]')
@@ -2267,8 +2762,12 @@
         }
       }
       var label = verb + (title ? title.textContent.trim() : '')
+      var tipLabel = verb.trim()
       toggle.setAttribute('aria-label', label)
-      toggle.setAttribute('title', label)
+      toggle.setAttribute('data-tooltip', tipLabel)
+      var tip = toggle.parentElement &&
+        toggle.parentElement.querySelector('[data-sh-feed-status-tip]')
+      if (tip) tip.textContent = tipLabel
     }
 
     // Reflect the change on the Recents rail: this workflow's nav row
@@ -2647,14 +3146,10 @@
         else if (actionId === 'pause' && row) changeFeedState(feedRoot, row, 'paused')
         else if (actionId === 'complete' && row) changeFeedState(feedRoot, row, 'completed')
         else if (actionId === 'schedule' && row) changeFeedState(feedRoot, row, 'scheduled')
-        // Edit opens the backing skill's detail page. The skill id rides
-        // on the row as `data-sh-feed-skill` (index.json → item.workflow.id);
-        // a row with no skill just falls through to the dispatch above.
-        else if (actionId === 'edit' && row) {
-          var feedSkillId = row.getAttribute('data-sh-feed-skill')
-          if (feedSkillId) {
-            window.location.href = window.SH.userUrl('/skill_detail.html?id=' + encodeURIComponent(feedSkillId))
-          }
+        else if (actionId === 'edit') {
+          var menuScope = closest(item, '[data-sh-feed-item-menu]')
+          var returnTo = menuScope && menuScope.querySelector('[data-sh-feed-item-menu-trigger]')
+          openFeedEditModal(returnTo || item, row)
         }
         return
       }
@@ -2762,26 +3257,56 @@
   }
 
   // ── Whole-row click ───────────────────────────────────────────────
-  // Reporting only. Every row's title is a real control stretched over
-  // the row by CSS, so navigation is the browser's job — which is what
-  // keeps command-click and "open in new tab" working on the rows that
-  // lead somewhere.
+  // Every row's title is a `<button>` stretched over the card by CSS,
+  // so hover never shows a URL preview. Destinations live on
+  // `data-sh-nav-href`; this handler follows them. Cmd/Ctrl/Shift-click
+  // and middle-click open a new tab, matching what an `<a>` would do.
   function bindFeedRowClicks (feedRoot) {
+    function feedHrefFrom (row) {
+      var link = row && row.querySelector('[data-sh-feed-item-link]')
+      return link
+        ? (link.getAttribute('data-sh-nav-href') || link.getAttribute('href'))
+        : null
+    }
+
+    function followFeedHref (href, newTab) {
+      if (!href) return
+      if (newTab) {
+        window.open(href, '_blank')
+        return
+      }
+      window.location.assign(href)
+    }
+
     feedRoot.addEventListener('click', function (event) {
       if (closest(event.target, '[data-sh-feed-item-stop]')) return
 
       var row = closest(event.target, '[data-sh-feed-item]')
       if (!row) return
 
-      var link = row.querySelector('[data-sh-feed-item-link]')
+      var href = feedHrefFrom(row)
 
       document.dispatchEvent(new CustomEvent('sh:feed-item-select', {
         detail: {
           rowId: row.getAttribute('data-sh-feed-item'),
-          href: link ? link.getAttribute('href') : null,
+          href: href,
           source: 'feed'
         }
       }))
+
+      if (!href) return
+      followFeedHref(href, event.metaKey || event.ctrlKey || event.shiftKey)
+    })
+
+    feedRoot.addEventListener('auxclick', function (event) {
+      if (event.button !== 1) return
+      if (closest(event.target, '[data-sh-feed-item-stop]')) return
+      var row = closest(event.target, '[data-sh-feed-item]')
+      if (!row) return
+      var href = feedHrefFrom(row)
+      if (!href) return
+      event.preventDefault()
+      followFeedHref(href, true)
     })
   }
 
@@ -2848,6 +3373,9 @@
       if (labelEl) labelEl.textContent = text
       trigger.setAttribute('aria-label', 'Filter: ' + text)
       trigger.setAttribute('title', 'Filter: ' + text)
+      var headingEl = feedRoot.querySelector('[data-sh-feed-heading]')
+      var heading = chosen && chosen.getAttribute('data-sh-feed-filter-heading')
+      if (headingEl && heading) headingEl.textContent = heading
     }
 
     trigger.addEventListener('click', function (event) {
@@ -2911,6 +3439,7 @@
 
     toArray(feedRoot.querySelectorAll('[data-sh-feed-item]')).forEach(function (row) {
       if (row.getAttribute('data-sh-feed-state') !== 'completed') return
+      if (row.hasAttribute('data-sh-feed-stay-home')) return
       var convId = convByFeed[row.getAttribute('data-sh-feed-item')]
       if (!convId || !consumed[convId]) return
       applyFeedState(row, 'scheduled')
@@ -3221,19 +3750,14 @@
     }
   }
 
-  // What pressing the status button turns the row into. Same rule the
-  // feed uses, including "resume returns to the last state that wasn't
-  // paused" so retrying an errored row and then pausing it doesn't
-  // resume back into the error.
+  // What pressing the status button turns the row into. Same swaps as
+  // the home feed: Run a scheduled or completed row, Stop a running one,
+  // Resume a paused one back to the state it left.
   function nextWorkflowStatus (item) {
     var status = item.getAttribute('data-sh-workflow-status')
-    // Same lifecycle as the home feed: Run now a scheduled/completed row,
-    // Stop a running one, Restart an archived one; a paused row resumes to
-    // its last real state; a failed one retries.
-    if (status === 'scheduled' || status === 'completed') return 'running'
-    if (status === 'running' || status === 'archived') return 'scheduled'
-    if (status === 'failed') return 'running'
     if (status === 'paused') return item.getAttribute('data-sh-workflow-status-default') || 'scheduled'
+    if (status === 'scheduled' || status === 'completed') return 'running'
+    if (status === 'running') return 'scheduled'
     return 'scheduled'
   }
 
@@ -3262,9 +3786,12 @@
     // what keeps the copy in scheduled.json.
     var toggle = item.querySelector('[data-sh-workflow-run-toggle]')
     if (toggle && meta.action) {
-      var action = meta.action + ' ' + name
-      toggle.setAttribute('aria-label', action)
-      toggle.setAttribute('title', action)
+      toggle.setAttribute('aria-label', meta.action + ' ' + name)
+      toggle.removeAttribute('title')
+      toggle.setAttribute('data-tooltip', meta.action)
+      var tip = toggle.parentElement &&
+        toggle.parentElement.querySelector('[data-sh-scheduled-status-tip]')
+      if (tip) tip.textContent = meta.action
     }
 
     if (!meta.label) return
@@ -3316,6 +3843,85 @@
           source: 'scheduled'
         }
       }))
+    })
+  }
+
+  // Conversation-feed composer placed in the Scheduled body. The
+  // conversation page owns the full thread/voice controller
+  // (`bindConvComposer`); this one only keeps the box honest: placeholder
+  // class, plain-text paste, Enter to send, and a no-op empty submit so
+  // the form never reloads the page.
+  function bindScheduledComposer (root) {
+    var form = root.querySelector('[data-sh-scheduled-composer]')
+    var input = form && form.querySelector('[data-sh-conv-composer-input]')
+    var send = form && form.querySelector('[data-sh-conv-composer-send]')
+    if (!form || !input || !send) return
+
+    function composerText () {
+      var out = ''
+      for (var i = 0; i < input.childNodes.length; i++) {
+        var node = input.childNodes[i]
+        if (node.nodeType === 3) out += node.nodeValue
+        else if (node.nodeType === 1 && node.tagName === 'BR') out += '\n'
+        else if (node.nodeType === 1) out += node.textContent || ''
+      }
+      return out.replace(/\u00a0/g, ' ').replace(/\r/g, '')
+    }
+
+    function syncEmpty () {
+      if (composerText().trim()) input.classList.remove('is-empty')
+      else input.classList.add('is-empty')
+    }
+
+    function insertPlainText (text) {
+      var sel = window.getSelection ? window.getSelection() : null
+      if (!sel || !sel.rangeCount || !input.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+        input.appendChild(document.createTextNode(text))
+        return
+      }
+      var range = sel.getRangeAt(0)
+      range.deleteContents()
+      var node = document.createTextNode(text)
+      range.insertNode(node)
+      range.setStartAfter(node)
+      range.setEndAfter(node)
+      sel.removeAllRanges()
+      sel.addRange(range)
+    }
+
+    syncEmpty()
+
+    input.addEventListener('input', syncEmpty)
+
+    input.addEventListener('keydown', function (event) {
+      if (event.key !== 'Enter') return
+      if (event.isComposing || event.keyCode === 229) return
+      if (event.shiftKey) {
+        event.preventDefault()
+        insertPlainText('\n')
+        syncEmpty()
+        return
+      }
+      event.preventDefault()
+      if (typeof form.requestSubmit === 'function') form.requestSubmit()
+    })
+
+    input.addEventListener('paste', function (event) {
+      if (!event.clipboardData) return
+      event.preventDefault()
+      insertPlainText(event.clipboardData.getData('text/plain') || '')
+      syncEmpty()
+    })
+
+    form.addEventListener('submit', function (event) {
+      event.preventDefault()
+      var text = composerText().trim()
+      if (!text) return
+      document.dispatchEvent(new CustomEvent('sh:composer-submit', {
+        detail: { text: text, source: 'scheduled' }
+      }))
+      while (input.firstChild) input.removeChild(input.firstChild)
+      syncEmpty()
     })
   }
 
@@ -3741,8 +4347,10 @@
     var menuList = panel.querySelector('[data-sh-schedule-menu-list]')
 
     // Body value slots (filled per schedule).
-    var freqSelectEl = panel.querySelector('[data-sh-sched-frequency]')
-    var timeSelectEl = panel.querySelector('[data-sh-sched-time]')
+    var freqEl = panel.querySelector('[data-sh-sched-frequency]')
+    var freqList = panel.querySelector('[data-sh-sched-frequency-list]')
+    var timeEl = panel.querySelector('[data-sh-sched-time]')
+    var timeList = panel.querySelector('[data-sh-sched-time-list]')
     var deliveryEl = panel.querySelector('[data-sh-sched-delivery]')
     var skillLinkEl = panel.querySelector('[data-sh-sched-skill-link]')
     var skillNameEl = panel.querySelector('[data-sh-sched-skill-name]')
@@ -3779,10 +4387,17 @@
     var SKILL_ROUTE = window.SH.userUrl(config.skillRoute || '/skill_detail.html')
     var activeTrigger = null
     var editing = false
+    // Last values written by Save (or loaded with the schedule). Cancel
+    // restores the form to this snapshot.
+    var saved = null
+    var saving = false
+    var saveToken = 0
 
     // Frequency picklist + time picklist (15-minute increments). Built
-    // once; `fillSelect` keeps whatever value a schedule already carries
-    // even if it's off-list (e.g. "Fridays") by prepending it.
+    // once; `fillList` keeps whatever value a schedule already carries
+    // even if it's off-list (e.g. "Fridays") by prepending it. Option
+    // markup matches the home edit modal so app.js can write the
+    // chosen label back into the combobox.
     var FREQ_OPTIONS = ['Hourly', 'Daily', 'Weekdays', 'Monthly']
     var TIME_OPTIONS = (function buildTimeOptions () {
       var out = []
@@ -3796,19 +4411,64 @@
       }
       return out
     })()
+    var CHECK_ICON = '<svg class="slds-icon slds-icon_x-small slds-listbox__icon-selected" aria-hidden="true"><use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use></svg>'
 
-    function fillSelect (sel, options, value) {
-      if (!sel) return
+    function writeControl (control, value) {
+      if (!control) return
+      if (control.tagName === 'INPUT') control.value = value || ''
+      else {
+        var trunc = control.querySelector('.slds-truncate')
+        if (trunc) trunc.textContent = value || ''
+        // SLDS grays a faux combobox until it carries this class, which
+        // is why Frequency read lighter than the time input beside it.
+        control.classList.toggle('slds-combobox__input-value', !!value)
+      }
+    }
+
+    function readControl (control) {
+      if (!control) return ''
+      if (control.tagName === 'INPUT') return (control.value || '').trim()
+      var trunc = control.querySelector('.slds-truncate')
+      return trunc ? trunc.textContent.trim() : ''
+    }
+
+    function fillList (list, control, options, value) {
+      if (!list) return
       var opts = options.slice()
       if (value && opts.indexOf(value) < 0) opts.unshift(value)
-      sel.innerHTML = ''
+      list.innerHTML = ''
       opts.forEach(function (label) {
-        var op = document.createElement('option')
-        op.value = label
-        op.textContent = label
-        sel.appendChild(op)
+        var li = document.createElement('li')
+        li.setAttribute('role', 'presentation')
+        li.className = 'slds-listbox__item'
+        var option = document.createElement('div')
+        option.className = 'slds-media slds-listbox__option slds-listbox__option_plain slds-media_small'
+        option.setAttribute('role', 'option')
+        option.setAttribute('aria-selected', label === value ? 'true' : 'false')
+        if (label === value) option.classList.add('slds-is-selected')
+        var figure = document.createElement('span')
+        figure.className = 'slds-media__figure slds-listbox__option-icon'
+        figure.innerHTML = CHECK_ICON
+        var body = document.createElement('span')
+        body.className = 'slds-media__body'
+        var span = document.createElement('span')
+        span.title = label
+        span.textContent = label
+        body.appendChild(span)
+        option.appendChild(figure)
+        option.appendChild(body)
+        li.appendChild(option)
+        list.appendChild(li)
       })
-      if (value) sel.value = value
+      writeControl(control, value)
+    }
+
+    function closeComboboxes () {
+      toArray(panel.querySelectorAll('[data-slds-combobox]')).forEach(function (trigger) {
+        trigger.classList.remove('slds-is-open')
+        var control = trigger.querySelector('[role="combobox"]')
+        if (control) control.setAttribute('aria-expanded', 'false')
+      })
     }
 
     // The status-glyph / aria registry lives on the list root; the tab
@@ -3868,8 +4528,9 @@
     function populate (record) {
       if (titleEl) titleEl.textContent = record.title || 'Schedule'
       renderAlert(record)
-      fillSelect(freqSelectEl, FREQ_OPTIONS, record.frequency)
-      fillSelect(timeSelectEl, TIME_OPTIONS, record.time)
+      closeComboboxes()
+      fillList(freqList, freqEl, FREQ_OPTIONS, record.frequency)
+      fillList(timeList, timeEl, TIME_OPTIONS, record.time)
       if (deliveryEl) deliveryEl.textContent = record.delivery || '—'
 
       if (skillNameEl) skillNameEl.textContent = record.skillName || ''
@@ -3897,6 +4558,14 @@
 
       renderLastRun(record)
       renderMenu(record)
+      syncFooterAction(record)
+      saved = {
+        frequency: record.frequency || '',
+        time: record.time || '',
+        instructions: record.instructions || ''
+      }
+      saveToken += 1
+      resetSaveButton()
     }
 
     // Last run reads "<status> <when>", plain. When the run is viewable
@@ -3942,11 +4611,10 @@
     function menuItemVisible (id, record) {
       var status = record.status || ''
       switch (id) {
-        case 'run_now': return status !== 'archived'
-        case 'pause': return status !== 'paused' && status !== 'archived'
+        case 'run_now': return status === 'scheduled' || status === 'paused'
+        case 'pause': return status === 'scheduled' || status === 'running' || status === 'completed'
         case 'resume': return status === 'paused'
         case 'open_chat': return !!record.chatId
-        case 'archive': return status !== 'archived'
         default: return true
       }
     }
@@ -3982,6 +4650,31 @@
       // Nothing applies (e.g. an archived schedule) → hide the ⋮ trigger
       // rather than offer an empty menu.
       if (menuWrap) menuWrap.hidden = shown === 0
+      syncFooterAction(record)
+    }
+
+    // Footer always opens a chat. An existing session is reused; a
+    // schedule with none starts one, named for the workflow.
+    function syncFooterAction () {
+      if (!footerActionBtn) return
+      footerActionBtn.textContent = 'Open Chat'
+      footerActionBtn.disabled = false
+      footerActionBtn.removeAttribute('aria-disabled')
+      footerActionBtn.removeAttribute('title')
+    }
+    function openWorkflowChat (record, id) {
+      if (record.chatId) {
+        window.location.href = CHAT_ROUTE + '?id=' + encodeURIComponent(record.chatId)
+        return
+      }
+      var api = window.SellerHomeScheduling
+      var started = api && typeof api.createWorkflowChat === 'function'
+        ? api.createWorkflowChat(record)
+        : null
+      if (started && started.convId) record.chatId = started.convId
+      window.location.href = started && started.url
+        ? started.url
+        : CHAT_ROUTE + '?id=' + encodeURIComponent('conv-wf-' + id)
     }
 
     function visibleMenuItems () {
@@ -4003,15 +4696,10 @@
     // (shared `applyWorkflowStatus`), update its meta line, keep the
     // in-memory record in sync, refresh the overflow menu (Pause↔Resume)
     // and re-run the active tab filter + counts (without closing us).
-    // Active cadence rebuilt from the (editable) frequency + time, with
-    // the original "· Next run …" tail preserved so editing the picklists
-    // updates the card without losing its schedule-relative suffix.
+    // The list subline is the frequency alone. A running row shows how
+    // long it has been going instead.
     function scheduledCadence (record) {
-      var tail = ''
-      var c = record.cadence || ''
-      var idx = c.indexOf(' · ')
-      if (idx >= 0) tail = c.slice(idx)
-      return (record.frequency || '') + ' at ' + (record.time || '') + tail
+      return record.frequency || ''
     }
 
     // Repaint a failed row's meta as just the error message. The
@@ -4025,11 +4713,7 @@
     function updateCadence (row, record, status) {
       var meta = row && row.querySelector('.seller-home__scheduled-workflow-meta')
       if (!meta) return
-      var freq = (record.frequency || '').toLowerCase()
-      var time = record.time || ''
-      if (status === 'running') meta.textContent = 'Running now · Started at ' + time
-      else if (status === 'paused') meta.textContent = 'Paused · Previously ran ' + freq + ' at ' + time
-      else if (status === 'archived') meta.textContent = 'Archived'
+      if (status === 'running') meta.textContent = record.elapsed || 'Just started'
       else if (status === 'failed' && record.reconnect) renderReconnectMeta(meta, record)
       else meta.textContent = scheduledCadence(record)
     }
@@ -4122,9 +4806,7 @@
       if (actionId === 'run_now' && scheduleRunBlocked(record.status || '')) return
       switch (actionId) {
         case 'open_chat':
-          if (record.chatId) {
-            window.location.href = CHAT_ROUTE + '?id=' + encodeURIComponent(record.chatId)
-          }
+          openWorkflowChat(record, id)
           break
         case 'run_now':
           changeStatus(id, record, 'running')
@@ -4176,12 +4858,9 @@
 
     function exitEdit (save) {
       if (!instrDisplayEl || !instrEditEl) return
-      if (editing && save) {
-        var id = panel.getAttribute('data-sh-schedule-current')
-        var record = id ? detailsById[id] : null
-        if (record) record.instructions = instrEditEl.value
-        instrDisplayEl.textContent = instrEditEl.value
-      }
+      // Keep the edited text in the display only. The record updates
+      // when Save is pressed.
+      if (editing && save) instrDisplayEl.textContent = instrEditEl.value
       editing = false
       instrEditEl.hidden = true
       instrDisplayEl.hidden = false
@@ -4224,19 +4903,20 @@
       if (panel.hidden) return
       exitEdit(false)
       setMenuOpen(false)
+      closeComboboxes()
       panel.hidden = true
       panel.setAttribute('aria-hidden', 'true')
       panel.removeAttribute('data-sh-schedule-current')
       clearSelected()
       var back = activeTrigger
       activeTrigger = null
-      // If the card the panel opened from was filtered out (paused /
-      // archived → gone from the current tab), returning focus to it
-      // would be a focus-into-nothing; fall back to the active tab.
-      var target = back
-      if (!target || target.offsetParent === null) {
-        target = root.querySelector('[data-sh-scheduled-tab][aria-checked="true"]') || null
-      }
+      // Don't return focus to the card. Its `:focus-within` surface is
+      // the same grey as `.is-selected`, so focusing it after close
+      // left the row looking selected. Land on the active tab instead,
+      // unless the card was filtered out of the list (then the tab is
+      // already the only sensible target).
+      var target = root.querySelector('[data-sh-scheduled-tab][aria-checked="true"]') || null
+      if (!target && back && back.offsetParent !== null) target = back
       if (target && typeof target.focus === 'function') {
         setTimeout(function () { target.focus() }, 0)
       }
@@ -4288,24 +4968,87 @@
       })
     }
 
-    // Editable Frequency / Time picklists — persist the choice to the
-    // record and repaint the card's cadence line so the change shows
-    // both in the panel and the list.
-    function onScheduleFieldChange (field, sel) {
+    // Frequency and time stay in the form until Save. Save stays
+    // disabled until one of those differs from the last saved values.
+    function scheduleDirty () {
+      if (!saved) return false
+      return readControl(freqEl) !== (saved.frequency || '') ||
+        readControl(timeEl) !== (saved.time || '')
+    }
+    function syncSaveState () {
+      if (!saveBtn) return
+      if (saving) {
+        saveBtn.disabled = true
+        return
+      }
+      saveBtn.disabled = !scheduleDirty()
+    }
+    function resetSaveButton () {
+      saving = false
+      if (!saveBtn) return
+      saveBtn.removeAttribute('aria-busy')
+      var label = saveBtn.querySelector('[data-sh-schedule-panel-save-label]')
+      if (label) label.textContent = 'Save'
+      syncSaveState()
+    }
+    function commitSchedule () {
+      if (saving || !scheduleDirty()) return
       var id = panel.getAttribute('data-sh-schedule-current')
       var record = id ? detailsById[id] : null
       if (!record) return
-      record[field] = sel.value
-      updateCadence(rowFor(id), record, record.status)
+      var frequency = readControl(freqEl)
+      var time = readControl(timeEl)
+      var token = ++saveToken
+      saving = true
+      saveBtn.disabled = true
+      saveBtn.setAttribute('aria-busy', 'true')
+      var label = saveBtn.querySelector('[data-sh-schedule-panel-save-label]')
+      if (label) label.textContent = 'Save'
+      window.setTimeout(function () {
+        if (frequency) record.frequency = frequency
+        if (time) record.time = time
+        updateCadence(rowFor(id), record, record.status)
+        var stillOpen = token === saveToken &&
+          panel.getAttribute('data-sh-schedule-current') === id
+        if (stillOpen) {
+          saved = {
+            frequency: record.frequency || '',
+            time: record.time || '',
+            instructions: record.instructions || ''
+          }
+          resetSaveButton()
+          close()
+        }
+        showScheduledToast('Changes saved successfully', 'success')
+      }, 3000)
     }
-    if (freqSelectEl) {
-      freqSelectEl.addEventListener('change', function () {
-        onScheduleFieldChange('frequency', freqSelectEl)
-      })
+    function watchScheduleEdits (control) {
+      if (!control) return
+      var listId = control.getAttribute('aria-controls')
+      var list = listId && document.getElementById(listId)
+      if (list) {
+        list.addEventListener('click', function (event) {
+          if (!closest(event.target, '[role="option"]')) return
+          syncSaveState()
+        })
+      }
+      if (control.tagName === 'INPUT') {
+        control.addEventListener('input', syncSaveState)
+        control.addEventListener('change', syncSaveState)
+      }
     }
-    if (timeSelectEl) {
-      timeSelectEl.addEventListener('change', function () {
-        onScheduleFieldChange('time', timeSelectEl)
+    var saveBtn = panel.querySelector('[data-sh-schedule-panel-save]')
+    var footerActionBtn = panel.querySelector('[data-sh-schedule-panel-secondary]')
+    watchScheduleEdits(freqEl)
+    watchScheduleEdits(timeEl)
+    if (saveBtn) saveBtn.addEventListener('click', commitSchedule)
+    if (footerActionBtn) {
+      footerActionBtn.addEventListener('click', function () {
+        if (footerActionBtn.disabled) return
+        var id = panel.getAttribute('data-sh-schedule-current')
+        var record = id ? detailsById[id] : null
+        if (!record) return
+        doAction('open_chat', record, id)
       })
     }
 
@@ -4371,9 +5114,9 @@
       })
     }
 
-    // Instructions: click / Enter / Space to edit; blur saves; Escape
-    // cancels; Cmd/Ctrl+Enter commits. Escape + typing are kept from
-    // bubbling so they don't trip the panel's Escape-to-close.
+    // Instructions: click / Enter / Space to edit. Blur keeps the text
+    // in the display; Save commits it. Escape drops the in-progress
+    // edit. Escape + typing stay off the panel's Escape-to-close.
     if (instrDisplayEl) {
       instrDisplayEl.addEventListener('click', function () { enterEdit() })
       instrDisplayEl.addEventListener('keydown', function (event) {
@@ -4418,6 +5161,31 @@
       close()
     })
 
+    // The status button and the row menu change state on the card. Keep
+    // the in-memory record, cadence line, and header menu on the same
+    // state. Panel-originated actions already did this in doAction.
+    function syncRecordStatus (id, status) {
+      var record = detailsById[id]
+      if (!record || !status || record.status === status) return
+      record.status = status
+      updateCadence(rowFor(id), record, status)
+      if (panel.getAttribute('data-sh-schedule-current') === id) renderMenu(record)
+    }
+
+    document.addEventListener('sh:workflow-run-toggle', function (event) {
+      var detail = event.detail || {}
+      if (!detail.workflowId || !detail.to) return
+      syncRecordStatus(detail.workflowId, detail.to)
+    })
+
+    document.addEventListener('sh:workflow-action', function (event) {
+      var detail = event.detail || {}
+      if (detail.source === 'schedule-panel' || !detail.workflowId) return
+      var row = rowFor(detail.workflowId)
+      if (!row) return
+      syncRecordStatus(detail.workflowId, row.getAttribute('data-sh-workflow-status') || '')
+    })
+
     return { open: open, close: close }
   }
 
@@ -4448,14 +5216,20 @@
     var openMenu = null
     var openTrigger = null
 
-    // Overflow actions that move the row to a new state — the same
-    // transitions the status button and the home feed make. `edit` isn't
-    // here, so it stays a dispatch-only placeholder.
+    // Overflow actions that move the row to a new state. `edit` isn't
+    // here, so it stays a dispatch-only placeholder. Resume has no fixed
+    // target — it returns to the row's last non-paused state.
     var WORKFLOW_ACTION_STATES = {
       run_now: 'running',
+      pause: 'paused',
       stop: 'scheduled',
       restart: 'scheduled',
       archive: 'archived'
+    }
+
+    function visibleMenuActions (menu) {
+      return toArray(menu.querySelectorAll('[data-sh-workflow-action]:not([disabled])'))
+        .filter(function (btn) { return btn.offsetParent !== null })
     }
 
     function setMenuState (trigger, menu, isOpen) {
@@ -4512,7 +5286,7 @@
               runNow.removeAttribute('title')
             }
           }
-          var first = menu.querySelector('[data-sh-workflow-action]:not([disabled])')
+          var first = visibleMenuActions(menu)[0]
           if (first) first.focus()
         }
         return
@@ -4548,6 +5322,9 @@
       // Apply the state change (if any), then let the caller refresh the
       // tab counts + re-filter so the row moves between tabs.
       var target = WORKFLOW_ACTION_STATES[actionId]
+      if (actionId === 'resume' && row) {
+        target = row.getAttribute('data-sh-workflow-status-default') || 'scheduled'
+      }
       if (target && row) {
         applyWorkflowStatus(row, target, readWorkflowStatusTypes(listRoot))
         if (onChange) onChange(row, actionId, target)
@@ -4578,7 +5355,7 @@
       if (!openMenu.contains(document.activeElement) &&
           openTrigger !== document.activeElement) return
 
-      var items = toArray(openMenu.querySelectorAll('[data-sh-workflow-action]:not([disabled])'))
+      var items = visibleMenuActions(openMenu)
       if (!items.length) return
       event.preventDefault()
       var idx = items.indexOf(document.activeElement)
@@ -4885,14 +5662,6 @@
       return t ? t.getAttribute('data-sh-knowledge-tab') : null
     }
 
-    function learnedTeamId () {
-      try {
-        return window.localStorage.getItem(sk('sh:onboarding:team')) || ''
-      } catch (e) {
-        return ''
-      }
-    }
-
     function applyFilter (rawQuery) {
       // Trim so trailing whitespace never zeroes out results.
       var query = (rawQuery == null ? '' : String(rawQuery)).trim().toLowerCase()
@@ -4905,10 +5674,6 @@
         // regardless of the query.
         var rowTab = row.getAttribute('data-sh-knowledge-doc-tab')
         var tabMatch = !tab || !rowTab || rowTab === tab
-        var learnedProfile = row.getAttribute('data-sh-learned-profile')
-        var learnedBaseline = row.hasAttribute('data-sh-learned-baseline')
-        if (learnedProfile && learnedProfile !== learnedTeamId()) tabMatch = false
-        if (learnedBaseline && learnedTeamId()) tabMatch = false
         var visible
         if (!tabMatch) {
           visible = false
@@ -5065,8 +5830,9 @@
       activate(tabs[next].getAttribute('data-sh-knowledge-tab'), true)
     })
 
-    // Apply the default (server-active) tab's filter on load so the
-    // non-active tab's rows start hidden.
+    // Sync `hidden` with the server-active tab. CSS already hides the
+    // other tab from first paint (`:has(aria-checked)`); this keeps
+    // search-within-tab and the `hidden` attribute in agreement.
     reFilter()
   }
 
@@ -5156,6 +5922,12 @@
       if (container.parentNode) container.remove()
     }, duration)
   }
+
+  // Knowledge's segment-tabs module is deferred and reads
+  // `knowledge-profiles` before DOMContentLoaded. A refresh has to
+  // drop that store first, or the custom profile is already on screen
+  // and gets written back on the next unload.
+  if (isReload()) clearDemoState()
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init)

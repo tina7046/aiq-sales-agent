@@ -1180,7 +1180,7 @@
   // idempotent so calling them on every render (including live-preview
   // keystrokes) doesn't compound state.
   //
-  //   1. Supporting-skill chips. Any `<a href="/skill_detail.html?id=<id>">`
+  //   1. Supporting-skill chips. Any `<a href="/aiq-sales-agent/skill_detail.html?id=<id>">`
   //      inside the article gets the `seller-home__skill-chip` class +
   //      a small leading glyph. Known ids gain `_known` + a friendly
   //      tooltip; unknown ids gain a "Skill not found" tooltip.
@@ -1282,7 +1282,7 @@
           // chip's accent-blue text colour automatically (and
           // re-tints on hover / focus without a duplicate asset).
           // Source-of-truth asset is
-          // `src/aiq-sales-agent/assets/images/skill-chip.svg`; this string is a
+          // `src/assets/images/skill-chip.svg`; this string is a
           // verbatim inline copy so we skip a runtime fetch. Keep
           // in sync when the SVG is refreshed. The `class` and
           // `data-*` hooks match the previous <img> so the
@@ -1743,7 +1743,7 @@
   // seller can move sideways through the catalog without bouncing
   // off /skills.html.
   //
-  // Rows are real `<a href="/skill_detail.html?id=…">` links. That
+  // Rows are real `<a href="/aiq-sales-agent/skill_detail.html?id=…">` links. That
   // buys ⌘-click / middle-click / "open in new tab" for free, and it
   // means the unsaved-changes `beforeunload` guard registered further
   // down already covers switching away from a dirty editor — no

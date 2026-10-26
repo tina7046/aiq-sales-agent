@@ -21,7 +21,7 @@
   
   
   <link rel="stylesheet" href="/aiq-sales-agent/styles/home.css" />
-  <link rel="stylesheet" href="/aiq-sales-agent/styles/knowledge.css" />
+  <link rel="stylesheet" href="/aiq-sales-agent/styles/page.css" />
   <link rel="stylesheet" href="/aiq-sales-agent/styles/skills.css" />
   
   <link rel="stylesheet" href="/aiq-sales-agent/styles/tools.css" />
@@ -29,17 +29,14 @@
 
   
   <script>
-    window.SH_USERS = {"defaultUserId":"rohan","users":[{"id":"rohan","name":"Rohan","title":"Account Executive","role":"rep","avatar":"/aiq-sales-agent/assets/images/avatar2.jpg"},{"id":"nima","name":"Nima","title":"Admin","role":"admin","avatar":"/aiq-sales-agent/assets/images/avatar-nima.png"}]};
-    window.SH_USER = {"id":"rohan","name":"Rohan","title":"Account Executive","role":"rep","avatar":"/aiq-sales-agent/assets/images/avatar2.jpg"};
+    window.SH_USERS = {"defaultUserId":"rohan","users":[{"id":"rohan","name":"Rohan","title":"Account Executive","avatar":"/aiq-sales-agent/assets/images/avatar2.jpg"},{"id":"nima","name":"Nima","title":"Admin","avatar":"/aiq-sales-agent/assets/images/avatar-nima.png"}]};
+    window.SH_USER = {"id":"rohan","name":"Rohan","title":"Account Executive","avatar":"/aiq-sales-agent/assets/images/avatar2.jpg"};
   </script>
-  
-  <script>window.SH_BASE = '/aiq-sales-agent'</script>
   <script src="/aiq-sales-agent/scripts/sh_user.js"></script>
-  
-  <script src="/aiq-sales-agent/scripts/onboarding_gate.js"></script>
 </head>
-<body>
+<body class="">
 
+  
   <header class="slds-global-header_container">
       <a href="javascript:void(0);" class="slds-assistive-text slds-assistive-text_focus">Skip to Navigation</a>
       <a href="javascript:void(0);" class="slds-assistive-text slds-assistive-text_focus">Skip to Main Content</a>
@@ -47,9 +44,15 @@
         <div class="slds-global-header__item">
           <div class="slds-global-header__logo">
             
-            <a href="/aiq-sales-agent/u/rohan/index.html?reset=1" title="Salesforce — restart demo">
-              <img src="/aiq-sales-agent/assets/images/logo-noname.svg" style="width: 12.5rem;height: 1.75rem;background-size: contain;background-repeat: no-repeat;background-position: left center;"alt="Salesforce Logo" />
-            </a>
+            <button
+              type="button"
+              class="sh-header-logo"
+              data-sh-header-logo
+              data-sh-nav-href="/aiq-sales-agent/u/rohan/index.html?reset=1"
+              title="Salesforce — restart demo"
+            >
+              <img src="/aiq-sales-agent/assets/images/logo-noname.svg" style="width: 12.5rem;height: 1.75rem;background-size: contain;background-repeat: no-repeat;background-position: left center;" alt="Salesforce Logo" />
+            </button>
           </div>
         </div>
         <div class="slds-global-header__item slds-global-header__item_search">
@@ -320,62 +323,13 @@
               </div>
             </li>
             <li class="slds-global-actions__item">
-              
-              <div
-                class="slds-dropdown-trigger slds-dropdown-trigger_click sh-setup-menu"
-                data-sh-setup-menu
-              >
-                <button
-                  class="slds-button slds-button_icon slds-button_icon slds-button_icon-container slds-button_icon-small slds-global-actions__setup slds-global-actions__item-action"
-                  type="button"
-                  title="Setup"
-                  aria-haspopup="menu"
-                  aria-expanded="false"
-                  aria-controls="sh-setup-menu"
-                  data-sh-setup-trigger
-                >
+              <div class="slds-dropdown-trigger slds-dropdown-trigger_click">
+                <button class="slds-button slds-button_icon slds-button_icon slds-button_icon-container slds-button_icon-small slds-global-actions__setup slds-global-actions__item-action" aria-haspopup="true" title="Setup">
                   <svg class="slds-button__icon slds-global-header__icon" aria-hidden="true">
                     <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#setup"></use>
                   </svg>
                   <span class="slds-assistive-text">Setup</span>
                 </button>
-                <div
-                  id="sh-setup-menu"
-                  class="slds-dropdown slds-dropdown_right slds-dropdown_actions t-dropdown sh-setup-menu__menu"
-                  data-origin="top-right"
-                  data-sh-setup-dropdown
-                  role="menu"
-                  aria-label="Setup Menu"
-                >
-                  <ul class="slds-dropdown__list" role="presentation">
-                    <li class="slds-dropdown__header slds-truncate" role="separator">
-                      <span>Setup Menu</span>
-                    </li>
-                    <li class="slds-dropdown__item" role="presentation">
-                      <a href="#" role="menuitem" tabindex="-1">
-                        <span class="slds-truncate" title="Setup">Setup</span>
-                      </a>
-                    </li>
-                    <li class="slds-dropdown__item" role="presentation">
-                      <a href="/aiq-sales-agent/u/rohan/salesforce_go.html" role="menuitem" tabindex="-1">
-                        <span class="slds-truncate" title="Salesforce Go">Salesforce Go</span>
-                        <svg class="slds-icon slds-icon_x-small slds-icon-text-default sh-setup-menu__external" aria-hidden="true">
-                          <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#new_window"></use>
-                        </svg>
-                      </a>
-                    </li>
-                    <li class="slds-dropdown__item" role="presentation">
-                      <a href="#" role="menuitem" tabindex="-1">
-                        <span class="slds-truncate" title="Your Account">Your Account</span>
-                      </a>
-                    </li>
-                    <li class="slds-dropdown__item" role="presentation">
-                      <a href="#" role="menuitem" tabindex="-1">
-                        <span class="slds-truncate" title="Developer Console">Developer Console</span>
-                      </a>
-                    </li>
-                  </ul>
-                </div>
               </div>
             </li>
             <li class="slds-global-actions__item">
@@ -426,11 +380,12 @@
                     
                     
                     <li class="slds-dropdown__item" role="presentation">
-                      <a
-                        href="/aiq-sales-agent/u/rohan/index.html"
+                      <button
+                        type="button"
                         role="menuitem"
                         tabindex="-1"
                         data-sh-user-switch="rohan"
+                        data-sh-nav-href="/aiq-sales-agent/u/rohan/index.html"
                         aria-current="true"
                       >
                         <span class="sh-user-switcher__row">
@@ -449,16 +404,17 @@
                           </svg>
                           
                         </span>
-                      </a>
+                      </button>
                     </li>
                     
                     
                     <li class="slds-dropdown__item" role="presentation">
-                      <a
-                        href="/aiq-sales-agent/u/nima/index.html"
+                      <button
+                        type="button"
                         role="menuitem"
                         tabindex="-1"
                         data-sh-user-switch="nima"
+                        data-sh-nav-href="/aiq-sales-agent/u/nima/index.html"
                         
                       >
                         <span class="sh-user-switcher__row">
@@ -473,7 +429,7 @@
                           </span>
                           
                         </span>
-                      </a>
+                      </button>
                     </li>
                     
                   </ul>
@@ -518,15 +474,18 @@
         <nav class="slds-context-bar__secondary" role="navigation">
           <ul class="slds-grid">
             
+            
             <li class="slds-context-bar__item slds-is-active">
               <a href="/aiq-sales-agent/u/rohan/index.html" class="slds-context-bar__label-action" title="Home">
                 <span class="slds-assistive-text">Current Page:</span>
                 <span class="slds-truncate" title="Home">Home</span>
               </a>
             </li>
+            
           </ul>
         </nav>
   </div>
+  
 
   <main class="app-wrapper slds-template_default">
     
@@ -544,7 +503,8 @@
 
 
 
-<div class="seller-home seller-home--knowledge seller-home--skills" data-sh-root>
+
+<div class="seller-home page-root seller-home--skills" data-sh-root>
   
   
 
@@ -651,6 +611,9 @@
       // Storage unavailable — fall through to the expanded default,
       // which is what the markup already renders.
     }
+    // Lab pages can opt into a collapsed first paint without rewriting
+    // the shared Home preference. Toggle still works after load.
+    if (root.hasAttribute('data-sh-nav-default-collapsed')) collapsed = true
 
     root.classList.add('seller-home--nav-preload')
     root.classList.toggle('seller-home--nav-collapsed', collapsed)
@@ -685,12 +648,12 @@
         
           
 
-<a
-  href="/aiq-sales-agent/u/rohan/index.html"
+<button
+  type="button"
   class="seller-home__nav-item"
   role="listitem"
   data-sh-nav="new_chat"
-  
+  data-sh-nav-href="/aiq-sales-agent/u/rohan/index.html"
   
   
   
@@ -708,19 +671,19 @@
   <span class="seller-home__nav-label">New chat</span>
   
   
-</a>
+</button>
 
         
       
         
           
 
-<a
-  href="/aiq-sales-agent/u/rohan/scheduled.html"
+<button
+  type="button"
   class="seller-home__nav-item"
   role="listitem"
   data-sh-nav="schedules"
-  
+  data-sh-nav-href="/aiq-sales-agent/u/rohan/scheduled.html"
   
   
   
@@ -738,19 +701,19 @@
   <span class="seller-home__nav-label">Scheduled</span>
   
   
-</a>
+</button>
 
         
       
         
           
 
-<a
-  href="/aiq-sales-agent/u/rohan/skills.html"
+<button
+  type="button"
   class="seller-home__nav-item is-active"
   role="listitem"
   data-sh-nav="skills"
-  
+  data-sh-nav-href="/aiq-sales-agent/u/rohan/skills.html"
   
   
   
@@ -770,19 +733,19 @@
   <span class="seller-home__nav-label">Skills</span>
   
   
-</a>
+</button>
 
         
       
         
           
 
-<a
-  href="/aiq-sales-agent/u/rohan/knowledge.html"
+<button
+  type="button"
   class="seller-home__nav-item"
   role="listitem"
   data-sh-nav="knowledge"
-  
+  data-sh-nav-href="/aiq-sales-agent/u/rohan/knowledge.html"
   
   
   
@@ -793,14 +756,14 @@
     
       
       <svg width="20" height="20" aria-hidden="true">
-        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#knowledge_base"></use>
+        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#display_text"></use>
       </svg>
     
   </span>
   <span class="seller-home__nav-label">Knowledge</span>
   
   
-</a>
+</button>
 
         
       
@@ -833,14 +796,16 @@
       >
         
         
-        
-        <a
-          href="/aiq-sales-agent/u/rohan/home_conversation.html?id=conv-001"
+        <button
+          type="button"
           class="seller-home__nav-recent seller-home__nav-recent--linked"
           role="listitem"
           data-sh-recent="rec-ri-01"
           data-sh-recent-feed="ri-01"
+          
           data-sh-recent-conv="conv-001"
+          data-sh-nav-href="/aiq-sales-agent/u/rohan/home_conversation.html?id=conv-001"
+          
           data-sh-recent-status="completed"
           title="Found new prospects"
         >
@@ -858,18 +823,18 @@
     <span class="slds-assistive-text" data-sh-recent-indicator>, new results</span>
   
 
-        </a>
+        </button>
         
         
-        
-        
-        <a
-          href="/aiq-sales-agent/u/rohan/home_conversation.html?id=conv-draft-proposals"
-          class="seller-home__nav-recent seller-home__nav-recent--linked"
+        <button
+          type="button"
+          class="seller-home__nav-recent"
           role="listitem"
           data-sh-recent="rec-ri-02"
           data-sh-recent-feed="ri-02"
-          data-sh-recent-conv="conv-draft-proposals"
+          
+          data-sh-nav-noroute
+          
           data-sh-recent-status="completed"
           title="Drafted proposals to send"
         >
@@ -887,18 +852,18 @@
     <span class="slds-assistive-text" data-sh-recent-indicator>, new results</span>
   
 
-        </a>
+        </button>
         
         
-        
-        
-        <a
-          href="#"
+        <button
+          type="button"
           class="seller-home__nav-recent"
           role="listitem"
           data-sh-recent="rec-ri-03"
           data-sh-recent-feed="ri-03"
+          
           data-sh-nav-noroute
+          
           data-sh-recent-status="scheduled"
           title="Executive Brief"
         >
@@ -907,18 +872,19 @@
           
   
 
-        </a>
+        </button>
         
         
-        
-        
-        <a
-          href="/aiq-sales-agent/u/rohan/home_conversation.html?id=conv-003"
+        <button
+          type="button"
           class="seller-home__nav-recent seller-home__nav-recent--linked"
           role="listitem"
           data-sh-recent="rec-ri-04"
           data-sh-recent-feed="ri-04"
+          
           data-sh-recent-conv="conv-003"
+          data-sh-nav-href="/aiq-sales-agent/u/rohan/home_conversation.html?id=conv-003"
+          
           data-sh-recent-status="scheduled"
           title="Meeting Next Steps"
         >
@@ -927,18 +893,18 @@
           
   
 
-        </a>
+        </button>
         
         
-        
-        
-        <a
-          href="#"
+        <button
+          type="button"
           class="seller-home__nav-recent seller-home__nav-recent--running"
           role="listitem"
           data-sh-recent="rec-run-01"
           data-sh-recent-feed="run-01"
+          
           data-sh-nav-noroute
+          
           data-sh-recent-status="running"
           title="Researching target accounts"
         >
@@ -952,22 +918,25 @@
       aria-label="Researching target accounts is running."
       data-sh-recent-indicator
     >
-      <span class="seller-home__nav-recent-status-glyph seller-home__nav-recent-status-glyph--spinner sh-spinner" aria-hidden="true"></span>
+      <span class="seller-home__feed-status-pulse" aria-hidden="true">
+        <span class="seller-home__feed-status-pulse-dot"></span>
+        <span class="seller-home__feed-status-pulse-ring"></span>
+      </span>
     </span>
   
 
-        </a>
+        </button>
         
         
-        
-        
-        <a
-          href="#"
+        <button
+          type="button"
           class="seller-home__nav-recent seller-home__nav-recent--running"
           role="listitem"
           data-sh-recent="rec-run-02"
           data-sh-recent-feed="run-02"
+          
           data-sh-nav-noroute
+          
           data-sh-recent-status="running"
           title="Drafting outreach for warm leads"
         >
@@ -981,22 +950,26 @@
       aria-label="Drafting outreach for warm leads is running."
       data-sh-recent-indicator
     >
-      <span class="seller-home__nav-recent-status-glyph seller-home__nav-recent-status-glyph--spinner sh-spinner" aria-hidden="true"></span>
+      <span class="seller-home__feed-status-pulse" aria-hidden="true">
+        <span class="seller-home__feed-status-pulse-dot"></span>
+        <span class="seller-home__feed-status-pulse-ring"></span>
+      </span>
     </span>
   
 
-        </a>
+        </button>
         
         
-        
-        
-        <a
-          href="/aiq-sales-agent/u/rohan/home_conversation.html?id=conv-weekly-top-3"
+        <button
+          type="button"
           class="seller-home__nav-recent seller-home__nav-recent--linked"
           role="listitem"
           data-sh-recent="rec-ri-weekly-top-3"
           data-sh-recent-feed="ri-weekly-top-3"
+          
           data-sh-recent-conv="conv-weekly-top-3"
+          data-sh-nav-href="/aiq-sales-agent/u/rohan/home_conversation.html?id=conv-weekly-top-3"
+          
           data-sh-recent-status="scheduled"
           title="Quota Health Check"
         >
@@ -1005,18 +978,19 @@
           
   
 
-        </a>
+        </button>
         
         
-        
-        
-        <a
-          href="/aiq-sales-agent/u/rohan/home_conversation.html?id=conv-daily-pipeline-snapshot"
+        <button
+          type="button"
           class="seller-home__nav-recent seller-home__nav-recent--linked"
           role="listitem"
           data-sh-recent="rec-ri-daily-pipeline-snapshot"
           data-sh-recent-feed="ri-daily-pipeline-snapshot"
+          
           data-sh-recent-conv="conv-daily-pipeline-snapshot"
+          data-sh-nav-href="/aiq-sales-agent/u/rohan/home_conversation.html?id=conv-daily-pipeline-snapshot"
+          
           data-sh-recent-status="scheduled"
           title="Pipeline Snapshot"
         >
@@ -1025,8 +999,7 @@
           
   
 
-        </a>
-        
+        </button>
         
       </div>
     </div>
@@ -1040,13 +1013,13 @@
         
           
 
-<a
-  href="#"
+<button
+  type="button"
   class="seller-home__nav-item"
   role="listitem"
   data-sh-nav="feedback"
-  hidden
   data-sh-nav-noroute
+  hidden
   
   
   
@@ -1063,7 +1036,7 @@
   <span class="seller-home__nav-label">Feedback</span>
   
   
-</a>
+</button>
 
         
       
@@ -1071,15 +1044,15 @@
         
           
 
-<a
-  href="/aiq-sales-agent/u/rohan/tools.html"
+<button
+  type="button"
   class="seller-home__nav-item"
   role="listitem"
   data-sh-nav="tools"
-  hidden
+  data-sh-nav-href="/aiq-sales-agent/u/rohan/tools.html"
   
   
-  data-sh-tools-open
+  
   
   title="Connections"
 >
@@ -1103,7 +1076,7 @@
     <span class="slds-assistive-text"> connections available</span>
   </span>
   
-</a>
+</button>
 
         
       
@@ -1111,12 +1084,12 @@
         
           
 
-<a
-  href="/aiq-sales-agent/u/rohan/settings.html"
+<button
+  type="button"
   class="seller-home__nav-item"
   role="listitem"
   data-sh-nav="settings"
-  
+  data-sh-nav-noroute
   
   
   
@@ -1134,7 +1107,7 @@
   <span class="seller-home__nav-label">Settings</span>
   
   
-</a>
+</button>
 
         
       
@@ -1142,14 +1115,17 @@
   </div>
 
   
-  <script type="application/json" data-sh-nav-workflow-sessions>[{"feedId":"ri-marcus-reply","conversationId":"conv-marcus-reply","label":"Drafted reply to Marcus Chen","status":"completed","demoGate":"marcus-reply"},{"feedId":"ri-01","conversationId":"conv-001","label":"Found new prospects","status":"completed","demoGate":""},{"feedId":"ri-02","conversationId":"conv-draft-proposals","label":"Drafted proposals to send","status":"completed","demoGate":""},{"feedId":"ri-03","conversationId":"","label":"Executive Brief","status":"scheduled","demoGate":""},{"feedId":"ri-04","conversationId":"conv-003","label":"Meeting Next Steps","status":"scheduled","demoGate":""},{"feedId":"run-01","conversationId":"","label":"Researching target accounts","status":"running","demoGate":""},{"feedId":"run-02","conversationId":"","label":"Drafting outreach for warm leads","status":"running","demoGate":""},{"feedId":"ri-weekly-top-3","conversationId":"conv-weekly-top-3","label":"Quota Health Check","status":"scheduled","demoGate":""},{"feedId":"ri-daily-pipeline-snapshot","conversationId":"conv-daily-pipeline-snapshot","label":"Pipeline Snapshot","status":"scheduled","demoGate":""}]</script>
+  <script type="application/json" data-sh-nav-workflow-sessions>[{"feedId":"ri-marcus-reply","conversationId":"conv-marcus-reply","label":"Drafted reply to Marcus Chen","status":"completed","demoGate":"marcus-reply"},{"feedId":"ri-01","conversationId":"conv-001","label":"Found new prospects","status":"completed","demoGate":""},{"feedId":"ri-02","conversationId":"","label":"Drafted proposals to send","status":"completed","demoGate":""},{"feedId":"ri-03","conversationId":"","label":"Executive Brief","status":"scheduled","demoGate":""},{"feedId":"ri-04","conversationId":"conv-003","label":"Meeting Next Steps","status":"scheduled","demoGate":""},{"feedId":"run-01","conversationId":"","label":"Researching target accounts","status":"running","demoGate":""},{"feedId":"run-02","conversationId":"","label":"Drafting outreach for warm leads","status":"running","demoGate":""},{"feedId":"ri-weekly-top-3","conversationId":"conv-weekly-top-3","label":"Quota Health Check","status":"scheduled","demoGate":""},{"feedId":"ri-daily-pipeline-snapshot","conversationId":"conv-daily-pipeline-snapshot","label":"Pipeline Snapshot","status":"scheduled","demoGate":""}]</script>
   <template data-sh-recent-spinner-template>
     <span
       class="seller-home__nav-recent-status seller-home__nav-recent-status--running slds-col_bump-left"
       role="img"
       data-sh-recent-indicator
     >
-      <span class="seller-home__nav-recent-status-glyph seller-home__nav-recent-status-glyph--spinner sh-spinner" aria-hidden="true"></span>
+      <span class="seller-home__feed-status-pulse" aria-hidden="true">
+        <span class="seller-home__feed-status-pulse-dot"></span>
+        <span class="seller-home__feed-status-pulse-ring"></span>
+      </span>
     </span>
   </template>
 </aside>
@@ -1157,76 +1133,47 @@
 
   
   <div
-    class="seller-home__knowledge seller-home__skills"
+    class="page seller-home__skills"
     role="main"
     aria-label="Skills"
     tabindex="-1"
     data-sh-skills-root
   >
     
-    <header
-      class="seller-home__knowledge-header"
-      data-sh-skills-header
-    >
-      <h1 class="seller-home__knowledge-header-title">Skills</h1>
-      <button
-        type="button"
-        class="slds-button slds-button_neutral seller-home__skills-new"
-        data-sh-skills-create
-      >
-        <svg class="slds-button__icon slds-button__icon_left" aria-hidden="true">
-          <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
-        </svg>
-        Create Skill
-      </button>
-    </header>
-
     
     <section
-      class="seller-home__knowledge-body"
+      class="page__body"
       aria-label="Skills"
     >
-      <div class="seller-home__knowledge-body-inner">
-        
-        
-          
-          
-          
-
-
-
-<section
-  class="seller-home__banner seller-home__banner_skills"
-  role="region"
-  aria-labelledby="seller-home-skills-banner-heading"
-  data-sh-seller-home-banner
-  
-  
-  style="background-image: url('/aiq-sales-agent/assets/images/skills-banner.jpg');"
-  
->
-  <div class="seller-home__banner-copy">
-    <h2
-      id="seller-home-skills-banner-heading"
-      class="seller-home__banner-title"
-    >Turn your regular tasks into reusable skills</h2>
-    <p class="seller-home__banner-description">Let Agentforce Coworker take on the work, like meeting prep or project updates. Create skills for yourself or the whole team.</p>
-  </div>
-</section>
-
-        
-
-        
-        
+      <div class="page__center">
+        <div class="seller-home__skills-sticky">
+          <header
+            class="page__header"
+            data-sh-skills-header
+          >
+            <h1 class="page__title">Skills</h1>
+            <button
+              type="button"
+              class="slds-button slds-button_neutral seller-home__skills-new"
+              data-sh-skills-create
+            >
+              <svg class="slds-button__icon slds-button__icon_left" aria-hidden="true">
+                <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
+              </svg>
+              Create Skill
+            </button>
+          </header>
+          <div class="seller-home__skills-sticky-bar">
+            
 
 
 <div
-  class="seller-home__skills-toolbar"
+  class="seller-home__scheduled-toolbar seller-home__skills-toolbar"
   data-sh-skills-toolbar
 >
   
   <div
-    class="seller-home__skills-tabs"
+    class="seller-home__scheduled-tabs seller-home__skills-tabs"
     role="radiogroup"
     aria-label="Filter skills by collection"
     data-sh-skills-tabs
@@ -1331,7 +1278,7 @@
       
       <button
         type="button"
-        class="seller-home__skills-tab is-active"
+        class="seller-home__scheduled-tab seller-home__skills-tab is-active"
         role="radio"
         aria-checked="true"
         aria-controls="seller-home-skills-list"
@@ -1340,9 +1287,9 @@
         
         tabindex="0"
       >
-        <span class="seller-home__skills-tab-label">Your Skills</span>
+        <span class="seller-home__scheduled-tab-label seller-home__skills-tab-label">Installed</span>
         <span
-          class="seller-home__skills-tab-count"
+          class="seller-home__scheduled-tab-count seller-home__skills-tab-count"
           data-sh-skills-tab-count
           aria-hidden="true"
         >12</span>
@@ -1430,7 +1377,7 @@
       
       <button
         type="button"
-        class="seller-home__skills-tab"
+        class="seller-home__scheduled-tab seller-home__skills-tab"
         role="radio"
         aria-checked="false"
         aria-controls="seller-home-skills-list"
@@ -1439,9 +1386,9 @@
         
         tabindex="-1"
       >
-        <span class="seller-home__skills-tab-label">Shared with you</span>
+        <span class="seller-home__scheduled-tab-label seller-home__skills-tab-label">Available</span>
         <span
-          class="seller-home__skills-tab-count"
+          class="seller-home__scheduled-tab-count seller-home__skills-tab-count"
           data-sh-skills-tab-count
           aria-hidden="true"
         >1</span>
@@ -1453,20 +1400,6 @@
       
     
   </div>
-
-  
-  <button
-    type="button"
-    class="slds-button slds-button_icon slds-button_icon-border seller-home__skills-filter"
-    data-sh-skills-filter
-    title="Filter skills"
-    aria-label="Filter skills"
-  >
-    <svg class="slds-button__icon" aria-hidden="true">
-      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#filterList"></use>
-    </svg>
-    <span class="slds-assistive-text">Filter skills</span>
-  </button>
 </div>
 
 
@@ -1479,10 +1412,130 @@
   data-sh-skills-status
 ></div>
 
+            
+<div class="c-vk-filter-row">
+  <div class="c-vk-search-wrap">
+    <div class="c-vf-search c-vk-search slds-form-element">
+      <label class="slds-form-element__label slds-no-flex slds-assistive-text" for="skills-filter-search">Search</label>
+      <div class="slds-form-element__control slds-grow slds-input-has-icon slds-input-has-icon_left-right">
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-input__icon slds-input__icon_left slds-icon-text-default">
+          <g>
+            <path d="M496 453L362 320a189 189 0 10-340-92 190 190 0 00298 135l133 133a14 14 0 0021 0l21-21a17 17 0 001-22M210 338a129 129 0 11130-130 129 129 0 01-130 130"></path>
+          </g>
+        </svg>
+        <input class="slds-input" id="skills-filter-search" placeholder="Search..." type="search">
+        <div class="slds-input__icon-group slds-input__icon-group_right"></div>
+      </div>
+    </div>
+  </div>
+  <div class="c-vk-spacer"></div>
+  <div class="c-vk-right-group">
+    <div class="c-ve-filters c-vk-filters">
+      <div class="c-ve-filter-trigger" data-sh-owner-filter>
+        <button type="button" class="c-ve-filter-btn" data-filter="owner" data-sh-owner-btn aria-expanded="false" aria-haspopup="menu">
+          <span>Owner</span>
+          <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_xx-small">
+            <g>
+              <path d="M83 140h354c10 0 17 13 9 22L273 374c-6 8-19 8-25 0L73 162c-7-9-1-22 10-22"></path>
+            </g>
+          </svg>
+        </button>
+        <button type="button" class="c-ve-chip" data-filter="owner" data-sh-owner-chip hidden>
+          <span class="c-ve-chip-label" data-sh-owner-chip-label></span>
+          <span class="c-ve-chip-close" data-filter="owner" data-sh-owner-clear>
+            <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_xx-small">
+              <g>
+                <path d="M310 254l130-131c6-6 6-15 0-21l-20-21c-6-6-15-6-21 0L268 212a10 10 0 01-14 0L123 80c-6-6-15-6-21 0l-21 21c-6 6-6 15 0 21l131 131c4 4 4 10 0 14L80 399c-6 6-6 15 0 21l21 21c6 6 15 6 21 0l131-131a10 10 0 0114 0l131 131c6 6 15 6 21 0l21-21c6-6 6-15 0-21L310 268a10 10 0 010-14"></path>
+              </g>
+            </svg>
+          </span>
+        </button>
+        <div class="c-ve-dropdown" data-sh-owner-menu hidden>
+          <button type="button" class="c-ve-dropdown-item" data-sh-owner-option data-owner-label="Owned by me">
+            <span>Owned by me</span>
+          </button>
+          <button type="button" class="c-ve-dropdown-item" data-sh-owner-option data-owner-label="Shared with me">
+            <span>Shared with me</span>
+          </button>
+        </div>
+      </div>
+      <div class="c-ve-filter-trigger" data-sh-status-filter>
+        <button type="button" class="c-ve-filter-btn" data-filter="status" data-sh-status-btn aria-expanded="false" aria-haspopup="menu">
+          <span>Status</span>
+          <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_xx-small">
+            <g>
+              <path d="M83 140h354c10 0 17 13 9 22L273 374c-6 8-19 8-25 0L73 162c-7-9-1-22 10-22"></path>
+            </g>
+          </svg>
+        </button>
+        <button type="button" class="c-ve-chip" data-filter="status" data-sh-status-chip hidden>
+          <span class="c-ve-chip-label" data-sh-status-chip-label></span>
+          <span class="c-ve-chip-close" data-filter="status" data-sh-status-clear>
+            <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_xx-small">
+              <g>
+                <path d="M310 254l130-131c6-6 6-15 0-21l-20-21c-6-6-15-6-21 0L268 212a10 10 0 01-14 0L123 80c-6-6-15-6-21 0l-21 21c-6 6-6 15 0 21l131 131c4 4 4 10 0 14L80 399c-6 6-6 15 0 21l21 21c6 6 15 6 21 0l131-131a10 10 0 0114 0l131 131c6 6 15 6 21 0l21-21c6-6 6-15 0-21L310 268a10 10 0 010-14"></path>
+              </g>
+            </svg>
+          </span>
+        </button>
+        <div class="c-ve-dropdown" data-sh-status-menu hidden>
+          
+            <button type="button" class="c-ve-dropdown-item" data-sh-status-option data-status-label="Published">
+              <span>Published</span>
+            </button>
+          
+            <button type="button" class="c-ve-dropdown-item" data-sh-status-option data-status-label="Unpublished">
+              <span>Unpublished</span>
+            </button>
+          
+        </div>
+      </div>
+    </div>
+    <div class="c-vk-filter-divider c-vk-sort-divider"></div>
+    <div class="c-ve-filter-trigger c-vf-sort-trigger" data-sh-sort-filter>
+      <button type="button" class="c-ve-filter-btn c-vk-sort-btn" data-sh-sort-btn aria-expanded="false" aria-haspopup="menu">
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+          <g>
+            <path d="M275 160c6-6 6-15 0-21L161 24c-6-6-15-6-21 0L25 139c-6 6-6 15 0 21l21 21c6 6 15 6 21 0l36-36c6-6 17-2 17 7v212c0 8 7 15 15 15h30c8 0 15-8 15-15V152c0-9 11-13 17-7l36 36c6 6 15 6 21 0zm220 200l-21-20c-6-6-15-6-21 0l-36 36c-6 6-17 2-17-7V155c0-8-7-15-15-15h-30c-8 0-15 8-15 15v212c0 9-11 13-17 7l-36-36c-6-6-15-6-21 0l-21 22c-6 6-6 15 0 21l115 115c6 6 15 6 21 0l115-115c5-6 5-16-1-21"></path>
+          </g>
+        </svg>
+        <span>Most Relevant</span>
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_xx-small">
+          <g>
+            <path d="M83 140h354c10 0 17 13 9 22L273 374c-6 8-19 8-25 0L73 162c-7-9-1-22 10-22"></path>
+          </g>
+        </svg>
+      </button>
+      <div class="c-ve-dropdown c-vf-sort-dropdown" data-sh-sort-menu hidden>
+        <div class="c-ve-dropdown-item" data-value="relevance">
+          <span>Most Relevant</span>
+          <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="c-ve-check slds-icon slds-icon-text-default slds-icon_xx-small">
+            <g>
+              <path d="M191 425L26 259c-6-6-6-16 0-22l22-22c6-6 16-6 22 0l124 125a10 10 0 0015 0L452 95c6-6 16-6 22 0l22 22c6 6 6 16 0 22L213 425c-6 7-16 7-22 0"></path>
+            </g>
+          </svg>
+        </div>
+        <div class="c-ve-dropdown-item" data-value="az">
+          <span>A to Z</span>
+        </div>
+        <div class="c-ve-dropdown-item" data-value="modified">
+          <span>Last Modified</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+          </div>
+        </div>
+      <div class="page__inner">
+        
+        
 
         
         <div
           id="seller-home-skills-list"
+          class="c-vk-content-area"
           data-sh-skills-list-region
         >
           
@@ -1504,17 +1557,19 @@
 
 
 <ul
-  class="seller-home__skill-list"
+  class="seller-home__skill-list c-vf-cards c-vf-cards--single"
   data-sh-skill-grid
 >
   
     
       
   
-
   
   
-
+  
+  
+  
+  
   
   
   
@@ -1573,87 +1628,99 @@
     
       
       <a
-        class="seller-home__skill-row"
+        class="skill-card skill-card_library skill-card--no-swap skill-card--vf skill-card--desc-1"
         href="/aiq-sales-agent/u/rohan/skill_detail.html?id=sk-find-prospects"
         aria-label="Open skill, Find Prospects, Hunter"
         data-sh-skill-open
       >
     
-      <div class="seller-home__skill-body">
-        
-        
           
+          <span class="skill-card__vf-title-row">
+            <span class="skill-card__vf-title seller-home__skill-title">Find Prospects</span>
+          </span>
+          <p class="skill-card__vf-desc" title="Build deduplicated, prioritized prospect lists by discovering net-new target accounts, identifying relevant people at known accounts, or both.">Build deduplicated, prioritized prospect lists by discovering net-new target accounts, identifying relevant people at known accounts, or both.</p>
           
-  <span class="seller-home__skill-title-row">
-    <span class="seller-home__skill-title">Find Prospects</span>
-    
-      <span class="slds-badge seller-home__skill-agent-badge seller-home__skill-agent-badge--sales">Hunter</span>
-    
-  </span>
-
-
-          
-          
-          
-            <p class="seller-home__skill-ownership">
+            <p class="skill-card__vf-meta">
+              
+              
+              
+                <span class="skill-card__vf-meta-agent">Hunter</span>
+              
+              
+                <span class="skill-card__vf-meta-sep" aria-hidden="true">·</span>
+              
               
                 <span>Owned by You</span>
               
-              
-                <span class="seller-home__skill-ownership-sep" aria-hidden="true">·</span>
-              
-              
-                <span>Last modified 3 days ago</span>
-              
             </p>
           
-        
-
-        
-        <p
-          class="seller-home__skill-description"
-          title="Build deduplicated, prioritized prospect lists by discovering net-new target accounts, identifying relevant people at known accounts, or both."
-        >Build deduplicated, prioritized prospect lists by discovering net-new target accounts, identifying relevant people at known accounts, or both.</p>
-
-      </div>
-
-      
-      
-        <span class="seller-home__skill-chevron" aria-hidden="true">
-          <svg class="seller-home__skill-chevron-glyph" focusable="false">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
-          </svg>
-        </span>
-      
     </a>
 
-    
       
-      
+      <div class="skill-card__vf-actions">
+        
+          <button
+            type="button"
+            class="c-skill-action"
+            data-tooltip="Use Skill"
+            data-sh-skill-action="use_in_chat"
+            aria-label="Use Find Prospects in a new conversation"
+            title="Use Find Prospects in a new conversation"
+          >
+            <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+              <g>
+                <path d="M140 437V83c0-10 13-17 22-9l212 173c8 6 8 19 0 25L162 447c-9 7-22 1-22-10"></path>
+              </g>
+            </svg>
+            <span class="slds-assistive-text">Use Skill</span>
+          </button>
+        
+        <div class="c-skill-install-toggle">
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <label class="slds-checkbox_toggle slds-grid">
+                <span class="slds-form-element__label slds-assistive-text">Install</span>
+                <input type="checkbox" role="switch" checked>
+                <span class="slds-checkbox_faux_container">
+                  <span class="slds-checkbox_faux"></span>
+                  <span class="slds-checkbox_on"></span>
+                  <span class="slds-checkbox_off"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+          
   
   <div
-    class="seller-home__skill-menu"
+    class="c-skill-vf-overflow"
     data-sh-skill-menu
     data-sh-skill-stop
   >
     <button
       type="button"
-      class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger"
+      class="c-skill-action"
       data-sh-skill-menu-trigger
+      data-tooltip="More actions"
       aria-haspopup="menu"
       aria-expanded="false"
       aria-controls="skill-sk-find-prospects-menu"
       aria-label="More actions for Find Prospects"
       title="More actions"
     >
-      <svg class="slds-button__icon" aria-hidden="true">
-        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-      </svg>
+      
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+          <g>
+            <path d="M200 440c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60"></path>
+          </g>
+        </svg>
+      
       <span class="slds-assistive-text">More actions</span>
     </button>
 
     <div
-      class="seller-home__skill-menu-list"
+      class="seller-home__skill-menu-list slds-dropdown_x-small slds-dropdown_right"
       id="skill-sk-find-prospects-menu"
       role="menu"
       aria-label="Find Prospects actions"
@@ -1776,7 +1843,8 @@
     </div>
   </div>
 
-    
+        
+      </div>
   </li>
 
     
@@ -1784,10 +1852,12 @@
     
       
   
-
   
   
-
+  
+  
+  
+  
   
   
   
@@ -1846,87 +1916,99 @@
     
       
       <a
-        class="seller-home__skill-row"
+        class="skill-card skill-card_library skill-card--no-swap skill-card--vf skill-card--desc-1"
         href="/aiq-sales-agent/u/rohan/skill_detail.html?id=sk-daily-pipeline-snapshot"
         aria-label="Open skill, Pipeline Snapshot, Hunter"
         data-sh-skill-open
       >
     
-      <div class="seller-home__skill-body">
-        
-        
           
+          <span class="skill-card__vf-title-row">
+            <span class="skill-card__vf-title seller-home__skill-title">Pipeline Snapshot</span>
+          </span>
+          <p class="skill-card__vf-desc" title="Get a prioritized daily view of pipeline changes, at-risk deals, and the actions most likely to move them forward.">Get a prioritized daily view of pipeline changes, at-risk deals, and the actions most likely to move them forward.</p>
           
-  <span class="seller-home__skill-title-row">
-    <span class="seller-home__skill-title">Pipeline Snapshot</span>
-    
-      <span class="slds-badge seller-home__skill-agent-badge seller-home__skill-agent-badge--sales">Hunter</span>
-    
-  </span>
-
-
-          
-          
-          
-            <p class="seller-home__skill-ownership">
+            <p class="skill-card__vf-meta">
+              
+              
+              
+                <span class="skill-card__vf-meta-agent">Hunter</span>
+              
+              
+                <span class="skill-card__vf-meta-sep" aria-hidden="true">·</span>
+              
               
                 <span>Owned by You</span>
               
-              
-                <span class="seller-home__skill-ownership-sep" aria-hidden="true">·</span>
-              
-              
-                <span>Last modified yesterday at 4:00 PM</span>
-              
             </p>
           
-        
-
-        
-        <p
-          class="seller-home__skill-description"
-          title="Get a prioritized daily view of pipeline changes, at-risk deals, and the actions most likely to move them forward."
-        >Get a prioritized daily view of pipeline changes, at-risk deals, and the actions most likely to move them forward.</p>
-
-      </div>
-
-      
-      
-        <span class="seller-home__skill-chevron" aria-hidden="true">
-          <svg class="seller-home__skill-chevron-glyph" focusable="false">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
-          </svg>
-        </span>
-      
     </a>
 
-    
       
-      
+      <div class="skill-card__vf-actions">
+        
+          <button
+            type="button"
+            class="c-skill-action"
+            data-tooltip="Use Skill"
+            data-sh-skill-action="use_in_chat"
+            aria-label="Use Pipeline Snapshot in a new conversation"
+            title="Use Pipeline Snapshot in a new conversation"
+          >
+            <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+              <g>
+                <path d="M140 437V83c0-10 13-17 22-9l212 173c8 6 8 19 0 25L162 447c-9 7-22 1-22-10"></path>
+              </g>
+            </svg>
+            <span class="slds-assistive-text">Use Skill</span>
+          </button>
+        
+        <div class="c-skill-install-toggle">
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <label class="slds-checkbox_toggle slds-grid">
+                <span class="slds-form-element__label slds-assistive-text">Install</span>
+                <input type="checkbox" role="switch" checked>
+                <span class="slds-checkbox_faux_container">
+                  <span class="slds-checkbox_faux"></span>
+                  <span class="slds-checkbox_on"></span>
+                  <span class="slds-checkbox_off"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+          
   
   <div
-    class="seller-home__skill-menu"
+    class="c-skill-vf-overflow"
     data-sh-skill-menu
     data-sh-skill-stop
   >
     <button
       type="button"
-      class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger"
+      class="c-skill-action"
       data-sh-skill-menu-trigger
+      data-tooltip="More actions"
       aria-haspopup="menu"
       aria-expanded="false"
       aria-controls="skill-sk-daily-pipeline-snapshot-menu"
       aria-label="More actions for Pipeline Snapshot"
       title="More actions"
     >
-      <svg class="slds-button__icon" aria-hidden="true">
-        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-      </svg>
+      
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+          <g>
+            <path d="M200 440c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60"></path>
+          </g>
+        </svg>
+      
       <span class="slds-assistive-text">More actions</span>
     </button>
 
     <div
-      class="seller-home__skill-menu-list"
+      class="seller-home__skill-menu-list slds-dropdown_x-small slds-dropdown_right"
       id="skill-sk-daily-pipeline-snapshot-menu"
       role="menu"
       aria-label="Pipeline Snapshot actions"
@@ -2049,7 +2131,8 @@
     </div>
   </div>
 
-    
+        
+      </div>
   </li>
 
     
@@ -2057,10 +2140,12 @@
     
       
   
-
   
   
-
+  
+  
+  
+  
   
   
   
@@ -2119,87 +2204,99 @@
     
       
       <a
-        class="seller-home__skill-row"
+        class="skill-card skill-card_library skill-card--no-swap skill-card--vf skill-card--desc-1"
         href="/aiq-sales-agent/u/rohan/skill_detail.html?id=sk-buyer-engage"
         aria-label="Open skill, Buyer Engage, Hunter"
         data-sh-skill-open
       >
     
-      <div class="seller-home__skill-body">
-        
-        
           
+          <span class="skill-card__vf-title-row">
+            <span class="skill-card__vf-title seller-home__skill-title">Buyer Engage</span>
+          </span>
+          <p class="skill-card__vf-desc" title="Monitors buyer activity and drafts personalized outreach when meaningful engagement signals appear.">Monitors buyer activity and drafts personalized outreach when meaningful engagement signals appear.</p>
           
-  <span class="seller-home__skill-title-row">
-    <span class="seller-home__skill-title">Buyer Engage</span>
-    
-      <span class="slds-badge seller-home__skill-agent-badge seller-home__skill-agent-badge--sales">Hunter</span>
-    
-  </span>
-
-
-          
-          
-          
-            <p class="seller-home__skill-ownership">
+            <p class="skill-card__vf-meta">
+              
+              
+              
+                <span class="skill-card__vf-meta-agent">Hunter</span>
+              
+              
+                <span class="skill-card__vf-meta-sep" aria-hidden="true">·</span>
+              
               
                 <span>Owned by You</span>
               
-              
-                <span class="seller-home__skill-ownership-sep" aria-hidden="true">·</span>
-              
-              
-                <span>Last modified yesterday at 10:12 AM</span>
-              
             </p>
           
-        
-
-        
-        <p
-          class="seller-home__skill-description"
-          title="Monitors buyer activity and drafts personalized outreach when meaningful engagement signals appear."
-        >Monitors buyer activity and drafts personalized outreach when meaningful engagement signals appear.</p>
-
-      </div>
-
-      
-      
-        <span class="seller-home__skill-chevron" aria-hidden="true">
-          <svg class="seller-home__skill-chevron-glyph" focusable="false">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
-          </svg>
-        </span>
-      
     </a>
 
-    
       
-      
+      <div class="skill-card__vf-actions">
+        
+          <button
+            type="button"
+            class="c-skill-action"
+            data-tooltip="Use Skill"
+            data-sh-skill-action="use_in_chat"
+            aria-label="Use Buyer Engage in a new conversation"
+            title="Use Buyer Engage in a new conversation"
+          >
+            <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+              <g>
+                <path d="M140 437V83c0-10 13-17 22-9l212 173c8 6 8 19 0 25L162 447c-9 7-22 1-22-10"></path>
+              </g>
+            </svg>
+            <span class="slds-assistive-text">Use Skill</span>
+          </button>
+        
+        <div class="c-skill-install-toggle">
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <label class="slds-checkbox_toggle slds-grid">
+                <span class="slds-form-element__label slds-assistive-text">Install</span>
+                <input type="checkbox" role="switch" checked>
+                <span class="slds-checkbox_faux_container">
+                  <span class="slds-checkbox_faux"></span>
+                  <span class="slds-checkbox_on"></span>
+                  <span class="slds-checkbox_off"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+          
   
   <div
-    class="seller-home__skill-menu"
+    class="c-skill-vf-overflow"
     data-sh-skill-menu
     data-sh-skill-stop
   >
     <button
       type="button"
-      class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger"
+      class="c-skill-action"
       data-sh-skill-menu-trigger
+      data-tooltip="More actions"
       aria-haspopup="menu"
       aria-expanded="false"
       aria-controls="skill-sk-buyer-engage-menu"
       aria-label="More actions for Buyer Engage"
       title="More actions"
     >
-      <svg class="slds-button__icon" aria-hidden="true">
-        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-      </svg>
+      
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+          <g>
+            <path d="M200 440c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60"></path>
+          </g>
+        </svg>
+      
       <span class="slds-assistive-text">More actions</span>
     </button>
 
     <div
-      class="seller-home__skill-menu-list"
+      class="seller-home__skill-menu-list slds-dropdown_x-small slds-dropdown_right"
       id="skill-sk-buyer-engage-menu"
       role="menu"
       aria-label="Buyer Engage actions"
@@ -2322,7 +2419,8 @@
     </div>
   </div>
 
-    
+        
+      </div>
   </li>
 
     
@@ -2330,10 +2428,12 @@
     
       
   
-
   
   
-
+  
+  
+  
+  
   
   
   
@@ -2392,87 +2492,99 @@
     
       
       <a
-        class="seller-home__skill-row"
+        class="skill-card skill-card_library skill-card--no-swap skill-card--vf skill-card--desc-1"
         href="/aiq-sales-agent/u/rohan/skill_detail.html?id=sk-write-sales-emails"
         aria-label="Open skill, Write Sales Emails, Hunter"
         data-sh-skill-open
       >
     
-      <div class="seller-home__skill-body">
-        
-        
           
+          <span class="skill-card__vf-title-row">
+            <span class="skill-card__vf-title seller-home__skill-title">Write Sales Emails</span>
+          </span>
+          <p class="skill-card__vf-desc" title="Drafts personalized, ready-to-review sales emails for selected prospects using account context, deal history, and the seller&#39;s tone.">Drafts personalized, ready-to-review sales emails for selected prospects using account context, deal history, and the seller&#39;s tone.</p>
           
-  <span class="seller-home__skill-title-row">
-    <span class="seller-home__skill-title">Write Sales Emails</span>
-    
-      <span class="slds-badge seller-home__skill-agent-badge seller-home__skill-agent-badge--sales">Hunter</span>
-    
-  </span>
-
-
-          
-          
-          
-            <p class="seller-home__skill-ownership">
+            <p class="skill-card__vf-meta">
+              
+              
+              
+                <span class="skill-card__vf-meta-agent">Hunter</span>
+              
+              
+                <span class="skill-card__vf-meta-sep" aria-hidden="true">·</span>
+              
               
                 <span>Owned by You</span>
               
-              
-                <span class="seller-home__skill-ownership-sep" aria-hidden="true">·</span>
-              
-              
-                <span>Last modified yesterday at 9:20 AM</span>
-              
             </p>
           
-        
-
-        
-        <p
-          class="seller-home__skill-description"
-          title="Drafts personalized, ready-to-review sales emails for selected prospects using account context, deal history, and the seller&#39;s tone."
-        >Drafts personalized, ready-to-review sales emails for selected prospects using account context, deal history, and the seller&#39;s tone.</p>
-
-      </div>
-
-      
-      
-        <span class="seller-home__skill-chevron" aria-hidden="true">
-          <svg class="seller-home__skill-chevron-glyph" focusable="false">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
-          </svg>
-        </span>
-      
     </a>
 
-    
       
-      
+      <div class="skill-card__vf-actions">
+        
+          <button
+            type="button"
+            class="c-skill-action"
+            data-tooltip="Use Skill"
+            data-sh-skill-action="use_in_chat"
+            aria-label="Use Write Sales Emails in a new conversation"
+            title="Use Write Sales Emails in a new conversation"
+          >
+            <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+              <g>
+                <path d="M140 437V83c0-10 13-17 22-9l212 173c8 6 8 19 0 25L162 447c-9 7-22 1-22-10"></path>
+              </g>
+            </svg>
+            <span class="slds-assistive-text">Use Skill</span>
+          </button>
+        
+        <div class="c-skill-install-toggle">
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <label class="slds-checkbox_toggle slds-grid">
+                <span class="slds-form-element__label slds-assistive-text">Install</span>
+                <input type="checkbox" role="switch" checked>
+                <span class="slds-checkbox_faux_container">
+                  <span class="slds-checkbox_faux"></span>
+                  <span class="slds-checkbox_on"></span>
+                  <span class="slds-checkbox_off"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+          
   
   <div
-    class="seller-home__skill-menu"
+    class="c-skill-vf-overflow"
     data-sh-skill-menu
     data-sh-skill-stop
   >
     <button
       type="button"
-      class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger"
+      class="c-skill-action"
       data-sh-skill-menu-trigger
+      data-tooltip="More actions"
       aria-haspopup="menu"
       aria-expanded="false"
       aria-controls="skill-sk-write-sales-emails-menu"
       aria-label="More actions for Write Sales Emails"
       title="More actions"
     >
-      <svg class="slds-button__icon" aria-hidden="true">
-        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-      </svg>
+      
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+          <g>
+            <path d="M200 440c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60"></path>
+          </g>
+        </svg>
+      
       <span class="slds-assistive-text">More actions</span>
     </button>
 
     <div
-      class="seller-home__skill-menu-list"
+      class="seller-home__skill-menu-list slds-dropdown_x-small slds-dropdown_right"
       id="skill-sk-write-sales-emails-menu"
       role="menu"
       aria-label="Write Sales Emails actions"
@@ -2595,7 +2707,8 @@
     </div>
   </div>
 
-    
+        
+      </div>
   </li>
 
     
@@ -2603,10 +2716,12 @@
     
       
   
-
   
   
-
+  
+  
+  
+  
   
   
   
@@ -2665,87 +2780,99 @@
     
       
       <a
-        class="seller-home__skill-row"
+        class="skill-card skill-card_library skill-card--no-swap skill-card--vf skill-card--desc-1"
         href="/aiq-sales-agent/u/rohan/skill_detail.html?id=sk-prepare-for-meetings"
         aria-label="Open skill, Prepare for Meetings, Hunter"
         data-sh-skill-open
       >
     
-      <div class="seller-home__skill-body">
-        
-        
           
+          <span class="skill-card__vf-title-row">
+            <span class="skill-card__vf-title seller-home__skill-title">Prepare for Meetings</span>
+          </span>
+          <p class="skill-card__vf-desc" title="Researches the account, attendees, recent activity, and open opportunities to create a meeting brief.">Researches the account, attendees, recent activity, and open opportunities to create a meeting brief.</p>
           
-  <span class="seller-home__skill-title-row">
-    <span class="seller-home__skill-title">Prepare for Meetings</span>
-    
-      <span class="slds-badge seller-home__skill-agent-badge seller-home__skill-agent-badge--sales">Hunter</span>
-    
-  </span>
-
-
-          
-          
-          
-            <p class="seller-home__skill-ownership">
+            <p class="skill-card__vf-meta">
+              
+              
+              
+                <span class="skill-card__vf-meta-agent">Hunter</span>
+              
+              
+                <span class="skill-card__vf-meta-sep" aria-hidden="true">·</span>
+              
               
                 <span>Owned by You</span>
               
-              
-                <span class="seller-home__skill-ownership-sep" aria-hidden="true">·</span>
-              
-              
-                <span>Last modified last week</span>
-              
             </p>
           
-        
-
-        
-        <p
-          class="seller-home__skill-description"
-          title="Researches the account, attendees, recent activity, and open opportunities to create a meeting brief."
-        >Researches the account, attendees, recent activity, and open opportunities to create a meeting brief.</p>
-
-      </div>
-
-      
-      
-        <span class="seller-home__skill-chevron" aria-hidden="true">
-          <svg class="seller-home__skill-chevron-glyph" focusable="false">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
-          </svg>
-        </span>
-      
     </a>
 
-    
       
-      
+      <div class="skill-card__vf-actions">
+        
+          <button
+            type="button"
+            class="c-skill-action"
+            data-tooltip="Use Skill"
+            data-sh-skill-action="use_in_chat"
+            aria-label="Use Prepare for Meetings in a new conversation"
+            title="Use Prepare for Meetings in a new conversation"
+          >
+            <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+              <g>
+                <path d="M140 437V83c0-10 13-17 22-9l212 173c8 6 8 19 0 25L162 447c-9 7-22 1-22-10"></path>
+              </g>
+            </svg>
+            <span class="slds-assistive-text">Use Skill</span>
+          </button>
+        
+        <div class="c-skill-install-toggle">
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <label class="slds-checkbox_toggle slds-grid">
+                <span class="slds-form-element__label slds-assistive-text">Install</span>
+                <input type="checkbox" role="switch" checked>
+                <span class="slds-checkbox_faux_container">
+                  <span class="slds-checkbox_faux"></span>
+                  <span class="slds-checkbox_on"></span>
+                  <span class="slds-checkbox_off"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+          
   
   <div
-    class="seller-home__skill-menu"
+    class="c-skill-vf-overflow"
     data-sh-skill-menu
     data-sh-skill-stop
   >
     <button
       type="button"
-      class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger"
+      class="c-skill-action"
       data-sh-skill-menu-trigger
+      data-tooltip="More actions"
       aria-haspopup="menu"
       aria-expanded="false"
       aria-controls="skill-sk-prepare-for-meetings-menu"
       aria-label="More actions for Prepare for Meetings"
       title="More actions"
     >
-      <svg class="slds-button__icon" aria-hidden="true">
-        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-      </svg>
+      
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+          <g>
+            <path d="M200 440c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60"></path>
+          </g>
+        </svg>
+      
       <span class="slds-assistive-text">More actions</span>
     </button>
 
     <div
-      class="seller-home__skill-menu-list"
+      class="seller-home__skill-menu-list slds-dropdown_x-small slds-dropdown_right"
       id="skill-sk-prepare-for-meetings-menu"
       role="menu"
       aria-label="Prepare for Meetings actions"
@@ -2868,7 +2995,8 @@
     </div>
   </div>
 
-    
+        
+      </div>
   </li>
 
     
@@ -2876,10 +3004,12 @@
     
       
   
-
   
   
-
+  
+  
+  
+  
   
   
   
@@ -2938,87 +3068,99 @@
     
       
       <a
-        class="seller-home__skill-row"
+        class="skill-card skill-card_library skill-card--no-swap skill-card--vf skill-card--desc-1"
         href="/aiq-sales-agent/u/rohan/skill_detail.html?id=sk-make-powerpoint"
         aria-label="Open skill, Make Powerpoint, CoWorker"
         data-sh-skill-open
       >
     
-      <div class="seller-home__skill-body">
-        
-        
           
+          <span class="skill-card__vf-title-row">
+            <span class="skill-card__vf-title seller-home__skill-title">Make Powerpoint</span>
+          </span>
+          <p class="skill-card__vf-desc" title="Builds a presentation-ready deck from account context, deal history, and the points you want to land.">Builds a presentation-ready deck from account context, deal history, and the points you want to land.</p>
           
-  <span class="seller-home__skill-title-row">
-    <span class="seller-home__skill-title">Make Powerpoint</span>
-    
-      <span class="slds-badge seller-home__skill-agent-badge seller-home__skill-agent-badge--coworker">CoWorker</span>
-    
-  </span>
-
-
-          
-          
-          
-            <p class="seller-home__skill-ownership">
+            <p class="skill-card__vf-meta">
+              
+              
+              
+                <span class="skill-card__vf-meta-agent">CoWorker</span>
+              
+              
+                <span class="skill-card__vf-meta-sep" aria-hidden="true">·</span>
+              
               
                 <span>Owned by You</span>
               
-              
-                <span class="seller-home__skill-ownership-sep" aria-hidden="true">·</span>
-              
-              
-                <span>Last modified today at 9:15 AM</span>
-              
             </p>
           
-        
-
-        
-        <p
-          class="seller-home__skill-description"
-          title="Builds a presentation-ready deck from account context, deal history, and the points you want to land."
-        >Builds a presentation-ready deck from account context, deal history, and the points you want to land.</p>
-
-      </div>
-
-      
-      
-        <span class="seller-home__skill-chevron" aria-hidden="true">
-          <svg class="seller-home__skill-chevron-glyph" focusable="false">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
-          </svg>
-        </span>
-      
     </a>
 
-    
       
-      
+      <div class="skill-card__vf-actions">
+        
+          <button
+            type="button"
+            class="c-skill-action"
+            data-tooltip="Use Skill"
+            data-sh-skill-action="use_in_chat"
+            aria-label="Use Make Powerpoint in a new conversation"
+            title="Use Make Powerpoint in a new conversation"
+          >
+            <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+              <g>
+                <path d="M140 437V83c0-10 13-17 22-9l212 173c8 6 8 19 0 25L162 447c-9 7-22 1-22-10"></path>
+              </g>
+            </svg>
+            <span class="slds-assistive-text">Use Skill</span>
+          </button>
+        
+        <div class="c-skill-install-toggle">
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <label class="slds-checkbox_toggle slds-grid">
+                <span class="slds-form-element__label slds-assistive-text">Install</span>
+                <input type="checkbox" role="switch" checked>
+                <span class="slds-checkbox_faux_container">
+                  <span class="slds-checkbox_faux"></span>
+                  <span class="slds-checkbox_on"></span>
+                  <span class="slds-checkbox_off"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+          
   
   <div
-    class="seller-home__skill-menu"
+    class="c-skill-vf-overflow"
     data-sh-skill-menu
     data-sh-skill-stop
   >
     <button
       type="button"
-      class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger"
+      class="c-skill-action"
       data-sh-skill-menu-trigger
+      data-tooltip="More actions"
       aria-haspopup="menu"
       aria-expanded="false"
       aria-controls="skill-sk-make-powerpoint-menu"
       aria-label="More actions for Make Powerpoint"
       title="More actions"
     >
-      <svg class="slds-button__icon" aria-hidden="true">
-        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-      </svg>
+      
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+          <g>
+            <path d="M200 440c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60"></path>
+          </g>
+        </svg>
+      
       <span class="slds-assistive-text">More actions</span>
     </button>
 
     <div
-      class="seller-home__skill-menu-list"
+      class="seller-home__skill-menu-list slds-dropdown_x-small slds-dropdown_right"
       id="skill-sk-make-powerpoint-menu"
       role="menu"
       aria-label="Make Powerpoint actions"
@@ -3141,7 +3283,8 @@
     </div>
   </div>
 
-    
+        
+      </div>
   </li>
 
     
@@ -3149,10 +3292,12 @@
     
       
   
-
   
   
-
+  
+  
+  
+  
   
   
   
@@ -3209,85 +3354,95 @@
     
       
       <a
-        class="seller-home__skill-row"
+        class="skill-card skill-card_library skill-card--no-swap skill-card--vf skill-card--desc-1"
         href="/aiq-sales-agent/u/rohan/skill_detail.html?id=sk-review-deal-health"
         aria-label="Open skill, Review Deal Health"
         data-sh-skill-open
       >
     
-      <div class="seller-home__skill-body">
-        
-        
           
+          <span class="skill-card__vf-title-row">
+            <span class="skill-card__vf-title seller-home__skill-title">Review Deal Health</span>
+          </span>
+          <p class="skill-card__vf-desc" title="Scores each open opportunity on the signals that predict close, and flags the ones that need attention.">Scores each open opportunity on the signals that predict close, and flags the ones that need attention.</p>
           
-  <span class="seller-home__skill-title-row">
-    <span class="seller-home__skill-title">Review Deal Health</span>
-    
-  </span>
-
-
-          
-          
-          
-            <p class="seller-home__skill-ownership">
+            <p class="skill-card__vf-meta">
+              
+              
+              
+              
               
                 <span>Owned by Caroline Alix</span>
               
-              
-                <span class="seller-home__skill-ownership-sep" aria-hidden="true">·</span>
-              
-              
-                <span>Last modified 2 weeks ago</span>
-              
             </p>
           
-        
-
-        
-        <p
-          class="seller-home__skill-description"
-          title="Scores each open opportunity on the signals that predict close, and flags the ones that need attention."
-        >Scores each open opportunity on the signals that predict close, and flags the ones that need attention.</p>
-
-      </div>
-
-      
-      
-        <span class="seller-home__skill-chevron" aria-hidden="true">
-          <svg class="seller-home__skill-chevron-glyph" focusable="false">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
-          </svg>
-        </span>
-      
     </a>
 
-    
       
-      
+      <div class="skill-card__vf-actions">
+        
+          <button
+            type="button"
+            class="c-skill-action"
+            data-tooltip="Use Skill"
+            data-sh-skill-action="use_in_chat"
+            aria-label="Use Review Deal Health in a new conversation"
+            title="Use Review Deal Health in a new conversation"
+          >
+            <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+              <g>
+                <path d="M140 437V83c0-10 13-17 22-9l212 173c8 6 8 19 0 25L162 447c-9 7-22 1-22-10"></path>
+              </g>
+            </svg>
+            <span class="slds-assistive-text">Use Skill</span>
+          </button>
+        
+        <div class="c-skill-install-toggle">
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <label class="slds-checkbox_toggle slds-grid">
+                <span class="slds-form-element__label slds-assistive-text">Install</span>
+                <input type="checkbox" role="switch" checked>
+                <span class="slds-checkbox_faux_container">
+                  <span class="slds-checkbox_faux"></span>
+                  <span class="slds-checkbox_on"></span>
+                  <span class="slds-checkbox_off"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+          
   
   <div
-    class="seller-home__skill-menu"
+    class="c-skill-vf-overflow"
     data-sh-skill-menu
     data-sh-skill-stop
   >
     <button
       type="button"
-      class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger"
+      class="c-skill-action"
       data-sh-skill-menu-trigger
+      data-tooltip="More actions"
       aria-haspopup="menu"
       aria-expanded="false"
       aria-controls="skill-sk-review-deal-health-menu"
       aria-label="More actions for Review Deal Health"
       title="More actions"
     >
-      <svg class="slds-button__icon" aria-hidden="true">
-        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-      </svg>
+      
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+          <g>
+            <path d="M200 440c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60"></path>
+          </g>
+        </svg>
+      
       <span class="slds-assistive-text">More actions</span>
     </button>
 
     <div
-      class="seller-home__skill-menu-list"
+      class="seller-home__skill-menu-list slds-dropdown_x-small slds-dropdown_right"
       id="skill-sk-review-deal-health-menu"
       role="menu"
       aria-label="Review Deal Health actions"
@@ -3410,7 +3565,8 @@
     </div>
   </div>
 
-    
+        
+      </div>
   </li>
 
     
@@ -3418,10 +3574,12 @@
     
       
   
-
   
   
-
+  
+  
+  
+  
   
   
   
@@ -3478,85 +3636,95 @@
     
       
       <a
-        class="seller-home__skill-row"
+        class="skill-card skill-card_library skill-card--no-swap skill-card--vf skill-card--desc-1"
         href="/aiq-sales-agent/u/rohan/skill_detail.html?id=sk-identify-pipeline-changes"
         aria-label="Open skill, Identify Pipeline Changes"
         data-sh-skill-open
       >
     
-      <div class="seller-home__skill-body">
-        
-        
           
+          <span class="skill-card__vf-title-row">
+            <span class="skill-card__vf-title seller-home__skill-title">Identify Pipeline Changes</span>
+          </span>
+          <p class="skill-card__vf-desc" title="Detects meaningful movement across the seller&#39;s pipeline since the last snapshot.">Detects meaningful movement across the seller&#39;s pipeline since the last snapshot.</p>
           
-  <span class="seller-home__skill-title-row">
-    <span class="seller-home__skill-title">Identify Pipeline Changes</span>
-    
-  </span>
-
-
-          
-          
-          
-            <p class="seller-home__skill-ownership">
+            <p class="skill-card__vf-meta">
+              
+              
+              
+              
               
                 <span>Owned by Caroline Alix</span>
               
-              
-                <span class="seller-home__skill-ownership-sep" aria-hidden="true">·</span>
-              
-              
-                <span>Last modified 2 weeks ago</span>
-              
             </p>
           
-        
-
-        
-        <p
-          class="seller-home__skill-description"
-          title="Detects meaningful movement across the seller&#39;s pipeline since the last snapshot."
-        >Detects meaningful movement across the seller&#39;s pipeline since the last snapshot.</p>
-
-      </div>
-
-      
-      
-        <span class="seller-home__skill-chevron" aria-hidden="true">
-          <svg class="seller-home__skill-chevron-glyph" focusable="false">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
-          </svg>
-        </span>
-      
     </a>
 
-    
       
-      
+      <div class="skill-card__vf-actions">
+        
+          <button
+            type="button"
+            class="c-skill-action"
+            data-tooltip="Use Skill"
+            data-sh-skill-action="use_in_chat"
+            aria-label="Use Identify Pipeline Changes in a new conversation"
+            title="Use Identify Pipeline Changes in a new conversation"
+          >
+            <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+              <g>
+                <path d="M140 437V83c0-10 13-17 22-9l212 173c8 6 8 19 0 25L162 447c-9 7-22 1-22-10"></path>
+              </g>
+            </svg>
+            <span class="slds-assistive-text">Use Skill</span>
+          </button>
+        
+        <div class="c-skill-install-toggle">
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <label class="slds-checkbox_toggle slds-grid">
+                <span class="slds-form-element__label slds-assistive-text">Install</span>
+                <input type="checkbox" role="switch" checked>
+                <span class="slds-checkbox_faux_container">
+                  <span class="slds-checkbox_faux"></span>
+                  <span class="slds-checkbox_on"></span>
+                  <span class="slds-checkbox_off"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+          
   
   <div
-    class="seller-home__skill-menu"
+    class="c-skill-vf-overflow"
     data-sh-skill-menu
     data-sh-skill-stop
   >
     <button
       type="button"
-      class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger"
+      class="c-skill-action"
       data-sh-skill-menu-trigger
+      data-tooltip="More actions"
       aria-haspopup="menu"
       aria-expanded="false"
       aria-controls="skill-sk-identify-pipeline-changes-menu"
       aria-label="More actions for Identify Pipeline Changes"
       title="More actions"
     >
-      <svg class="slds-button__icon" aria-hidden="true">
-        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-      </svg>
+      
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+          <g>
+            <path d="M200 440c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60"></path>
+          </g>
+        </svg>
+      
       <span class="slds-assistive-text">More actions</span>
     </button>
 
     <div
-      class="seller-home__skill-menu-list"
+      class="seller-home__skill-menu-list slds-dropdown_x-small slds-dropdown_right"
       id="skill-sk-identify-pipeline-changes-menu"
       role="menu"
       aria-label="Identify Pipeline Changes actions"
@@ -3679,7 +3847,8 @@
     </div>
   </div>
 
-    
+        
+      </div>
   </li>
 
     
@@ -3687,10 +3856,12 @@
     
       
   
-
   
   
-
+  
+  
+  
+  
   
   
   
@@ -3747,85 +3918,95 @@
     
       
       <a
-        class="seller-home__skill-row"
+        class="skill-card skill-card_library skill-card--no-swap skill-card--vf skill-card--desc-1"
         href="/aiq-sales-agent/u/rohan/skill_detail.html?id=sk-recommend-next-actions"
         aria-label="Open skill, Recommend Next Actions"
         data-sh-skill-open
       >
     
-      <div class="seller-home__skill-body">
-        
-        
           
+          <span class="skill-card__vf-title-row">
+            <span class="skill-card__vf-title seller-home__skill-title">Recommend Next Actions</span>
+          </span>
+          <p class="skill-card__vf-desc" title="Turns the health + change signals into a specific, prioritized next action per high-impact deal.">Turns the health + change signals into a specific, prioritized next action per high-impact deal.</p>
           
-  <span class="seller-home__skill-title-row">
-    <span class="seller-home__skill-title">Recommend Next Actions</span>
-    
-  </span>
-
-
-          
-          
-          
-            <p class="seller-home__skill-ownership">
+            <p class="skill-card__vf-meta">
+              
+              
+              
+              
               
                 <span>Owned by Caroline Alix</span>
               
-              
-                <span class="seller-home__skill-ownership-sep" aria-hidden="true">·</span>
-              
-              
-                <span>Last modified 2 weeks ago</span>
-              
             </p>
           
-        
-
-        
-        <p
-          class="seller-home__skill-description"
-          title="Turns the health + change signals into a specific, prioritized next action per high-impact deal."
-        >Turns the health + change signals into a specific, prioritized next action per high-impact deal.</p>
-
-      </div>
-
-      
-      
-        <span class="seller-home__skill-chevron" aria-hidden="true">
-          <svg class="seller-home__skill-chevron-glyph" focusable="false">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
-          </svg>
-        </span>
-      
     </a>
 
-    
       
-      
+      <div class="skill-card__vf-actions">
+        
+          <button
+            type="button"
+            class="c-skill-action"
+            data-tooltip="Use Skill"
+            data-sh-skill-action="use_in_chat"
+            aria-label="Use Recommend Next Actions in a new conversation"
+            title="Use Recommend Next Actions in a new conversation"
+          >
+            <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+              <g>
+                <path d="M140 437V83c0-10 13-17 22-9l212 173c8 6 8 19 0 25L162 447c-9 7-22 1-22-10"></path>
+              </g>
+            </svg>
+            <span class="slds-assistive-text">Use Skill</span>
+          </button>
+        
+        <div class="c-skill-install-toggle">
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <label class="slds-checkbox_toggle slds-grid">
+                <span class="slds-form-element__label slds-assistive-text">Install</span>
+                <input type="checkbox" role="switch" checked>
+                <span class="slds-checkbox_faux_container">
+                  <span class="slds-checkbox_faux"></span>
+                  <span class="slds-checkbox_on"></span>
+                  <span class="slds-checkbox_off"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+          
   
   <div
-    class="seller-home__skill-menu"
+    class="c-skill-vf-overflow"
     data-sh-skill-menu
     data-sh-skill-stop
   >
     <button
       type="button"
-      class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger"
+      class="c-skill-action"
       data-sh-skill-menu-trigger
+      data-tooltip="More actions"
       aria-haspopup="menu"
       aria-expanded="false"
       aria-controls="skill-sk-recommend-next-actions-menu"
       aria-label="More actions for Recommend Next Actions"
       title="More actions"
     >
-      <svg class="slds-button__icon" aria-hidden="true">
-        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-      </svg>
+      
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+          <g>
+            <path d="M200 440c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60"></path>
+          </g>
+        </svg>
+      
       <span class="slds-assistive-text">More actions</span>
     </button>
 
     <div
-      class="seller-home__skill-menu-list"
+      class="seller-home__skill-menu-list slds-dropdown_x-small slds-dropdown_right"
       id="skill-sk-recommend-next-actions-menu"
       role="menu"
       aria-label="Recommend Next Actions actions"
@@ -3948,7 +4129,8 @@
     </div>
   </div>
 
-    
+        
+      </div>
   </li>
 
     
@@ -3956,10 +4138,12 @@
     
       
   
-
   
   
-
+  
+  
+  
+  
   
   
   
@@ -4018,87 +4202,99 @@
     
       
       <a
-        class="seller-home__skill-row"
+        class="skill-card skill-card_library skill-card--no-swap skill-card--vf skill-card--desc-1"
         href="/aiq-sales-agent/u/rohan/skill_detail.html?id=sk-pipeline-management"
         aria-label="Open skill, Pipeline Management, Hunter"
         data-sh-skill-open
       >
     
-      <div class="seller-home__skill-body">
-        
-        
           
+          <span class="skill-card__vf-title-row">
+            <span class="skill-card__vf-title seller-home__skill-title">Pipeline Management</span>
+          </span>
+          <p class="skill-card__vf-desc" title="Keeps opportunities current and progressing—surfacing deal health, stage movement, and the next actions that move pipeline forward.">Keeps opportunities current and progressing—surfacing deal health, stage movement, and the next actions that move pipeline forward.</p>
           
-  <span class="seller-home__skill-title-row">
-    <span class="seller-home__skill-title">Pipeline Management</span>
-    
-      <span class="slds-badge seller-home__skill-agent-badge seller-home__skill-agent-badge--sales">Hunter</span>
-    
-  </span>
-
-
-          
-          
-          
-            <p class="seller-home__skill-ownership">
+            <p class="skill-card__vf-meta">
+              
+              
+              
+                <span class="skill-card__vf-meta-agent">Hunter</span>
+              
+              
+                <span class="skill-card__vf-meta-sep" aria-hidden="true">·</span>
+              
               
                 <span>Owned by You</span>
               
-              
-                <span class="seller-home__skill-ownership-sep" aria-hidden="true">·</span>
-              
-              
-                <span>Last modified yesterday at 11:40 AM</span>
-              
             </p>
           
-        
-
-        
-        <p
-          class="seller-home__skill-description"
-          title="Keeps opportunities current and progressing—surfacing deal health, stage movement, and the next actions that move pipeline forward."
-        >Keeps opportunities current and progressing—surfacing deal health, stage movement, and the next actions that move pipeline forward.</p>
-
-      </div>
-
-      
-      
-        <span class="seller-home__skill-chevron" aria-hidden="true">
-          <svg class="seller-home__skill-chevron-glyph" focusable="false">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
-          </svg>
-        </span>
-      
     </a>
 
-    
       
-      
+      <div class="skill-card__vf-actions">
+        
+          <button
+            type="button"
+            class="c-skill-action"
+            data-tooltip="Use Skill"
+            data-sh-skill-action="use_in_chat"
+            aria-label="Use Pipeline Management in a new conversation"
+            title="Use Pipeline Management in a new conversation"
+          >
+            <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+              <g>
+                <path d="M140 437V83c0-10 13-17 22-9l212 173c8 6 8 19 0 25L162 447c-9 7-22 1-22-10"></path>
+              </g>
+            </svg>
+            <span class="slds-assistive-text">Use Skill</span>
+          </button>
+        
+        <div class="c-skill-install-toggle">
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <label class="slds-checkbox_toggle slds-grid">
+                <span class="slds-form-element__label slds-assistive-text">Install</span>
+                <input type="checkbox" role="switch" checked>
+                <span class="slds-checkbox_faux_container">
+                  <span class="slds-checkbox_faux"></span>
+                  <span class="slds-checkbox_on"></span>
+                  <span class="slds-checkbox_off"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+          
   
   <div
-    class="seller-home__skill-menu"
+    class="c-skill-vf-overflow"
     data-sh-skill-menu
     data-sh-skill-stop
   >
     <button
       type="button"
-      class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger"
+      class="c-skill-action"
       data-sh-skill-menu-trigger
+      data-tooltip="More actions"
       aria-haspopup="menu"
       aria-expanded="false"
       aria-controls="skill-sk-pipeline-management-menu"
       aria-label="More actions for Pipeline Management"
       title="More actions"
     >
-      <svg class="slds-button__icon" aria-hidden="true">
-        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-      </svg>
+      
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+          <g>
+            <path d="M200 440c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60"></path>
+          </g>
+        </svg>
+      
       <span class="slds-assistive-text">More actions</span>
     </button>
 
     <div
-      class="seller-home__skill-menu-list"
+      class="seller-home__skill-menu-list slds-dropdown_x-small slds-dropdown_right"
       id="skill-sk-pipeline-management-menu"
       role="menu"
       aria-label="Pipeline Management actions"
@@ -4221,7 +4417,8 @@
     </div>
   </div>
 
-    
+        
+      </div>
   </li>
 
     
@@ -4229,10 +4426,12 @@
     
       
   
-
   
   
-
+  
+  
+  
+  
   
   
   
@@ -4291,87 +4490,99 @@
     
       
       <a
-        class="seller-home__skill-row"
+        class="skill-card skill-card_library skill-card--no-swap skill-card--vf skill-card--desc-1"
         href="/aiq-sales-agent/u/rohan/skill_detail.html?id=sk-data-sourcing"
         aria-label="Open skill, Data Sourcing, Hunter"
         data-sh-skill-open
       >
     
-      <div class="seller-home__skill-body">
-        
-        
           
+          <span class="skill-card__vf-title-row">
+            <span class="skill-card__vf-title seller-home__skill-title">Data Sourcing</span>
+          </span>
+          <p class="skill-card__vf-desc" title="Selects connected data providers, enrichment recipes, waterfalls, validation, and fallbacks used to source and verify records.">Selects connected data providers, enrichment recipes, waterfalls, validation, and fallbacks used to source and verify records.</p>
           
-  <span class="seller-home__skill-title-row">
-    <span class="seller-home__skill-title">Data Sourcing</span>
-    
-      <span class="slds-badge seller-home__skill-agent-badge seller-home__skill-agent-badge--sales">Hunter</span>
-    
-  </span>
-
-
-          
-          
-          
-            <p class="seller-home__skill-ownership">
+            <p class="skill-card__vf-meta">
+              
+              
+              
+                <span class="skill-card__vf-meta-agent">Hunter</span>
+              
+              
+                <span class="skill-card__vf-meta-sep" aria-hidden="true">·</span>
+              
               
                 <span>Owned by You</span>
               
-              
-                <span class="seller-home__skill-ownership-sep" aria-hidden="true">·</span>
-              
-              
-                <span>Last modified last week</span>
-              
             </p>
           
-        
-
-        
-        <p
-          class="seller-home__skill-description"
-          title="Selects connected data providers, enrichment recipes, waterfalls, validation, and fallbacks used to source and verify records."
-        >Selects connected data providers, enrichment recipes, waterfalls, validation, and fallbacks used to source and verify records.</p>
-
-      </div>
-
-      
-      
-        <span class="seller-home__skill-chevron" aria-hidden="true">
-          <svg class="seller-home__skill-chevron-glyph" focusable="false">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
-          </svg>
-        </span>
-      
     </a>
 
-    
       
-      
+      <div class="skill-card__vf-actions">
+        
+          <button
+            type="button"
+            class="c-skill-action"
+            data-tooltip="Use Skill"
+            data-sh-skill-action="use_in_chat"
+            aria-label="Use Data Sourcing in a new conversation"
+            title="Use Data Sourcing in a new conversation"
+          >
+            <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+              <g>
+                <path d="M140 437V83c0-10 13-17 22-9l212 173c8 6 8 19 0 25L162 447c-9 7-22 1-22-10"></path>
+              </g>
+            </svg>
+            <span class="slds-assistive-text">Use Skill</span>
+          </button>
+        
+        <div class="c-skill-install-toggle">
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <label class="slds-checkbox_toggle slds-grid">
+                <span class="slds-form-element__label slds-assistive-text">Install</span>
+                <input type="checkbox" role="switch" checked>
+                <span class="slds-checkbox_faux_container">
+                  <span class="slds-checkbox_faux"></span>
+                  <span class="slds-checkbox_on"></span>
+                  <span class="slds-checkbox_off"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+          
   
   <div
-    class="seller-home__skill-menu"
+    class="c-skill-vf-overflow"
     data-sh-skill-menu
     data-sh-skill-stop
   >
     <button
       type="button"
-      class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger"
+      class="c-skill-action"
       data-sh-skill-menu-trigger
+      data-tooltip="More actions"
       aria-haspopup="menu"
       aria-expanded="false"
       aria-controls="skill-sk-data-sourcing-menu"
       aria-label="More actions for Data Sourcing"
       title="More actions"
     >
-      <svg class="slds-button__icon" aria-hidden="true">
-        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-      </svg>
+      
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+          <g>
+            <path d="M200 440c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60"></path>
+          </g>
+        </svg>
+      
       <span class="slds-assistive-text">More actions</span>
     </button>
 
     <div
-      class="seller-home__skill-menu-list"
+      class="seller-home__skill-menu-list slds-dropdown_x-small slds-dropdown_right"
       id="skill-sk-data-sourcing-menu"
       role="menu"
       aria-label="Data Sourcing actions"
@@ -4494,7 +4705,8 @@
     </div>
   </div>
 
-    
+        
+      </div>
   </li>
 
     
@@ -4502,10 +4714,12 @@
     
       
   
-
   
   
-
+  
+  
+  
+  
   
   
   
@@ -4566,87 +4780,99 @@
     
       
       <a
-        class="seller-home__skill-row"
+        class="skill-card skill-card_library skill-card--no-swap skill-card--vf skill-card--desc-1"
         href="/aiq-sales-agent/u/rohan/skill_detail.html?id=sk-account-research-summary"
         aria-label="Open skill, Account Research Summary, CoWorker, Shared by Admin"
         data-sh-skill-open
       >
     
-      <div class="seller-home__skill-body">
-        
-        
           
+          <span class="skill-card__vf-title-row">
+            <span class="skill-card__vf-title seller-home__skill-title">Account Research Summary</span>
+          </span>
+          <p class="skill-card__vf-desc" title="Generates a structured account health summary for CSMs preparing for customer calls, QBRs, or check-ins.">Generates a structured account health summary for CSMs preparing for customer calls, QBRs, or check-ins.</p>
           
-  <span class="seller-home__skill-title-row">
-    <span class="seller-home__skill-title">Account Research Summary</span>
-    
-      <span class="slds-badge seller-home__skill-agent-badge seller-home__skill-agent-badge--coworker">CoWorker</span>
-    
-  </span>
-
-
-          
-          
-          
-            <p class="seller-home__skill-ownership">
+            <p class="skill-card__vf-meta">
+              
+              
+              
+                <span class="skill-card__vf-meta-agent">CoWorker</span>
+              
+              
+                <span class="skill-card__vf-meta-sep" aria-hidden="true">·</span>
+              
               
                 <span>Owned by Admin</span>
               
-              
-                <span class="seller-home__skill-ownership-sep" aria-hidden="true">·</span>
-              
-              
-                <span>Last modified today</span>
-              
             </p>
           
-        
-
-        
-        <p
-          class="seller-home__skill-description"
-          title="Generates a structured account health summary for CSMs preparing for customer calls, QBRs, or check-ins."
-        >Generates a structured account health summary for CSMs preparing for customer calls, QBRs, or check-ins.</p>
-
-      </div>
-
-      
-      
-        <span class="seller-home__skill-chevron" aria-hidden="true">
-          <svg class="seller-home__skill-chevron-glyph" focusable="false">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
-          </svg>
-        </span>
-      
     </a>
 
-    
       
-      
+      <div class="skill-card__vf-actions">
+        
+          <button
+            type="button"
+            class="c-skill-action"
+            data-tooltip="Use Skill"
+            data-sh-skill-action="use_in_chat"
+            aria-label="Use Account Research Summary in a new conversation"
+            title="Use Account Research Summary in a new conversation"
+          >
+            <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+              <g>
+                <path d="M140 437V83c0-10 13-17 22-9l212 173c8 6 8 19 0 25L162 447c-9 7-22 1-22-10"></path>
+              </g>
+            </svg>
+            <span class="slds-assistive-text">Use Skill</span>
+          </button>
+        
+        <div class="c-skill-install-toggle">
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <label class="slds-checkbox_toggle slds-grid">
+                <span class="slds-form-element__label slds-assistive-text">Install</span>
+                <input type="checkbox" role="switch" checked>
+                <span class="slds-checkbox_faux_container">
+                  <span class="slds-checkbox_faux"></span>
+                  <span class="slds-checkbox_on"></span>
+                  <span class="slds-checkbox_off"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+          
   
   <div
-    class="seller-home__skill-menu"
+    class="c-skill-vf-overflow"
     data-sh-skill-menu
     data-sh-skill-stop
   >
     <button
       type="button"
-      class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger"
+      class="c-skill-action"
       data-sh-skill-menu-trigger
+      data-tooltip="More actions"
       aria-haspopup="menu"
       aria-expanded="false"
       aria-controls="skill-sk-account-research-summary-menu"
       aria-label="More actions for Account Research Summary"
       title="More actions"
     >
-      <svg class="slds-button__icon" aria-hidden="true">
-        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-      </svg>
+      
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+          <g>
+            <path d="M200 440c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60"></path>
+          </g>
+        </svg>
+      
       <span class="slds-assistive-text">More actions</span>
     </button>
 
     <div
-      class="seller-home__skill-menu-list"
+      class="seller-home__skill-menu-list slds-dropdown_x-small slds-dropdown_right"
       id="skill-sk-account-research-summary-menu"
       role="menu"
       aria-label="Account Research Summary actions"
@@ -4769,7 +4995,8 @@
     </div>
   </div>
 
-    
+        
+      </div>
   </li>
 
     
@@ -4777,10 +5004,12 @@
     
       
   
-
   
   
-
+  
+  
+  
+  
   
   
   
@@ -4839,87 +5068,99 @@
     
       
       <a
-        class="seller-home__skill-row"
+        class="skill-card skill-card_library skill-card--no-swap skill-card--vf skill-card--desc-1"
         href="/aiq-sales-agent/u/rohan/skill_detail.html?id=sk-draft-proposals"
         aria-label="Open skill, Draft Proposals, Hunter"
         data-sh-skill-open
       >
     
-      <div class="seller-home__skill-body">
-        
-        
           
+          <span class="skill-card__vf-title-row">
+            <span class="skill-card__vf-title seller-home__skill-title">Draft Proposals</span>
+          </span>
+          <p class="skill-card__vf-desc" title="Assembles ready-to-review proposals for selected opportunities using account context, deal history, and approved pricing.">Assembles ready-to-review proposals for selected opportunities using account context, deal history, and approved pricing.</p>
           
-  <span class="seller-home__skill-title-row">
-    <span class="seller-home__skill-title">Draft Proposals</span>
-    
-      <span class="slds-badge seller-home__skill-agent-badge seller-home__skill-agent-badge--sales">Hunter</span>
-    
-  </span>
-
-
-          
-          
-          
-            <p class="seller-home__skill-ownership">
+            <p class="skill-card__vf-meta">
+              
+              
+              
+                <span class="skill-card__vf-meta-agent">Hunter</span>
+              
+              
+                <span class="skill-card__vf-meta-sep" aria-hidden="true">·</span>
+              
               
                 <span>Owned by You</span>
               
-              
-                <span class="seller-home__skill-ownership-sep" aria-hidden="true">·</span>
-              
-              
-                <span>Last modified yesterday at 2:10 PM</span>
-              
             </p>
           
-        
-
-        
-        <p
-          class="seller-home__skill-description"
-          title="Assembles ready-to-review proposals for selected opportunities using account context, deal history, and approved pricing."
-        >Assembles ready-to-review proposals for selected opportunities using account context, deal history, and approved pricing.</p>
-
-      </div>
-
-      
-      
-        <span class="seller-home__skill-chevron" aria-hidden="true">
-          <svg class="seller-home__skill-chevron-glyph" focusable="false">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
-          </svg>
-        </span>
-      
     </a>
 
-    
       
-      
+      <div class="skill-card__vf-actions">
+        
+          <button
+            type="button"
+            class="c-skill-action"
+            data-tooltip="Use Skill"
+            data-sh-skill-action="use_in_chat"
+            aria-label="Use Draft Proposals in a new conversation"
+            title="Use Draft Proposals in a new conversation"
+          >
+            <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+              <g>
+                <path d="M140 437V83c0-10 13-17 22-9l212 173c8 6 8 19 0 25L162 447c-9 7-22 1-22-10"></path>
+              </g>
+            </svg>
+            <span class="slds-assistive-text">Use Skill</span>
+          </button>
+        
+        <div class="c-skill-install-toggle">
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <label class="slds-checkbox_toggle slds-grid">
+                <span class="slds-form-element__label slds-assistive-text">Install</span>
+                <input type="checkbox" role="switch" checked>
+                <span class="slds-checkbox_faux_container">
+                  <span class="slds-checkbox_faux"></span>
+                  <span class="slds-checkbox_on"></span>
+                  <span class="slds-checkbox_off"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+          
   
   <div
-    class="seller-home__skill-menu"
+    class="c-skill-vf-overflow"
     data-sh-skill-menu
     data-sh-skill-stop
   >
     <button
       type="button"
-      class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger"
+      class="c-skill-action"
       data-sh-skill-menu-trigger
+      data-tooltip="More actions"
       aria-haspopup="menu"
       aria-expanded="false"
       aria-controls="skill-sk-draft-proposals-menu"
       aria-label="More actions for Draft Proposals"
       title="More actions"
     >
-      <svg class="slds-button__icon" aria-hidden="true">
-        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-      </svg>
+      
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+          <g>
+            <path d="M200 440c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60"></path>
+          </g>
+        </svg>
+      
       <span class="slds-assistive-text">More actions</span>
     </button>
 
     <div
-      class="seller-home__skill-menu-list"
+      class="seller-home__skill-menu-list slds-dropdown_x-small slds-dropdown_right"
       id="skill-sk-draft-proposals-menu"
       role="menu"
       aria-label="Draft Proposals actions"
@@ -5042,7 +5283,8 @@
     </div>
   </div>
 
-    
+        
+      </div>
   </li>
 
     
@@ -5050,10 +5292,12 @@
     
       
   
-
   
   
-
+  
+  
+  
+  
   
   
   
@@ -5112,87 +5356,99 @@
     
       
       <a
-        class="seller-home__skill-row"
+        class="skill-card skill-card_library skill-card--no-swap skill-card--vf skill-card--desc-1"
         href="/aiq-sales-agent/u/rohan/skill_detail.html?id=sk-weekly-exec-brief"
         aria-label="Open skill, Executive Brief, Hunter"
         data-sh-skill-open
       >
     
-      <div class="seller-home__skill-body">
-        
-        
           
+          <span class="skill-card__vf-title-row">
+            <span class="skill-card__vf-title seller-home__skill-title">Executive Brief</span>
+          </span>
+          <p class="skill-card__vf-desc" title="Summarizes the week&#39;s pipeline movement, wins, and risks into a concise brief ready to share with leadership.">Summarizes the week&#39;s pipeline movement, wins, and risks into a concise brief ready to share with leadership.</p>
           
-  <span class="seller-home__skill-title-row">
-    <span class="seller-home__skill-title">Executive Brief</span>
-    
-      <span class="slds-badge seller-home__skill-agent-badge seller-home__skill-agent-badge--sales">Hunter</span>
-    
-  </span>
-
-
-          
-          
-          
-            <p class="seller-home__skill-ownership">
+            <p class="skill-card__vf-meta">
+              
+              
+              
+                <span class="skill-card__vf-meta-agent">Hunter</span>
+              
+              
+                <span class="skill-card__vf-meta-sep" aria-hidden="true">·</span>
+              
               
                 <span>Owned by You</span>
               
-              
-                <span class="seller-home__skill-ownership-sep" aria-hidden="true">·</span>
-              
-              
-                <span>Last modified last week</span>
-              
             </p>
           
-        
-
-        
-        <p
-          class="seller-home__skill-description"
-          title="Summarizes the week&#39;s pipeline movement, wins, and risks into a concise brief ready to share with leadership."
-        >Summarizes the week&#39;s pipeline movement, wins, and risks into a concise brief ready to share with leadership.</p>
-
-      </div>
-
-      
-      
-        <span class="seller-home__skill-chevron" aria-hidden="true">
-          <svg class="seller-home__skill-chevron-glyph" focusable="false">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
-          </svg>
-        </span>
-      
     </a>
 
-    
       
-      
+      <div class="skill-card__vf-actions">
+        
+          <button
+            type="button"
+            class="c-skill-action"
+            data-tooltip="Use Skill"
+            data-sh-skill-action="use_in_chat"
+            aria-label="Use Executive Brief in a new conversation"
+            title="Use Executive Brief in a new conversation"
+          >
+            <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+              <g>
+                <path d="M140 437V83c0-10 13-17 22-9l212 173c8 6 8 19 0 25L162 447c-9 7-22 1-22-10"></path>
+              </g>
+            </svg>
+            <span class="slds-assistive-text">Use Skill</span>
+          </button>
+        
+        <div class="c-skill-install-toggle">
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <label class="slds-checkbox_toggle slds-grid">
+                <span class="slds-form-element__label slds-assistive-text">Install</span>
+                <input type="checkbox" role="switch" checked>
+                <span class="slds-checkbox_faux_container">
+                  <span class="slds-checkbox_faux"></span>
+                  <span class="slds-checkbox_on"></span>
+                  <span class="slds-checkbox_off"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+          
   
   <div
-    class="seller-home__skill-menu"
+    class="c-skill-vf-overflow"
     data-sh-skill-menu
     data-sh-skill-stop
   >
     <button
       type="button"
-      class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger"
+      class="c-skill-action"
       data-sh-skill-menu-trigger
+      data-tooltip="More actions"
       aria-haspopup="menu"
       aria-expanded="false"
       aria-controls="skill-sk-weekly-exec-brief-menu"
       aria-label="More actions for Executive Brief"
       title="More actions"
     >
-      <svg class="slds-button__icon" aria-hidden="true">
-        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-      </svg>
+      
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+          <g>
+            <path d="M200 440c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60"></path>
+          </g>
+        </svg>
+      
       <span class="slds-assistive-text">More actions</span>
     </button>
 
     <div
-      class="seller-home__skill-menu-list"
+      class="seller-home__skill-menu-list slds-dropdown_x-small slds-dropdown_right"
       id="skill-sk-weekly-exec-brief-menu"
       role="menu"
       aria-label="Executive Brief actions"
@@ -5315,7 +5571,8 @@
     </div>
   </div>
 
-    
+        
+      </div>
   </li>
 
     
@@ -5323,10 +5580,12 @@
     
       
   
-
   
   
-
+  
+  
+  
+  
   
   
   
@@ -5385,87 +5644,99 @@
     
       
       <a
-        class="seller-home__skill-row"
+        class="skill-card skill-card_library skill-card--no-swap skill-card--vf skill-card--desc-1"
         href="/aiq-sales-agent/u/rohan/skill_detail.html?id=sk-account-research"
         aria-label="Open skill, Account Research, Hunter"
         data-sh-skill-open
       >
     
-      <div class="seller-home__skill-body">
-        
-        
           
+          <span class="skill-card__vf-title-row">
+            <span class="skill-card__vf-title seller-home__skill-title">Account Research</span>
+          </span>
+          <p class="skill-card__vf-desc" title="Builds a deep, evidence-backed brief on a target account—firmographics, org structure, buying signals, and relevant news.">Builds a deep, evidence-backed brief on a target account—firmographics, org structure, buying signals, and relevant news.</p>
           
-  <span class="seller-home__skill-title-row">
-    <span class="seller-home__skill-title">Account Research</span>
-    
-      <span class="slds-badge seller-home__skill-agent-badge seller-home__skill-agent-badge--sales">Hunter</span>
-    
-  </span>
-
-
-          
-          
-          
-            <p class="seller-home__skill-ownership">
+            <p class="skill-card__vf-meta">
+              
+              
+              
+                <span class="skill-card__vf-meta-agent">Hunter</span>
+              
+              
+                <span class="skill-card__vf-meta-sep" aria-hidden="true">·</span>
+              
               
                 <span>Owned by You</span>
               
-              
-                <span class="seller-home__skill-ownership-sep" aria-hidden="true">·</span>
-              
-              
-                <span>Last modified 3 days ago</span>
-              
             </p>
           
-        
-
-        
-        <p
-          class="seller-home__skill-description"
-          title="Builds a deep, evidence-backed brief on a target account—firmographics, org structure, buying signals, and relevant news."
-        >Builds a deep, evidence-backed brief on a target account—firmographics, org structure, buying signals, and relevant news.</p>
-
-      </div>
-
-      
-      
-        <span class="seller-home__skill-chevron" aria-hidden="true">
-          <svg class="seller-home__skill-chevron-glyph" focusable="false">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
-          </svg>
-        </span>
-      
     </a>
 
-    
       
-      
+      <div class="skill-card__vf-actions">
+        
+          <button
+            type="button"
+            class="c-skill-action"
+            data-tooltip="Use Skill"
+            data-sh-skill-action="use_in_chat"
+            aria-label="Use Account Research in a new conversation"
+            title="Use Account Research in a new conversation"
+          >
+            <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+              <g>
+                <path d="M140 437V83c0-10 13-17 22-9l212 173c8 6 8 19 0 25L162 447c-9 7-22 1-22-10"></path>
+              </g>
+            </svg>
+            <span class="slds-assistive-text">Use Skill</span>
+          </button>
+        
+        <div class="c-skill-install-toggle">
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <label class="slds-checkbox_toggle slds-grid">
+                <span class="slds-form-element__label slds-assistive-text">Install</span>
+                <input type="checkbox" role="switch" checked>
+                <span class="slds-checkbox_faux_container">
+                  <span class="slds-checkbox_faux"></span>
+                  <span class="slds-checkbox_on"></span>
+                  <span class="slds-checkbox_off"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+          
   
   <div
-    class="seller-home__skill-menu"
+    class="c-skill-vf-overflow"
     data-sh-skill-menu
     data-sh-skill-stop
   >
     <button
       type="button"
-      class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger"
+      class="c-skill-action"
       data-sh-skill-menu-trigger
+      data-tooltip="More actions"
       aria-haspopup="menu"
       aria-expanded="false"
       aria-controls="skill-sk-account-research-menu"
       aria-label="More actions for Account Research"
       title="More actions"
     >
-      <svg class="slds-button__icon" aria-hidden="true">
-        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-      </svg>
+      
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+          <g>
+            <path d="M200 440c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60"></path>
+          </g>
+        </svg>
+      
       <span class="slds-assistive-text">More actions</span>
     </button>
 
     <div
-      class="seller-home__skill-menu-list"
+      class="seller-home__skill-menu-list slds-dropdown_x-small slds-dropdown_right"
       id="skill-sk-account-research-menu"
       role="menu"
       aria-label="Account Research actions"
@@ -5588,7 +5859,8 @@
     </div>
   </div>
 
-    
+        
+      </div>
   </li>
 
     
@@ -5596,10 +5868,12 @@
     
       
   
-
   
   
-
+  
+  
+  
+  
   
   
   
@@ -5658,87 +5932,99 @@
     
       
       <a
-        class="seller-home__skill-row"
+        class="skill-card skill-card_library skill-card--no-swap skill-card--vf skill-card--desc-1"
         href="/aiq-sales-agent/u/rohan/skill_detail.html?id=sk-weekly-top-3"
         aria-label="Open skill, Quota Health Check, Hunter"
         data-sh-skill-open
       >
     
-      <div class="seller-home__skill-body">
-        
-        
           
+          <span class="skill-card__vf-title-row">
+            <span class="skill-card__vf-title seller-home__skill-title">Quota Health Check</span>
+          </span>
+          <p class="skill-card__vf-desc" title="Distills everything happening across the seller&#39;s book into the three things that matter most this week.">Distills everything happening across the seller&#39;s book into the three things that matter most this week.</p>
           
-  <span class="seller-home__skill-title-row">
-    <span class="seller-home__skill-title">Quota Health Check</span>
-    
-      <span class="slds-badge seller-home__skill-agent-badge seller-home__skill-agent-badge--sales">Hunter</span>
-    
-  </span>
-
-
-          
-          
-          
-            <p class="seller-home__skill-ownership">
+            <p class="skill-card__vf-meta">
+              
+              
+              
+                <span class="skill-card__vf-meta-agent">Hunter</span>
+              
+              
+                <span class="skill-card__vf-meta-sep" aria-hidden="true">·</span>
+              
               
                 <span>Owned by You</span>
               
-              
-                <span class="seller-home__skill-ownership-sep" aria-hidden="true">·</span>
-              
-              
-                <span>Last modified yesterday at 8:00 AM</span>
-              
             </p>
           
-        
-
-        
-        <p
-          class="seller-home__skill-description"
-          title="Distills everything happening across the seller&#39;s book into the three things that matter most this week."
-        >Distills everything happening across the seller&#39;s book into the three things that matter most this week.</p>
-
-      </div>
-
-      
-      
-        <span class="seller-home__skill-chevron" aria-hidden="true">
-          <svg class="seller-home__skill-chevron-glyph" focusable="false">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
-          </svg>
-        </span>
-      
     </a>
 
-    
       
-      
+      <div class="skill-card__vf-actions">
+        
+          <button
+            type="button"
+            class="c-skill-action"
+            data-tooltip="Use Skill"
+            data-sh-skill-action="use_in_chat"
+            aria-label="Use Quota Health Check in a new conversation"
+            title="Use Quota Health Check in a new conversation"
+          >
+            <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+              <g>
+                <path d="M140 437V83c0-10 13-17 22-9l212 173c8 6 8 19 0 25L162 447c-9 7-22 1-22-10"></path>
+              </g>
+            </svg>
+            <span class="slds-assistive-text">Use Skill</span>
+          </button>
+        
+        <div class="c-skill-install-toggle">
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <label class="slds-checkbox_toggle slds-grid">
+                <span class="slds-form-element__label slds-assistive-text">Install</span>
+                <input type="checkbox" role="switch" checked>
+                <span class="slds-checkbox_faux_container">
+                  <span class="slds-checkbox_faux"></span>
+                  <span class="slds-checkbox_on"></span>
+                  <span class="slds-checkbox_off"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+          
   
   <div
-    class="seller-home__skill-menu"
+    class="c-skill-vf-overflow"
     data-sh-skill-menu
     data-sh-skill-stop
   >
     <button
       type="button"
-      class="slds-button slds-button_icon slds-button_icon-bare seller-home__skill-menu-trigger"
+      class="c-skill-action"
       data-sh-skill-menu-trigger
+      data-tooltip="More actions"
       aria-haspopup="menu"
       aria-expanded="false"
       aria-controls="skill-sk-weekly-top-3-menu"
       aria-label="More actions for Quota Health Check"
       title="More actions"
     >
-      <svg class="slds-button__icon" aria-hidden="true">
-        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#threedots_vertical"></use>
-      </svg>
+      
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 520 520" class="slds-icon slds-icon-text-default slds-icon_x-small">
+          <g>
+            <path d="M200 440c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60m0-180c0-33 27-60 60-60s60 27 60 60-27 60-60 60-60-27-60-60"></path>
+          </g>
+        </svg>
+      
       <span class="slds-assistive-text">More actions</span>
     </button>
 
     <div
-      class="seller-home__skill-menu-list"
+      class="seller-home__skill-menu-list slds-dropdown_x-small slds-dropdown_right"
       id="skill-sk-weekly-top-3-menu"
       role="menu"
       aria-label="Quota Health Check actions"
@@ -5861,7 +6147,8 @@
     </div>
   </div>
 
-    
+        
+      </div>
   </li>
 
     
@@ -5888,6 +6175,7 @@
 </div>
 
         </div>
+      </div>
       </div>
     </section>
   </div>
@@ -6375,53 +6663,6 @@
 
 
 
-
-
-
-
-
-
-
-  <nav
-    class="proto-version-switcher"
-    aria-label="Prototype design version"
-    data-proto-version-switcher
-  >
-    
-      <span class="proto-version-switcher__label" aria-hidden="true">
-        Design
-      </span>
-    
-
-    <ul class="proto-version-switcher__list">
-      
-        
-        <li class="proto-version-switcher__item">
-          
-            <span
-              class="proto-version-switcher__option proto-version-switcher__option--current"
-              aria-current="page"
-            >Version A</span>
-          
-        </li>
-      
-        
-        <li class="proto-version-switcher__item">
-          
-            
-            <a
-              class="proto-version-switcher__option"
-              href="/aiq-sales-agent/u/rohan/skills-v2.html"
-            >Version B</a>
-          
-        </li>
-      
-    </ul>
-  </nav>
-
-
-
-
   
   
 
@@ -6533,7 +6774,7 @@
     data-tool-category="crm"
     
     type="button"
-    data-tool-id="gong"
+    data-tool-id="momentum"
     data-panel-type="conversations"
     
   >
@@ -6543,13 +6784,13 @@
         
         
         <span class="tool-icon-container tool-icon-container_image">
-          <img class="tool-icon-img" src="/aiq-sales-agent/assets/images/source_icons/conn_gong.png" alt="" />
-          <span class="slds-assistive-text">Gong</span>
+          <img class="tool-icon-img" src="/aiq-sales-agent/assets/images/source_icons/source_momentum.svg" alt="" />
+          <span class="slds-assistive-text">Momentum</span>
         </span>
         
       </div>
       <div class="tool-card__text">
-        <p class="tool-title">Gong</p>
+        <p class="tool-title">Momentum</p>
         <p class="tool-description">Call recordings, transcripts, and conversation insights</p>
       </div>
     </div>
@@ -8255,12 +8496,11 @@
 <div class="slds-backdrop" id="morphBackdrop" role="presentation"></div>
 
   <script type="application/json" id="sh-tools-config">
-    {"tools":[{"id":"gong","name":"Gong","description":"Call recordings, transcripts, and conversation insights","category":"crm","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_gong.png","iconLabel":"Gong","state":"added","panelType":"conversations"},{"id":"zoominfo_lookup","name":"ZoomInfo","description":"Company, Contacts, Intent, Signals","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_zoominfo.png","iconLabel":"ZoomInfo","state":"setup","panelType":"zoominfo"},{"id":"6sense","name":"6sense","description":"Predictive buying stages, account readiness, keyword intent, and anonymous visitor identification","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_6sense.png","iconLabel":"6sense","state":"added","panelType":"detail"},{"id":"demandbase","name":"Demandbase","description":"Company, Contacts, Intent, Signals","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_demandbase.png","iconLabel":"Demandbase","state":"added","panelType":"detail"},{"id":"apollo","name":"Apollo","description":"Company, Contacts, Intent, Signals","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_apollo.png","iconLabel":"Apollo","state":"setup","panelType":"detail"},{"id":"salesintel","name":"SalesIntel","description":"Company, Contacts, Intent, Signals","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_salesintel.png","iconLabel":"SalesIntel","state":"added","panelType":"detail"},{"id":"moody_s","name":"Moody's","description":"Private-company financials, ownership, corporate hierarchies, and M&A data","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_moodys.png","iconLabel":"Moody's","state":"added","panelType":"detail"},{"id":"g2","name":"G2","description":"Software category research, product-page views, and competitor-comparison intent","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_g2.png","iconLabel":"G2","state":"setup","panelType":"detail"},{"id":"bombora","name":"Bombora","description":"Broad-web B2B topic intent","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_bombora.png","iconLabel":"Bombora","state":"setup","panelType":"detail"},{"id":"cognism","name":"Cognism","description":"Phone-verified contacts, European coverage, and compliance controls","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_cognism.png","iconLabel":"Cognism","state":"added","panelType":"detail"},{"id":"crossbeam","name":"Crossbeam","description":"Partner overlaps, shared customers, and co-selling signals","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_crossbeam.png","iconLabel":"Crossbeam","state":"added","panelType":"detail"},{"id":"boardex","name":"BoardEx","description":"Executive and board profiles, leadership changes, and relationship paths","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_boardex.png","iconLabel":"BoardEx","state":"added","panelType":"detail"},{"id":"dow_jones_factiva","name":"Dow Jones Factiva","description":"Licensed global news and company-event monitoring","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_dow_jones.png","iconLabel":"Dow Jones Factiva","state":"added","panelType":"detail"},{"id":"outreach","name":"Outreach","description":"Sequences, engagement history, and reply activity","category":"crm","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_outreach.png","iconLabel":"Outreach","state":"added","panelType":"detail"},{"id":"builtwith","name":"BuiltWith","description":"Website technologies, technology changes, and installation history","category":"tech","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_builtwith.png","iconLabel":"BuiltWith","state":"setup","panelType":"detail"},{"id":"predictleads","name":"PredictLeads","description":"Hiring, funding, technology, product, customer, and company-event signals","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_predictleads.png","iconLabel":"PredictLeads","state":"added","panelType":"detail"},{"id":"informa_techtarget","name":"Informa TechTarget","description":"Named-person enterprise-technology research and purchase intent","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_techtarget.png","iconLabel":"Informa TechTarget","state":"added","panelType":"detail"},{"id":"veridion","name":"Veridion","description":"Company products, services, locations, and business-model classifications","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_veridion.png","iconLabel":"Veridion","state":"added","panelType":"detail"},{"id":"harmonic","name":"Harmonic","description":"Emerging startups, founders, teams, network paths, and early-growth signals","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_harmonic.png","iconLabel":"Harmonic","state":"added","panelType":"detail"},{"id":"salesloft","name":"Salesloft","description":"Cadences, engagement history, and reply activity","category":"crm","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_salesloft.png","iconLabel":"Salesloft","state":"added","panelType":"detail"},{"id":"people_data_labs","name":"People Data Labs","description":"People, employment, company, and IP data","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_people_data_labs.png","iconLabel":"People Data Labs","state":"added","panelType":"detail"},{"id":"d_b","name":"D&B","description":"Verified business identities, legal entities, subsidiaries, and global corporate hierarchies","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_dun_bradstreet.png","iconLabel":"D&B","state":"added","panelType":"detail"},{"id":"crunchbase","name":"Crunchbase","description":"Private companies, funding, acquisitions, layoffs, and growth signals","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_crunchbase.png","iconLabel":"Crunchbase","state":"setup","panelType":"detail"},{"id":"enigma","name":"Enigma","description":"US SMB identities, revenue, card transactions, and growth signals","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_enigma.png","iconLabel":"Enigma","state":"added","panelType":"detail"},{"id":"exa","name":"Exa","description":"Live web search, crawling, monitoring, and agent-driven research","category":"tech","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_exa.png","iconLabel":"Exa","state":"added","panelType":"detail"},{"id":"pitchbook","name":"PitchBook","description":"Private-capital deals, investors, funds, PE ownership, debt, and professionals","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_pitchbook.png","iconLabel":"PitchBook","state":"added","panelType":"detail"},{"id":"similarweb","name":"SimilarWeb","description":"Website and app traffic, audiences, acquisition channels, and digital growth","category":"tech","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_similarweb.png","iconLabel":"SimilarWeb","state":"added","panelType":"detail"},{"id":"s_p_global","name":"S&P Global","description":"Company financials, transactions, relationships, filings, and earnings transcripts","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_sp_global.png","iconLabel":"S&P Global","state":"added","panelType":"detail"},{"id":"live_data_technologies","name":"Live Data Technologies","description":"Employment verification and real-time job-change data","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_live_data.png","iconLabel":"Live Data Technologies","state":"added","panelType":"detail"},{"id":"the_org","name":"The Org","description":"Org charts, reporting lines, roles, and positions","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_the_org.png","iconLabel":"The Org","state":"added","panelType":"detail"},{"id":"coresignal","name":"CoreSignal","description":"Employee, company, and job-posting data","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_coresignal.png","iconLabel":"CoreSignal","state":"added","panelType":"detail"},{"id":"linkedin_sales_navigator","name":"LinkedIn Sales Navigator","description":"Professional profiles, current roles, job changes, mutual connections, and relationship maps","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_linkedin.png","iconLabel":"LinkedIn Sales Navigator","state":"added","panelType":"detail"},{"id":"hg_insights","name":"HG Insights","description":"Technographics, cloud usage, IT spending, and technology-contract intelligence","category":"tech","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_hg_insights.png","iconLabel":"HG Insights","state":"added","panelType":"detail"},{"id":"usergems","name":"UserGems","description":"Best Context data and signals","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_usergems.png","iconLabel":"UserGems","state":"added","panelType":"detail"}]}
+    {"tools":[{"id":"momentum","name":"Momentum","description":"Call recordings, transcripts, and conversation insights","category":"crm","iconSrc":"/aiq-sales-agent/assets/images/source_icons/source_momentum.svg","iconLabel":"Momentum","state":"added","panelType":"conversations"},{"id":"zoominfo_lookup","name":"ZoomInfo","description":"Company, Contacts, Intent, Signals","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_zoominfo.png","iconLabel":"ZoomInfo","state":"setup","panelType":"zoominfo"},{"id":"6sense","name":"6sense","description":"Predictive buying stages, account readiness, keyword intent, and anonymous visitor identification","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_6sense.png","iconLabel":"6sense","state":"added","panelType":"detail"},{"id":"demandbase","name":"Demandbase","description":"Company, Contacts, Intent, Signals","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_demandbase.png","iconLabel":"Demandbase","state":"added","panelType":"detail"},{"id":"apollo","name":"Apollo","description":"Company, Contacts, Intent, Signals","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_apollo.png","iconLabel":"Apollo","state":"setup","panelType":"detail"},{"id":"salesintel","name":"SalesIntel","description":"Company, Contacts, Intent, Signals","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_salesintel.png","iconLabel":"SalesIntel","state":"added","panelType":"detail"},{"id":"moody_s","name":"Moody's","description":"Private-company financials, ownership, corporate hierarchies, and M&A data","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_moodys.png","iconLabel":"Moody's","state":"added","panelType":"detail"},{"id":"g2","name":"G2","description":"Software category research, product-page views, and competitor-comparison intent","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_g2.png","iconLabel":"G2","state":"setup","panelType":"detail"},{"id":"bombora","name":"Bombora","description":"Broad-web B2B topic intent","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_bombora.png","iconLabel":"Bombora","state":"setup","panelType":"detail"},{"id":"cognism","name":"Cognism","description":"Phone-verified contacts, European coverage, and compliance controls","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_cognism.png","iconLabel":"Cognism","state":"added","panelType":"detail"},{"id":"crossbeam","name":"Crossbeam","description":"Partner overlaps, shared customers, and co-selling signals","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_crossbeam.png","iconLabel":"Crossbeam","state":"added","panelType":"detail"},{"id":"boardex","name":"BoardEx","description":"Executive and board profiles, leadership changes, and relationship paths","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_boardex.png","iconLabel":"BoardEx","state":"added","panelType":"detail"},{"id":"dow_jones_factiva","name":"Dow Jones Factiva","description":"Licensed global news and company-event monitoring","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_dow_jones.png","iconLabel":"Dow Jones Factiva","state":"added","panelType":"detail"},{"id":"outreach","name":"Outreach","description":"Sequences, engagement history, and reply activity","category":"crm","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_outreach.png","iconLabel":"Outreach","state":"added","panelType":"detail"},{"id":"builtwith","name":"BuiltWith","description":"Website technologies, technology changes, and installation history","category":"tech","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_builtwith.png","iconLabel":"BuiltWith","state":"setup","panelType":"detail"},{"id":"predictleads","name":"PredictLeads","description":"Hiring, funding, technology, product, customer, and company-event signals","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_predictleads.png","iconLabel":"PredictLeads","state":"added","panelType":"detail"},{"id":"informa_techtarget","name":"Informa TechTarget","description":"Named-person enterprise-technology research and purchase intent","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_techtarget.png","iconLabel":"Informa TechTarget","state":"added","panelType":"detail"},{"id":"veridion","name":"Veridion","description":"Company products, services, locations, and business-model classifications","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_veridion.png","iconLabel":"Veridion","state":"added","panelType":"detail"},{"id":"harmonic","name":"Harmonic","description":"Emerging startups, founders, teams, network paths, and early-growth signals","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_harmonic.png","iconLabel":"Harmonic","state":"added","panelType":"detail"},{"id":"salesloft","name":"Salesloft","description":"Cadences, engagement history, and reply activity","category":"crm","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_salesloft.png","iconLabel":"Salesloft","state":"added","panelType":"detail"},{"id":"people_data_labs","name":"People Data Labs","description":"People, employment, company, and IP data","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_people_data_labs.png","iconLabel":"People Data Labs","state":"added","panelType":"detail"},{"id":"d_b","name":"D&B","description":"Verified business identities, legal entities, subsidiaries, and global corporate hierarchies","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_dun_bradstreet.png","iconLabel":"D&B","state":"added","panelType":"detail"},{"id":"crunchbase","name":"Crunchbase","description":"Private companies, funding, acquisitions, layoffs, and growth signals","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_crunchbase.png","iconLabel":"Crunchbase","state":"setup","panelType":"detail"},{"id":"enigma","name":"Enigma","description":"US SMB identities, revenue, card transactions, and growth signals","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_enigma.png","iconLabel":"Enigma","state":"added","panelType":"detail"},{"id":"exa","name":"Exa","description":"Live web search, crawling, monitoring, and agent-driven research","category":"tech","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_exa.png","iconLabel":"Exa","state":"added","panelType":"detail"},{"id":"pitchbook","name":"PitchBook","description":"Private-capital deals, investors, funds, PE ownership, debt, and professionals","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_pitchbook.png","iconLabel":"PitchBook","state":"added","panelType":"detail"},{"id":"similarweb","name":"SimilarWeb","description":"Website and app traffic, audiences, acquisition channels, and digital growth","category":"tech","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_similarweb.png","iconLabel":"SimilarWeb","state":"added","panelType":"detail"},{"id":"s_p_global","name":"S&P Global","description":"Company financials, transactions, relationships, filings, and earnings transcripts","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_sp_global.png","iconLabel":"S&P Global","state":"added","panelType":"detail"},{"id":"live_data_technologies","name":"Live Data Technologies","description":"Employment verification and real-time job-change data","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_live_data.png","iconLabel":"Live Data Technologies","state":"added","panelType":"detail"},{"id":"the_org","name":"The Org","description":"Org charts, reporting lines, roles, and positions","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_the_org.png","iconLabel":"The Org","state":"added","panelType":"detail"},{"id":"coresignal","name":"CoreSignal","description":"Employee, company, and job-posting data","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_coresignal.png","iconLabel":"CoreSignal","state":"added","panelType":"detail"},{"id":"linkedin_sales_navigator","name":"LinkedIn Sales Navigator","description":"Professional profiles, current roles, job changes, mutual connections, and relationship maps","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_linkedin.png","iconLabel":"LinkedIn Sales Navigator","state":"added","panelType":"detail"},{"id":"hg_insights","name":"HG Insights","description":"Technographics, cloud usage, IT spending, and technology-contract intelligence","category":"tech","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_hg_insights.png","iconLabel":"HG Insights","state":"added","panelType":"detail"},{"id":"usergems","name":"UserGems","description":"Best Context data and signals","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_usergems.png","iconLabel":"UserGems","state":"added","panelType":"detail"}]}
   </script>
 
   </main>
   <script src="/aiq-sales-agent/scripts/user_switcher.js"></script>
-  <script src="/aiq-sales-agent/scripts/setup_menu.js"></script>
   <script src="/aiq-sales-agent/scripts/app.js"></script>
   
   <script src="/aiq-sales-agent/scripts/tab_nav.js"></script>
@@ -8278,7 +8518,5 @@
   <script src="/aiq-sales-agent/scripts/vendor/gsap.min.js"></script>
   <script type="module" src="/aiq-sales-agent/scripts/tools_modal.js"></script>
 
-  
-  <script src="/aiq-sales-agent/scripts/settings.js"></script>
 </body>
 </html>

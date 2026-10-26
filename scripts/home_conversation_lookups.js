@@ -5,10 +5,10 @@
 // the cadence card's header. Two modules from hunter's proto, merged
 // into one file because they only ever ship together:
 //
-//   initLookups()   protos/BB - AOP → src/aiq-sales-agent/scripts/app.js, lines 59–551.
+//   initLookups()   protos/BB - AOP → src/scripts/app.js, lines 59–551.
 //                   The generic SLDS lookup: typeahead, option list,
 //                   keyboard nav, the selected chip, and clearing it.
-//   initPopover()   protos/BB - AOP → src/aiq-sales-agent/scripts/cadence-popover.js.
+//   initPopover()   protos/BB - AOP → src/scripts/cadence-popover.js.
 //                   The cadence field's popover: per-panel typeahead,
 //                   click-to-pick, and the Generate prompt's Confirm.
 //

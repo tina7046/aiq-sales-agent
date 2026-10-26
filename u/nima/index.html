@@ -25,7 +25,7 @@
 <style>
 	/* Page-level shader styling used to live here, back when the canvas was
      mounted on a fixed `#bg` behind the whole shell. It's now hosted by
-     `.seller-home__god-rays` inside `.seller-home`, exactly as in
+     `.seller-home__shader` inside `.seller-home`, exactly as in
      hunter-main-main, so home.css owns the host geometry (overscan, min-height,
      stacking) and the white fallback surface underneath it. Keeping the two
      prototypes on the same host is what lets the tuned numbers mean the same
@@ -217,17 +217,14 @@
 
   
   <script>
-    window.SH_USERS = {"defaultUserId":"rohan","users":[{"id":"rohan","name":"Rohan","title":"Account Executive","role":"rep","avatar":"/aiq-sales-agent/assets/images/avatar2.jpg"},{"id":"nima","name":"Nima","title":"Admin","role":"admin","avatar":"/aiq-sales-agent/assets/images/avatar-nima.png"}]};
-    window.SH_USER = {"id":"nima","name":"Nima","title":"Admin","role":"admin","avatar":"/aiq-sales-agent/assets/images/avatar-nima.png"};
+    window.SH_USERS = {"defaultUserId":"rohan","users":[{"id":"rohan","name":"Rohan","title":"Account Executive","avatar":"/aiq-sales-agent/assets/images/avatar2.jpg"},{"id":"nima","name":"Nima","title":"Admin","avatar":"/aiq-sales-agent/assets/images/avatar-nima.png"}]};
+    window.SH_USER = {"id":"nima","name":"Nima","title":"Admin","avatar":"/aiq-sales-agent/assets/images/avatar-nima.png"};
   </script>
-  
-  <script>window.SH_BASE = '/aiq-sales-agent'</script>
   <script src="/aiq-sales-agent/scripts/sh_user.js"></script>
-  
-  <script src="/aiq-sales-agent/scripts/onboarding_gate.js"></script>
 </head>
-<body>
+<body class="">
 
+  
   <header class="slds-global-header_container">
       <a href="javascript:void(0);" class="slds-assistive-text slds-assistive-text_focus">Skip to Navigation</a>
       <a href="javascript:void(0);" class="slds-assistive-text slds-assistive-text_focus">Skip to Main Content</a>
@@ -235,9 +232,15 @@
         <div class="slds-global-header__item">
           <div class="slds-global-header__logo">
             
-            <a href="/aiq-sales-agent/u/nima/index.html?reset=1" title="Salesforce — restart demo">
-              <img src="/aiq-sales-agent/assets/images/logo-noname.svg" style="width: 12.5rem;height: 1.75rem;background-size: contain;background-repeat: no-repeat;background-position: left center;"alt="Salesforce Logo" />
-            </a>
+            <button
+              type="button"
+              class="sh-header-logo"
+              data-sh-header-logo
+              data-sh-nav-href="/aiq-sales-agent/u/nima/index.html?reset=1"
+              title="Salesforce — restart demo"
+            >
+              <img src="/aiq-sales-agent/assets/images/logo-noname.svg" style="width: 12.5rem;height: 1.75rem;background-size: contain;background-repeat: no-repeat;background-position: left center;" alt="Salesforce Logo" />
+            </button>
           </div>
         </div>
         <div class="slds-global-header__item slds-global-header__item_search">
@@ -508,62 +511,13 @@
               </div>
             </li>
             <li class="slds-global-actions__item">
-              
-              <div
-                class="slds-dropdown-trigger slds-dropdown-trigger_click sh-setup-menu"
-                data-sh-setup-menu
-              >
-                <button
-                  class="slds-button slds-button_icon slds-button_icon slds-button_icon-container slds-button_icon-small slds-global-actions__setup slds-global-actions__item-action"
-                  type="button"
-                  title="Setup"
-                  aria-haspopup="menu"
-                  aria-expanded="false"
-                  aria-controls="sh-setup-menu"
-                  data-sh-setup-trigger
-                >
+              <div class="slds-dropdown-trigger slds-dropdown-trigger_click">
+                <button class="slds-button slds-button_icon slds-button_icon slds-button_icon-container slds-button_icon-small slds-global-actions__setup slds-global-actions__item-action" aria-haspopup="true" title="Setup">
                   <svg class="slds-button__icon slds-global-header__icon" aria-hidden="true">
                     <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#setup"></use>
                   </svg>
                   <span class="slds-assistive-text">Setup</span>
                 </button>
-                <div
-                  id="sh-setup-menu"
-                  class="slds-dropdown slds-dropdown_right slds-dropdown_actions t-dropdown sh-setup-menu__menu"
-                  data-origin="top-right"
-                  data-sh-setup-dropdown
-                  role="menu"
-                  aria-label="Setup Menu"
-                >
-                  <ul class="slds-dropdown__list" role="presentation">
-                    <li class="slds-dropdown__header slds-truncate" role="separator">
-                      <span>Setup Menu</span>
-                    </li>
-                    <li class="slds-dropdown__item" role="presentation">
-                      <a href="#" role="menuitem" tabindex="-1">
-                        <span class="slds-truncate" title="Setup">Setup</span>
-                      </a>
-                    </li>
-                    <li class="slds-dropdown__item" role="presentation">
-                      <a href="/aiq-sales-agent/u/nima/salesforce_go.html" role="menuitem" tabindex="-1">
-                        <span class="slds-truncate" title="Salesforce Go">Salesforce Go</span>
-                        <svg class="slds-icon slds-icon_x-small slds-icon-text-default sh-setup-menu__external" aria-hidden="true">
-                          <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#new_window"></use>
-                        </svg>
-                      </a>
-                    </li>
-                    <li class="slds-dropdown__item" role="presentation">
-                      <a href="#" role="menuitem" tabindex="-1">
-                        <span class="slds-truncate" title="Your Account">Your Account</span>
-                      </a>
-                    </li>
-                    <li class="slds-dropdown__item" role="presentation">
-                      <a href="#" role="menuitem" tabindex="-1">
-                        <span class="slds-truncate" title="Developer Console">Developer Console</span>
-                      </a>
-                    </li>
-                  </ul>
-                </div>
               </div>
             </li>
             <li class="slds-global-actions__item">
@@ -614,11 +568,12 @@
                     
                     
                     <li class="slds-dropdown__item" role="presentation">
-                      <a
-                        href="/aiq-sales-agent/u/rohan/index.html"
+                      <button
+                        type="button"
                         role="menuitem"
                         tabindex="-1"
                         data-sh-user-switch="rohan"
+                        data-sh-nav-href="/aiq-sales-agent/u/rohan/index.html"
                         
                       >
                         <span class="sh-user-switcher__row">
@@ -633,16 +588,17 @@
                           </span>
                           
                         </span>
-                      </a>
+                      </button>
                     </li>
                     
                     
                     <li class="slds-dropdown__item" role="presentation">
-                      <a
-                        href="/aiq-sales-agent/u/nima/index.html"
+                      <button
+                        type="button"
                         role="menuitem"
                         tabindex="-1"
                         data-sh-user-switch="nima"
+                        data-sh-nav-href="/aiq-sales-agent/u/nima/index.html"
                         aria-current="true"
                       >
                         <span class="sh-user-switcher__row">
@@ -661,7 +617,7 @@
                           </svg>
                           
                         </span>
-                      </a>
+                      </button>
                     </li>
                     
                   </ul>
@@ -706,15 +662,18 @@
         <nav class="slds-context-bar__secondary" role="navigation">
           <ul class="slds-grid">
             
+            
             <li class="slds-context-bar__item slds-is-active">
               <a href="/aiq-sales-agent/u/nima/index.html" class="slds-context-bar__label-action" title="Home">
                 <span class="slds-assistive-text">Current Page:</span>
                 <span class="slds-truncate" title="Home">Home</span>
               </a>
             </li>
+            
           </ul>
         </nav>
   </div>
+  
 
   <main class="app-wrapper slds-template_default">
     
@@ -794,6 +753,9 @@
       // Storage unavailable — fall through to the expanded default,
       // which is what the markup already renders.
     }
+    // Lab pages can opt into a collapsed first paint without rewriting
+    // the shared Home preference. Toggle still works after load.
+    if (root.hasAttribute('data-sh-nav-default-collapsed')) collapsed = true
 
     root.classList.add('seller-home--nav-preload')
     root.classList.toggle('seller-home--nav-collapsed', collapsed)
@@ -828,12 +790,12 @@
         
           
 
-<a
-  href="/aiq-sales-agent/u/nima/index.html"
+<button
+  type="button"
   class="seller-home__nav-item is-active"
   role="listitem"
   data-sh-nav="new_chat"
-  
+  data-sh-nav-href="/aiq-sales-agent/u/nima/index.html"
   
   
   
@@ -851,19 +813,19 @@
   <span class="seller-home__nav-label">New chat</span>
   
   
-</a>
+</button>
 
         
       
         
           
 
-<a
-  href="/aiq-sales-agent/u/nima/scheduled.html"
+<button
+  type="button"
   class="seller-home__nav-item"
   role="listitem"
   data-sh-nav="schedules"
-  
+  data-sh-nav-href="/aiq-sales-agent/u/nima/scheduled.html"
   
   
   
@@ -881,19 +843,19 @@
   <span class="seller-home__nav-label">Scheduled</span>
   
   
-</a>
+</button>
 
         
       
         
           
 
-<a
-  href="/aiq-sales-agent/u/nima/skills.html"
+<button
+  type="button"
   class="seller-home__nav-item"
   role="listitem"
   data-sh-nav="skills"
-  
+  data-sh-nav-href="/aiq-sales-agent/u/nima/skills.html"
   
   
   
@@ -913,19 +875,19 @@
   <span class="seller-home__nav-label">Skills</span>
   
   
-</a>
+</button>
 
         
       
         
           
 
-<a
-  href="/aiq-sales-agent/u/nima/knowledge.html"
+<button
+  type="button"
   class="seller-home__nav-item"
   role="listitem"
   data-sh-nav="knowledge"
-  
+  data-sh-nav-href="/aiq-sales-agent/u/nima/knowledge.html"
   
   
   
@@ -936,14 +898,14 @@
     
       
       <svg width="20" height="20" aria-hidden="true">
-        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#knowledge_base"></use>
+        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#display_text"></use>
       </svg>
     
   </span>
   <span class="seller-home__nav-label">Knowledge</span>
   
   
-</a>
+</button>
 
         
       
@@ -976,14 +938,16 @@
       >
         
         
-        
-        <a
-          href="/aiq-sales-agent/u/nima/home_conversation.html?id=conv-n-org-health"
+        <button
+          type="button"
           class="seller-home__nav-recent seller-home__nav-recent--linked"
           role="listitem"
           data-sh-recent="rec-ri-n-org-health"
           data-sh-recent-feed="ri-n-org-health"
+          
           data-sh-recent-conv="conv-n-org-health"
+          data-sh-nav-href="/aiq-sales-agent/u/nima/home_conversation.html?id=conv-n-org-health"
+          
           data-sh-recent-status="completed"
           title="Drafted plan to setup Hunter"
         >
@@ -1001,18 +965,19 @@
     <span class="slds-assistive-text" data-sh-recent-indicator>, new results</span>
   
 
-        </a>
+        </button>
         
         
-        
-        
-        <a
-          href="/aiq-sales-agent/u/nima/home_conversation.html?id=conv-n-permset"
+        <button
+          type="button"
           class="seller-home__nav-recent seller-home__nav-recent--linked"
           role="listitem"
           data-sh-recent="rec-ri-n-permset"
           data-sh-recent-feed="ri-n-permset"
+          
           data-sh-recent-conv="conv-n-permset"
+          data-sh-nav-href="/aiq-sales-agent/u/nima/home_conversation.html?id=conv-n-permset"
+          
           data-sh-recent-status="scheduled"
           title="Draft Sales Ops permission set"
         >
@@ -1021,18 +986,18 @@
           
   
 
-        </a>
+        </button>
         
         
-        
-        
-        <a
-          href="#"
+        <button
+          type="button"
           class="seller-home__nav-recent"
           role="listitem"
           data-sh-recent="rec-ri-n-release"
           data-sh-recent-feed="ri-n-release"
+          
           data-sh-nav-noroute
+          
           data-sh-recent-status="scheduled"
           title="Winter ’27 release-update brief"
         >
@@ -1041,18 +1006,18 @@
           
   
 
-        </a>
+        </button>
         
         
-        
-        
-        <a
-          href="#"
+        <button
+          type="button"
           class="seller-home__nav-recent"
           role="listitem"
           data-sh-recent="rec-run-n-guest-user"
           data-sh-recent-feed="run-n-guest-user"
+          
           data-sh-nav-noroute
+          
           data-sh-recent-status="scheduled"
           title="Scan guest-user access"
         >
@@ -1061,8 +1026,7 @@
           
   
 
-        </a>
-        
+        </button>
         
       </div>
     </div>
@@ -1076,13 +1040,13 @@
         
           
 
-<a
-  href="#"
+<button
+  type="button"
   class="seller-home__nav-item"
   role="listitem"
   data-sh-nav="feedback"
-  hidden
   data-sh-nav-noroute
+  hidden
   
   
   
@@ -1099,7 +1063,7 @@
   <span class="seller-home__nav-label">Feedback</span>
   
   
-</a>
+</button>
 
         
       
@@ -1107,15 +1071,15 @@
         
           
 
-<a
-  href="/aiq-sales-agent/u/nima/tools.html"
+<button
+  type="button"
   class="seller-home__nav-item"
   role="listitem"
   data-sh-nav="tools"
-  hidden
+  data-sh-nav-href="/aiq-sales-agent/u/nima/tools.html"
   
   
-  data-sh-tools-open
+  
   
   title="Connections"
 >
@@ -1139,7 +1103,7 @@
     <span class="slds-assistive-text"> connections available</span>
   </span>
   
-</a>
+</button>
 
         
       
@@ -1147,12 +1111,12 @@
         
           
 
-<a
-  href="/aiq-sales-agent/u/nima/settings.html"
+<button
+  type="button"
   class="seller-home__nav-item"
   role="listitem"
   data-sh-nav="settings"
-  
+  data-sh-nav-noroute
   
   
   
@@ -1170,7 +1134,7 @@
   <span class="seller-home__nav-label">Settings</span>
   
   
-</a>
+</button>
 
         
       
@@ -1185,14 +1149,17 @@
       role="img"
       data-sh-recent-indicator
     >
-      <span class="seller-home__nav-recent-status-glyph seller-home__nav-recent-status-glyph--spinner sh-spinner" aria-hidden="true"></span>
+      <span class="seller-home__feed-status-pulse" aria-hidden="true">
+        <span class="seller-home__feed-status-pulse-dot"></span>
+        <span class="seller-home__feed-status-pulse-ring"></span>
+      </span>
     </span>
   </template>
 </aside>
 
 
 		
-		<div class="seller-home__god-rays" data-sh-god-rays aria-hidden="true"></div>
+		<div class="seller-home__shader" data-sh-shader-host aria-hidden="true"></div>
 
 		
 		<div class="seller-home__main">
@@ -1204,33 +1171,9 @@
 					aria-label="Daily briefing"
 					data-sh-briefing-root
 				>
-					<h1
-						class="seller-home__briefing-heading"
-						data-sh-briefing-heading
-						data-sh-briefing-heading-energy="Hey Nima 👋🏼"
-						data-sh-briefing-heading-quiet="Hey Nima"
-					>
+					<h1 class="seller-home__briefing-heading">
 						Hey Nima 👋🏼
 					</h1>
-					
-					<div
-						class="slds-scoped-notification slds-media slds-media_center slds-scoped-notification_light seller-home__onboard-notice"
-						role="status"
-						data-sh-onboard-notice
-						hidden
-					>
-						<div class="slds-media__figure">
-							<span class="slds-icon_container slds-icon-utility-sparkles">
-								<svg class="slds-icon slds-icon_x-small slds-icon-text-default" aria-hidden="true">
-									<use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#sparkles"></use>
-								</svg>
-							</span>
-						</div>
-						<div class="slds-media__body">
-							<p data-sh-onboard-notice-copy>Hunter is learning this team in the background. The playbook shows up under Knowledge, on Learnings. You can prospect now.</p>
-						</div>
-					</div>
-					<p class="seller-home__briefing-text">I've been ingesting your org's CRM, email, meetings, and call recordings learning all about your org and sales reps.</p>
 
 					
 					
@@ -1338,7 +1281,14 @@
   data-sh-composer-target="/aiq-sales-agent/u/nima/home_conversation.html?id=conv-n-org-health"
 >
   <form class="seller-home__composer-form" data-sh-composer-form novalidate>
-    <div class="seller-home__composer-editor">
+    <div
+      class="seller-home__composer-editor sh-aurora"
+      data-sh-aurora-root
+      data-sh-aurora-target="composer"
+      data-sh-aurora-card="fill"
+    >
+      <div class="sh-aurora__gray" data-sh-aurora-gray hidden aria-hidden="true"></div>
+      <div class="sh-aurora__glow" data-sh-aurora-glow aria-hidden="true"></div>
       <div class="seller-home__composer-content">
         <label for="seller-home-composer-input" class="slds-assistive-text">Ask Agentforce</label>
         
@@ -1347,8 +1297,8 @@
           class="seller-home__composer-textarea"
           data-sh-composer-textarea
           data-sh-composer-prompts="[]"
-          placeholder="Try “What did you learn about us?”"
-          rows="3"
+          placeholder="What should we work on?"
+          rows="2"
           aria-label="Ask Agentforce"
           aria-describedby="seller-home-composer-hint"
         ></textarea>
@@ -1366,6 +1316,7 @@
         <div class="seller-home__composer-slot seller-home__composer-slot--start" role="group" aria-label="Attach and augment">
           
             
+              
         
           
         <button
@@ -1385,429 +1336,34 @@
       
         
       
-          
-            
-        
-          
-        <button
-          type="button"
-          class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn"
-          data-sh-composer-action="skills"
-          title="Skills"
-          aria-label="Skills"
-        >
-          <span
-              class="slds-button__icon seller-home__composer-btn-image"
-              style="--sh-composer-icon-image: url('/aiq-sales-agent/assets/images/nav-icons/skills.png')"
-              aria-hidden="true"
-            ></span>
-          
-          <span class="slds-assistive-text">Skills</span>
-        </button>
-      
-        
-      
-          
-            
-        
-          
-        <button
-          type="button"
-          class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn"
-          data-sh-composer-action="all_tools"
-          title="All tools"
-          aria-label="All tools"
-        >
-          
-            <svg class="slds-button__icon" aria-hidden="true">
-              <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#all"></use>
-            </svg>
-          
-          <span class="slds-assistive-text">All tools</span>
-        </button>
-      
-        
-      
-          
-            
-        
-          
-        <div
-          class="slds-dropdown-trigger slds-dropdown-trigger_click slds-m-left_small seller-home__composer-menu"
-          data-slds-dropdown-manual
-          data-sh-composer-menu
-        >
-          <button
-          type="button"
-          class="slds-badge slds-badge_lightest seller-home__composer-badge"
-          data-sh-composer-action="agent"
-          title="Agent"
-          aria-label="Agent: Hunter Sales Agent"
-          aria-haspopup="menu"
-          aria-expanded="false"
-          aria-controls="seller-home-composer-agent-menu"
-          data-sh-composer-menu-trigger
-        ><span class="slds-badge__icon slds-badge__icon_left">
-            
-              <span
-                class="seller-home__composer-badge-icon-slot"
-                data-sh-composer-badge-icon="hunter"
-              ><img
-            class="seller-home__composer-badge-icon seller-home__composer-badge-icon--round"
-            src="/aiq-sales-agent/assets/images/agent-icons/hunter.png"
-            alt=""
-          /></span>
-            
-              <span
-                class="seller-home__composer-badge-icon-slot"
-                data-sh-composer-badge-icon="coworker" hidden
-              ><img
-            class="seller-home__composer-badge-icon"
-            src="/aiq-sales-agent/assets/images/agent-icons/coworker.svg"
-            alt=""
-          /></span>
-            
-              <span
-                class="seller-home__composer-badge-icon-slot"
-                data-sh-composer-badge-icon="custom-1" hidden
-              ><span class="slds-icon_container slds-icon_container_circle slds-icon-standard-custom-notification seller-home__composer-badge-icon">
-            <svg class="slds-icon" aria-hidden="true">
-              <use xlink:href="/aiq-sales-agent/assets/icons/standard-sprite/svg/symbols.svg#custom_notification"></use>
-            </svg>
-          </span></span>
-            
-              <span
-                class="seller-home__composer-badge-icon-slot"
-                data-sh-composer-badge-icon="custom-2" hidden
-              ><span class="slds-icon_container slds-icon_container_circle slds-icon-standard-custom-notification seller-home__composer-badge-icon">
-            <svg class="slds-icon" aria-hidden="true">
-              <use xlink:href="/aiq-sales-agent/assets/icons/standard-sprite/svg/symbols.svg#custom_notification"></use>
-            </svg>
-          </span></span>
-            
-              <span
-                class="seller-home__composer-badge-icon-slot"
-                data-sh-composer-badge-icon="custom-3" hidden
-              ><span class="slds-icon_container slds-icon_container_circle slds-icon-standard-custom-notification seller-home__composer-badge-icon">
-            <svg class="slds-icon" aria-hidden="true">
-              <use xlink:href="/aiq-sales-agent/assets/icons/standard-sprite/svg/symbols.svg#custom_notification"></use>
-            </svg>
-          </span></span>
-            
-              <span
-                class="seller-home__composer-badge-icon-slot"
-                data-sh-composer-badge-icon="custom-4" hidden
-              ><span class="slds-icon_container slds-icon_container_circle slds-icon-standard-custom-notification seller-home__composer-badge-icon">
-            <svg class="slds-icon" aria-hidden="true">
-              <use xlink:href="/aiq-sales-agent/assets/icons/standard-sprite/svg/symbols.svg#custom_notification"></use>
-            </svg>
-          </span></span>
-            
-              <span
-                class="seller-home__composer-badge-icon-slot"
-                data-sh-composer-badge-icon="custom-5" hidden
-              ><span class="slds-icon_container slds-icon_container_circle slds-icon-standard-custom-notification seller-home__composer-badge-icon">
-            <svg class="slds-icon" aria-hidden="true">
-              <use xlink:href="/aiq-sales-agent/assets/icons/standard-sprite/svg/symbols.svg#custom_notification"></use>
-            </svg>
-          </span></span>
-            
-          </span>
-          <span data-sh-composer-badge-label>Hunter</span>
-          <span class="slds-badge__icon slds-badge__icon_right">
-            <span class="slds-icon_container slds-icon-utility-chevrondown slds-current-color">
-              <svg class="slds-icon slds-icon_xx-small" aria-hidden="true">
-                <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevrondown"></use>
-              </svg>
-            </span>
-          </span>
-        </button>
-      
-
-          <div
-            class="slds-dropdown slds-dropdown_left slds-dropdown_small seller-home__composer-menu-list"
-            id="seller-home-composer-agent-menu"
-            role="menu"
-            aria-label="Choose an agent"
-            data-sh-composer-menu-list
-            hidden
-          ><ul class="slds-dropdown__list" role="none">
-              
-                <li class="slds-dropdown__item" role="none">
-                  
-                    <button
-                      type="button"
-                      class="seller-home__composer-menu-item"
-                      role="menuitemradio"
-                      aria-checked="true"
-                      data-sh-composer-menu-row="hunter"
-                      data-sh-composer-menu-item="hunter"
-                      data-sh-composer-badge-text="Hunter"
-                    ><img
-            class="seller-home__composer-menu-icon seller-home__composer-menu-icon--round"
-            src="/aiq-sales-agent/assets/images/agent-icons/hunter.png"
-            alt=""
-          />
-
-                      <span class="seller-home__composer-menu-label">Hunter Sales Agent</span><svg class="seller-home__composer-menu-check" aria-hidden="true">
-                        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
-                      </svg>
-                    </button>
-                  
-                </li>
-              
-                <li class="slds-dropdown__item" role="none">
-                  
-                    <button
-                      type="button"
-                      class="seller-home__composer-menu-item"
-                      role="menuitemradio"
-                      aria-checked="false"
-                      data-sh-composer-menu-row="coworker"
-                      data-sh-composer-menu-item="coworker"
-                      data-sh-composer-badge-text="Coworker"
-                    ><img
-            class="seller-home__composer-menu-icon"
-            src="/aiq-sales-agent/assets/images/agent-icons/coworker.svg"
-            alt=""
-          />
-
-                      <span class="seller-home__composer-menu-label">Coworker Agent</span><svg class="seller-home__composer-menu-check" aria-hidden="true">
-                        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
-                      </svg>
-                    </button>
-                  
-                </li>
-              
-                <li class="slds-dropdown__item" role="none">
-                  
-                    <button
-                      type="button"
-                      class="seller-home__composer-menu-item"
-                      role="menuitem"
-                      aria-haspopup="menu"
-                      aria-expanded="false"
-                      aria-controls="seller-home-composer-agent-menu-custom-detail"
-                      data-sh-composer-menu-row="custom"
-                    >
-                      <span class="slds-icon_container slds-icon_container_circle slds-icon-standard-custom-notification seller-home__composer-menu-icon">
-            <svg class="slds-icon" aria-hidden="true">
-              <use xlink:href="/aiq-sales-agent/assets/icons/standard-sprite/svg/symbols.svg#custom_notification"></use>
-            </svg>
-          </span>
-                      <span class="seller-home__composer-menu-label">Custom Agents</span>
-                      <svg class="seller-home__composer-menu-chevron" aria-hidden="true">
-                        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
-                      </svg>
-                    </button>
-                  
-                </li>
-              
-            </ul>
-          </div>
-            <div
-              class="seller-home__composer-menu-detail"
-              id="seller-home-composer-agent-menu-hunter-detail"
-              data-sh-composer-menu-detail="hunter"
-              hidden
-            >
-              <div class="seller-home__composer-menu-detail-header">
-                <div class="slds-media"><div class="slds-media__figure">
-                    
-                      <span class="slds-avatar slds-avatar_large">
-                        <img src="/aiq-sales-agent/assets/images/agent-icons/hunter.png" alt="" />
-                      </span>
-                    
-                  </div>
-
-                  <div class="slds-media__body">
-                    <p class="seller-home__composer-menu-detail-title">Best for admin tasks</p>
-                    
-                      <p class="seller-home__composer-menu-example">What broke in the org overnight?</p>
-                    
-                      <p class="seller-home__composer-menu-example">Which Flows failed in the last 12 hours?</p>
-                    
-                      <p class="seller-home__composer-menu-example">Draft a permission set for Sales Ops</p>
-                    
-                      <p class="seller-home__composer-menu-example">Which Winter &#39;27 updates are Enforced Soon?</p>
-                    
-                      <p class="seller-home__composer-menu-example">Scan guest-user access on Experience Cloud</p>
-                    
-                  </div>
-                </div>
-              </div>
-            </div>
             
           
-            <div
-              class="seller-home__composer-menu-detail"
-              id="seller-home-composer-agent-menu-coworker-detail"
-              data-sh-composer-menu-detail="coworker"
-              hidden
-            >
-              <div class="seller-home__composer-menu-detail-header">
-                <div class="slds-media"><div class="slds-media__figure">
-                    
-                      <span class="slds-avatar slds-avatar_large">
-                        <img src="/aiq-sales-agent/assets/images/agent-icons/coworker.svg" alt="" />
-                      </span>
-                    
-                  </div>
-
-                  <div class="slds-media__body">
-                    <p class="seller-home__composer-menu-detail-title">Best for general tasks</p>
-                    
-                      <p class="seller-home__composer-menu-example">Plan my work for today</p>
-                    
-                      <p class="seller-home__composer-menu-example">Show me trending support cases this month</p>
-                    
-                      <p class="seller-home__composer-menu-example">Which cases should I follow-up on?</p>
-                    
-                      <p class="seller-home__composer-menu-example">Which campaigns are running?</p>
-                    
-                      <p class="seller-home__composer-menu-example">Draft new marketing emails</p>
-                    
-                  </div>
-                </div>
-              </div>
-            </div>
             
           
-              <div
-                class="seller-home__composer-menu-detail seller-home__composer-menu-detail--menu"
-                id="seller-home-composer-agent-menu-custom-detail"
-                data-sh-composer-menu-detail="custom"
-                role="menu"
-                aria-label="Custom Agents"
-                hidden
-              >
-                <ul class="slds-dropdown__list" role="none">
-                  
-                    <li class="slds-dropdown__item" role="none">
-                      <button
-                        type="button"
-                        class="seller-home__composer-menu-item"
-                        role="menuitemradio"
-                        aria-checked="false"
-                        data-sh-composer-menu-item="custom-1"
-                        data-sh-composer-badge-text="Custom agent 1"
-                      >
-                        <span class="slds-icon_container slds-icon_container_circle slds-icon-standard-custom-notification seller-home__composer-menu-icon">
-            <svg class="slds-icon" aria-hidden="true">
-              <use xlink:href="/aiq-sales-agent/assets/icons/standard-sprite/svg/symbols.svg#custom_notification"></use>
-            </svg>
-          </span>
-                        <span class="seller-home__composer-menu-label">Custom agent 1</span>
-                        <svg class="seller-home__composer-menu-check" aria-hidden="true">
-                          <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
-                        </svg>
-                      </button>
-                    </li>
-                  
-                    <li class="slds-dropdown__item" role="none">
-                      <button
-                        type="button"
-                        class="seller-home__composer-menu-item"
-                        role="menuitemradio"
-                        aria-checked="false"
-                        data-sh-composer-menu-item="custom-2"
-                        data-sh-composer-badge-text="Custom agent 2"
-                      >
-                        <span class="slds-icon_container slds-icon_container_circle slds-icon-standard-custom-notification seller-home__composer-menu-icon">
-            <svg class="slds-icon" aria-hidden="true">
-              <use xlink:href="/aiq-sales-agent/assets/icons/standard-sprite/svg/symbols.svg#custom_notification"></use>
-            </svg>
-          </span>
-                        <span class="seller-home__composer-menu-label">Custom agent 2</span>
-                        <svg class="seller-home__composer-menu-check" aria-hidden="true">
-                          <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
-                        </svg>
-                      </button>
-                    </li>
-                  
-                    <li class="slds-dropdown__item" role="none">
-                      <button
-                        type="button"
-                        class="seller-home__composer-menu-item"
-                        role="menuitemradio"
-                        aria-checked="false"
-                        data-sh-composer-menu-item="custom-3"
-                        data-sh-composer-badge-text="Custom agent 3"
-                      >
-                        <span class="slds-icon_container slds-icon_container_circle slds-icon-standard-custom-notification seller-home__composer-menu-icon">
-            <svg class="slds-icon" aria-hidden="true">
-              <use xlink:href="/aiq-sales-agent/assets/icons/standard-sprite/svg/symbols.svg#custom_notification"></use>
-            </svg>
-          </span>
-                        <span class="seller-home__composer-menu-label">Custom agent 3</span>
-                        <svg class="seller-home__composer-menu-check" aria-hidden="true">
-                          <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
-                        </svg>
-                      </button>
-                    </li>
-                  
-                    <li class="slds-dropdown__item" role="none">
-                      <button
-                        type="button"
-                        class="seller-home__composer-menu-item"
-                        role="menuitemradio"
-                        aria-checked="false"
-                        data-sh-composer-menu-item="custom-4"
-                        data-sh-composer-badge-text="Custom agent 4"
-                      >
-                        <span class="slds-icon_container slds-icon_container_circle slds-icon-standard-custom-notification seller-home__composer-menu-icon">
-            <svg class="slds-icon" aria-hidden="true">
-              <use xlink:href="/aiq-sales-agent/assets/icons/standard-sprite/svg/symbols.svg#custom_notification"></use>
-            </svg>
-          </span>
-                        <span class="seller-home__composer-menu-label">Custom agent 4</span>
-                        <svg class="seller-home__composer-menu-check" aria-hidden="true">
-                          <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
-                        </svg>
-                      </button>
-                    </li>
-                  
-                    <li class="slds-dropdown__item" role="none">
-                      <button
-                        type="button"
-                        class="seller-home__composer-menu-item"
-                        role="menuitemradio"
-                        aria-checked="false"
-                        data-sh-composer-menu-item="custom-5"
-                        data-sh-composer-badge-text="Custom agent 5"
-                      >
-                        <span class="slds-icon_container slds-icon_container_circle slds-icon-standard-custom-notification seller-home__composer-menu-icon">
-            <svg class="slds-icon" aria-hidden="true">
-              <use xlink:href="/aiq-sales-agent/assets/icons/standard-sprite/svg/symbols.svg#custom_notification"></use>
-            </svg>
-          </span>
-                        <span class="seller-home__composer-menu-label">Custom agent 5</span>
-                        <svg class="seller-home__composer-menu-check" aria-hidden="true">
-                          <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
-                        </svg>
-                      </button>
-                    </li>
-                  
-                </ul>
-              </div>
+            
+          
             
           
         </div>
-      
-        
-      
-          
-        </div><div class="seller-home__composer-slot seller-home__composer-slot--end" role="group" aria-label="Send">
-          
 
-          
+        <div class="seller-home__composer-slot seller-home__composer-slot--end" role="group" aria-label="Voice and send">
+          <button
+            type="button"
+            class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn"
+            title="Start voice input"
+            aria-label="Start voice input"
+          >
+            <svg class="slds-button__icon" aria-hidden="true">
+              <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#unmuted"></use>
+            </svg>
+            <span class="slds-assistive-text">Start voice input</span>
+          </button>
           <button
             type="submit"
             class="slds-button slds-button_icon slds-button_icon-bare seller-home__composer-btn seller-home__composer-send"
             data-sh-composer-send
             title="Send message"
             aria-label="Send message"
-            disabled
           >
             <svg class="slds-button__icon" aria-hidden="true">
               <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#send"></use>
@@ -1818,40 +1374,6 @@
       </div>
     </div>
   </form>
-
-  <div class="seller-home__composer-footer">
-    <div class="connected-sources">
-      <span class="connected-sources__label">Connections</span>
-      <div class="connected-sources__icon-container">
-        <ul class="source-icons" role="list">
-          <li class="source-icons__item">
-            <span class="source-icons__wrapper" aria-label="Salesforce">
-              <img class="source-icons__icon" src="/aiq-sales-agent/assets/images/source_icons/source_salesforce.svg" alt="Salesforce">
-              <span class="slds-popover slds-popover_tooltip slds-nubbin_bottom source-icons__tooltip" role="tooltip"><div class="slds-popover__body">Salesforce</div></span>
-            </span>
-          </li>
-          <li class="source-icons__item">
-            <span class="source-icons__wrapper" aria-label="Gong">
-              <img class="source-icons__icon" src="/aiq-sales-agent/assets/images/source_icons/source_gong.svg" alt="Gong">
-              <span class="slds-popover slds-popover_tooltip slds-nubbin_bottom source-icons__tooltip" role="tooltip"><div class="slds-popover__body">Gong</div></span>
-            </span>
-          </li>
-          <li class="source-icons__item">
-            <span class="source-icons__wrapper" aria-label="ZoomInfo">
-              <img class="source-icons__icon" src="/aiq-sales-agent/assets/images/source_icons/source_zoominfo.svg" alt="ZoomInfo">
-              <span class="slds-popover slds-popover_tooltip slds-nubbin_bottom source-icons__tooltip" role="tooltip"><div class="slds-popover__body">ZoomInfo</div></span>
-            </span>
-          </li>
-        </ul>
-        
-        <button type="button" class="slds-button connected-sources__view-all" data-sh-tools-open>View all</button>
-      </div>
-    </div>
-
-    <span class="seller-home__composer-disclaimer">Generative AI can produce inaccurate responses. Review responses carefully.</span>
-
-    <button type="button" class="slds-button seller-home__composer-feedback">Share Feedback</button>
-  </div>
 </section>
 
 
@@ -1896,21 +1418,27 @@
 
 
 <section
-  class="seller-home__feed"
+  class="seller-home__feed sh-aurora"
   aria-labelledby="seller-home-ready-heading"
   data-sh-feed-root
   data-sh-feed-state-order="completed,failed,running,scheduled,paused,archived"
+  data-sh-aurora-root
+  data-sh-aurora-target="feed"
+  data-sh-aurora-card="fade"
 >
+  
+  <div class="sh-aurora__gray" data-sh-aurora-gray hidden aria-hidden="true"></div>
+  <div class="sh-aurora__glow" data-sh-aurora-glow aria-hidden="true"></div>
   <div class="seller-home__feed-header">
     <div class="seller-home__feed-title-row">
-      <h2 id="seller-home-ready-heading" class="seller-home__feed-heading">
-        Your agent at work
+      <h2 id="seller-home-ready-heading" class="seller-home__feed-heading" data-sh-feed-heading>
+        Ready for review
       </h2>
       
       <span
         class="seller-home__feed-date"
         data-sh-today
-      >Thu October 1</span>
+      >Mon October 26</span>
     </div>
 
     
@@ -1949,7 +1477,7 @@
                 class="seller-home__feed-overflow-item seller-home__feed-filter-item"
                 role="option"
                 aria-selected="true"
-                data-sh-feed-filter-option="active"
+                data-sh-feed-filter-option="active" data-sh-feed-filter-heading="Ready for review"
               >
                 <span class="seller-home__feed-filter-item-label">Active</span>
                 <svg class="seller-home__feed-filter-item-check" aria-hidden="true" focusable="false">
@@ -1964,24 +1492,9 @@
                 class="seller-home__feed-overflow-item seller-home__feed-filter-item"
                 role="option"
                 aria-selected="false"
-                data-sh-feed-filter-option="scheduled"
+                data-sh-feed-filter-option="scheduled" data-sh-feed-filter-heading="Scheduled"
               >
                 <span class="seller-home__feed-filter-item-label">Scheduled</span>
-                <svg class="seller-home__feed-filter-item-check" aria-hidden="true" focusable="false">
-                  <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
-                </svg>
-              </button>
-            </li>
-          
-            <li role="none">
-              <button
-                type="button"
-                class="seller-home__feed-overflow-item seller-home__feed-filter-item"
-                role="option"
-                aria-selected="false"
-                data-sh-feed-filter-option="archived"
-              >
-                <span class="seller-home__feed-filter-item-label">Archived</span>
                 <svg class="seller-home__feed-filter-item-check" aria-hidden="true" focusable="false">
                   <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
                 </svg>
@@ -2022,12 +1535,14 @@
 
 
 
+
 <article
   class="seller-home__feed-item seller-home__feed-item--has-outputs"
   data-sh-feed-item="ri-n-org-health"
   data-sh-feed-skill="sk-daily-pipeline-snapshot"
   data-sh-feed-state="completed"
   data-sh-feed-state-default="completed"
+  data-sh-feed-stay-home
   data-sh-feed-has-schedule
 >
   <div class="seller-home__feed-item-main">
@@ -2035,63 +1550,86 @@
 
 
 
-<button
-  type="button"
-  class="seller-home__feed-item-status"
-  data-sh-feed-run-toggle
-  data-sh-feed-item-stop
-  aria-label="Run Drafted plan to setup Hunter"
-  title="Run Drafted plan to setup Hunter"
->
-  <span
-    class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--spinner sh-spinner"
+
+
+<span class="t-tt-group seller-home__feed-item-status-group">
+  <button
+    type="button"
+    class="seller-home__feed-item-status t-tt-trigger"
+    data-sh-feed-run-toggle
+    data-sh-feed-item-stop
+    data-tooltip="Run"
+    aria-label="Run Drafted plan to setup Hunter"
+    aria-describedby="seller-home-feed-ri-n-org-health-status-tip"
+  >
+    <span
+      class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--spinner"
+      aria-hidden="true"
+    >
+      <span class="seller-home__feed-status-pulse">
+        <span class="seller-home__feed-status-pulse-dot"></span>
+        <span class="seller-home__feed-status-pulse-ring"></span>
+      </span>
+    </span>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--circle" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#circle"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--check" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--clock" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#clock"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--pause" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#pause"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--play" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#play"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--warning" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#warning"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--refresh" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#refresh"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--stop" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#stop"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--ban" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#ban"></use>
+    </svg>
+    
+  </button>
+  <div
+    class="slds-popover slds-popover_tooltip t-tt seller-home__feed-status-tip"
+    role="tooltip"
+    id="seller-home-feed-ri-n-org-health-status-tip"
     aria-hidden="true"
-  ></span>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--check" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--clock" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#clock"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--pause" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#pause"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--play" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#play"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--warning" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#warning"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--refresh" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#refresh"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--stop" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#stop"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--ban" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#ban"></use>
-  </svg>
-  
-</button>
+    data-show="false"
+  >
+    <div class="slds-popover__body t-tt-text seller-home__feed-status-tip-label" data-sh-feed-status-tip>Run</div>
+  </div>
+</span>
 
 
     <div class="seller-home__feed-item-body">
       
       <h3 class="seller-home__feed-item-title">
-        
-        <a
-          href="/aiq-sales-agent/u/nima/home_conversation.html?id=conv-n-org-health"
+        <button
+          type="button"
           class="seller-home__feed-item-title-action"
-          data-sh-feed-item-link="ri-n-org-health"
           data-sh-feed-item-title
+          data-sh-feed-item-link="ri-n-org-health"
+          data-sh-nav-href="/aiq-sales-agent/u/nima/home_conversation.html?id=conv-n-org-health"
           data-sh-feed-slot="title"
           data-sh-feed-slot-default="Drafted plan to setup Hunter"
           data-sh-feed-slot-paused="Draft plan to setup Hunter"
@@ -2100,37 +1638,38 @@
           data-sh-feed-slot-scheduled="Draft plan to setup Hunter"
           data-sh-feed-slot-archived="Draft plan to setup Hunter"
           aria-describedby="seller-home-feed-ri-n-org-health-desc"
-        >Drafted plan to setup Hunter</a>
-        
+        >Drafted plan to setup Hunter</button>
       </h3>
 
       
       <p class="seller-home__feed-item-desc" id="seller-home-feed-ri-n-org-health-desc">
         
+        
 <span
   class="seller-home__feed-item-desc-status"
   data-sh-feed-slot="status"
-  data-sh-feed-slot-default="Ready"
+  data-sh-feed-slot-default="One time"
   data-sh-feed-slot-paused="Paused"
-  data-sh-feed-slot-running="Running"
-  data-sh-feed-slot-completed="Ready"
+  data-sh-feed-slot-running="1 of 3 steps"
+  data-sh-feed-slot-completed="One time"
   data-sh-feed-slot-scheduled="One time"
   data-sh-feed-slot-archived="Archived"
->Ready</span>
+>One time</span>
 
         <span class="seller-home__feed-item-desc-sep" aria-hidden="true">·</span>
         
 <span
   class="seller-home__feed-item-desc-time"
   data-sh-feed-slot="time"
-  data-sh-feed-slot-default="One time"
+  data-sh-feed-slot-default="No next run"
   data-sh-feed-slot-paused=""
-  data-sh-feed-slot-running="One time"
-  data-sh-feed-slot-completed="One time"
+  data-sh-feed-slot-running="Just started"
+  data-sh-feed-slot-completed="No next run"
   data-sh-feed-slot-scheduled="No next run"
   data-sh-feed-slot-archived="No next run"
->One time</span>
+>No next run</span>
 
+        
       </p>
 
       
@@ -2140,18 +1679,24 @@
 
 
 
+
+
+
+
 <span class="slds-badge slds-badge_lightest seller-home__feed-item-output-pill"
   data-sh-feed-output
   data-sh-feed-output-label-default="11 Knowledge" data-sh-feed-output-label-scheduled="Knowledge" data-sh-feed-output-icon-default="/aiq-sales-agent/assets/images/doctype-icons/Doc-green.svg" data-sh-feed-output-icon-scheduled="/aiq-sales-agent/assets/images/doctype-icons/Doc-grey.svg">
   
-    
+    <span class="seller-home__feed-item-output-pill-icon">
+      
       <img
         class="seller-home__feed-item-output-pill-glyph seller-home__feed-item-output-pill-glyph--image"
         src="/aiq-sales-agent/assets/images/doctype-icons/Doc-green.svg"
         alt=""
         aria-hidden="true"
       />
-    
+      
+    </span>
   
   <span
     class="seller-home__feed-item-output-pill-label"
@@ -2161,18 +1706,24 @@
 
 
 
+
+
+
+
 <span class="slds-badge slds-badge_lightest seller-home__feed-item-output-pill"
   data-sh-feed-output
   data-sh-feed-output-label-default="16 Skills" data-sh-feed-output-label-scheduled="Skills" data-sh-feed-output-icon-default="/aiq-sales-agent/assets/images/doctype-icons/Doc-yellow.svg" data-sh-feed-output-icon-scheduled="/aiq-sales-agent/assets/images/doctype-icons/Doc-grey.svg">
   
-    
+    <span class="seller-home__feed-item-output-pill-icon">
+      
       <img
         class="seller-home__feed-item-output-pill-glyph seller-home__feed-item-output-pill-glyph--image"
         src="/aiq-sales-agent/assets/images/doctype-icons/Doc-yellow.svg"
         alt=""
         aria-hidden="true"
       />
-    
+      
+    </span>
   
   <span
     class="seller-home__feed-item-output-pill-label"
@@ -2254,24 +1805,6 @@
       </li>
       
       <li
-        role="none" data-sh-feed-action-only="archived"
-      >
-        <button
-          type="button"
-          class="seller-home__feed-item-menu-item"
-          role="menuitem"
-          data-sh-feed-item-menu-action="restart"
-        >
-          
-          <svg class="seller-home__feed-item-menu-item-icon" aria-hidden="true">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#refresh"></use>
-          </svg>
-          
-          <span class="seller-home__feed-item-menu-item-label">Restart</span>
-        </button>
-      </li>
-      
-      <li
         role="none"
       >
         <button
@@ -2285,25 +1818,7 @@
             <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#edit"></use>
           </svg>
           
-          <span class="seller-home__feed-item-menu-item-label">Edit Skill</span>
-        </button>
-      </li>
-      
-      <li
-        role="none" data-sh-feed-action-only="completed scheduled"
-      >
-        <button
-          type="button"
-          class="seller-home__feed-item-menu-item"
-          role="menuitem"
-          data-sh-feed-item-menu-action="archive"
-        >
-          
-          <svg class="seller-home__feed-item-menu-item-icon" aria-hidden="true">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#archive"></use>
-          </svg>
-          
-          <span class="seller-home__feed-item-menu-item-label">Archive</span>
+          <span class="seller-home__feed-item-menu-item-label">Edit</span>
         </button>
       </li>
       
@@ -2335,6 +1850,17 @@
         
       
     
+      
+<li
+  class="seller-home__feed-group"
+  role="presentation"
+  data-sh-feed-group="running"
+  data-sh-feed-group-state="running"
+  data-sh-feed-order="-1"
+>
+  <h4 class="seller-home__feed-group-label">Running</h4>
+</li>
+
       
       
         
@@ -2369,6 +1895,7 @@
 
 
 
+
 <article
   class="seller-home__feed-item seller-home__feed-item--has-outputs"
   data-sh-feed-item="ri-n-permset"
@@ -2382,63 +1909,86 @@
 
 
 
-<button
-  type="button"
-  class="seller-home__feed-item-status"
-  data-sh-feed-run-toggle
-  data-sh-feed-item-stop
-  aria-label="Run Draft Sales Ops permission set"
-  title="Run Draft Sales Ops permission set"
->
-  <span
-    class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--spinner sh-spinner"
+
+
+<span class="t-tt-group seller-home__feed-item-status-group">
+  <button
+    type="button"
+    class="seller-home__feed-item-status t-tt-trigger"
+    data-sh-feed-run-toggle
+    data-sh-feed-item-stop
+    data-tooltip="Run"
+    aria-label="Run Draft Sales Ops permission set"
+    aria-describedby="seller-home-feed-ri-n-permset-status-tip"
+  >
+    <span
+      class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--spinner"
+      aria-hidden="true"
+    >
+      <span class="seller-home__feed-status-pulse">
+        <span class="seller-home__feed-status-pulse-dot"></span>
+        <span class="seller-home__feed-status-pulse-ring"></span>
+      </span>
+    </span>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--circle" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#circle"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--check" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--clock" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#clock"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--pause" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#pause"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--play" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#play"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--warning" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#warning"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--refresh" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#refresh"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--stop" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#stop"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--ban" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#ban"></use>
+    </svg>
+    
+  </button>
+  <div
+    class="slds-popover slds-popover_tooltip t-tt seller-home__feed-status-tip"
+    role="tooltip"
+    id="seller-home-feed-ri-n-permset-status-tip"
     aria-hidden="true"
-  ></span>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--check" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--clock" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#clock"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--pause" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#pause"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--play" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#play"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--warning" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#warning"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--refresh" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#refresh"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--stop" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#stop"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--ban" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#ban"></use>
-  </svg>
-  
-</button>
+    data-show="false"
+  >
+    <div class="slds-popover__body t-tt-text seller-home__feed-status-tip-label" data-sh-feed-status-tip>Run</div>
+  </div>
+</span>
 
 
     <div class="seller-home__feed-item-body">
       
       <h3 class="seller-home__feed-item-title">
-        
-        <a
-          href="/aiq-sales-agent/u/nima/home_conversation.html?id=conv-n-permset"
+        <button
+          type="button"
           class="seller-home__feed-item-title-action"
-          data-sh-feed-item-link="ri-n-permset"
           data-sh-feed-item-title
+          data-sh-feed-item-link="ri-n-permset"
+          data-sh-nav-href="/aiq-sales-agent/u/nima/home_conversation.html?id=conv-n-permset"
           data-sh-feed-slot="title"
           data-sh-feed-slot-default="Draft Sales Ops permission set"
           data-sh-feed-slot-paused="Draft Sales Ops permission set"
@@ -2447,20 +1997,20 @@
           data-sh-feed-slot-scheduled="Draft Sales Ops permission set"
           data-sh-feed-slot-archived="Draft Sales Ops permission set"
           aria-describedby="seller-home-feed-ri-n-permset-desc"
-        >Draft Sales Ops permission set</a>
-        
+        >Draft Sales Ops permission set</button>
       </h3>
 
       
       <p class="seller-home__feed-item-desc" id="seller-home-feed-ri-n-permset-desc">
+        
         
 <span
   class="seller-home__feed-item-desc-status"
   data-sh-feed-slot="status"
   data-sh-feed-slot-default="Weekly"
   data-sh-feed-slot-paused="Paused"
-  data-sh-feed-slot-running="Running"
-  data-sh-feed-slot-completed="Ready"
+  data-sh-feed-slot-running="1 of 3 steps"
+  data-sh-feed-slot-completed="Weekly"
   data-sh-feed-slot-scheduled="Weekly"
   data-sh-feed-slot-archived="Archived"
 >Weekly</span>
@@ -2472,12 +2022,13 @@
   data-sh-feed-slot="time"
   data-sh-feed-slot-default="Next run in 5 days"
   data-sh-feed-slot-paused="Last run today"
-  data-sh-feed-slot-running="Weekly"
-  data-sh-feed-slot-completed="Weekly"
+  data-sh-feed-slot-running="Just started"
+  data-sh-feed-slot-completed="Next run in 5 days"
   data-sh-feed-slot-scheduled="Next run in 5 days"
   data-sh-feed-slot-archived="Last run today"
 >Next run in 5 days</span>
 
+        
       </p>
 
       
@@ -2487,16 +2038,22 @@
 
 
 
+
+
+
+
 <span class="slds-badge slds-badge_lightest seller-home__feed-item-output-pill">
   
-    
+    <span class="seller-home__feed-item-output-pill-icon">
+      
       <img
         class="seller-home__feed-item-output-pill-glyph seller-home__feed-item-output-pill-glyph--image"
         src="/aiq-sales-agent/assets/images/doctype-icons/Doc-grey.svg"
         alt=""
         aria-hidden="true"
       />
-    
+      
+    </span>
   
   <span
     class="seller-home__feed-item-output-pill-label"
@@ -2578,24 +2135,6 @@
       </li>
       
       <li
-        role="none" data-sh-feed-action-only="archived"
-      >
-        <button
-          type="button"
-          class="seller-home__feed-item-menu-item"
-          role="menuitem"
-          data-sh-feed-item-menu-action="restart"
-        >
-          
-          <svg class="seller-home__feed-item-menu-item-icon" aria-hidden="true">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#refresh"></use>
-          </svg>
-          
-          <span class="seller-home__feed-item-menu-item-label">Restart</span>
-        </button>
-      </li>
-      
-      <li
         role="none"
       >
         <button
@@ -2609,25 +2148,7 @@
             <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#edit"></use>
           </svg>
           
-          <span class="seller-home__feed-item-menu-item-label">Edit Skill</span>
-        </button>
-      </li>
-      
-      <li
-        role="none" data-sh-feed-action-only="completed scheduled"
-      >
-        <button
-          type="button"
-          class="seller-home__feed-item-menu-item"
-          role="menuitem"
-          data-sh-feed-item-menu-action="archive"
-        >
-          
-          <svg class="seller-home__feed-item-menu-item-icon" aria-hidden="true">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#archive"></use>
-          </svg>
-          
-          <span class="seller-home__feed-item-menu-item-label">Archive</span>
+          <span class="seller-home__feed-item-menu-item-label">Edit</span>
         </button>
       </li>
       
@@ -2660,6 +2181,7 @@
 
 
 
+
 <article
   class="seller-home__feed-item seller-home__feed-item--has-outputs"
   data-sh-feed-item="ri-n-release"
@@ -2673,58 +2195,80 @@
 
 
 
-<button
-  type="button"
-  class="seller-home__feed-item-status"
-  data-sh-feed-run-toggle
-  data-sh-feed-item-stop
-  aria-label="Run Winter ’27 release-update brief"
-  title="Run Winter ’27 release-update brief"
->
-  <span
-    class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--spinner sh-spinner"
+
+
+<span class="t-tt-group seller-home__feed-item-status-group">
+  <button
+    type="button"
+    class="seller-home__feed-item-status t-tt-trigger"
+    data-sh-feed-run-toggle
+    data-sh-feed-item-stop
+    data-tooltip="Run"
+    aria-label="Run Winter ’27 release-update brief"
+    aria-describedby="seller-home-feed-ri-n-release-status-tip"
+  >
+    <span
+      class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--spinner"
+      aria-hidden="true"
+    >
+      <span class="seller-home__feed-status-pulse">
+        <span class="seller-home__feed-status-pulse-dot"></span>
+        <span class="seller-home__feed-status-pulse-ring"></span>
+      </span>
+    </span>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--circle" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#circle"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--check" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--clock" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#clock"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--pause" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#pause"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--play" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#play"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--warning" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#warning"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--refresh" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#refresh"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--stop" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#stop"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--ban" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#ban"></use>
+    </svg>
+    
+  </button>
+  <div
+    class="slds-popover slds-popover_tooltip t-tt seller-home__feed-status-tip"
+    role="tooltip"
+    id="seller-home-feed-ri-n-release-status-tip"
     aria-hidden="true"
-  ></span>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--check" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--clock" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#clock"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--pause" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#pause"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--play" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#play"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--warning" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#warning"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--refresh" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#refresh"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--stop" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#stop"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--ban" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#ban"></use>
-  </svg>
-  
-</button>
+    data-show="false"
+  >
+    <div class="slds-popover__body t-tt-text seller-home__feed-status-tip-label" data-sh-feed-status-tip>Run</div>
+  </div>
+</span>
 
 
     <div class="seller-home__feed-item-body">
       
       <h3 class="seller-home__feed-item-title">
-        
         <button
           type="button"
           class="seller-home__feed-item-title-action"
@@ -2738,19 +2282,19 @@
           data-sh-feed-slot-archived="Winter ’27 release-update brief"
           aria-describedby="seller-home-feed-ri-n-release-desc"
         >Winter ’27 release-update brief</button>
-        
       </h3>
 
       
       <p class="seller-home__feed-item-desc" id="seller-home-feed-ri-n-release-desc">
+        
         
 <span
   class="seller-home__feed-item-desc-status"
   data-sh-feed-slot="status"
   data-sh-feed-slot-default="Weekly"
   data-sh-feed-slot-paused="Paused"
-  data-sh-feed-slot-running="Running"
-  data-sh-feed-slot-completed="Ready"
+  data-sh-feed-slot-running="1 of 3 steps"
+  data-sh-feed-slot-completed="Weekly"
   data-sh-feed-slot-scheduled="Weekly"
   data-sh-feed-slot-archived="Archived"
 >Weekly</span>
@@ -2762,12 +2306,13 @@
   data-sh-feed-slot="time"
   data-sh-feed-slot-default="Next run Friday at 4:00 PM"
   data-sh-feed-slot-paused="Last run Friday"
-  data-sh-feed-slot-running="Weekly"
-  data-sh-feed-slot-completed="Weekly"
+  data-sh-feed-slot-running="Just started"
+  data-sh-feed-slot-completed="Next run Friday at 4:00 PM"
   data-sh-feed-slot-scheduled="Next run Friday at 4:00 PM"
   data-sh-feed-slot-archived="Last run Friday"
 >Next run Friday at 4:00 PM</span>
 
+        
       </p>
 
       
@@ -2777,16 +2322,22 @@
 
 
 
+
+
+
+
 <span class="slds-badge slds-badge_lightest seller-home__feed-item-output-pill">
   
-    
+    <span class="seller-home__feed-item-output-pill-icon">
+      
       <img
         class="seller-home__feed-item-output-pill-glyph seller-home__feed-item-output-pill-glyph--image"
         src="/aiq-sales-agent/assets/images/doctype-icons/Doc-grey.svg"
         alt=""
         aria-hidden="true"
       />
-    
+      
+    </span>
   
   <span
     class="seller-home__feed-item-output-pill-label"
@@ -2868,24 +2419,6 @@
       </li>
       
       <li
-        role="none" data-sh-feed-action-only="archived"
-      >
-        <button
-          type="button"
-          class="seller-home__feed-item-menu-item"
-          role="menuitem"
-          data-sh-feed-item-menu-action="restart"
-        >
-          
-          <svg class="seller-home__feed-item-menu-item-icon" aria-hidden="true">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#refresh"></use>
-          </svg>
-          
-          <span class="seller-home__feed-item-menu-item-label">Restart</span>
-        </button>
-      </li>
-      
-      <li
         role="none"
       >
         <button
@@ -2899,25 +2432,7 @@
             <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#edit"></use>
           </svg>
           
-          <span class="seller-home__feed-item-menu-item-label">Edit Skill</span>
-        </button>
-      </li>
-      
-      <li
-        role="none" data-sh-feed-action-only="completed scheduled"
-      >
-        <button
-          type="button"
-          class="seller-home__feed-item-menu-item"
-          role="menuitem"
-          data-sh-feed-item-menu-action="archive"
-        >
-          
-          <svg class="seller-home__feed-item-menu-item-icon" aria-hidden="true">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#archive"></use>
-          </svg>
-          
-          <span class="seller-home__feed-item-menu-item-label">Archive</span>
+          <span class="seller-home__feed-item-menu-item-label">Edit</span>
         </button>
       </li>
       
@@ -2950,6 +2465,7 @@
 
 
 
+
 <article
   class="seller-home__feed-item seller-home__feed-item--has-outputs"
   data-sh-feed-item="run-n-guest-user"
@@ -2963,58 +2479,80 @@
 
 
 
-<button
-  type="button"
-  class="seller-home__feed-item-status"
-  data-sh-feed-run-toggle
-  data-sh-feed-item-stop
-  aria-label="Run Scan guest-user access"
-  title="Run Scan guest-user access"
->
-  <span
-    class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--spinner sh-spinner"
+
+
+<span class="t-tt-group seller-home__feed-item-status-group">
+  <button
+    type="button"
+    class="seller-home__feed-item-status t-tt-trigger"
+    data-sh-feed-run-toggle
+    data-sh-feed-item-stop
+    data-tooltip="Run"
+    aria-label="Run Scan guest-user access"
+    aria-describedby="seller-home-feed-run-n-guest-user-status-tip"
+  >
+    <span
+      class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--spinner"
+      aria-hidden="true"
+    >
+      <span class="seller-home__feed-status-pulse">
+        <span class="seller-home__feed-status-pulse-dot"></span>
+        <span class="seller-home__feed-status-pulse-ring"></span>
+      </span>
+    </span>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--circle" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#circle"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--check" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--clock" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#clock"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--pause" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#pause"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--play" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#play"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--warning" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#warning"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--refresh" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#refresh"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--stop" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#stop"></use>
+    </svg>
+    
+    <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--ban" aria-hidden="true">
+      <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#ban"></use>
+    </svg>
+    
+  </button>
+  <div
+    class="slds-popover slds-popover_tooltip t-tt seller-home__feed-status-tip"
+    role="tooltip"
+    id="seller-home-feed-run-n-guest-user-status-tip"
     aria-hidden="true"
-  ></span>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--check" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#check"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--clock" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#clock"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--pause" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#pause"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--play" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#play"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--warning" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#warning"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--refresh" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#refresh"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--stop" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#stop"></use>
-  </svg>
-  
-  <svg class="seller-home__feed-item-status-glyph seller-home__feed-item-status-glyph--ban" aria-hidden="true">
-    <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#ban"></use>
-  </svg>
-  
-</button>
+    data-show="false"
+  >
+    <div class="slds-popover__body t-tt-text seller-home__feed-status-tip-label" data-sh-feed-status-tip>Run</div>
+  </div>
+</span>
 
 
     <div class="seller-home__feed-item-body">
       
       <h3 class="seller-home__feed-item-title">
-        
         <button
           type="button"
           class="seller-home__feed-item-title-action"
@@ -3028,19 +2566,19 @@
           data-sh-feed-slot-archived="Scan guest-user access"
           aria-describedby="seller-home-feed-run-n-guest-user-desc"
         >Scan guest-user access</button>
-        
       </h3>
 
       
       <p class="seller-home__feed-item-desc" id="seller-home-feed-run-n-guest-user-desc">
+        
         
 <span
   class="seller-home__feed-item-desc-status"
   data-sh-feed-slot="status"
   data-sh-feed-slot-default="Daily"
   data-sh-feed-slot-paused="Paused"
-  data-sh-feed-slot-running="Running"
-  data-sh-feed-slot-completed="Ready"
+  data-sh-feed-slot-running="3 of 5 steps"
+  data-sh-feed-slot-completed="Daily"
   data-sh-feed-slot-scheduled="Daily"
   data-sh-feed-slot-archived="Archived"
 >Daily</span>
@@ -3052,12 +2590,13 @@
   data-sh-feed-slot="time"
   data-sh-feed-slot-default="Next run tomorrow at 7:00 AM"
   data-sh-feed-slot-paused="Last run Monday"
-  data-sh-feed-slot-running="Daily"
-  data-sh-feed-slot-completed="Daily"
+  data-sh-feed-slot-running="Just started"
+  data-sh-feed-slot-completed="Next run tomorrow at 7:00 AM"
   data-sh-feed-slot-scheduled="Next run tomorrow at 7:00 AM"
   data-sh-feed-slot-archived="Last run Monday"
 >Next run tomorrow at 7:00 AM</span>
 
+        
       </p>
 
       
@@ -3067,16 +2606,22 @@
 
 
 
+
+
+
+
 <span class="slds-badge slds-badge_lightest seller-home__feed-item-output-pill">
   
-    
+    <span class="seller-home__feed-item-output-pill-icon">
+      
       <img
         class="seller-home__feed-item-output-pill-glyph seller-home__feed-item-output-pill-glyph--image"
         src="/aiq-sales-agent/assets/images/doctype-icons/Doc-grey.svg"
         alt=""
         aria-hidden="true"
       />
-    
+      
+    </span>
   
   <span
     class="seller-home__feed-item-output-pill-label"
@@ -3158,24 +2703,6 @@
       </li>
       
       <li
-        role="none" data-sh-feed-action-only="archived"
-      >
-        <button
-          type="button"
-          class="seller-home__feed-item-menu-item"
-          role="menuitem"
-          data-sh-feed-item-menu-action="restart"
-        >
-          
-          <svg class="seller-home__feed-item-menu-item-icon" aria-hidden="true">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#refresh"></use>
-          </svg>
-          
-          <span class="seller-home__feed-item-menu-item-label">Restart</span>
-        </button>
-      </li>
-      
-      <li
         role="none"
       >
         <button
@@ -3189,25 +2716,7 @@
             <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#edit"></use>
           </svg>
           
-          <span class="seller-home__feed-item-menu-item-label">Edit Skill</span>
-        </button>
-      </li>
-      
-      <li
-        role="none" data-sh-feed-action-only="completed scheduled"
-      >
-        <button
-          type="button"
-          class="seller-home__feed-item-menu-item"
-          role="menuitem"
-          data-sh-feed-item-menu-action="archive"
-        >
-          
-          <svg class="seller-home__feed-item-menu-item-icon" aria-hidden="true">
-            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#archive"></use>
-          </svg>
-          
-          <span class="seller-home__feed-item-menu-item-label">Archive</span>
+          <span class="seller-home__feed-item-menu-item-label">Edit</span>
         </button>
       </li>
       
@@ -3273,15 +2782,6 @@
       <p class="seller-home__feed-empty-body">Upcoming runs will appear here.</p>
     </div>
     
-    <div
-      class="seller-home__feed-empty seller-home__feed-empty--filter"
-      data-sh-feed-empty-view="archived"
-      role="status"
-    >
-      <p class="seller-home__feed-empty-heading">No archived workflows</p>
-      <p class="seller-home__feed-empty-body">Anything you archive lands here.</p>
-    </div>
-    
   
 </section>
 
@@ -3329,11 +2829,11 @@
         <div class="slds-box slds-box_x-small slds-media source-tile source-tile_connected">
           <div class="slds-media__figure slds-media__figure_fixed-width slds-align_absolute-center slds-m-left_xx-small">
             <div class="slds-icon_container">
-              <img src="/aiq-sales-agent/assets/images/source_icons/conn_gong.png" alt="Gong" title="Gong" class="slds-icon slds-icon_medium" />
+              <img src="/aiq-sales-agent/assets/images/source_icons/source_momentum.svg" alt="Momentum" title="Momentum" class="slds-icon slds-icon_medium" />
             </div>
           </div>
           <div class="slds-media__body source-tile__body slds-p-around_small">
-            <h3 class="slds-truncate slds-text-heading_small" title="Gong">Gong</h3>
+            <h3 class="slds-truncate slds-text-heading_small" title="Momentum">Momentum</h3>
             <div class="slds-m-top_small source-tile__status slds-truncate">Connected</div>
           </div>
         </div>
@@ -3744,6 +3244,275 @@
 </section>
 <div class="slds-backdrop" data-sh-connections-backdrop hidden></div>
 
+	
+
+
+
+<section
+  role="dialog"
+  tabindex="-1"
+  aria-modal="true"
+  aria-labelledby="feed-edit-modal-heading"
+  class="slds-modal slds-modal_small seller-home__schedule-edit"
+  data-sh-feed-edit-modal
+  hidden
+>
+  <div class="slds-modal__container">
+    <button type="button" class="slds-button slds-button_icon slds-modal__close" data-sh-feed-edit-close>
+      <svg class="slds-button__icon slds-button__icon_large" aria-hidden="true">
+        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#close"></use>
+      </svg>
+      <span class="slds-assistive-text">Cancel and close</span>
+    </button>
+    <div class="slds-modal__header">
+      <h1 id="feed-edit-modal-heading" class="slds-modal__title slds-hyphenate" tabindex="-1" data-sh-feed-edit-title>Edit</h1>
+    </div>
+    <div class="slds-modal__content seller-home__schedule-edit__body" id="feed-edit-modal-content">
+      <div
+        class="slds-assistive-text"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-sh-feed-edit-announce
+      ></div>
+
+      <div class="seller-home__schedule-edit__field">
+        <label class="slds-form-element__label slds-p-left_xx-small" for="feed-edit-frequency" id="feed-edit-frequency-label">Frequency</label>
+        <div class="seller-home__schedule-edit__frequency">
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <div class="slds-combobox_container">
+                <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click" data-slds-combobox>
+                  <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right" role="none">
+                    <div
+                      role="combobox"
+                      tabindex="0"
+                      class="slds-input_faux slds-combobox__input"
+                      id="feed-edit-frequency"
+                      data-sh-feed-edit-frequency
+                      aria-labelledby="feed-edit-frequency-label"
+                      aria-controls="feed-edit-frequency-list"
+                      aria-expanded="false"
+                      aria-haspopup="listbox"
+                    >
+                      <span class="slds-truncate" data-sh-feed-edit-frequency-value></span>
+                    </div>
+                    <span class="slds-icon_container slds-icon-utility-down slds-input__icon slds-input__icon_right">
+                      <svg class="slds-icon slds-icon_x-small slds-icon-text-default" aria-hidden="true">
+                        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevrondown"></use>
+                      </svg>
+                    </span>
+                  </div>
+                  <div id="feed-edit-frequency-list" class="slds-dropdown slds-dropdown_length-5 slds-dropdown_fluid" role="listbox" aria-label="Frequency" tabindex="-1">
+                    <ul class="slds-listbox slds-listbox_vertical" role="presentation" data-sh-feed-edit-frequency-list></ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <span class="seller-home__schedule-edit__frequency-on">on</span>
+          <div class="slds-form-element">
+            <label class="slds-assistive-text" for="feed-edit-time" id="feed-edit-time-label">Time</label>
+            <div class="slds-form-element__control">
+              <div class="slds-combobox_container">
+                <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click" data-slds-combobox>
+                  <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right" role="none">
+                    <input
+                      class="slds-input slds-combobox__input"
+                      id="feed-edit-time"
+                      data-sh-feed-edit-time
+                      aria-labelledby="feed-edit-time-label"
+                      aria-autocomplete="list"
+                      aria-controls="feed-edit-time-list"
+                      aria-expanded="false"
+                      aria-haspopup="listbox"
+                      autocomplete="off"
+                      role="combobox"
+                      type="text"
+                    />
+                    <span class="slds-icon_container slds-input__icon slds-input__icon_right">
+                      <svg class="slds-icon slds-icon_x-small slds-icon-text-default" aria-hidden="true">
+                        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevrondown"></use>
+                      </svg>
+                    </span>
+                  </div>
+                  <div id="feed-edit-time-list" class="slds-dropdown slds-dropdown_length-5 slds-dropdown_fluid" role="listbox" aria-label="Time" tabindex="-1">
+                    <ul class="slds-listbox slds-listbox_vertical" role="presentation" data-sh-feed-edit-time-list></ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="seller-home__schedule-edit__divider" aria-hidden="true">
+
+      <div class="slds-form-element">
+        <label class="slds-form-element__label slds-p-left_xx-small" for="feed-edit-instructions">Instructions</label>
+        <div class="slds-form-element__control">
+          <textarea id="feed-edit-instructions" class="slds-textarea seller-home__schedule-edit__instructions" data-sh-feed-edit-instructions></textarea>
+        </div>
+      </div>
+
+      <hr class="seller-home__schedule-edit__divider" aria-hidden="true">
+
+      <div class="seller-home__schedule-edit__details">
+        <section class="seller-home__schedule-edit__field" aria-label="Delivery">
+          <p class="seller-home__schedule-edit__label">Delivery</p>
+          <p class="seller-home__schedule-edit__value" data-sh-feed-edit-delivery></p>
+        </section>
+        <section class="seller-home__schedule-edit__field" aria-label="Uses Skill">
+          <p class="seller-home__schedule-edit__label">Uses Skill</p>
+          <a class="seller-home__schedule-edit__skill" data-sh-feed-edit-skill href="#">
+            <svg class="seller-home__schedule-edit__skill-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="12" fill="#2f2cb7"></circle><g fill="#ffffff" transform="translate(5.2 5.2) scale(0.85)"><g transform="translate(0.616 0.9232)"><path fill-rule="evenodd" clip-rule="evenodd" d="M11.4591 0C12.434 0 13.2409 0.758083 13.3017 1.73107L13.8242 10.0922H13.8462C14.3702 10.0922 14.7692 10.5235 14.7692 11.0231V12.277C14.7692 13.2992 13.9569 14.1538 12.9231 14.1538H5.23077V14.153C5.21938 14.1532 5.20797 14.1538 5.19652 14.1538C4.19111 14.1538 3.39997 13.3304 3.38523 12.3402L2.92969 4.61538H0.923077C0.413277 4.61538 0 4.20212 0 3.69231V1.84615C0 0.826551 0.826551 0 1.84615 0H11.4591ZM7.0084 12.3119C7.0084 12.5253 6.97191 12.731 6.90535 12.9231H12.9231C13.2487 12.9231 13.5384 12.6482 13.5385 12.277V11.323H7.0084V12.3119ZM3.88643 1.23077C3.95646 1.42473 3.99597 1.63301 3.99911 1.84916L4.61418 12.2758L4.61538 12.2939V12.3119C4.61538 12.6638 4.88978 12.923 5.19652 12.9231C5.50326 12.9231 5.77763 12.6638 5.77763 12.3119V11.0231C5.77763 10.5235 6.17674 10.0923 6.70071 10.0922H12.591L12.0733 1.80769C12.053 1.4834 11.7841 1.23077 11.4591 1.23077H3.88643ZM1.84615 1.23077C1.50629 1.23077 1.23077 1.50629 1.23077 1.84615V3.38462H2.85726L2.77043 1.91316L2.76923 1.89513V1.8768C2.76917 1.50559 2.47945 1.23077 2.15385 1.23077H1.84615Z"></path></g><g transform="translate(5.8464 3.6928)"><path d="M2.80839 0.135688C2.89334 -0.0416965 3.14762 -0.0461579 3.23867 0.128181L3.8826 1.36166C4.07491 1.73298 4.3835 2.03049 4.76153 2.2096L6.01722 2.80997C6.19473 2.89483 6.1991 3.14889 6.02473 3.23993L4.79067 3.88387C4.41913 4.07609 4.12131 4.38437 3.94211 4.76218L3.34143 6.01729C3.25651 6.1947 3.00223 6.19917 2.91116 6.0248L2.26691 4.79132C2.07463 4.42006 1.7663 4.12249 1.38833 3.94338L0.135619 3.3427C-0.0416732 3.25778 -0.046135 3.00409 0.128111 2.91304L1.36217 2.2691C1.73371 2.07689 2.03147 1.76535 2.21073 1.3908L2.80839 0.135688Z"></path></g></g></svg>
+            <span class="seller-home__schedule-edit__skill-name" data-sh-feed-edit-skill-name></span>
+          </a>
+        </section>
+        <div class="seller-home__schedule-edit__meta-row">
+          <p class="seller-home__schedule-edit__meta-label">Created</p>
+          <p class="seller-home__schedule-edit__meta-value" data-sh-feed-edit-created></p>
+        </div>
+        <div class="seller-home__schedule-edit__meta-row">
+          <p class="seller-home__schedule-edit__meta-label">Last run</p>
+          <p class="seller-home__schedule-edit__meta-value" data-sh-feed-edit-lastrun></p>
+        </div>
+      </div>
+    </div>
+    <div class="slds-modal__footer">
+      <button type="button" class="slds-button slds-button_neutral" data-sh-feed-edit-close>Cancel</button>
+      <button type="button" class="slds-button slds-button_brand" data-sh-feed-edit-save>Save</button>
+    </div>
+  </div>
+</section>
+<div class="slds-backdrop" data-sh-feed-edit-backdrop role="presentation" hidden></div>
+<script type="application/json" id="sh-feed-edit-skills">
+{
+
+  "sk-find-prospects": "Find Prospects",
+
+  "sk-daily-pipeline-snapshot": "Pipeline Snapshot",
+
+  "sk-buyer-engage": "Buyer Engage",
+
+  "sk-write-sales-emails": "Write Sales Emails",
+
+  "sk-prepare-for-meetings": "Prepare for Meetings",
+
+  "sk-make-powerpoint": "Make Powerpoint",
+
+  "sk-review-deal-health": "Review Deal Health",
+
+  "sk-identify-pipeline-changes": "Identify Pipeline Changes",
+
+  "sk-recommend-next-actions": "Recommend Next Actions",
+
+  "sk-pipeline-management": "Pipeline Management",
+
+  "sk-data-sourcing": "Data Sourcing",
+
+  "sk-account-research-summary": "Account Research Summary",
+
+  "sk-draft-proposals": "Draft Proposals",
+
+  "sk-weekly-exec-brief": "Executive Brief",
+
+  "sk-account-research": "Account Research",
+
+  "sk-weekly-top-3": "Quota Health Check"
+
+}
+</script>
+<script type="application/json" id="sh-feed-edit-schedules">
+[
+
+
+
+
+
+
+
+{
+  "id": "ri-n-org-health",
+  "title": "Draft plan to setup Hunter",
+  "frequency": "One time",
+  "time": "9:00 AM",
+  "delivery": "the home feed",
+  "skillId": "sk-daily-pipeline-snapshot",
+  "instructions": "Run “Draft plan to setup Hunter” One time at 9:00 AM.\n\nDeliver the result via the home feed.\n\nThese instructions cover when this runs and where the result is delivered. The skill keeps its own instructions for what the agent does.",
+  "createdAt": "",
+  "createdBy": "You",
+  "lastRun": "",
+  "state": "completed",
+  "reconnect": null
+},
+
+
+
+
+
+
+
+{
+  "id": "ri-n-permset",
+  "title": "Draft Sales Ops permission set",
+  "frequency": "Weekly",
+  "time": "9:00 AM",
+  "delivery": "the home feed",
+  "skillId": "sk-data-sourcing",
+  "instructions": "Run “Draft Sales Ops permission set” Weekly at 9:00 AM.\n\nDeliver the result via the home feed.\n\nThese instructions cover when this runs and where the result is delivered. The skill keeps its own instructions for what the agent does.",
+  "createdAt": "",
+  "createdBy": "You",
+  "lastRun": "Last run today",
+  "state": "scheduled",
+  "reconnect": null
+},
+
+
+
+
+
+
+
+{
+  "id": "ri-n-release",
+  "title": "Winter ’27 release-update brief",
+  "frequency": "Weekly",
+  "time": "9:00 AM",
+  "delivery": "the home feed",
+  "skillId": "sk-weekly-exec-brief",
+  "instructions": "Run “Winter ’27 release-update brief” Weekly at 9:00 AM.\n\nDeliver the result via the home feed.\n\nThese instructions cover when this runs and where the result is delivered. The skill keeps its own instructions for what the agent does.",
+  "createdAt": "",
+  "createdBy": "You",
+  "lastRun": "Last run Friday",
+  "state": "scheduled",
+  "reconnect": null
+},
+
+
+
+
+
+
+
+{
+  "id": "run-n-guest-user",
+  "title": "Scan guest-user access",
+  "frequency": "Daily",
+  "time": "9:00 AM",
+  "delivery": "the home feed",
+  "skillId": "sk-account-research",
+  "instructions": "Run “Scan guest-user access” Daily at 9:00 AM.\n\nDeliver the result via the home feed.\n\nThese instructions cover when this runs and where the result is delivered. The skill keeps its own instructions for what the agent does.",
+  "createdAt": "",
+  "createdBy": "You",
+  "lastRun": "Last run Monday",
+  "state": "scheduled",
+  "reconnect": null
+}
+
+]
+</script>
+
 
 	
 	
@@ -3856,7 +3625,7 @@
     data-tool-category="crm"
     
     type="button"
-    data-tool-id="gong"
+    data-tool-id="momentum"
     data-panel-type="conversations"
     
   >
@@ -3866,13 +3635,13 @@
         
         
         <span class="tool-icon-container tool-icon-container_image">
-          <img class="tool-icon-img" src="/aiq-sales-agent/assets/images/source_icons/conn_gong.png" alt="" />
-          <span class="slds-assistive-text">Gong</span>
+          <img class="tool-icon-img" src="/aiq-sales-agent/assets/images/source_icons/source_momentum.svg" alt="" />
+          <span class="slds-assistive-text">Momentum</span>
         </span>
         
       </div>
       <div class="tool-card__text">
-        <p class="tool-title">Gong</p>
+        <p class="tool-title">Momentum</p>
         <p class="tool-description">Call recordings, transcripts, and conversation insights</p>
       </div>
     </div>
@@ -5578,7 +5347,7 @@
 <div class="slds-backdrop" id="morphBackdrop" role="presentation"></div>
 
 	<script type="application/json" id="sh-tools-config">
-		{"tools":[{"id":"gong","name":"Gong","description":"Call recordings, transcripts, and conversation insights","category":"crm","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_gong.png","iconLabel":"Gong","state":"added","panelType":"conversations"},{"id":"zoominfo_lookup","name":"ZoomInfo","description":"Company, Contacts, Intent, Signals","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_zoominfo.png","iconLabel":"ZoomInfo","state":"setup","panelType":"zoominfo"},{"id":"6sense","name":"6sense","description":"Predictive buying stages, account readiness, keyword intent, and anonymous visitor identification","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_6sense.png","iconLabel":"6sense","state":"added","panelType":"detail"},{"id":"demandbase","name":"Demandbase","description":"Company, Contacts, Intent, Signals","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_demandbase.png","iconLabel":"Demandbase","state":"added","panelType":"detail"},{"id":"apollo","name":"Apollo","description":"Company, Contacts, Intent, Signals","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_apollo.png","iconLabel":"Apollo","state":"setup","panelType":"detail"},{"id":"salesintel","name":"SalesIntel","description":"Company, Contacts, Intent, Signals","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_salesintel.png","iconLabel":"SalesIntel","state":"added","panelType":"detail"},{"id":"moody_s","name":"Moody's","description":"Private-company financials, ownership, corporate hierarchies, and M&A data","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_moodys.png","iconLabel":"Moody's","state":"added","panelType":"detail"},{"id":"g2","name":"G2","description":"Software category research, product-page views, and competitor-comparison intent","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_g2.png","iconLabel":"G2","state":"setup","panelType":"detail"},{"id":"bombora","name":"Bombora","description":"Broad-web B2B topic intent","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_bombora.png","iconLabel":"Bombora","state":"setup","panelType":"detail"},{"id":"cognism","name":"Cognism","description":"Phone-verified contacts, European coverage, and compliance controls","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_cognism.png","iconLabel":"Cognism","state":"added","panelType":"detail"},{"id":"crossbeam","name":"Crossbeam","description":"Partner overlaps, shared customers, and co-selling signals","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_crossbeam.png","iconLabel":"Crossbeam","state":"added","panelType":"detail"},{"id":"boardex","name":"BoardEx","description":"Executive and board profiles, leadership changes, and relationship paths","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_boardex.png","iconLabel":"BoardEx","state":"added","panelType":"detail"},{"id":"dow_jones_factiva","name":"Dow Jones Factiva","description":"Licensed global news and company-event monitoring","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_dow_jones.png","iconLabel":"Dow Jones Factiva","state":"added","panelType":"detail"},{"id":"outreach","name":"Outreach","description":"Sequences, engagement history, and reply activity","category":"crm","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_outreach.png","iconLabel":"Outreach","state":"added","panelType":"detail"},{"id":"builtwith","name":"BuiltWith","description":"Website technologies, technology changes, and installation history","category":"tech","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_builtwith.png","iconLabel":"BuiltWith","state":"setup","panelType":"detail"},{"id":"predictleads","name":"PredictLeads","description":"Hiring, funding, technology, product, customer, and company-event signals","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_predictleads.png","iconLabel":"PredictLeads","state":"added","panelType":"detail"},{"id":"informa_techtarget","name":"Informa TechTarget","description":"Named-person enterprise-technology research and purchase intent","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_techtarget.png","iconLabel":"Informa TechTarget","state":"added","panelType":"detail"},{"id":"veridion","name":"Veridion","description":"Company products, services, locations, and business-model classifications","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_veridion.png","iconLabel":"Veridion","state":"added","panelType":"detail"},{"id":"harmonic","name":"Harmonic","description":"Emerging startups, founders, teams, network paths, and early-growth signals","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_harmonic.png","iconLabel":"Harmonic","state":"added","panelType":"detail"},{"id":"salesloft","name":"Salesloft","description":"Cadences, engagement history, and reply activity","category":"crm","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_salesloft.png","iconLabel":"Salesloft","state":"added","panelType":"detail"},{"id":"people_data_labs","name":"People Data Labs","description":"People, employment, company, and IP data","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_people_data_labs.png","iconLabel":"People Data Labs","state":"added","panelType":"detail"},{"id":"d_b","name":"D&B","description":"Verified business identities, legal entities, subsidiaries, and global corporate hierarchies","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_dun_bradstreet.png","iconLabel":"D&B","state":"added","panelType":"detail"},{"id":"crunchbase","name":"Crunchbase","description":"Private companies, funding, acquisitions, layoffs, and growth signals","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_crunchbase.png","iconLabel":"Crunchbase","state":"setup","panelType":"detail"},{"id":"enigma","name":"Enigma","description":"US SMB identities, revenue, card transactions, and growth signals","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_enigma.png","iconLabel":"Enigma","state":"added","panelType":"detail"},{"id":"exa","name":"Exa","description":"Live web search, crawling, monitoring, and agent-driven research","category":"tech","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_exa.png","iconLabel":"Exa","state":"added","panelType":"detail"},{"id":"pitchbook","name":"PitchBook","description":"Private-capital deals, investors, funds, PE ownership, debt, and professionals","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_pitchbook.png","iconLabel":"PitchBook","state":"added","panelType":"detail"},{"id":"similarweb","name":"SimilarWeb","description":"Website and app traffic, audiences, acquisition channels, and digital growth","category":"tech","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_similarweb.png","iconLabel":"SimilarWeb","state":"added","panelType":"detail"},{"id":"s_p_global","name":"S&P Global","description":"Company financials, transactions, relationships, filings, and earnings transcripts","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_sp_global.png","iconLabel":"S&P Global","state":"added","panelType":"detail"},{"id":"live_data_technologies","name":"Live Data Technologies","description":"Employment verification and real-time job-change data","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_live_data.png","iconLabel":"Live Data Technologies","state":"added","panelType":"detail"},{"id":"the_org","name":"The Org","description":"Org charts, reporting lines, roles, and positions","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_the_org.png","iconLabel":"The Org","state":"added","panelType":"detail"},{"id":"coresignal","name":"CoreSignal","description":"Employee, company, and job-posting data","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_coresignal.png","iconLabel":"CoreSignal","state":"added","panelType":"detail"},{"id":"linkedin_sales_navigator","name":"LinkedIn Sales Navigator","description":"Professional profiles, current roles, job changes, mutual connections, and relationship maps","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_linkedin.png","iconLabel":"LinkedIn Sales Navigator","state":"added","panelType":"detail"},{"id":"hg_insights","name":"HG Insights","description":"Technographics, cloud usage, IT spending, and technology-contract intelligence","category":"tech","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_hg_insights.png","iconLabel":"HG Insights","state":"added","panelType":"detail"},{"id":"usergems","name":"UserGems","description":"Best Context data and signals","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_usergems.png","iconLabel":"UserGems","state":"added","panelType":"detail"}]}
+		{"tools":[{"id":"momentum","name":"Momentum","description":"Call recordings, transcripts, and conversation insights","category":"crm","iconSrc":"/aiq-sales-agent/assets/images/source_icons/source_momentum.svg","iconLabel":"Momentum","state":"added","panelType":"conversations"},{"id":"zoominfo_lookup","name":"ZoomInfo","description":"Company, Contacts, Intent, Signals","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_zoominfo.png","iconLabel":"ZoomInfo","state":"setup","panelType":"zoominfo"},{"id":"6sense","name":"6sense","description":"Predictive buying stages, account readiness, keyword intent, and anonymous visitor identification","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_6sense.png","iconLabel":"6sense","state":"added","panelType":"detail"},{"id":"demandbase","name":"Demandbase","description":"Company, Contacts, Intent, Signals","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_demandbase.png","iconLabel":"Demandbase","state":"added","panelType":"detail"},{"id":"apollo","name":"Apollo","description":"Company, Contacts, Intent, Signals","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_apollo.png","iconLabel":"Apollo","state":"setup","panelType":"detail"},{"id":"salesintel","name":"SalesIntel","description":"Company, Contacts, Intent, Signals","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_salesintel.png","iconLabel":"SalesIntel","state":"added","panelType":"detail"},{"id":"moody_s","name":"Moody's","description":"Private-company financials, ownership, corporate hierarchies, and M&A data","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_moodys.png","iconLabel":"Moody's","state":"added","panelType":"detail"},{"id":"g2","name":"G2","description":"Software category research, product-page views, and competitor-comparison intent","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_g2.png","iconLabel":"G2","state":"setup","panelType":"detail"},{"id":"bombora","name":"Bombora","description":"Broad-web B2B topic intent","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_bombora.png","iconLabel":"Bombora","state":"setup","panelType":"detail"},{"id":"cognism","name":"Cognism","description":"Phone-verified contacts, European coverage, and compliance controls","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_cognism.png","iconLabel":"Cognism","state":"added","panelType":"detail"},{"id":"crossbeam","name":"Crossbeam","description":"Partner overlaps, shared customers, and co-selling signals","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_crossbeam.png","iconLabel":"Crossbeam","state":"added","panelType":"detail"},{"id":"boardex","name":"BoardEx","description":"Executive and board profiles, leadership changes, and relationship paths","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_boardex.png","iconLabel":"BoardEx","state":"added","panelType":"detail"},{"id":"dow_jones_factiva","name":"Dow Jones Factiva","description":"Licensed global news and company-event monitoring","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_dow_jones.png","iconLabel":"Dow Jones Factiva","state":"added","panelType":"detail"},{"id":"outreach","name":"Outreach","description":"Sequences, engagement history, and reply activity","category":"crm","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_outreach.png","iconLabel":"Outreach","state":"added","panelType":"detail"},{"id":"builtwith","name":"BuiltWith","description":"Website technologies, technology changes, and installation history","category":"tech","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_builtwith.png","iconLabel":"BuiltWith","state":"setup","panelType":"detail"},{"id":"predictleads","name":"PredictLeads","description":"Hiring, funding, technology, product, customer, and company-event signals","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_predictleads.png","iconLabel":"PredictLeads","state":"added","panelType":"detail"},{"id":"informa_techtarget","name":"Informa TechTarget","description":"Named-person enterprise-technology research and purchase intent","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_techtarget.png","iconLabel":"Informa TechTarget","state":"added","panelType":"detail"},{"id":"veridion","name":"Veridion","description":"Company products, services, locations, and business-model classifications","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_veridion.png","iconLabel":"Veridion","state":"added","panelType":"detail"},{"id":"harmonic","name":"Harmonic","description":"Emerging startups, founders, teams, network paths, and early-growth signals","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_harmonic.png","iconLabel":"Harmonic","state":"added","panelType":"detail"},{"id":"salesloft","name":"Salesloft","description":"Cadences, engagement history, and reply activity","category":"crm","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_salesloft.png","iconLabel":"Salesloft","state":"added","panelType":"detail"},{"id":"people_data_labs","name":"People Data Labs","description":"People, employment, company, and IP data","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_people_data_labs.png","iconLabel":"People Data Labs","state":"added","panelType":"detail"},{"id":"d_b","name":"D&B","description":"Verified business identities, legal entities, subsidiaries, and global corporate hierarchies","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_dun_bradstreet.png","iconLabel":"D&B","state":"added","panelType":"detail"},{"id":"crunchbase","name":"Crunchbase","description":"Private companies, funding, acquisitions, layoffs, and growth signals","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_crunchbase.png","iconLabel":"Crunchbase","state":"setup","panelType":"detail"},{"id":"enigma","name":"Enigma","description":"US SMB identities, revenue, card transactions, and growth signals","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_enigma.png","iconLabel":"Enigma","state":"added","panelType":"detail"},{"id":"exa","name":"Exa","description":"Live web search, crawling, monitoring, and agent-driven research","category":"tech","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_exa.png","iconLabel":"Exa","state":"added","panelType":"detail"},{"id":"pitchbook","name":"PitchBook","description":"Private-capital deals, investors, funds, PE ownership, debt, and professionals","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_pitchbook.png","iconLabel":"PitchBook","state":"added","panelType":"detail"},{"id":"similarweb","name":"SimilarWeb","description":"Website and app traffic, audiences, acquisition channels, and digital growth","category":"tech","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_similarweb.png","iconLabel":"SimilarWeb","state":"added","panelType":"detail"},{"id":"s_p_global","name":"S&P Global","description":"Company financials, transactions, relationships, filings, and earnings transcripts","category":"company","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_sp_global.png","iconLabel":"S&P Global","state":"added","panelType":"detail"},{"id":"live_data_technologies","name":"Live Data Technologies","description":"Employment verification and real-time job-change data","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_live_data.png","iconLabel":"Live Data Technologies","state":"added","panelType":"detail"},{"id":"the_org","name":"The Org","description":"Org charts, reporting lines, roles, and positions","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_the_org.png","iconLabel":"The Org","state":"added","panelType":"detail"},{"id":"coresignal","name":"CoreSignal","description":"Employee, company, and job-posting data","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_coresignal.png","iconLabel":"CoreSignal","state":"added","panelType":"detail"},{"id":"linkedin_sales_navigator","name":"LinkedIn Sales Navigator","description":"Professional profiles, current roles, job changes, mutual connections, and relationship maps","category":"contacts","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_linkedin.png","iconLabel":"LinkedIn Sales Navigator","state":"added","panelType":"detail"},{"id":"hg_insights","name":"HG Insights","description":"Technographics, cloud usage, IT spending, and technology-contract intelligence","category":"tech","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_hg_insights.png","iconLabel":"HG Insights","state":"added","panelType":"detail"},{"id":"usergems","name":"UserGems","description":"Best Context data and signals","category":"intent","iconSrc":"/aiq-sales-agent/assets/images/source_icons/conn_usergems.png","iconLabel":"UserGems","state":"added","panelType":"detail"}]}
 	</script>
 
 	
@@ -5616,9 +5385,9 @@
 	
 	<script src="/aiq-sales-agent/scripts/vendor/gsap.min.js"></script>
 	<script src="/aiq-sales-agent/scripts/vendor/Flip.min.js"></script>
+	<script src="/aiq-sales-agent/scripts/aurora.js"></script>
 
 	<script src="/aiq-sales-agent/scripts/home.js"></script>
-
 	<script src="/aiq-sales-agent/scripts/tools_filter.js"></script>
 	<script type="module" src="/aiq-sales-agent/scripts/tools_modal.js"></script>
 
@@ -5701,8 +5470,8 @@
 		Object.assign(state, loadSavedState('godrays') || {});
 
 		// Same host as hunter-main-main: a child of `.seller-home`, sized and
-		// stacked by `.seller-home__god-rays` in home.scss.
-		const bg = document.querySelector('[data-sh-god-rays]');
+		// stacked by `.seller-home__shader` in home.scss.
+		const bg = document.querySelector('[data-sh-shader-host]');
 		const shell = bg.parentElement;
 		const anchor = document.querySelector('.seller-home__composer');
 		const scroller = document.querySelector('.seller-home__main');
@@ -5724,7 +5493,7 @@
 		// dropdown (localStorage 'sh:shader'), then DEFAULT_SHADER. Whichever is
 		// active mounts and populates the one #panel; the other's setup sits
 		// dormant behind its guard. Nothing is deleted.
-		const DEFAULT_SHADER = 'simplex';
+		const DEFAULT_SHADER = 'off';
 		let storedShader = null;
 		try { storedShader = window.localStorage.getItem('sh:shader'); } catch (e) { }
 		const ACTIVE_SHADER = new URLSearchParams(location.search).get('shader') || storedShader || DEFAULT_SHADER;
@@ -5733,7 +5502,7 @@
 			// MeshGradient — vanilla translation of the React
 			// `<MeshGradient colors distortion swirl grainMixer grainOverlay
 			// speed scale rotation offsetX offsetY />` (speed is the ShaderMount
-			// arg; the rest are uniforms). Mounted on the god-rays host, with a
+			// arg; the rest are uniforms). Mounted on the shader host, with a
 			// god-rays-style tuning panel built into the same #panel.
 			try {
 				const MESH_DEFAULTS = {
@@ -6252,7 +6021,7 @@
 		// Original god-rays — untouched, just gated so it doesn't mount while
 		// another shader (mesh / radial / simplex) is active. (God-rays is
 		// capped at 5 colors by the shader itself, unlike the others.)
-		if (ACTIVE_SHADER !== 'mesh' && ACTIVE_SHADER !== 'radial' && ACTIVE_SHADER !== 'simplex') try {
+		if (ACTIVE_SHADER !== 'off' && ACTIVE_SHADER !== 'mesh' && ACTIVE_SHADER !== 'radial' && ACTIVE_SHADER !== 'simplex') try {
 			// ShaderMount rejects a texture that hasn't decoded, so wait for it.
 			let noise;
 			try { noise = getShaderNoiseTexture(document); } catch { noise = getShaderNoiseTexture(); }
@@ -6602,7 +6371,7 @@
 			// the hidden panel win; they can still re-pick / re-open afterward.
 			// This classic script runs before the deferred shader module reads
 			// the same keys, so the forced pick also drives what mounts.
-			var SHADER_FORCE = 'simplex-2026-09-07';
+			var SHADER_FORCE = 'aurora-2026-09-22';
 			try {
 				if (window.localStorage.getItem('sh:shaderForce') !== SHADER_FORCE) {
 					window.localStorage.removeItem('sh:shader');
@@ -6617,12 +6386,10 @@
 			var gearBtn = document.querySelector('.slds-global-actions__setup');
 			if (!gearBtn) return;
 			var trigger = gearBtn.closest('.slds-dropdown-trigger') || gearBtn.parentElement;
-			var setupMenu = trigger.querySelector('[data-sh-setup-dropdown]');
-			var setupList = setupMenu && setupMenu.querySelector('.slds-dropdown__list');
 
-			var SHADER_KEY = 'sh:shader';        // 'godrays' | 'mesh'
+			var SHADER_KEY = 'sh:shader';        // 'off' | 'godrays' | 'mesh' | 'radial' | 'simplex'
 			var PANEL_KEY = 'sh:shaderControls'; // 'shown' | 'hidden'
-			var DEFAULT_SHADER = 'simplex';
+			var DEFAULT_SHADER = 'off';
 
 			function lsGet(key) { try { return window.localStorage.getItem(key); } catch (e) { return null; } }
 			function lsSet(key, val) { try { window.localStorage.setItem(key, val); } catch (e) { } }
@@ -6645,9 +6412,14 @@
 					'<span data-sh-check style="visibility:' + (on ? 'visible' : 'hidden') + '">' + check + '</span>' + label +
 					'</span></a></li>';
 			}
-			var shaderMarkup =
-				'<li class="slds-has-divider_top-space" role="separator"></li>' +
+			var dd = document.createElement('div');
+			dd.className = 'slds-dropdown slds-dropdown_right slds-dropdown_small';
+			dd.setAttribute('role', 'menu');
+			dd.style.display = 'none';
+			dd.innerHTML =
+				'<ul class="slds-dropdown__list" role="presentation">' +
 				'<li class="slds-dropdown__header slds-truncate" role="separator"><span>Background shader</span></li>' +
+				shaderItem('off', 'Aurora') +
 				shaderItem('godrays', 'God Rays') +
 				shaderItem('mesh', 'Mesh') +
 				shaderItem('radial', 'Radial') +
@@ -6657,32 +6429,23 @@
 				'<a href="#" role="menuitemcheckbox" aria-checked="' + (!panelHidden) + '" data-sh-panel-toggle tabindex="0">' +
 				'<span class="slds-truncate" title="Show control panel">' +
 				'<span data-sh-panel-check style="visibility:' + (panelHidden ? 'hidden' : 'visible') + '">' + check + '</span>Show control panel' +
-				'</span></a></li>';
-			var dd;
-			if (setupList) {
-				setupList.insertAdjacentHTML('beforeend', shaderMarkup);
-				dd = setupMenu;
-			} else {
-				dd = document.createElement('div');
-				dd.className = 'slds-dropdown slds-dropdown_right slds-dropdown_small';
-				dd.setAttribute('role', 'menu');
-				dd.style.display = 'none';
-				dd.innerHTML = '<ul class="slds-dropdown__list" role="presentation">' + shaderMarkup + '</ul>';
-				trigger.appendChild(dd);
+				'</span></a></li>' +
+				'</ul>';
+			trigger.appendChild(dd);
 
-				function open() { trigger.classList.add('slds-is-open'); dd.style.display = 'block'; gearBtn.setAttribute('aria-expanded', 'true'); }
-				function close() { trigger.classList.remove('slds-is-open'); dd.style.display = 'none'; gearBtn.setAttribute('aria-expanded', 'false'); }
+			// ── Open / close ──────────────────────────────────────────────
+			function open() { trigger.classList.add('slds-is-open'); dd.style.display = 'block'; gearBtn.setAttribute('aria-expanded', 'true'); }
+			function close() { trigger.classList.remove('slds-is-open'); dd.style.display = 'none'; gearBtn.setAttribute('aria-expanded', 'false'); }
 
-				gearBtn.setAttribute('aria-haspopup', 'true');
-				gearBtn.setAttribute('aria-expanded', 'false');
-				gearBtn.setAttribute('title', 'Demo controls');
-				gearBtn.addEventListener('click', function (e) {
-					e.preventDefault(); e.stopPropagation();
-					dd.style.display === 'none' ? open() : close();
-				});
-				document.addEventListener('click', function (e) { if (!trigger.contains(e.target)) close(); });
-				document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
-			}
+			gearBtn.setAttribute('aria-haspopup', 'true');
+			gearBtn.setAttribute('aria-expanded', 'false');
+			gearBtn.setAttribute('title', 'Demo controls');
+			gearBtn.addEventListener('click', function (e) {
+				e.preventDefault(); e.stopPropagation();
+				dd.style.display === 'none' ? open() : close();
+			});
+			document.addEventListener('click', function (e) { if (!trigger.contains(e.target)) close(); });
+			document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
 
 			// ── Actions ───────────────────────────────────────────────────
 			dd.addEventListener('click', function (e) {
@@ -6690,7 +6453,7 @@
 				if (shaderEl) {
 					e.preventDefault();
 					var choice = shaderEl.getAttribute('data-sh-shader');
-					if (choice === activeShader) return;
+					if (choice === activeShader) { close(); return; }
 					lsSet(SHADER_KEY, choice);
 					// Clean URL so the saved pick (not a stale ?shader=) wins.
 					location.assign(location.pathname);
@@ -6715,14 +6478,11 @@
 
   </main>
   <script src="/aiq-sales-agent/scripts/user_switcher.js"></script>
-  <script src="/aiq-sales-agent/scripts/setup_menu.js"></script>
   <script src="/aiq-sales-agent/scripts/app.js"></script>
   
   <script src="/aiq-sales-agent/scripts/tab_nav.js"></script>
   <script src="/aiq-sales-agent/scripts/vendor/svg4everybody.min.js"></script>
   <script>svg4everybody();</script>
   
-  
-  <script src="/aiq-sales-agent/scripts/settings.js"></script>
 </body>
 </html>

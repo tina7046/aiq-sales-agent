@@ -42,14 +42,6 @@
     var emptyFiltered = root.querySelector('[data-sh-skill-empty-filtered]')
     var statusRegion = root.querySelector('[data-sh-skills-status]')
 
-    // Filter trigger — plain stateless icon button (Scheduled-parity
-    // shape as of 2026-07-31). Click dispatches `sh:skills-filter`
-    // on the Skills root so a future filter surface (popover,
-    // dialog, or off-canvas menu) can subscribe without touching
-    // this markup. The previous inline popover was withdrawn; see
-    // git history for the multi-facet checkbox implementation.
-    var filterBtn = root.querySelector('[data-sh-skills-filter]')
-
     // Bail if the tab / grid DOM isn't fully rendered — a half-
     // hydrated shell is better ignored than crashed.
     if (!tabsRoot || !gridRoot) return
@@ -200,6 +192,8 @@
     // filter after a card mutation).
     skillActionRouter(gridRoot)
 
+    bindStatusChip(root)
+
     // Create Skill — navigate to the empty three-block canvas.
     // The button used to be a dead `data-sh-skills-create` hook;
     // the detail page now owns `?new=1` as the empty-state entry.
@@ -249,23 +243,6 @@
       refreshTabCounts()
       applyFilters({ announce: false })
     })
-
-    // ── Filter trigger ─────────────────────────────────────────
-    // Simple event dispatch — no popover, no active-fill state,
-    // no count pill. Mirrors `.seller-home__scheduled-filter`'s
-    // contract 1:1 so a future filter surface (popover, dialog,
-    // off-canvas) can bind on `sh:skills-filter` without touching
-    // this markup. `preventDefault` on the click is defensive —
-    // the button is a `<button type="button">` so it never
-    // submits anything, but the guard costs nothing.
-    if (filterBtn) {
-      filterBtn.addEventListener('click', function (event) {
-        event.preventDefault()
-        document.dispatchEvent(new CustomEvent('sh:skills-filter'))
-        // eslint-disable-next-line no-console
-        console.info('[seller-home] skills filter clicked')
-      })
-    }
 
     // Re-run the tab / ownership filter against the card list and
     // update visibility + empty-state + aria-live in one pass.
@@ -342,6 +319,13 @@
       if (tabOwnershipsById[tabId] === undefined) return
 
       activeTabId = tabId
+
+      // Your Skills (the first chip) is one column. Later chips use
+      // the two-column grid.
+      if (gridRoot.classList.contains('c-vf-cards')) {
+        var firstTabId = tabs[0].getAttribute('data-sh-skills-tab')
+        gridRoot.classList.toggle('c-vf-cards--single', tabId === firstTabId)
+      }
 
       // Update tab visual + ARIA state. Roving tabindex per WAI-
       // ARIA — only the active tab is in the natural tab order.
@@ -1029,6 +1013,100 @@
       return String(s).replace(/([\0-\x1f\x7f]|^-?\d)|([\x80-\uFFFF]|[\-_a-zA-Z0-9])/g,
         function (m, p1) { return p1 ? '\\' + m : m })
     }
+  }
+
+  // Owner and Status start as filter buttons. Picking a menu item
+  // swaps that control for the blue chip; the close control puts the
+  // button back. Only one item can be selected on each menu.
+  function bindStatusChip (root) {
+    var ownerHost = root.querySelector('[data-sh-owner-filter]')
+    var host = root.querySelector('[data-sh-status-filter]')
+    var sortHost = root.querySelector('[data-sh-sort-filter]')
+    var ownerBtn = ownerHost && ownerHost.querySelector('[data-sh-owner-btn]')
+    var ownerChip = ownerHost && ownerHost.querySelector('[data-sh-owner-chip]')
+    var ownerLabel = ownerHost && ownerHost.querySelector('[data-sh-owner-chip-label]')
+    var ownerMenu = ownerHost && ownerHost.querySelector('[data-sh-owner-menu]')
+    var btn = host && host.querySelector('[data-sh-status-btn]')
+    var chip = host && host.querySelector('[data-sh-status-chip]')
+    var label = host && host.querySelector('[data-sh-status-chip-label]')
+    var statusMenu = host && host.querySelector('[data-sh-status-menu]')
+    var sortBtn = sortHost && sortHost.querySelector('[data-sh-sort-btn]')
+    var sortMenu = sortHost && sortHost.querySelector('[data-sh-sort-menu]')
+
+    function setMenu (menu, trigger, open) {
+      if (!menu) return
+      menu.hidden = !open
+      if (trigger) trigger.setAttribute('aria-expanded', open ? 'true' : 'false')
+    }
+
+    function closeMenus () {
+      setMenu(ownerMenu, ownerBtn, false)
+      setMenu(statusMenu, btn, false)
+      setMenu(sortMenu, sortBtn, false)
+    }
+
+    function bindSwapMenu (menuHost, trigger, menu, chipEl, labelEl, optionSel, labelAttr, clearSel) {
+      if (!menuHost) return
+      menuHost.addEventListener('click', function (event) {
+        var option = closest(event.target, optionSel)
+        if (option && menuHost.contains(option)) {
+          event.preventDefault()
+          var next = option.getAttribute(labelAttr) || option.textContent.trim()
+          if (labelEl) labelEl.textContent = next
+          if (trigger) trigger.hidden = true
+          if (chipEl) {
+            chipEl.hidden = false
+            chipEl.focus()
+          }
+          closeMenus()
+          return
+        }
+
+        var clear = closest(event.target, clearSel)
+        if (clear && menuHost.contains(clear)) {
+          event.preventDefault()
+          if (chipEl) chipEl.hidden = true
+          if (trigger) {
+            trigger.hidden = false
+            trigger.focus()
+          }
+          return
+        }
+
+        if (trigger && (event.target === trigger || trigger.contains(event.target))) {
+          event.preventDefault()
+          var willOpen = menu && menu.hidden
+          closeMenus()
+          setMenu(menu, trigger, !!willOpen)
+        }
+      })
+    }
+
+    bindSwapMenu(
+      ownerHost, ownerBtn, ownerMenu, ownerChip, ownerLabel,
+      '[data-sh-owner-option]', 'data-owner-label', '[data-sh-owner-clear]'
+    )
+    bindSwapMenu(
+      host, btn, statusMenu, chip, label,
+      '[data-sh-status-option]', 'data-status-label', '[data-sh-status-clear]'
+    )
+
+    if (sortHost && sortBtn) {
+      sortHost.addEventListener('click', function (event) {
+        if (event.target !== sortBtn && !sortBtn.contains(event.target)) return
+        event.preventDefault()
+        var willOpen = sortMenu && sortMenu.hidden
+        closeMenus()
+        setMenu(sortMenu, sortBtn, !!willOpen)
+      })
+    }
+
+    document.addEventListener('click', function (event) {
+      if (ownerHost && ownerHost.contains(event.target)) return
+      if (host && host.contains(event.target)) return
+      if (sortHost && sortHost.contains(event.target)) return
+      closeMenus()
+    })
   }
 
   // ── Utils ─────────────────────────────────────────────────────────

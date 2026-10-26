@@ -22,17 +22,14 @@
 
   
   <script>
-    window.SH_USERS = {"defaultUserId":"rohan","users":[{"id":"rohan","name":"Rohan","title":"Account Executive","role":"rep","avatar":"/aiq-sales-agent/assets/images/avatar2.jpg"},{"id":"nima","name":"Nima","title":"Admin","role":"admin","avatar":"/aiq-sales-agent/assets/images/avatar-nima.png"}]};
-    window.SH_USER = {"id":"rohan","name":"Rohan","title":"Account Executive","role":"rep","avatar":"/aiq-sales-agent/assets/images/avatar2.jpg"};
+    window.SH_USERS = {"defaultUserId":"rohan","users":[{"id":"rohan","name":"Rohan","title":"Account Executive","avatar":"/aiq-sales-agent/assets/images/avatar2.jpg"},{"id":"nima","name":"Nima","title":"Admin","avatar":"/aiq-sales-agent/assets/images/avatar-nima.png"}]};
+    window.SH_USER = {"id":"rohan","name":"Rohan","title":"Account Executive","avatar":"/aiq-sales-agent/assets/images/avatar2.jpg"};
   </script>
-  
-  <script>window.SH_BASE = '/aiq-sales-agent'</script>
   <script src="/aiq-sales-agent/scripts/sh_user.js"></script>
-  
-  <script src="/aiq-sales-agent/scripts/onboarding_gate.js"></script>
 </head>
-<body>
+<body class="">
 
+  
   <header class="slds-global-header_container">
       <a href="javascript:void(0);" class="slds-assistive-text slds-assistive-text_focus">Skip to Navigation</a>
       <a href="javascript:void(0);" class="slds-assistive-text slds-assistive-text_focus">Skip to Main Content</a>
@@ -40,9 +37,15 @@
         <div class="slds-global-header__item">
           <div class="slds-global-header__logo">
             
-            <a href="/index.html?reset=1" title="Salesforce — restart demo">
-              <img src="/aiq-sales-agent/assets/images/logo-noname.svg" style="width: 12.5rem;height: 1.75rem;background-size: contain;background-repeat: no-repeat;background-position: left center;"alt="Salesforce Logo" />
-            </a>
+            <button
+              type="button"
+              class="sh-header-logo"
+              data-sh-header-logo
+              data-sh-nav-href="/aiq-sales-agent/index.html?reset=1"
+              title="Salesforce — restart demo"
+            >
+              <img src="/aiq-sales-agent/assets/images/logo-noname.svg" style="width: 12.5rem;height: 1.75rem;background-size: contain;background-repeat: no-repeat;background-position: left center;" alt="Salesforce Logo" />
+            </button>
           </div>
         </div>
         <div class="slds-global-header__item slds-global-header__item_search">
@@ -313,62 +316,13 @@
               </div>
             </li>
             <li class="slds-global-actions__item">
-              
-              <div
-                class="slds-dropdown-trigger slds-dropdown-trigger_click sh-setup-menu"
-                data-sh-setup-menu
-              >
-                <button
-                  class="slds-button slds-button_icon slds-button_icon slds-button_icon-container slds-button_icon-small slds-global-actions__setup slds-global-actions__item-action"
-                  type="button"
-                  title="Setup"
-                  aria-haspopup="menu"
-                  aria-expanded="false"
-                  aria-controls="sh-setup-menu"
-                  data-sh-setup-trigger
-                >
+              <div class="slds-dropdown-trigger slds-dropdown-trigger_click">
+                <button class="slds-button slds-button_icon slds-button_icon slds-button_icon-container slds-button_icon-small slds-global-actions__setup slds-global-actions__item-action" aria-haspopup="true" title="Setup">
                   <svg class="slds-button__icon slds-global-header__icon" aria-hidden="true">
                     <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#setup"></use>
                   </svg>
                   <span class="slds-assistive-text">Setup</span>
                 </button>
-                <div
-                  id="sh-setup-menu"
-                  class="slds-dropdown slds-dropdown_right slds-dropdown_actions t-dropdown sh-setup-menu__menu"
-                  data-origin="top-right"
-                  data-sh-setup-dropdown
-                  role="menu"
-                  aria-label="Setup Menu"
-                >
-                  <ul class="slds-dropdown__list" role="presentation">
-                    <li class="slds-dropdown__header slds-truncate" role="separator">
-                      <span>Setup Menu</span>
-                    </li>
-                    <li class="slds-dropdown__item" role="presentation">
-                      <a href="#" role="menuitem" tabindex="-1">
-                        <span class="slds-truncate" title="Setup">Setup</span>
-                      </a>
-                    </li>
-                    <li class="slds-dropdown__item" role="presentation">
-                      <a href="/salesforce_go.html" role="menuitem" tabindex="-1">
-                        <span class="slds-truncate" title="Salesforce Go">Salesforce Go</span>
-                        <svg class="slds-icon slds-icon_x-small slds-icon-text-default sh-setup-menu__external" aria-hidden="true">
-                          <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#new_window"></use>
-                        </svg>
-                      </a>
-                    </li>
-                    <li class="slds-dropdown__item" role="presentation">
-                      <a href="#" role="menuitem" tabindex="-1">
-                        <span class="slds-truncate" title="Your Account">Your Account</span>
-                      </a>
-                    </li>
-                    <li class="slds-dropdown__item" role="presentation">
-                      <a href="#" role="menuitem" tabindex="-1">
-                        <span class="slds-truncate" title="Developer Console">Developer Console</span>
-                      </a>
-                    </li>
-                  </ul>
-                </div>
               </div>
             </li>
             <li class="slds-global-actions__item">
@@ -419,11 +373,12 @@
                     
                     
                     <li class="slds-dropdown__item" role="presentation">
-                      <a
-                        href="/aiq-sales-agent/u/rohan/index.html"
+                      <button
+                        type="button"
                         role="menuitem"
                         tabindex="-1"
                         data-sh-user-switch="rohan"
+                        data-sh-nav-href="/aiq-sales-agent/u/rohan/index.html"
                         aria-current="true"
                       >
                         <span class="sh-user-switcher__row">
@@ -442,16 +397,17 @@
                           </svg>
                           
                         </span>
-                      </a>
+                      </button>
                     </li>
                     
                     
                     <li class="slds-dropdown__item" role="presentation">
-                      <a
-                        href="/aiq-sales-agent/u/nima/index.html"
+                      <button
+                        type="button"
                         role="menuitem"
                         tabindex="-1"
                         data-sh-user-switch="nima"
+                        data-sh-nav-href="/aiq-sales-agent/u/nima/index.html"
                         
                       >
                         <span class="sh-user-switcher__row">
@@ -466,7 +422,7 @@
                           </span>
                           
                         </span>
-                      </a>
+                      </button>
                     </li>
                     
                   </ul>
@@ -511,15 +467,18 @@
         <nav class="slds-context-bar__secondary" role="navigation">
           <ul class="slds-grid">
             
+            
             <li class="slds-context-bar__item slds-is-active">
-              <a href="/index.html" class="slds-context-bar__label-action" title="Home">
+              <a href="/aiq-sales-agent/index.html" class="slds-context-bar__label-action" title="Home">
                 <span class="slds-assistive-text">Current Page:</span>
                 <span class="slds-truncate" title="Home">Home</span>
               </a>
             </li>
+            
           </ul>
         </nav>
   </div>
+  
 
   <main class="app-wrapper slds-template_default">
     
@@ -533,14 +492,11 @@
 
   </main>
   <script src="/aiq-sales-agent/scripts/user_switcher.js"></script>
-  <script src="/aiq-sales-agent/scripts/setup_menu.js"></script>
   <script src="/aiq-sales-agent/scripts/app.js"></script>
   
   <script src="/aiq-sales-agent/scripts/tab_nav.js"></script>
   <script src="/aiq-sales-agent/scripts/vendor/svg4everybody.min.js"></script>
   <script>svg4everybody();</script>
   
-  
-  <script src="/aiq-sales-agent/scripts/settings.js"></script>
 </body>
 </html>
