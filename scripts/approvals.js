@@ -54,9 +54,14 @@
   var modalPanel = modal.querySelector('.appr-modal__panel')
   var modalTitle = modal.querySelector('[data-appr-modal-title]')
   var modalBody = modal.querySelector('[data-appr-modal-body]')
+  var modalWarn = modal.querySelector('[data-appr-modal-warn]')
+  var modalWarnLead = modal.querySelector('[data-appr-modal-warn-lead]')
+  var modalWarnDetail = modal.querySelector('[data-appr-modal-warn-detail]')
+  var choiceOnce = modal.querySelector('[data-appr-modal-choice="allow"]')
+  var choiceAlways = modal.querySelector('[data-appr-modal-choice="always"]')
+  var confirmAlways = modal.querySelector('[data-appr-modal-confirm]')
   var pendingAllow = null
   var modalReturn = null
-
   function esc (value) {
     return String(value == null ? '' : value)
       .replace(/&/g, '&amp;')
@@ -176,9 +181,10 @@
       })
       var sections = scope.querySelectorAll('[data-appr-section]')
       Array.prototype.forEach.call(sections, function (section) {
+        var anyGroup = section.querySelector('[data-appr-group]')
         var visible = section.querySelector('[data-appr-group]:not([hidden])')
         var empty = section.querySelector('[data-appr-section-empty]')
-        if (empty) empty.hidden = !!visible
+        if (empty) empty.hidden = !anyGroup || !!visible
       })
     })
   }
@@ -215,7 +221,7 @@
     drawerFooter.hidden = false
     if (!decision) {
       drawerFooter.innerHTML =
-        '<button type="button" class="appr-btn appr-btn--brand" data-appr-allow="drawer">Allow</button>' +
+        '<button type="button" class="appr-btn appr-btn--brand" data-appr-allow="drawer">Allow once</button>' +
         '<button type="button" class="appr-btn appr-btn--reject" data-appr-drawer-decide="reject">Reject</button>'
       return
     }
@@ -325,11 +331,48 @@
     }
   }
 
+  function dropAllowed (records) {
+    var list = Array.prototype.slice.call(records)
+    if (!list.length) return
+    var group = list[0].closest('[data-appr-group]')
+    var workflow = group.closest('[data-appr-workflow]')
+    var n = list.length
+    var name = list[0].getAttribute('data-name')
+    var noun = n === 1 ? group.getAttribute('data-noun') : group.getAttribute('data-noun-plural')
+    list.forEach(function (record) {
+      if (drawerMode === 'record' && currentId === record.getAttribute('data-record-id')) closeDrawer()
+      record.remove()
+    })
+    var waiting = group.querySelectorAll('[data-appr-record][data-decision=""]').length
+    if (waiting) {
+      var left = group.querySelectorAll('[data-appr-record]').length
+      var one = group.getAttribute('data-noun')
+      var many = group.getAttribute('data-noun-plural')
+      var scope = left === 1 ? 'the ' + one + ' below' : 'all ' + left + ' ' + many + ' below'
+      var scopeNode = group.querySelector('.appr-group__scope')
+      if (scopeNode) scopeNode.textContent = 'For ' + scope
+      var allowBtn = group.querySelector('[data-appr-allow="group"]')
+      var rejectBtn = group.querySelector('[data-appr-group-decide="reject"]')
+      if (allowBtn) allowBtn.setAttribute('aria-label', 'Allow ' + scope)
+      if (rejectBtn) rejectBtn.setAttribute('aria-label', 'Reject ' + scope)
+    } else {
+      group.remove()
+    }
+    refreshCounts()
+    updateGroupCounts()
+    applyFilter(workflow)
+    var label = n === 1 ? name : n + ' ' + noun
+    toast('Allowed ' + label + ' once' + (waiting ? '' : '. Off this queue.'))
+  }
+
   function decide (record, decision) {
+    if (decision === 'allow') {
+      dropAllowed([record])
+      return
+    }
     setDecision(record, decision)
     var name = record.getAttribute('data-name')
     var group = record.closest('[data-appr-group]')
-    if (decision === 'allow') toast('Allowed ' + name + ' once')
     if (decision === 'reject') toast('Rejected ' + name)
     if (decision === 'always') {
       toast('Allowed ' + name + '. Allow always is on.')
@@ -341,10 +384,35 @@
     }
   }
 
+  function removeGroup (group) {
+    var workflow = group.closest('[data-appr-workflow]')
+    var records = group.querySelectorAll('[data-appr-record]')
+    var n = records.length
+    var noun = n === 1 ? group.getAttribute('data-noun') : group.getAttribute('data-noun-plural')
+    var openHere = false
+    Array.prototype.forEach.call(records, function (record) {
+      if (record.getAttribute('data-record-id') === currentId) openHere = true
+    })
+    group.remove()
+    if (openHere) closeDrawer()
+    refreshCounts()
+    updateGroupCounts()
+    applyFilter(workflow)
+    toast('Allowed ' + (n === 1 ? 'the ' + noun : n + ' ' + noun) + ' always. Off this queue.')
+  }
+
   function decideGroup (group, decision) {
+    if (decision === 'always') {
+      removeGroup(group)
+      return
+    }
     var pending = group.querySelectorAll('[data-appr-record][data-decision=""]')
     if (!pending.length) {
       toast('Nothing left waiting in ' + group.getAttribute('data-object'))
+      return
+    }
+    if (decision === 'allow') {
+      dropAllowed(pending)
       return
     }
     var n = pending.length
@@ -352,32 +420,54 @@
       setDecision(record, decision)
     })
     var noun = n === 1 ? group.getAttribute('data-noun') : group.getAttribute('data-noun-plural')
-    if (decision === 'always') {
-      showBanner(group, 'Allowed ' + n + ' ' + noun + '. Allow always is on for ' + group.getAttribute('data-noun-plural') + ' in this run.')
-      toast('Allowed ' + n + ' ' + noun)
-    } else if (decision === 'allow') {
-      toast('Allowed ' + n + ' ' + noun + ' once')
-    } else {
-      toast('Rejected ' + n + ' ' + noun)
-    }
+    toast('Rejected ' + n + ' ' + noun)
   }
 
-  function openAllowModal (kind, group, record) {
-    pendingAllow = { kind: kind, group: group, record: record }
+  function awaitingCount (group) {
+    var waiting = group.querySelectorAll('[data-appr-record][data-decision=""]').length
+    if (waiting) return waiting
+    return group.querySelectorAll('[data-appr-record]').length
+  }
+
+  function showChoice () {
+    modal.classList.remove('is-warn')
+    modalBody.hidden = false
+    modalWarn.hidden = true
+    choiceOnce.hidden = false
+    choiceAlways.hidden = false
+    confirmAlways.hidden = true
+  }
+
+  function openAllowModal (group) {
+    pendingAllow = group
     modalReturn = document.activeElement
     var noun = group.getAttribute('data-noun')
     var plural = group.getAttribute('data-noun-plural')
-    if (kind === 'group') {
-      var count = group.querySelectorAll('[data-appr-record][data-decision=""]').length
-      var scope = count === 1 ? 'the ' + noun + ' below' : 'all ' + count + ' ' + plural + ' below'
-      modalTitle.textContent = 'Allow ' + scope + '?'
-      modalBody.textContent = 'Allow once approves only ' + scope + '. Allow always also turns allow always on for ' + plural + ' in this run.'
-    } else {
-      modalTitle.textContent = 'Allow ' + record.getAttribute('data-name') + '?'
-      modalBody.textContent = 'Allow once approves this ' + noun + ' only. Allow always also turns allow always on for ' + plural + ' in this run.'
-    }
+    var count = group.querySelectorAll('[data-appr-record][data-decision=""]').length
+    var scope = count === 1 ? 'the ' + noun + ' below' : 'all ' + count + ' ' + plural + ' below'
+    showChoice()
+    modalTitle.textContent = 'Allow ' + scope + '?'
+    modalBody.textContent = 'Allow once approves only ' + scope + '. Allow always approves ' + (count === 1 ? 'it' : 'them') + ' and removes this group from the queue.'
     modal.hidden = false
     document.body.classList.add('appr-lock')
+    modalPanel.focus()
+  }
+
+  function showAlwaysWarning () {
+    var group = pendingAllow
+    if (!group) return
+    var count = awaitingCount(group)
+    var tool = group.getAttribute('data-action') === 'create' ? 'Salesforce create record' : 'Salesforce update record'
+    var callWord = count === 1 ? 'call' : 'calls'
+    modal.classList.add('is-warn')
+    modalTitle.textContent = 'Allow all related actions on future runs?'
+    modalBody.hidden = true
+    modalWarn.hidden = false
+    modalWarnLead.textContent = 'This approves the ' + count + ' awaiting ' + callWord + ' in this table and stops this workflow pausing at ' + tool + ' on your own future runs.'
+    modalWarnDetail.textContent = 'Every future call to this tool from this workflow then runs without asking for approval, including calls for other records or actions it can make, not just the ones shown here. Other workflows and other tools are unaffected.'
+    choiceOnce.hidden = true
+    choiceAlways.hidden = true
+    confirmAlways.hidden = false
     modalPanel.focus()
   }
 
@@ -390,11 +480,9 @@
   }
 
   function confirmAllow (decision) {
-    var pending = pendingAllow
+    var group = pendingAllow
     closeAllowModal()
-    if (!pending) return
-    if (pending.kind === 'group') decideGroup(pending.group, decision)
-    else if (pending.record) decide(pending.record, decision)
+    if (group) decideGroup(group, decision)
   }
 
   root.addEventListener('click', function (event) {
@@ -404,9 +492,19 @@
       return
     }
 
+    if (event.target.closest('[data-appr-modal-confirm]')) {
+      confirmAllow('always')
+      return
+    }
+
     var choice = event.target.closest('[data-appr-modal-choice]')
     if (choice) {
-      confirmAllow(choice.getAttribute('data-appr-modal-choice'))
+      var decision = choice.getAttribute('data-appr-modal-choice')
+      if (decision === 'always') {
+        showAlwaysWarning()
+        return
+      }
+      confirmAllow(decision)
       return
     }
 
@@ -426,13 +524,12 @@
     if (allowBtn) {
       var allowKind = allowBtn.getAttribute('data-appr-allow')
       if (allowKind === 'group') {
-        openAllowModal('group', allowBtn.closest('[data-appr-group]'), null)
+        openAllowModal(allowBtn.closest('[data-appr-group]'))
       } else if (allowKind === 'drawer') {
         var drawerRow = root.querySelector('[data-appr-record][data-record-id="' + currentId + '"]')
-        if (drawerRow) openAllowModal('record', drawerRow.closest('[data-appr-group]'), drawerRow)
+        if (drawerRow) decide(drawerRow, 'allow')
       } else {
-        var allowRecord = allowBtn.closest('[data-appr-record]')
-        openAllowModal('record', allowRecord.closest('[data-appr-group]'), allowRecord)
+        decide(allowBtn.closest('[data-appr-record]'), 'allow')
       }
       return
     }

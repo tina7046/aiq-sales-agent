@@ -628,6 +628,7 @@ button.appr-name:hover {
   font-size: 0.8125rem;
   font-weight: 600;
   line-height: 1.25;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -1041,11 +1042,32 @@ body.appr-lock .app-wrapper {
   font-weight: 700;
 }
 
+.appr-modal.is-warn .appr-modal__panel {
+  width: min(36rem, 100%);
+}
+
 .appr-modal__panel p {
   margin: 0.5rem 0 0;
   font-size: 0.875rem;
   line-height: 1.45;
   color: var(--slds-g-color-on-surface-1);
+}
+
+.appr-modal__warn {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--slds-g-color-warning-base-95);
+  color: var(--slds-g-color-warning-base-30);
+}
+
+.appr-modal__warn p {
+  margin: 0;
+  color: var(--slds-g-color-warning-base-30);
+}
+
+.appr-modal__warn p + p {
+  margin-top: 0.5rem;
 }
 
 .appr-modal__actions {
@@ -1087,7 +1109,9 @@ button.appr-name:focus-visible {
 .appr-record[hidden],
 .appr-toast[hidden],
 .appr-more[hidden],
-.appr-modal[hidden] {
+.appr-modal[hidden],
+.appr-modal__warn[hidden],
+.appr-modal__actions [hidden] {
   display: none;
 }
 
