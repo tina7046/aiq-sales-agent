@@ -19,6 +19,8 @@
   <link rel="stylesheet" href="/aiq-sales-agent/styles/gc.css" />
 
   
+<link rel="stylesheet" href="/aiq-sales-agent/styles/home.css" />
+<link rel="stylesheet" href="/aiq-sales-agent/styles/page.css" />
 <link rel="stylesheet" href="/aiq-sales-agent/styles/approvals.css" />
 
 
@@ -35,24 +37,697 @@
 
   <main class="app-wrapper slds-template_default">
     
-<div class="appr" data-appr-root>
+<div class="seller-home page-root seller-home--approvals" data-sh-root data-appr-root>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  
+  
+
+  
+  
+  
+  
+    
+  
+
+  
+  
+  
+  
+    
+  
+
+  
+  
+  
+  
+    
+  
+
+  
+  
+  
+  
+    
+  
+
+  
+  
+  
+  
+    
+  
+
+  
+  
+  
+  
+    
+  
+
+  
+  
+  
+  
+    
+  
+
+  
+  
+  
+  
+    
+  
+
+
+
+<script>
+  (function () {
+    var script = document.currentScript
+    var root = script && script.closest ? script.closest('[data-sh-root]') : null
+    if (!root) return
+
+    var collapsed = false
+    try {
+      collapsed = window.localStorage.getItem(
+        (window.SH && window.SH.storageKey)
+          ? window.SH.storageKey('sh:navCollapsed')
+          : 'sh:navCollapsed'
+      ) === 'true'
+    } catch (e) {
+      // Storage unavailable — fall through to the expanded default,
+      // which is what the markup already renders.
+    }
+    // Lab pages can opt into a collapsed first paint without rewriting
+    // the shared Home preference. Toggle still works after load.
+    if (root.hasAttribute('data-sh-nav-default-collapsed')) collapsed = true
+
+    root.classList.add('seller-home--nav-preload')
+    root.classList.toggle('seller-home--nav-collapsed', collapsed)
+    root.classList.toggle('seller-home--nav-expanded', !collapsed)
+  })()
+</script>
+
+<aside
+  class="seller-home__nav"
+  aria-label="Seller Home navigation"
+  data-sh-nav-root
+>
+  
+  <div class="seller-home__nav-top">
+    <div class="seller-home__nav-topbar">
+      <button
+        type="button"
+        class="seller-home__nav-toggle"
+        data-sh-nav-toggle
+        aria-label="Collapse navigation"
+        aria-expanded="true"
+        aria-controls="seller-home-nav-body"
+      >
+        <svg width="20" height="20" aria-hidden="true">
+          <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#arrow_left"></use>
+        </svg>
+      </button>
+    </div>
+
+    <div class="seller-home__nav-list seller-home__nav-list--primary" role="list">
+      
+        
+          
+
+<button
+  type="button"
+  class="seller-home__nav-item"
+  role="listitem"
+  data-sh-nav="new_chat"
+  data-sh-nav-href="/aiq-sales-agent/index.html"
+  
+  
+  
+  
+  title="New chat"
+>
+  <span class="seller-home__nav-icon" aria-hidden="true">
+    
+      
+      <svg width="20" height="20" aria-hidden="true">
+        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#add"></use>
+      </svg>
+    
+  </span>
+  <span class="seller-home__nav-label">New chat</span>
+  
+  
+  
+</button>
+
+        
+      
+        
+          
+
+<button
+  type="button"
+  class="seller-home__nav-item"
+  role="listitem"
+  data-sh-nav="schedules"
+  data-sh-nav-href="/aiq-sales-agent/scheduled.html"
+  
+  
+  
+  
+  title="Scheduled"
+>
+  <span class="seller-home__nav-icon" aria-hidden="true">
+    
+      
+      <svg width="20" height="20" aria-hidden="true">
+        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#date_time"></use>
+      </svg>
+    
+  </span>
+  <span class="seller-home__nav-label">Scheduled</span>
+  
+  
+  
+</button>
+
+        
+      
+        
+          
+
+<button
+  type="button"
+  class="seller-home__nav-item"
+  role="listitem"
+  data-sh-nav="skills"
+  data-sh-nav-href="/aiq-sales-agent/skills.html"
+  
+  
+  
+  
+  title="Skills"
+>
+  <span class="seller-home__nav-icon" aria-hidden="true">
+    
+      
+      <span
+        class="seller-home__nav-icon-image"
+        style="--sh-nav-icon-image: url('/aiq-sales-agent/assets/images/nav-icons/skills.png')"
+        aria-hidden="true"
+      ></span>
+    
+  </span>
+  <span class="seller-home__nav-label">Skills</span>
+  
+  
+  
+</button>
+
+        
+      
+        
+          
+
+<button
+  type="button"
+  class="seller-home__nav-item is-active"
+  role="listitem"
+  data-sh-nav="approvals"
+  data-sh-nav-href="/aiq-sales-agent/approvals.html"
+  
+  
+  
+  aria-current="page"
+  title="Approvals"
+>
+  <span class="seller-home__nav-icon" aria-hidden="true">
+    
+      
+      <svg width="20" height="20" aria-hidden="true">
+        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#notification"></use>
+      </svg>
+    
+  </span>
+  <span class="seller-home__nav-label">Approvals</span>
+  
+  <span class="seller-home__nav-dot" aria-hidden="true"></span>
+  
+  
+  
+</button>
+
+        
+      
+        
+          
+
+<button
+  type="button"
+  class="seller-home__nav-item"
+  role="listitem"
+  data-sh-nav="knowledge"
+  data-sh-nav-href="/aiq-sales-agent/knowledge.html"
+  
+  
+  
+  
+  title="Knowledge"
+>
+  <span class="seller-home__nav-icon" aria-hidden="true">
+    
+      
+      <svg width="20" height="20" aria-hidden="true">
+        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#display_text"></use>
+      </svg>
+    
+  </span>
+  <span class="seller-home__nav-label">Knowledge</span>
+  
+  
+  
+</button>
+
+        
+      
+    </div>
+  </div>
+
+  
+  <div
+    class="seller-home__nav-scroll"
+    id="seller-home-nav-body"
+    tabindex="0"
+    aria-label="Recent conversations"
+  >
+    
+    <div class="seller-home__nav-section">
+      <div class="seller-home__nav-section-header" role="heading" aria-level="2">
+        <span class="seller-home__nav-icon" aria-hidden="true">
+          <svg width="20" height="20" aria-hidden="true">
+            <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#clock"></use>
+          </svg>
+        </span>
+        <span class="seller-home__nav-label">Recents</span>
+      </div>
+
+      
+      <div
+        class="seller-home__nav-list seller-home__nav-list--recents"
+        role="list"
+        data-sh-recents-list
+      >
+        
+        
+        <button
+          type="button"
+          class="seller-home__nav-recent seller-home__nav-recent--linked"
+          role="listitem"
+          data-sh-recent="rec-ri-01"
+          data-sh-recent-feed="ri-01"
+          
+          data-sh-recent-conv="conv-001"
+          data-sh-nav-href="/aiq-sales-agent/home_conversation.html?id=conv-001"
+          
+          data-sh-recent-status="completed"
+          title="Found new prospects"
+        >
+          <span class="seller-home__nav-recent-mono" aria-hidden="true">FN</span>
+          <span class="seller-home__nav-recent-label">Found new prospects</span>
+          
+  
+    <span
+      class="seller-home__nav-recent-status seller-home__nav-recent-status--completed slds-col_bump-left"
+      data-sh-recent-indicator
+      aria-hidden="true"
+    >
+      <span class="seller-home__nav-recent-status-glyph seller-home__nav-recent-status-glyph--dot" data-sh-recent-status-dot></span>
+    </span>
+    <span class="slds-assistive-text" data-sh-recent-indicator>, new results</span>
+  
+
+        </button>
+        
+        
+        <button
+          type="button"
+          class="seller-home__nav-recent"
+          role="listitem"
+          data-sh-recent="rec-ri-02"
+          data-sh-recent-feed="ri-02"
+          
+          data-sh-nav-noroute
+          
+          data-sh-recent-status="completed"
+          title="Drafted proposals to send"
+        >
+          <span class="seller-home__nav-recent-mono" aria-hidden="true">DP</span>
+          <span class="seller-home__nav-recent-label">Drafted proposals to send</span>
+          
+  
+    <span
+      class="seller-home__nav-recent-status seller-home__nav-recent-status--completed slds-col_bump-left"
+      data-sh-recent-indicator
+      aria-hidden="true"
+    >
+      <span class="seller-home__nav-recent-status-glyph seller-home__nav-recent-status-glyph--dot" data-sh-recent-status-dot></span>
+    </span>
+    <span class="slds-assistive-text" data-sh-recent-indicator>, new results</span>
+  
+
+        </button>
+        
+        
+        <button
+          type="button"
+          class="seller-home__nav-recent"
+          role="listitem"
+          data-sh-recent="rec-ri-03"
+          data-sh-recent-feed="ri-03"
+          
+          data-sh-nav-noroute
+          
+          data-sh-recent-status="scheduled"
+          title="Executive Brief"
+        >
+          <span class="seller-home__nav-recent-mono" aria-hidden="true">EB</span>
+          <span class="seller-home__nav-recent-label">Executive Brief</span>
+          
+  
+
+        </button>
+        
+        
+        <button
+          type="button"
+          class="seller-home__nav-recent seller-home__nav-recent--linked"
+          role="listitem"
+          data-sh-recent="rec-ri-04"
+          data-sh-recent-feed="ri-04"
+          
+          data-sh-recent-conv="conv-003"
+          data-sh-nav-href="/aiq-sales-agent/home_conversation.html?id=conv-003"
+          
+          data-sh-recent-status="scheduled"
+          title="Meeting Next Steps"
+        >
+          <span class="seller-home__nav-recent-mono" aria-hidden="true">MN</span>
+          <span class="seller-home__nav-recent-label">Meeting Next Steps</span>
+          
+  
+
+        </button>
+        
+        
+        <button
+          type="button"
+          class="seller-home__nav-recent seller-home__nav-recent--running"
+          role="listitem"
+          data-sh-recent="rec-run-01"
+          data-sh-recent-feed="run-01"
+          
+          data-sh-nav-noroute
+          
+          data-sh-recent-status="running"
+          title="Researching target accounts"
+        >
+          <span class="seller-home__nav-recent-mono" aria-hidden="true">RT</span>
+          <span class="seller-home__nav-recent-label">Researching target accounts</span>
+          
+  
+    <span
+      class="seller-home__nav-recent-status seller-home__nav-recent-status--running slds-col_bump-left"
+      role="img"
+      aria-label="Researching target accounts is running."
+      data-sh-recent-indicator
+    >
+      <span class="seller-home__feed-status-pulse" aria-hidden="true">
+        <span class="seller-home__feed-status-pulse-dot"></span>
+        <span class="seller-home__feed-status-pulse-ring"></span>
+      </span>
+    </span>
+  
+
+        </button>
+        
+        
+        <button
+          type="button"
+          class="seller-home__nav-recent seller-home__nav-recent--running"
+          role="listitem"
+          data-sh-recent="rec-run-02"
+          data-sh-recent-feed="run-02"
+          
+          data-sh-nav-noroute
+          
+          data-sh-recent-status="running"
+          title="Drafting outreach for warm leads"
+        >
+          <span class="seller-home__nav-recent-mono" aria-hidden="true">DO</span>
+          <span class="seller-home__nav-recent-label">Drafting outreach for warm leads</span>
+          
+  
+    <span
+      class="seller-home__nav-recent-status seller-home__nav-recent-status--running slds-col_bump-left"
+      role="img"
+      aria-label="Drafting outreach for warm leads is running."
+      data-sh-recent-indicator
+    >
+      <span class="seller-home__feed-status-pulse" aria-hidden="true">
+        <span class="seller-home__feed-status-pulse-dot"></span>
+        <span class="seller-home__feed-status-pulse-ring"></span>
+      </span>
+    </span>
+  
+
+        </button>
+        
+        
+        <button
+          type="button"
+          class="seller-home__nav-recent seller-home__nav-recent--linked"
+          role="listitem"
+          data-sh-recent="rec-ri-weekly-top-3"
+          data-sh-recent-feed="ri-weekly-top-3"
+          
+          data-sh-recent-conv="conv-weekly-top-3"
+          data-sh-nav-href="/aiq-sales-agent/home_conversation.html?id=conv-weekly-top-3"
+          
+          data-sh-recent-status="scheduled"
+          title="Quota Health Check"
+        >
+          <span class="seller-home__nav-recent-mono" aria-hidden="true">QH</span>
+          <span class="seller-home__nav-recent-label">Quota Health Check</span>
+          
+  
+
+        </button>
+        
+        
+        <button
+          type="button"
+          class="seller-home__nav-recent seller-home__nav-recent--linked"
+          role="listitem"
+          data-sh-recent="rec-ri-daily-pipeline-snapshot"
+          data-sh-recent-feed="ri-daily-pipeline-snapshot"
+          
+          data-sh-recent-conv="conv-daily-pipeline-snapshot"
+          data-sh-nav-href="/aiq-sales-agent/home_conversation.html?id=conv-daily-pipeline-snapshot"
+          
+          data-sh-recent-status="scheduled"
+          title="Pipeline Snapshot"
+        >
+          <span class="seller-home__nav-recent-mono" aria-hidden="true">PS</span>
+          <span class="seller-home__nav-recent-label">Pipeline Snapshot</span>
+          
+  
+
+        </button>
+        
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="seller-home__nav-footer">
+    <div class="seller-home__nav-list seller-home__nav-list--footer" role="list">
+      
+        
+        
+          
+
+<button
+  type="button"
+  class="seller-home__nav-item"
+  role="listitem"
+  data-sh-nav="feedback"
+  data-sh-nav-noroute
+  hidden
+  
+  
+  
+  title="Feedback"
+>
+  <span class="seller-home__nav-icon" aria-hidden="true">
+    
+      
+      <svg width="20" height="20" aria-hidden="true">
+        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#share"></use>
+      </svg>
+    
+  </span>
+  <span class="seller-home__nav-label">Feedback</span>
+  
+  
+  
+</button>
+
+        
+      
+        
+        
+          
+
+<button
+  type="button"
+  class="seller-home__nav-item"
+  role="listitem"
+  data-sh-nav="tools"
+  data-sh-nav-href="/aiq-sales-agent/tools.html"
+  
+  
+  
+  
+  title="Connections"
+>
+  <span class="seller-home__nav-icon" aria-hidden="true">
+    
+      
+      <svg width="20" height="20" aria-hidden="true">
+        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#custom_apps"></use>
+      </svg>
+    
+  </span>
+  <span class="seller-home__nav-label">Connections</span>
+  
+  
+  
+  <span
+    class="slds-badge slds-theme_info slds-col_bump-left seller-home__nav-badge"
+    data-sh-tools-nav-badge
+    
+  >
+    <span class="slds-assistive-text">: </span><span data-sh-tools-nav-badge-count>34</span>
+    <span class="slds-assistive-text"> connections available</span>
+  </span>
+  
+</button>
+
+        
+      
+        
+        
+          
+
+<button
+  type="button"
+  class="seller-home__nav-item"
+  role="listitem"
+  data-sh-nav="settings"
+  data-sh-nav-noroute
+  
+  
+  
+  
+  title="Settings"
+>
+  <span class="seller-home__nav-icon" aria-hidden="true">
+    
+      
+      <svg width="20" height="20" aria-hidden="true">
+        <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#settings"></use>
+      </svg>
+    
+  </span>
+  <span class="seller-home__nav-label">Settings</span>
+  
+  
+  
+</button>
+
+        
+      
+    </div>
+  </div>
+
+  
+  <script type="application/json" data-sh-nav-workflow-sessions>[{"feedId":"ri-marcus-reply","conversationId":"conv-marcus-reply","label":"Drafted reply to Marcus Chen","status":"completed","demoGate":"marcus-reply"},{"feedId":"ri-01","conversationId":"conv-001","label":"Found new prospects","status":"completed","demoGate":""},{"feedId":"ri-02","conversationId":"","label":"Drafted proposals to send","status":"completed","demoGate":""},{"feedId":"ri-03","conversationId":"","label":"Executive Brief","status":"scheduled","demoGate":""},{"feedId":"ri-04","conversationId":"conv-003","label":"Meeting Next Steps","status":"scheduled","demoGate":""},{"feedId":"run-01","conversationId":"","label":"Researching target accounts","status":"running","demoGate":""},{"feedId":"run-02","conversationId":"","label":"Drafting outreach for warm leads","status":"running","demoGate":""},{"feedId":"ri-weekly-top-3","conversationId":"conv-weekly-top-3","label":"Quota Health Check","status":"scheduled","demoGate":""},{"feedId":"ri-daily-pipeline-snapshot","conversationId":"conv-daily-pipeline-snapshot","label":"Pipeline Snapshot","status":"scheduled","demoGate":""}]</script>
+  <template data-sh-recent-spinner-template>
+    <span
+      class="seller-home__nav-recent-status seller-home__nav-recent-status--running slds-col_bump-left"
+      role="img"
+      data-sh-recent-indicator
+    >
+      <span class="seller-home__feed-status-pulse" aria-hidden="true">
+        <span class="seller-home__feed-status-pulse-dot"></span>
+        <span class="seller-home__feed-status-pulse-ring"></span>
+      </span>
+    </span>
+  </template>
+</aside>
+
+  <div class="page" role="main">
+    <section class="page__body">
+<div class="appr">
   <div class="appr__inner">
 
+    <h1 class="appr-page__title">Approvals</h1>
+    <p class="appr-lede">Approvals that are blocking your chats and workflows.</p>
+    <h2 class="appr-workflows__label">Workflow approvals</h2>
+
+    
+    <section class="appr-workflow" data-appr-workflow="wf-cnet" data-filter="all">
     <header class="appr-run">
       <div class="appr-run__head">
         <div>
-          <h1>Update CNET in Salesforce</h1>
+          <h3 class="appr-run__title">CNET Account Plan Workflow</h3>
           <p class="appr-run__meta">
             <span data-appr-waiting>11</span> waiting on you
             <span class="appr-run__dot" aria-hidden="true">·</span>
             Staged 36 minutes ago
           </p>
         </div>
-        <button type="button" class="appr-btn appr-btn--outline" data-appr-view-run>View run</button>
+        <button type="button" class="appr-btn appr-btn--outline" data-appr-view-run="wf-cnet">View run</button>
       </div>
       <p class="appr-run__guide">Gray is the record as it stands. Blue is the only thing Hunter will write.</p>
       <p class="appr-run__done" data-appr-done hidden>You are caught up. Undo a row if you want to look again.</p>
-      <div class="appr-filters" role="group" aria-label="Filter actions">
+      <div class="appr-filters" role="group" aria-label="Filter CNET Account Plan Workflow">
         <button type="button" class="appr-filter" data-appr-filter="all" aria-pressed="true">All <span data-appr-count="all">11</span></button>
         <button type="button" class="appr-filter" data-appr-filter="waiting" aria-pressed="false">Waiting <span data-appr-count="waiting">11</span></button>
         <button type="button" class="appr-filter" data-appr-filter="allowed" aria-pressed="false">Allowed <span data-appr-count="allowed">0</span></button>
@@ -164,7 +839,7 @@
 
           <p class="appr-deltas">
             <span class="appr-deltas__kicker">Changing</span>
-            <span class="appr-deltas__text" title="Description → Ziff Davis owns CNET. Data Cloud evaluation in progress, and the widget deal is in negotiation.">Description → Ziff Davis owns CNET. Data Cloud evaluation in progress, and the widget deal is in negotiation.</span>
+            <span class="appr-deltas__text" title="Phone → (212) 555-0188 · Employees → 1,240 · Annual Revenue → $410,000,000 · Description → Data Cloud evaluation in progress">Phone → (212) 555-0188 · Employees → 1,240 · Annual Revenue → $410,000,000 · Description → Data Cloud evaluation in progress</span>
           </p>
 
           <div class="appr-record__detail" id="appr-detail-acct-cnet" data-appr-detail >
@@ -192,7 +867,7 @@
             </div>
             <div class="appr-well appr-well--write">
               <h4 class="appr-well__title">Hunter is changing</h4>
-              <p class="appr-why">Rewritten from the CNET account plan Hunter just finished.</p>
+              <p class="appr-why">The account plan has a newer phone, headcount, and revenue. The description still reads like an import.</p>
               <div class="appr-table-wrap">
                 <table class="appr-change-table">
                   <thead>
@@ -203,6 +878,50 @@
                     </tr>
                   </thead>
                   <tbody>
+                    
+                    <tr>
+                      <th scope="row">Phone</th>
+                      <td>
+                        
+                        <p class="appr-clamp" data-appr-clamp>(212) 555-0100</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        
+                      </td>
+                      <td class="appr-change-table__after">
+                        
+                        (212) 555-0188
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Employees</th>
+                      <td>
+                        
+                        <p class="appr-clamp" data-appr-clamp>850</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        
+                      </td>
+                      <td class="appr-change-table__after">
+                        
+                        1,240
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Annual Revenue</th>
+                      <td>
+                        
+                        <p class="appr-empty">Empty</p>
+                        
+                      </td>
+                      <td class="appr-change-table__after">
+                        
+                        $410,000,000
+                        
+                      </td>
+                    </tr>
                     
                     <tr>
                       <th scope="row">Description</th>
@@ -1746,6 +2465,397 @@
       
     </section>
     
+    </section>
+    
+    <section class="appr-workflow" data-appr-workflow="wf-acme" data-filter="all">
+    <header class="appr-run">
+      <div class="appr-run__head">
+        <div>
+          <h3 class="appr-run__title">Daily Pipeline Workflow</h3>
+          <p class="appr-run__meta">
+            <span data-appr-waiting>2</span> waiting on you
+            <span class="appr-run__dot" aria-hidden="true">·</span>
+            Staged 2 hours ago
+          </p>
+        </div>
+        <button type="button" class="appr-btn appr-btn--outline" data-appr-view-run="wf-acme">View run</button>
+      </div>
+      <p class="appr-run__guide">Gray is the record as it stands. Blue is the only thing Hunter will write.</p>
+      <p class="appr-run__done" data-appr-done hidden>You are caught up. Undo a row if you want to look again.</p>
+      <div class="appr-filters" role="group" aria-label="Filter Daily Pipeline Workflow">
+        <button type="button" class="appr-filter" data-appr-filter="all" aria-pressed="true">All <span data-appr-count="all">2</span></button>
+        <button type="button" class="appr-filter" data-appr-filter="waiting" aria-pressed="false">Waiting <span data-appr-count="waiting">2</span></button>
+        <button type="button" class="appr-filter" data-appr-filter="allowed" aria-pressed="false">Allowed <span data-appr-count="allowed">0</span></button>
+        <button type="button" class="appr-filter" data-appr-filter="rejected" aria-pressed="false">Rejected <span data-appr-count="rejected">0</span></button>
+      </div>
+    </header>
+
+    
+    <section class="appr-section" data-appr-section>
+      <p class="appr-section__empty" data-appr-section-empty hidden>Nothing in this set matches the filter.</p>
+
+      
+      <section
+        class="appr-group"
+        data-appr-group
+        data-action="update"
+        data-object="Account"
+        data-noun="account"
+        data-noun-plural="accounts"
+      >
+        
+        <header class="appr-group__head">
+          <button
+            type="button"
+            class="appr-group__toggle"
+            data-appr-group-toggle
+            aria-expanded="false"
+            aria-controls="appr-group-acme-account"
+          >
+            <span class="appr-chevron" aria-hidden="true">
+              <svg>
+                <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
+              </svg>
+            </span>
+            <span class="appr-badge appr-badge--update">Update</span>
+            
+<span class="slds-icon_container slds-icon-standard-account appr-icon" title="Account">
+  <svg class="slds-icon" aria-hidden="true">
+    <use xlink:href="/aiq-sales-agent/assets/icons/standard-sprite/svg/symbols.svg#account"></use>
+  </svg>
+  <span class="slds-assistive-text">Account</span>
+</span>
+
+            <span class="appr-group__title">Account</span>
+            <span class="appr-group__count" data-appr-group-waiting>1 waiting</span>
+            <span class="appr-group__scope">For the account below</span>
+          </button>
+          <div class="appr-group__actions">
+            <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="group" aria-label="Allow the account below">Allow</button>
+            <button type="button" class="appr-btn appr-btn--reject" data-appr-group-decide="reject" aria-label="Reject the account below">Reject</button>
+          </div>
+        </header>
+        <div class="appr-group__body" id="appr-group-acme-account" data-appr-group-body hidden>
+          <p class="appr-banner" data-appr-banner hidden></p>
+
+        
+        <article
+          class="appr-record"
+          data-appr-record
+          data-record-id="acct-acme"
+          data-name="Acme Corp"
+          data-decision=""
+        >
+          <div class="appr-record__top">
+            <button
+              type="button"
+              class="appr-chevron"
+              data-appr-toggle
+              aria-expanded="false"
+              aria-controls="appr-detail-acct-acme"
+            >
+              <svg aria-hidden="true">
+                <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
+              </svg>
+              <span class="slds-assistive-text">Show what Hunter will write for Acme Corp</span>
+            </button>
+            
+<span class="slds-icon_container slds-icon-standard-account appr-icon" title="Account">
+  <svg class="slds-icon" aria-hidden="true">
+    <use xlink:href="/aiq-sales-agent/assets/icons/standard-sprite/svg/symbols.svg#account"></use>
+  </svg>
+  <span class="slds-assistive-text">Account</span>
+</span>
+
+            <div class="appr-record__identity">
+              <div class="appr-record__name-row">
+                
+                <button type="button" class="appr-name" data-appr-open="acct-acme">Acme Corp</button>
+                
+              </div>
+              
+              <p class="appr-record__summary">
+                <span class="appr-record__summary-kicker">Today</span>
+                <span>City / State San Francisco, California · Industry Manufacturing · Website https://www.acme.example</span>
+              </p>
+              
+            </div>
+            <div class="appr-record__actions" data-appr-actions>
+              <div class="appr-record__buttons" data-appr-buttons>
+                <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="record">Allow</button>
+                <button type="button" class="appr-btn appr-btn--reject" data-appr-decide="reject">Reject</button>
+              </div>
+              <div class="appr-record__status" data-appr-status hidden>
+                <span class="appr-status" data-appr-status-label></span>
+                <button type="button" class="appr-btn appr-btn--quiet" data-appr-undo>Undo</button>
+              </div>
+            </div>
+          </div>
+
+          <p class="appr-deltas">
+            <span class="appr-deltas__kicker">Changing</span>
+            <span class="appr-deltas__text" title="Phone → (415) 555-0142 · Employees → 860">Phone → (415) 555-0142 · Employees → 860</span>
+          </p>
+
+          <div class="appr-record__detail" id="appr-detail-acct-acme" data-appr-detail hidden>
+            
+            <div class="appr-well appr-well--today">
+              <h4 class="appr-well__title">In Salesforce today</h4>
+              <div class="appr-facts">
+                
+                <div class="appr-fact">
+                  <span class="appr-fact__label">City / State</span>
+                  <span class="appr-fact__value">San Francisco, California</span>
+                </div>
+                
+                <div class="appr-fact">
+                  <span class="appr-fact__label">Industry</span>
+                  <span class="appr-fact__value">Manufacturing</span>
+                </div>
+                
+                <div class="appr-fact">
+                  <span class="appr-fact__label">Website</span>
+                  <span class="appr-fact__value"><a class="appr-link" href="https://www.acme.example" target="_blank" rel="noopener noreferrer">https://www.acme.example</a></span>
+                </div>
+                
+              </div>
+            </div>
+            <div class="appr-well appr-well--write">
+              <h4 class="appr-well__title">Hunter is changing</h4>
+              <p class="appr-why">The renewal plan has a newer main line and a headcount from the last account review.</p>
+              <div class="appr-table-wrap">
+                <table class="appr-change-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">Before</th>
+                      <th scope="col" class="appr-change-table__after">After</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    
+                    <tr>
+                      <th scope="row">Phone</th>
+                      <td>
+                        
+                        <p class="appr-clamp" data-appr-clamp>(415) 555-0100</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        
+                      </td>
+                      <td class="appr-change-table__after">
+                        
+                        (415) 555-0142
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Employees</th>
+                      <td>
+                        
+                        <p class="appr-clamp" data-appr-clamp>640</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        
+                      </td>
+                      <td class="appr-change-table__after">
+                        
+                        860
+                        
+                      </td>
+                    </tr>
+                    
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+          </div>
+        </article>
+        
+        </div>
+      </section>
+      
+    </section>
+    
+    <section class="appr-section" data-appr-section>
+      <p class="appr-section__empty" data-appr-section-empty hidden>Nothing in this set matches the filter.</p>
+
+      
+      <section
+        class="appr-group"
+        data-appr-group
+        data-action="create"
+        data-object="Contact"
+        data-noun="contact"
+        data-noun-plural="contacts"
+      >
+        
+        <header class="appr-group__head">
+          <button
+            type="button"
+            class="appr-group__toggle"
+            data-appr-group-toggle
+            aria-expanded="false"
+            aria-controls="appr-group-acme-contact"
+          >
+            <span class="appr-chevron" aria-hidden="true">
+              <svg>
+                <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
+              </svg>
+            </span>
+            <span class="appr-badge appr-badge--create">New</span>
+            
+<span class="slds-icon_container slds-icon-standard-contact appr-icon" title="Contact">
+  <svg class="slds-icon" aria-hidden="true">
+    <use xlink:href="/aiq-sales-agent/assets/icons/standard-sprite/svg/symbols.svg#contact"></use>
+  </svg>
+  <span class="slds-assistive-text">Contact</span>
+</span>
+
+            <span class="appr-group__title">Contact</span>
+            <span class="appr-group__count" data-appr-group-waiting>1 waiting</span>
+            <span class="appr-group__scope">For the contact below</span>
+          </button>
+          <div class="appr-group__actions">
+            <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="group" aria-label="Allow the contact below">Allow</button>
+            <button type="button" class="appr-btn appr-btn--reject" data-appr-group-decide="reject" aria-label="Reject the contact below">Reject</button>
+          </div>
+        </header>
+        <div class="appr-group__body" id="appr-group-acme-contact" data-appr-group-body hidden>
+          <p class="appr-banner" data-appr-banner hidden></p>
+
+        
+        <article
+          class="appr-record"
+          data-appr-record
+          data-record-id="con-lena"
+          data-name="Lena Ortiz"
+          data-decision=""
+        >
+          <div class="appr-record__top">
+            <button
+              type="button"
+              class="appr-chevron"
+              data-appr-toggle
+              aria-expanded="false"
+              aria-controls="appr-detail-con-lena"
+            >
+              <svg aria-hidden="true">
+                <use xlink:href="/aiq-sales-agent/assets/icons/utility-sprite/svg/symbols.svg#chevronright"></use>
+              </svg>
+              <span class="slds-assistive-text">Show what Hunter will write for Lena Ortiz</span>
+            </button>
+            
+<span class="slds-icon_container slds-icon-standard-contact appr-icon" title="Contact">
+  <svg class="slds-icon" aria-hidden="true">
+    <use xlink:href="/aiq-sales-agent/assets/icons/standard-sprite/svg/symbols.svg#contact"></use>
+  </svg>
+  <span class="slds-assistive-text">Contact</span>
+</span>
+
+            <div class="appr-record__identity">
+              <div class="appr-record__name-row">
+                
+                <span class="appr-name">Lena Ortiz</span>
+                <span class="appr-badge appr-badge--create">New</span>
+                
+              </div>
+              
+              <p class="appr-record__summary">
+                <span class="appr-record__summary-kicker">No record to open</span>
+              </p>
+              
+            </div>
+            <div class="appr-record__actions" data-appr-actions>
+              <div class="appr-record__buttons" data-appr-buttons>
+                <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="record">Allow</button>
+                <button type="button" class="appr-btn appr-btn--reject" data-appr-decide="reject">Reject</button>
+              </div>
+              <div class="appr-record__status" data-appr-status hidden>
+                <span class="appr-status" data-appr-status-label></span>
+                <button type="button" class="appr-btn appr-btn--quiet" data-appr-undo>Undo</button>
+              </div>
+            </div>
+          </div>
+
+          <p class="appr-deltas appr-deltas--create">
+            <span class="appr-deltas__kicker">Will create</span>
+            <span class="appr-deltas__text" title="Director of Procurement · Acme Corp · lena.ortiz@acme.example">Director of Procurement · Acme Corp · lena.ortiz@acme.example</span>
+          </p>
+
+          <div class="appr-record__detail" id="appr-detail-con-lena" data-appr-detail hidden>
+            
+            <div class="appr-well appr-well--today">
+              <h4 class="appr-well__title">Not in Salesforce yet</h4>
+              <p class="appr-why">There is no record to open. Approving this creates it.</p>
+            </div>
+            <div class="appr-well appr-well--write">
+              <h4 class="appr-well__title">Hunter will create</h4>
+              <p class="appr-why">Named on the renewal thread. There is no matching contact on the account.</p>
+              <div class="appr-table-wrap">
+                <table class="appr-change-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col" class="appr-change-table__after">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    
+                    <tr>
+                      <th scope="row">Account</th>
+                      <td class="appr-change-table__after">
+                        
+                        <button type="button" class="appr-link" data-appr-open="acct-acme">Acme Corp</button>
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Title</th>
+                      <td class="appr-change-table__after">
+                        
+                        Director of Procurement
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Email</th>
+                      <td class="appr-change-table__after">
+                        
+                        lena.ortiz@acme.example
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Phone</th>
+                      <td class="appr-change-table__after">
+                        
+                        (415) 555-0177
+                        
+                      </td>
+                    </tr>
+                    
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+          </div>
+        </article>
+        
+        </div>
+      </section>
+      
+    </section>
+    
+    </section>
+    
+  </div>
+</div>
+    </section>
   </div>
 
   <div class="appr-drawer" data-appr-drawer hidden>
@@ -1782,9 +2892,9 @@
   </div>
 
   <div class="appr-toast" data-appr-toast role="status" hidden></div>
-</div>
 
-<script id="appr-data" type="application/json">{"run":{"title":"Update CNET in Salesforce","staged":"Staged 36 minutes ago","total":11,"guide":"Gray is the record as it stands. Blue is the only thing Hunter will write.","steps":[{"title":"Read what is already in Salesforce","body":"The CNET account, five contacts, and the widget opportunity."},{"title":"Drafted updates","body":"Descriptions on the account, Geoff Minor, and Mara Ellison. Title and phone for Dana Okonkwo. A newer email for Luis Chen. Title for Chris Patel. Description and next step on the widget opportunity."},{"title":"Drafted new records","body":"Priya Shah and Andre Ruiz from the CNET leadership page. A CNET Studios account. A Data Cloud opportunity, separate from the widget deal."},{"title":"Stopped for you","body":"Nothing is written to Salesforce until you allow it."}]},"sections":[{"id":"updates","groups":[{"id":"upd-account","action":"update","object":"Account","noun":"account","nounPlural":"accounts","icon":"account","records":[{"id":"acct-cnet","name":"CNET (Ziff Davis)","openable":true,"open":true,"summary":"New York, New York · Media · https://www.cnet.com","deltaSummary":"Description → Ziff Davis owns CNET. Data Cloud evaluation in progress, and the widget deal is in negotiation.","why":"Rewritten from the CNET account plan Hunter just finished.","context":[{"label":"City, State","text":"New York, New York"},{"label":"Industry","text":"Media"},{"label":"Website","text":"https://www.cnet.com","href":"https://www.cnet.com"}],"changes":[{"field":"Description","before":"Ziff Davis, Inc. (NASDAQ: ZD) is a vertically focused digital media and internet company headquartered in New York. The portfolio includes CNET, PCMag, and a set of performance-marketing brands. This description was imported from enrichment and has not been edited by the account team.","after":"Ziff Davis (NASDAQ: ZD) owns CNET and is headquartered in New York. Hunter updated this from the account plan: a Data Cloud evaluation is in progress, and the salesforce.com widget opportunity (5,000 units) is in negotiation with a possible follow-on. Geoff Minor is the executive sponsor."}],"preview":[{"label":"Account Owner","text":"Rohan"},{"label":"City, State","text":"New York, New York"},{"label":"Industry","text":"Media"},{"label":"Website","text":"https://www.cnet.com","href":"https://www.cnet.com"},{"label":"Phone","text":"(212) 555-0100"},{"label":"Description","changing":true,"text":"Ziff Davis, Inc. (NASDAQ: ZD) is a vertically focused digital media and internet company headquartered in New York. The portfolio includes CNET, PCMag, and a set of performance-marketing brands. This description was imported from enrichment and has not been edited by the account team."}]}]},{"id":"upd-contact","action":"update","object":"Contact","noun":"contact","nounPlural":"contacts","icon":"contact","records":[{"id":"con-geoff","name":"Geoff Minor","openable":true,"open":true,"summary":"CNET (Ziff Davis) · President · geoff.minor@cnet.com","deltaSummary":"Description → President at CNET. Asked for a Data Cloud walkthrough with his revenue team in November.","why":"Added from the account plan. Geoff is the executive sponsor on the Data Cloud evaluation.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"President"},{"label":"Email","text":"geoff.minor@cnet.com"}],"changes":[{"field":"Description","before":"","after":"President at CNET. Met during the account plan. Asked for a Data Cloud walkthrough with his revenue team in November."}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"President"},{"label":"Email","text":"geoff.minor@cnet.com"},{"label":"Phone","text":"(212) 555-0114"},{"label":"Description","changing":true,"text":""}]},{"id":"con-dana","name":"Dana Okonkwo","openable":true,"open":false,"summary":"CNET (Ziff Davis) · dana.okonkwo@cnet.com","deltaSummary":"Title → VP, Revenue Operations · Phone → (212) 555-0148","why":"The account plan has Dana as VP, Revenue Operations, with a direct line. Salesforce still says Director of Sales and has no phone.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Email","text":"dana.okonkwo@cnet.com"}],"changes":[{"field":"Title","before":"Director of Sales","after":"VP, Revenue Operations"},{"field":"Phone","before":"","after":"(212) 555-0148"}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"Director of Sales","changing":true},{"label":"Email","text":"dana.okonkwo@cnet.com"},{"label":"Phone","text":"","changing":true}]},{"id":"con-luis","name":"Luis Chen","openable":true,"open":false,"summary":"CNET (Ziff Davis) · Editor in Chief · (212) 555-0190","deltaSummary":"Email → l.chen@cnet.com","why":"The CNET masthead lists a newer email than the one on this contact.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"Editor in Chief"},{"label":"Phone","text":"(212) 555-0190"}],"changes":[{"field":"Email","before":"luis.chen@cnet.com","after":"l.chen@cnet.com"}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"Editor in Chief"},{"label":"Email","text":"luis.chen@cnet.com","changing":true},{"label":"Phone","text":"(212) 555-0190"}]},{"id":"con-mara","name":"Mara Ellison","openable":true,"open":false,"summary":"CNET (Ziff Davis) · VP, Brand · mara.ellison@cnet.com","deltaSummary":"Description → VP, Brand at CNET. Owns the partnership conversation from the account plan.","why":"Drafted from her role on the CNET leadership page.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"VP, Brand"},{"label":"Email","text":"mara.ellison@cnet.com"}],"changes":[{"field":"Description","before":"Leads brand and partnerships for CNET.","after":"VP, Brand at CNET. Owns the partnership conversation Hunter flagged in the account plan. Useful on the Data Cloud evaluation because brand budget sits with her team."}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"VP, Brand"},{"label":"Email","text":"mara.ellison@cnet.com"},{"label":"Phone","text":"(212) 555-0126"},{"label":"Description","changing":true,"text":"Leads brand and partnerships for CNET."}]},{"id":"con-chris","name":"Chris Patel","openable":true,"open":false,"summary":"CNET (Ziff Davis) · chris.patel@cnet.com · (212) 555-0133","deltaSummary":"Title → Senior Account Executive","why":"The account plan lists Chris as a senior account executive after the reorg. Salesforce still says Sales Manager.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Email","text":"chris.patel@cnet.com"},{"label":"Phone","text":"(212) 555-0133"}],"changes":[{"field":"Title","before":"Sales Manager","after":"Senior Account Executive"}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"Sales Manager","changing":true},{"label":"Email","text":"chris.patel@cnet.com"},{"label":"Phone","text":"(212) 555-0133"}]}]},{"id":"upd-opportunity","action":"update","object":"Opportunity","noun":"opportunity","nounPlural":"opportunities","icon":"opportunity","records":[{"id":"opp-widgets","name":"salesforce.com - 5000 Widgets","openable":true,"open":true,"summary":"CNET (Ziff Davis) · Negotiation · $1,200,000 · Close Nov 14, 2026","deltaSummary":"Description → 5,000 widgets in negotiation, with a follow-on if Data Cloud lands. · Next Step → Pricing review with Geoff Minor, week of Nov 3.","why":"Brought in line with the account plan, including the next meeting.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Stage","text":"Negotiation"},{"label":"Amount","text":"$1,200,000"},{"label":"Close Date","text":"Nov 14, 2026"}],"changes":[{"field":"Description","before":"Initial deal for 5000 widgets. We expect follow-on business with a potential upside of 40000 additional units. Last touched during the Q3 pricing pass. The description still says widgets because that is the language the buyer used.","after":"5,000 widgets, currently in negotiation. Follow-on of about 40,000 units if the Data Cloud evaluation on the CNET account lands. Next conversation is a pricing review with Geoff Minor the week of Nov 3."},{"field":"Next Step","before":"Send the pricing sheet.","after":"Pricing review with Geoff Minor, week of Nov 3."}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Owner","text":"Rohan"},{"label":"Stage","text":"Negotiation"},{"label":"Amount","text":"$1,200,000"},{"label":"Close Date","text":"Nov 14, 2026"},{"label":"Description","changing":true,"text":"Initial deal for 5000 widgets. We expect follow-on business with a potential upside of 40000 additional units. Last touched during the Q3 pricing pass. The description still says widgets because that is the language the buyer used."},{"label":"Next Step","changing":true,"text":"Send the pricing sheet."}]}]}]},{"id":"creates","groups":[{"id":"new-contact","action":"create","object":"Contact","noun":"contact","nounPlural":"contacts","icon":"contact","records":[{"id":"con-priya","name":"Priya Shah","openable":false,"open":true,"summary":"","deltaSummary":"VP, Marketing · priya.shah@cnet.com · (212) 555-0162 · CNET (Ziff Davis)","why":"Found on the CNET leadership page. She is not a contact yet.","context":[],"changes":[{"field":"Account","after":"CNET (Ziff Davis)","afterRecordId":"acct-cnet"},{"field":"Title","after":"VP, Marketing"},{"field":"Email","after":"priya.shah@cnet.com"},{"field":"Phone","after":"(212) 555-0162"},{"field":"Description","after":"Leads brand marketing at CNET. Named on the leadership page. She will not exist in Salesforce until you approve this."}]},{"id":"con-andre","name":"Andre Ruiz","openable":false,"open":false,"summary":"","deltaSummary":"Director of IT · andre.ruiz@cnet.com · (212) 555-0177 · CNET (Ziff Davis)","why":"Found on the CNET leadership page. He is not a contact yet.","context":[],"changes":[{"field":"Account","after":"CNET (Ziff Davis)","afterRecordId":"acct-cnet"},{"field":"Title","after":"Director of IT"},{"field":"Email","after":"andre.ruiz@cnet.com"},{"field":"Phone","after":"(212) 555-0177"},{"field":"Description","after":"Owns infrastructure for CNET.com. Hunter added him from the leadership page. No contact exists until you approve this."}]}]},{"id":"new-account","action":"create","object":"Account","noun":"account","nounPlural":"accounts","icon":"account","records":[{"id":"acct-studios","name":"CNET Studios","openable":false,"open":false,"summary":"","deltaSummary":"Media · New York · https://www.cnet.com/studios","why":"The account plan mentions a studio group that is not an account yet.","context":[],"changes":[{"field":"Website","after":"https://www.cnet.com/studios","afterHref":"https://www.cnet.com/studios"},{"field":"Industry","after":"Media"},{"field":"Billing City","after":"New York"},{"field":"Parent Account","after":"CNET (Ziff Davis)","afterRecordId":"acct-cnet"},{"field":"Description","after":"Production group under CNET. Not an account in Salesforce until you approve this."}]}]},{"id":"new-opportunity","action":"create","object":"Opportunity","noun":"opportunity","nounPlural":"opportunities","icon":"opportunity","records":[{"id":"opp-datacloud","name":"CNET - Data Cloud expansion","openable":false,"open":true,"summary":"","deltaSummary":"$420,000 · Qualification · Close Dec 18, 2026 · CNET (Ziff Davis)","why":"Drafted from the Data Cloud evaluation. Separate from the widget opportunity, which Hunter is only updating.","context":[],"changes":[{"field":"Account","after":"CNET (Ziff Davis)","afterRecordId":"acct-cnet"},{"field":"Amount","after":"$420,000"},{"field":"Stage","after":"Qualification"},{"field":"Close Date","after":"Dec 18, 2026"},{"field":"Next Step","after":"Discovery with Dana Okonkwo"},{"field":"Description","after":"New opportunity from the account plan. Data Cloud evaluation, kept separate from the 5,000 widget deal already in negotiation."}]}]}]}]}</script>
+<script id="appr-data" type="application/json">{"workflows":[{"id":"wf-cnet","title":"CNET Account Plan Workflow","staged":"Staged 36 minutes ago","total":11,"guide":"Gray is the record as it stands. Blue is the only thing Hunter will write.","steps":[{"title":"Read what is already in Salesforce","body":"The CNET account, five contacts, and the widget opportunity."},{"title":"Drafted updates","body":"Phone, employees, annual revenue, and description on the account. Descriptions on Geoff Minor and Mara Ellison. Title and phone for Dana Okonkwo. A newer email for Luis Chen. Title for Chris Patel. Description and next step on the widget opportunity."},{"title":"Drafted new records","body":"Priya Shah and Andre Ruiz from the CNET leadership page. A CNET Studios account. A Data Cloud opportunity, separate from the widget deal."},{"title":"Stopped for you","body":"Nothing is written to Salesforce until you allow it."}],"sections":[{"id":"updates","groups":[{"id":"upd-account","action":"update","object":"Account","noun":"account","nounPlural":"accounts","icon":"account","records":[{"id":"acct-cnet","name":"CNET (Ziff Davis)","openable":true,"open":true,"summary":"New York, New York · Media · https://www.cnet.com","deltaSummary":"Phone → (212) 555-0188 · Employees → 1,240 · Annual Revenue → $410,000,000 · Description → Data Cloud evaluation in progress","why":"The account plan has a newer phone, headcount, and revenue. The description still reads like an import.","context":[{"label":"City, State","text":"New York, New York"},{"label":"Industry","text":"Media"},{"label":"Website","text":"https://www.cnet.com","href":"https://www.cnet.com"}],"changes":[{"field":"Phone","before":"(212) 555-0100","after":"(212) 555-0188"},{"field":"Employees","before":"850","after":"1,240"},{"field":"Annual Revenue","before":"","after":"$410,000,000"},{"field":"Description","before":"Ziff Davis, Inc. (NASDAQ: ZD) is a vertically focused digital media and internet company headquartered in New York. The portfolio includes CNET, PCMag, and a set of performance-marketing brands. This description was imported from enrichment and has not been edited by the account team.","after":"Ziff Davis (NASDAQ: ZD) owns CNET and is headquartered in New York. Hunter updated this from the account plan: a Data Cloud evaluation is in progress, and the salesforce.com widget opportunity (5,000 units) is in negotiation with a possible follow-on. Geoff Minor is the executive sponsor."}],"preview":[{"label":"Account Owner","text":"Rohan"},{"label":"City, State","text":"New York, New York"},{"label":"Industry","text":"Media"},{"label":"Website","text":"https://www.cnet.com","href":"https://www.cnet.com"},{"label":"Phone","text":"(212) 555-0100","changing":true},{"label":"Employees","text":"850","changing":true},{"label":"Annual Revenue","text":"","changing":true},{"label":"Description","changing":true,"text":"Ziff Davis, Inc. (NASDAQ: ZD) is a vertically focused digital media and internet company headquartered in New York. The portfolio includes CNET, PCMag, and a set of performance-marketing brands. This description was imported from enrichment and has not been edited by the account team."}]}]},{"id":"upd-contact","action":"update","object":"Contact","noun":"contact","nounPlural":"contacts","icon":"contact","records":[{"id":"con-geoff","name":"Geoff Minor","openable":true,"open":true,"summary":"CNET (Ziff Davis) · President · geoff.minor@cnet.com","deltaSummary":"Description → President at CNET. Asked for a Data Cloud walkthrough with his revenue team in November.","why":"Added from the account plan. Geoff is the executive sponsor on the Data Cloud evaluation.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"President"},{"label":"Email","text":"geoff.minor@cnet.com"}],"changes":[{"field":"Description","before":"","after":"President at CNET. Met during the account plan. Asked for a Data Cloud walkthrough with his revenue team in November."}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"President"},{"label":"Email","text":"geoff.minor@cnet.com"},{"label":"Phone","text":"(212) 555-0114"},{"label":"Description","changing":true,"text":""}]},{"id":"con-dana","name":"Dana Okonkwo","openable":true,"open":false,"summary":"CNET (Ziff Davis) · dana.okonkwo@cnet.com","deltaSummary":"Title → VP, Revenue Operations · Phone → (212) 555-0148","why":"The account plan has Dana as VP, Revenue Operations, with a direct line. Salesforce still says Director of Sales and has no phone.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Email","text":"dana.okonkwo@cnet.com"}],"changes":[{"field":"Title","before":"Director of Sales","after":"VP, Revenue Operations"},{"field":"Phone","before":"","after":"(212) 555-0148"}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"Director of Sales","changing":true},{"label":"Email","text":"dana.okonkwo@cnet.com"},{"label":"Phone","text":"","changing":true}]},{"id":"con-luis","name":"Luis Chen","openable":true,"open":false,"summary":"CNET (Ziff Davis) · Editor in Chief · (212) 555-0190","deltaSummary":"Email → l.chen@cnet.com","why":"The CNET masthead lists a newer email than the one on this contact.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"Editor in Chief"},{"label":"Phone","text":"(212) 555-0190"}],"changes":[{"field":"Email","before":"luis.chen@cnet.com","after":"l.chen@cnet.com"}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"Editor in Chief"},{"label":"Email","text":"luis.chen@cnet.com","changing":true},{"label":"Phone","text":"(212) 555-0190"}]},{"id":"con-mara","name":"Mara Ellison","openable":true,"open":false,"summary":"CNET (Ziff Davis) · VP, Brand · mara.ellison@cnet.com","deltaSummary":"Description → VP, Brand at CNET. Owns the partnership conversation from the account plan.","why":"Drafted from her role on the CNET leadership page.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"VP, Brand"},{"label":"Email","text":"mara.ellison@cnet.com"}],"changes":[{"field":"Description","before":"Leads brand and partnerships for CNET.","after":"VP, Brand at CNET. Owns the partnership conversation Hunter flagged in the account plan. Useful on the Data Cloud evaluation because brand budget sits with her team."}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"VP, Brand"},{"label":"Email","text":"mara.ellison@cnet.com"},{"label":"Phone","text":"(212) 555-0126"},{"label":"Description","changing":true,"text":"Leads brand and partnerships for CNET."}]},{"id":"con-chris","name":"Chris Patel","openable":true,"open":false,"summary":"CNET (Ziff Davis) · chris.patel@cnet.com · (212) 555-0133","deltaSummary":"Title → Senior Account Executive","why":"The account plan lists Chris as a senior account executive after the reorg. Salesforce still says Sales Manager.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Email","text":"chris.patel@cnet.com"},{"label":"Phone","text":"(212) 555-0133"}],"changes":[{"field":"Title","before":"Sales Manager","after":"Senior Account Executive"}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"Sales Manager","changing":true},{"label":"Email","text":"chris.patel@cnet.com"},{"label":"Phone","text":"(212) 555-0133"}]}]},{"id":"upd-opportunity","action":"update","object":"Opportunity","noun":"opportunity","nounPlural":"opportunities","icon":"opportunity","records":[{"id":"opp-widgets","name":"salesforce.com - 5000 Widgets","openable":true,"open":true,"summary":"CNET (Ziff Davis) · Negotiation · $1,200,000 · Close Nov 14, 2026","deltaSummary":"Description → 5,000 widgets in negotiation, with a follow-on if Data Cloud lands. · Next Step → Pricing review with Geoff Minor, week of Nov 3.","why":"Brought in line with the account plan, including the next meeting.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Stage","text":"Negotiation"},{"label":"Amount","text":"$1,200,000"},{"label":"Close Date","text":"Nov 14, 2026"}],"changes":[{"field":"Description","before":"Initial deal for 5000 widgets. We expect follow-on business with a potential upside of 40000 additional units. Last touched during the Q3 pricing pass. The description still says widgets because that is the language the buyer used.","after":"5,000 widgets, currently in negotiation. Follow-on of about 40,000 units if the Data Cloud evaluation on the CNET account lands. Next conversation is a pricing review with Geoff Minor the week of Nov 3."},{"field":"Next Step","before":"Send the pricing sheet.","after":"Pricing review with Geoff Minor, week of Nov 3."}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Owner","text":"Rohan"},{"label":"Stage","text":"Negotiation"},{"label":"Amount","text":"$1,200,000"},{"label":"Close Date","text":"Nov 14, 2026"},{"label":"Description","changing":true,"text":"Initial deal for 5000 widgets. We expect follow-on business with a potential upside of 40000 additional units. Last touched during the Q3 pricing pass. The description still says widgets because that is the language the buyer used."},{"label":"Next Step","changing":true,"text":"Send the pricing sheet."}]}]}]},{"id":"creates","groups":[{"id":"new-contact","action":"create","object":"Contact","noun":"contact","nounPlural":"contacts","icon":"contact","records":[{"id":"con-priya","name":"Priya Shah","openable":false,"open":true,"summary":"","deltaSummary":"VP, Marketing · priya.shah@cnet.com · (212) 555-0162 · CNET (Ziff Davis)","why":"Found on the CNET leadership page. She is not a contact yet.","context":[],"changes":[{"field":"Account","after":"CNET (Ziff Davis)","afterRecordId":"acct-cnet"},{"field":"Title","after":"VP, Marketing"},{"field":"Email","after":"priya.shah@cnet.com"},{"field":"Phone","after":"(212) 555-0162"},{"field":"Description","after":"Leads brand marketing at CNET. Named on the leadership page. She will not exist in Salesforce until you approve this."}]},{"id":"con-andre","name":"Andre Ruiz","openable":false,"open":false,"summary":"","deltaSummary":"Director of IT · andre.ruiz@cnet.com · (212) 555-0177 · CNET (Ziff Davis)","why":"Found on the CNET leadership page. He is not a contact yet.","context":[],"changes":[{"field":"Account","after":"CNET (Ziff Davis)","afterRecordId":"acct-cnet"},{"field":"Title","after":"Director of IT"},{"field":"Email","after":"andre.ruiz@cnet.com"},{"field":"Phone","after":"(212) 555-0177"},{"field":"Description","after":"Owns infrastructure for CNET.com. Hunter added him from the leadership page. No contact exists until you approve this."}]}]},{"id":"new-account","action":"create","object":"Account","noun":"account","nounPlural":"accounts","icon":"account","records":[{"id":"acct-studios","name":"CNET Studios","openable":false,"open":false,"summary":"","deltaSummary":"Media · New York · https://www.cnet.com/studios","why":"The account plan mentions a studio group that is not an account yet.","context":[],"changes":[{"field":"Website","after":"https://www.cnet.com/studios","afterHref":"https://www.cnet.com/studios"},{"field":"Industry","after":"Media"},{"field":"Billing City","after":"New York"},{"field":"Parent Account","after":"CNET (Ziff Davis)","afterRecordId":"acct-cnet"},{"field":"Description","after":"Production group under CNET. Not an account in Salesforce until you approve this."}]}]},{"id":"new-opportunity","action":"create","object":"Opportunity","noun":"opportunity","nounPlural":"opportunities","icon":"opportunity","records":[{"id":"opp-datacloud","name":"CNET - Data Cloud expansion","openable":false,"open":true,"summary":"","deltaSummary":"$420,000 · Qualification · Close Dec 18, 2026 · CNET (Ziff Davis)","why":"Drafted from the Data Cloud evaluation. Separate from the widget opportunity, which Hunter is only updating.","context":[],"changes":[{"field":"Account","after":"CNET (Ziff Davis)","afterRecordId":"acct-cnet"},{"field":"Amount","after":"$420,000"},{"field":"Stage","after":"Qualification"},{"field":"Close Date","after":"Dec 18, 2026"},{"field":"Next Step","after":"Discovery with Dana Okonkwo"},{"field":"Description","after":"New opportunity from the account plan. Data Cloud evaluation, kept separate from the 5,000 widget deal already in negotiation."}]}]}]}]},{"id":"wf-acme","title":"Daily Pipeline Workflow","staged":"Staged 2 hours ago","total":2,"guide":"Gray is the record as it stands. Blue is the only thing Hunter will write.","steps":[{"title":"Read what is already in Salesforce","body":"The Acme Corp account and the open renewal."},{"title":"Drafted the write","body":"A newer phone and headcount on the account. A new contact, Lena Ortiz, from the renewal thread."},{"title":"Stopped for you","body":"Nothing is written to Salesforce until you allow it."}],"sections":[{"id":"acme-updates","groups":[{"id":"acme-account","action":"update","object":"Account","noun":"account","nounPlural":"accounts","icon":"account","records":[{"id":"acct-acme","name":"Acme Corp","openable":true,"open":false,"summary":"City / State San Francisco, California · Industry Manufacturing · Website https://www.acme.example","deltaSummary":"Phone → (415) 555-0142 · Employees → 860","why":"The renewal plan has a newer main line and a headcount from the last account review.","context":[{"label":"City / State","text":"San Francisco, California"},{"label":"Industry","text":"Manufacturing"},{"label":"Website","text":"https://www.acme.example","href":"https://www.acme.example"}],"changes":[{"field":"Phone","before":"(415) 555-0100","after":"(415) 555-0142"},{"field":"Employees","before":"640","after":"860"}],"preview":[{"label":"Account Name","text":"Acme Corp"},{"label":"Phone","text":"(415) 555-0100","changing":true},{"label":"Employees","text":"640","changing":true},{"label":"Owner","text":"Rohan"}]}]}]},{"id":"acme-creates","groups":[{"id":"acme-contact","action":"create","object":"Contact","noun":"contact","nounPlural":"contacts","icon":"contact","records":[{"id":"con-lena","name":"Lena Ortiz","openable":false,"open":false,"summary":"","deltaSummary":"Director of Procurement · Acme Corp · lena.ortiz@acme.example","why":"Named on the renewal thread. There is no matching contact on the account.","context":[],"changes":[{"field":"Account","after":"Acme Corp","afterRecordId":"acct-acme"},{"field":"Title","after":"Director of Procurement"},{"field":"Email","after":"lena.ortiz@acme.example"},{"field":"Phone","after":"(415) 555-0177"}]}]}]}]}]}</script>
+</div>
 
   </main>
   <script src="/aiq-sales-agent/scripts/user_switcher.js"></script>
@@ -1794,7 +2904,8 @@
   <script src="/aiq-sales-agent/scripts/vendor/svg4everybody.min.js"></script>
   <script>svg4everybody();</script>
   
-<script src="/aiq-sales-agent/scripts/approvals.js?v=7"></script>
+<script src="/aiq-sales-agent/scripts/home.js"></script>
+<script src="/aiq-sales-agent/scripts/approvals.js?v=8"></script>
 
 </body>
 </html>

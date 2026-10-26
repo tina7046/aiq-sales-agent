@@ -10,17 +10,22 @@
   if (!root) return
 
   var dataEl = document.getElementById('appr-data')
-  var data = { run: { steps: [] }, sections: [] }
+  var data = { workflows: [] }
   if (dataEl) data = JSON.parse(dataEl.textContent)
 
+  var workflows = data.workflows || []
+  var workflowsById = {}
   var recordsById = {}
-  ;(data.sections || []).forEach(function (section) {
-    ;(section.groups || []).forEach(function (group) {
-      ;(group.records || []).forEach(function (record) {
-        record.object = group.object
-        record.icon = group.icon
-        record.action = group.action
-        recordsById[record.id] = record
+  workflows.forEach(function (workflow) {
+    workflowsById[workflow.id] = workflow
+    ;(workflow.sections || []).forEach(function (section) {
+      ;(section.groups || []).forEach(function (group) {
+        ;(group.records || []).forEach(function (record) {
+          record.object = group.object
+          record.icon = group.icon
+          record.action = group.action
+          recordsById[record.id] = record
+        })
       })
     })
   })
@@ -31,7 +36,7 @@
     reject: 'Rejected'
   }
 
-  var currentFilter = 'all'
+  var currentRun = null
   var toastTimer = null
   var drawerMode = null
   var currentId = null
@@ -125,8 +130,8 @@
     Array.prototype.forEach.call(details, fitClamps)
   }
 
-  function refreshCounts () {
-    var records = root.querySelectorAll('[data-appr-record]')
+  function tally (scope) {
+    var records = scope.querySelectorAll('[data-appr-record]')
     var counts = { all: records.length, waiting: 0, allowed: 0, rejected: 0 }
     Array.prototype.forEach.call(records, function (el) {
       var decision = el.getAttribute('data-decision') || ''
@@ -134,45 +139,58 @@
       else if (decision === 'reject') counts.rejected += 1
       else counts.allowed += 1
     })
-    Object.keys(counts).forEach(function (key) {
-      var node = root.querySelector('[data-appr-count="' + key + '"]')
-      if (node) node.textContent = String(counts[key])
-    })
-    var waitingNode = root.querySelector('[data-appr-waiting]')
-    if (waitingNode) waitingNode.textContent = String(counts.waiting)
-    var done = root.querySelector('[data-appr-done]')
-    if (done) done.hidden = counts.waiting !== 0
+    return counts
   }
 
-  function applyFilter () {
-    var records = root.querySelectorAll('[data-appr-record]')
-    Array.prototype.forEach.call(records, function (el) {
-      var decision = el.getAttribute('data-decision') || ''
-      var show = currentFilter === 'all' ||
-        (currentFilter === 'waiting' && decision === '') ||
-        (currentFilter === 'allowed' && (decision === 'allow' || decision === 'always')) ||
-        (currentFilter === 'rejected' && decision === 'reject')
-      el.hidden = !show
-    })
-    var groups = root.querySelectorAll('[data-appr-group]')
-    Array.prototype.forEach.call(groups, function (group) {
-      group.hidden = !group.querySelector('[data-appr-record]:not([hidden])')
-    })
-    var sections = root.querySelectorAll('[data-appr-section]')
-    Array.prototype.forEach.call(sections, function (section) {
-      var visible = section.querySelector('[data-appr-group]:not([hidden])')
-      var empty = section.querySelector('[data-appr-section-empty]')
-      if (empty) empty.hidden = !!visible
+  function refreshCounts () {
+    var cards = root.querySelectorAll('[data-appr-workflow]')
+    Array.prototype.forEach.call(cards, function (card) {
+      var counts = tally(card)
+      Object.keys(counts).forEach(function (key) {
+        var node = card.querySelector('[data-appr-count="' + key + '"]')
+        if (node) node.textContent = String(counts[key])
+      })
+      var waitingNode = card.querySelector('[data-appr-waiting]')
+      if (waitingNode) waitingNode.textContent = String(counts.waiting)
+      var done = card.querySelector('[data-appr-done]')
+      if (done) done.hidden = counts.waiting !== 0
     })
   }
 
-  function setFilter (next) {
-    currentFilter = next
-    var buttons = root.querySelectorAll('[data-appr-filter]')
+  function applyFilter (workflow) {
+    var scopes = workflow ? [workflow] : root.querySelectorAll('[data-appr-workflow]')
+    Array.prototype.forEach.call(scopes, function (scope) {
+      var filter = scope.getAttribute('data-filter') || 'all'
+      var records = scope.querySelectorAll('[data-appr-record]')
+      Array.prototype.forEach.call(records, function (el) {
+        var decision = el.getAttribute('data-decision') || ''
+        var show = filter === 'all' ||
+          (filter === 'waiting' && decision === '') ||
+          (filter === 'allowed' && (decision === 'allow' || decision === 'always')) ||
+          (filter === 'rejected' && decision === 'reject')
+        el.hidden = !show
+      })
+      var groups = scope.querySelectorAll('[data-appr-group]')
+      Array.prototype.forEach.call(groups, function (group) {
+        group.hidden = !group.querySelector('[data-appr-record]:not([hidden])')
+      })
+      var sections = scope.querySelectorAll('[data-appr-section]')
+      Array.prototype.forEach.call(sections, function (section) {
+        var visible = section.querySelector('[data-appr-group]:not([hidden])')
+        var empty = section.querySelector('[data-appr-section-empty]')
+        if (empty) empty.hidden = !!visible
+      })
+    })
+  }
+
+  function setFilter (workflow, next) {
+    if (!workflow) return
+    workflow.setAttribute('data-filter', next)
+    var buttons = workflow.querySelectorAll('[data-appr-filter]')
     Array.prototype.forEach.call(buttons, function (btn) {
       btn.setAttribute('aria-pressed', btn.getAttribute('data-appr-filter') === next ? 'true' : 'false')
     })
-    applyFilter()
+    applyFilter(workflow)
   }
 
   function showBanner (group, text) {
@@ -222,7 +240,7 @@
   }
 
   function renderRunBody () {
-    var steps = (data.run && data.run.steps) || []
+    var steps = (currentRun && currentRun.steps) || []
     var html = '<ol class="appr-steps">'
     steps.forEach(function (step) {
       html += '<li><h3>' + esc(step.title) + '</h3><p>' + esc(step.body) + '</p></li>'
@@ -235,7 +253,7 @@
     drawerBack.hidden = history.length === 0
     if (drawerMode === 'run') {
       drawerKicker.textContent = 'Hunter'
-      drawerTitle.textContent = data.run.title || 'This run'
+      drawerTitle.textContent = (currentRun && currentRun.title) || 'This run'
       drawerBody.innerHTML = renderRunBody()
       drawerFooter.hidden = true
       drawerFooter.innerHTML = ''
@@ -280,9 +298,10 @@
     openDrawer()
   }
 
-  function openRun () {
+  function openRun (id) {
     history = []
     currentId = null
+    currentRun = workflowsById[id] || workflows[0] || { title: 'This run', steps: [] }
     drawerMode = 'run'
     openDrawer()
   }
@@ -381,7 +400,7 @@
   root.addEventListener('click', function (event) {
     var filterBtn = event.target.closest('[data-appr-filter]')
     if (filterBtn) {
-      setFilter(filterBtn.getAttribute('data-appr-filter'))
+      setFilter(filterBtn.closest('[data-appr-workflow]'), filterBtn.getAttribute('data-appr-filter'))
       return
     }
 
@@ -450,8 +469,9 @@
       return
     }
 
-    if (event.target.closest('[data-appr-view-run]')) {
-      openRun()
+    var runBtn = event.target.closest('[data-appr-view-run]')
+    if (runBtn) {
+      openRun(runBtn.getAttribute('data-appr-view-run'))
       return
     }
 
