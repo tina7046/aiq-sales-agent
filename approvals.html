@@ -62,8 +62,6 @@
 
     
     <section class="appr-section" data-appr-section>
-      <h2>Already in Salesforce</h2>
-      <p class="appr-section__lede">Open a name to see that record. Fields Hunter is changing stay in the blue area, so the gray area is only what stays as it is.</p>
       <p class="appr-section__empty" data-appr-section-empty hidden>Nothing in this set matches the filter.</p>
 
       
@@ -75,6 +73,7 @@
         data-noun="account"
         data-noun-plural="accounts"
       >
+        
         <header class="appr-group__head">
           <button
             type="button"
@@ -99,20 +98,14 @@
 
             <span class="appr-group__title">Account</span>
             <span class="appr-group__count" data-appr-group-waiting>1 waiting</span>
+            <span class="appr-group__scope">For the account below</span>
           </button>
-        </header>
-        
-        <div class="appr-group__body" id="appr-group-upd-account" data-appr-group-body hidden>
-          <div class="appr-group__batch-row">
-            <div class="appr-group__batch">
-              <p class="appr-group__batch-label">For the account below</p>
-              <div class="appr-group__batch-actions">
-                <button type="button" class="appr-btn appr-btn--brand" data-appr-group-decide="always" aria-label="Allow always for the account below">Allow always</button>
-                <button type="button" class="appr-btn appr-btn--outline" data-appr-group-decide="allow" aria-label="Allow once for the account below">Allow once</button>
-                <button type="button" class="appr-btn appr-btn--reject" data-appr-group-decide="reject" aria-label="Reject the account below">Reject</button>
-              </div>
-            </div>
+          <div class="appr-group__actions">
+            <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="group" aria-label="Allow the account below">Allow</button>
+            <button type="button" class="appr-btn appr-btn--reject" data-appr-group-decide="reject" aria-label="Reject the account below">Reject</button>
           </div>
+        </header>
+        <div class="appr-group__body" id="appr-group-upd-account" data-appr-group-body hidden>
           <p class="appr-banner" data-appr-banner hidden></p>
 
         
@@ -159,8 +152,7 @@
             </div>
             <div class="appr-record__actions" data-appr-actions>
               <div class="appr-record__buttons" data-appr-buttons>
-                <button type="button" class="appr-btn appr-btn--brand" data-appr-decide="always" title="Approve this record and turn allow always on for this object">Allow always</button>
-                <button type="button" class="appr-btn appr-btn--outline" data-appr-decide="allow">Allow once</button>
+                <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="record">Allow</button>
                 <button type="button" class="appr-btn appr-btn--reject" data-appr-decide="reject">Reject</button>
               </div>
               <div class="appr-record__status" data-appr-status hidden>
@@ -201,25 +193,36 @@
             <div class="appr-well appr-well--write">
               <h4 class="appr-well__title">Hunter is changing</h4>
               <p class="appr-why">Rewritten from the CNET account plan Hunter just finished.</p>
-              
-              <div class="appr-diff-block">
-                <h5 class="appr-diff-block__field">Description</h5>
-                <div class="appr-diff">
-                  <div class="appr-diff__col">
-                    <span class="appr-diff__label">Now</span>
+              <div class="appr-table-wrap">
+                <table class="appr-change-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">Before</th>
+                      <th scope="col" class="appr-change-table__after">After</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     
-                    <p class="appr-clamp" data-appr-clamp>Ziff Davis, Inc. (NASDAQ: ZD) is a vertically focused digital media and internet company headquartered in New York. The portfolio includes CNET, PCMag, and a set of performance-marketing brands. This description was imported from enrichment and has not been edited by the account team.</p>
-                    <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                    <tr>
+                      <th scope="row">Description</th>
+                      <td>
+                        
+                        <p class="appr-clamp" data-appr-clamp>Ziff Davis, Inc. (NASDAQ: ZD) is a vertically focused digital media and internet company headquartered in New York. The portfolio includes CNET, PCMag, and a set of performance-marketing brands. This description was imported from enrichment and has not been edited by the account team.</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        
+                      </td>
+                      <td class="appr-change-table__after">
+                        
+                        <p class="appr-clamp" data-appr-clamp>Ziff Davis (NASDAQ: ZD) owns CNET and is headquartered in New York. Hunter updated this from the account plan: a Data Cloud evaluation is in progress, and the salesforce.com widget opportunity (5,000 units) is in negotiation with a possible follow-on. Geoff Minor is the executive sponsor.</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        
+                      </td>
+                    </tr>
                     
-                  </div>
-                  <div class="appr-diff__col appr-diff__col--after">
-                    <span class="appr-diff__label">After you approve</span>
-                    <p class="appr-clamp" data-appr-clamp>Ziff Davis (NASDAQ: ZD) owns CNET and is headquartered in New York. Hunter updated this from the account plan: a Data Cloud evaluation is in progress, and the salesforce.com widget opportunity (5,000 units) is in negotiation with a possible follow-on. Geoff Minor is the executive sponsor.</p>
-                    <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
-                  </div>
-                </div>
+                  </tbody>
+                </table>
               </div>
-              
             </div>
             
           </div>
@@ -236,6 +239,7 @@
         data-noun="contact"
         data-noun-plural="contacts"
       >
+        
         <header class="appr-group__head">
           <button
             type="button"
@@ -260,20 +264,14 @@
 
             <span class="appr-group__title">Contact</span>
             <span class="appr-group__count" data-appr-group-waiting>5 waiting</span>
+            <span class="appr-group__scope">For all 5 contacts below</span>
           </button>
-        </header>
-        
-        <div class="appr-group__body" id="appr-group-upd-contact" data-appr-group-body hidden>
-          <div class="appr-group__batch-row">
-            <div class="appr-group__batch">
-              <p class="appr-group__batch-label">For all 5 contacts below</p>
-              <div class="appr-group__batch-actions">
-                <button type="button" class="appr-btn appr-btn--brand" data-appr-group-decide="always" aria-label="Allow always for all 5 contacts below">Allow always</button>
-                <button type="button" class="appr-btn appr-btn--outline" data-appr-group-decide="allow" aria-label="Allow once for all 5 contacts below">Allow once</button>
-                <button type="button" class="appr-btn appr-btn--reject" data-appr-group-decide="reject" aria-label="Reject all 5 contacts below">Reject</button>
-              </div>
-            </div>
+          <div class="appr-group__actions">
+            <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="group" aria-label="Allow all 5 contacts below">Allow</button>
+            <button type="button" class="appr-btn appr-btn--reject" data-appr-group-decide="reject" aria-label="Reject all 5 contacts below">Reject</button>
           </div>
+        </header>
+        <div class="appr-group__body" id="appr-group-upd-contact" data-appr-group-body hidden>
           <p class="appr-banner" data-appr-banner hidden></p>
 
         
@@ -320,8 +318,7 @@
             </div>
             <div class="appr-record__actions" data-appr-actions>
               <div class="appr-record__buttons" data-appr-buttons>
-                <button type="button" class="appr-btn appr-btn--brand" data-appr-decide="always" title="Approve this record and turn allow always on for this object">Allow always</button>
-                <button type="button" class="appr-btn appr-btn--outline" data-appr-decide="allow">Allow once</button>
+                <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="record">Allow</button>
                 <button type="button" class="appr-btn appr-btn--reject" data-appr-decide="reject">Reject</button>
               </div>
               <div class="appr-record__status" data-appr-status hidden>
@@ -362,24 +359,35 @@
             <div class="appr-well appr-well--write">
               <h4 class="appr-well__title">Hunter is changing</h4>
               <p class="appr-why">Added from the account plan. Geoff is the executive sponsor on the Data Cloud evaluation.</p>
-              
-              <div class="appr-diff-block">
-                <h5 class="appr-diff-block__field">Description</h5>
-                <div class="appr-diff">
-                  <div class="appr-diff__col">
-                    <span class="appr-diff__label">Now</span>
+              <div class="appr-table-wrap">
+                <table class="appr-change-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">Before</th>
+                      <th scope="col" class="appr-change-table__after">After</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     
-                    <p class="appr-empty">Empty</p>
+                    <tr>
+                      <th scope="row">Description</th>
+                      <td>
+                        
+                        <p class="appr-empty">Empty</p>
+                        
+                      </td>
+                      <td class="appr-change-table__after">
+                        
+                        <p class="appr-clamp" data-appr-clamp>President at CNET. Met during the account plan. Asked for a Data Cloud walkthrough with his revenue team in November.</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        
+                      </td>
+                    </tr>
                     
-                  </div>
-                  <div class="appr-diff__col appr-diff__col--after">
-                    <span class="appr-diff__label">After you approve</span>
-                    <p class="appr-clamp" data-appr-clamp>President at CNET. Met during the account plan. Asked for a Data Cloud walkthrough with his revenue team in November.</p>
-                    <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
-                  </div>
-                </div>
+                  </tbody>
+                </table>
               </div>
-              
             </div>
             
           </div>
@@ -428,8 +436,7 @@
             </div>
             <div class="appr-record__actions" data-appr-actions>
               <div class="appr-record__buttons" data-appr-buttons>
-                <button type="button" class="appr-btn appr-btn--brand" data-appr-decide="always" title="Approve this record and turn allow always on for this object">Allow always</button>
-                <button type="button" class="appr-btn appr-btn--outline" data-appr-decide="allow">Allow once</button>
+                <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="record">Allow</button>
                 <button type="button" class="appr-btn appr-btn--reject" data-appr-decide="reject">Reject</button>
               </div>
               <div class="appr-record__status" data-appr-status hidden>
@@ -465,42 +472,49 @@
             <div class="appr-well appr-well--write">
               <h4 class="appr-well__title">Hunter is changing</h4>
               <p class="appr-why">The account plan has Dana as VP, Revenue Operations, with a direct line. Salesforce still says Director of Sales and has no phone.</p>
-              
-              <div class="appr-diff-block">
-                <h5 class="appr-diff-block__field">Title</h5>
-                <div class="appr-diff">
-                  <div class="appr-diff__col">
-                    <span class="appr-diff__label">Now</span>
+              <div class="appr-table-wrap">
+                <table class="appr-change-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">Before</th>
+                      <th scope="col" class="appr-change-table__after">After</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     
-                    <p class="appr-clamp" data-appr-clamp>Director of Sales</p>
-                    <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                    <tr>
+                      <th scope="row">Title</th>
+                      <td>
+                        
+                        <p class="appr-clamp" data-appr-clamp>Director of Sales</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        
+                      </td>
+                      <td class="appr-change-table__after">
+                        
+                        VP, Revenue Operations
+                        
+                      </td>
+                    </tr>
                     
-                  </div>
-                  <div class="appr-diff__col appr-diff__col--after">
-                    <span class="appr-diff__label">After you approve</span>
-                    <p class="appr-clamp" data-appr-clamp>VP, Revenue Operations</p>
-                    <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
-                  </div>
-                </div>
+                    <tr>
+                      <th scope="row">Phone</th>
+                      <td>
+                        
+                        <p class="appr-empty">Empty</p>
+                        
+                      </td>
+                      <td class="appr-change-table__after">
+                        
+                        (212) 555-0148
+                        
+                      </td>
+                    </tr>
+                    
+                  </tbody>
+                </table>
               </div>
-              
-              <div class="appr-diff-block">
-                <h5 class="appr-diff-block__field">Phone</h5>
-                <div class="appr-diff">
-                  <div class="appr-diff__col">
-                    <span class="appr-diff__label">Now</span>
-                    
-                    <p class="appr-empty">Empty</p>
-                    
-                  </div>
-                  <div class="appr-diff__col appr-diff__col--after">
-                    <span class="appr-diff__label">After you approve</span>
-                    <p class="appr-clamp" data-appr-clamp>(212) 555-0148</p>
-                    <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
-                  </div>
-                </div>
-              </div>
-              
             </div>
             
           </div>
@@ -549,8 +563,7 @@
             </div>
             <div class="appr-record__actions" data-appr-actions>
               <div class="appr-record__buttons" data-appr-buttons>
-                <button type="button" class="appr-btn appr-btn--brand" data-appr-decide="always" title="Approve this record and turn allow always on for this object">Allow always</button>
-                <button type="button" class="appr-btn appr-btn--outline" data-appr-decide="allow">Allow once</button>
+                <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="record">Allow</button>
                 <button type="button" class="appr-btn appr-btn--reject" data-appr-decide="reject">Reject</button>
               </div>
               <div class="appr-record__status" data-appr-status hidden>
@@ -591,25 +604,35 @@
             <div class="appr-well appr-well--write">
               <h4 class="appr-well__title">Hunter is changing</h4>
               <p class="appr-why">The CNET masthead lists a newer email than the one on this contact.</p>
-              
-              <div class="appr-diff-block">
-                <h5 class="appr-diff-block__field">Email</h5>
-                <div class="appr-diff">
-                  <div class="appr-diff__col">
-                    <span class="appr-diff__label">Now</span>
+              <div class="appr-table-wrap">
+                <table class="appr-change-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">Before</th>
+                      <th scope="col" class="appr-change-table__after">After</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     
-                    <p class="appr-clamp" data-appr-clamp>luis.chen@cnet.com</p>
-                    <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                    <tr>
+                      <th scope="row">Email</th>
+                      <td>
+                        
+                        <p class="appr-clamp" data-appr-clamp>luis.chen@cnet.com</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        
+                      </td>
+                      <td class="appr-change-table__after">
+                        
+                        l.chen@cnet.com
+                        
+                      </td>
+                    </tr>
                     
-                  </div>
-                  <div class="appr-diff__col appr-diff__col--after">
-                    <span class="appr-diff__label">After you approve</span>
-                    <p class="appr-clamp" data-appr-clamp>l.chen@cnet.com</p>
-                    <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
-                  </div>
-                </div>
+                  </tbody>
+                </table>
               </div>
-              
             </div>
             
           </div>
@@ -658,8 +681,7 @@
             </div>
             <div class="appr-record__actions" data-appr-actions>
               <div class="appr-record__buttons" data-appr-buttons>
-                <button type="button" class="appr-btn appr-btn--brand" data-appr-decide="always" title="Approve this record and turn allow always on for this object">Allow always</button>
-                <button type="button" class="appr-btn appr-btn--outline" data-appr-decide="allow">Allow once</button>
+                <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="record">Allow</button>
                 <button type="button" class="appr-btn appr-btn--reject" data-appr-decide="reject">Reject</button>
               </div>
               <div class="appr-record__status" data-appr-status hidden>
@@ -700,25 +722,36 @@
             <div class="appr-well appr-well--write">
               <h4 class="appr-well__title">Hunter is changing</h4>
               <p class="appr-why">Drafted from her role on the CNET leadership page.</p>
-              
-              <div class="appr-diff-block">
-                <h5 class="appr-diff-block__field">Description</h5>
-                <div class="appr-diff">
-                  <div class="appr-diff__col">
-                    <span class="appr-diff__label">Now</span>
+              <div class="appr-table-wrap">
+                <table class="appr-change-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">Before</th>
+                      <th scope="col" class="appr-change-table__after">After</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     
-                    <p class="appr-clamp" data-appr-clamp>Leads brand and partnerships for CNET.</p>
-                    <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                    <tr>
+                      <th scope="row">Description</th>
+                      <td>
+                        
+                        <p class="appr-clamp" data-appr-clamp>Leads brand and partnerships for CNET.</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        
+                      </td>
+                      <td class="appr-change-table__after">
+                        
+                        <p class="appr-clamp" data-appr-clamp>VP, Brand at CNET. Owns the partnership conversation Hunter flagged in the account plan. Useful on the Data Cloud evaluation because brand budget sits with her team.</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        
+                      </td>
+                    </tr>
                     
-                  </div>
-                  <div class="appr-diff__col appr-diff__col--after">
-                    <span class="appr-diff__label">After you approve</span>
-                    <p class="appr-clamp" data-appr-clamp>VP, Brand at CNET. Owns the partnership conversation Hunter flagged in the account plan. Useful on the Data Cloud evaluation because brand budget sits with her team.</p>
-                    <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
-                  </div>
-                </div>
+                  </tbody>
+                </table>
               </div>
-              
             </div>
             
           </div>
@@ -767,8 +800,7 @@
             </div>
             <div class="appr-record__actions" data-appr-actions>
               <div class="appr-record__buttons" data-appr-buttons>
-                <button type="button" class="appr-btn appr-btn--brand" data-appr-decide="always" title="Approve this record and turn allow always on for this object">Allow always</button>
-                <button type="button" class="appr-btn appr-btn--outline" data-appr-decide="allow">Allow once</button>
+                <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="record">Allow</button>
                 <button type="button" class="appr-btn appr-btn--reject" data-appr-decide="reject">Reject</button>
               </div>
               <div class="appr-record__status" data-appr-status hidden>
@@ -809,25 +841,35 @@
             <div class="appr-well appr-well--write">
               <h4 class="appr-well__title">Hunter is changing</h4>
               <p class="appr-why">The account plan lists Chris as a senior account executive after the reorg. Salesforce still says Sales Manager.</p>
-              
-              <div class="appr-diff-block">
-                <h5 class="appr-diff-block__field">Title</h5>
-                <div class="appr-diff">
-                  <div class="appr-diff__col">
-                    <span class="appr-diff__label">Now</span>
+              <div class="appr-table-wrap">
+                <table class="appr-change-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">Before</th>
+                      <th scope="col" class="appr-change-table__after">After</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     
-                    <p class="appr-clamp" data-appr-clamp>Sales Manager</p>
-                    <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                    <tr>
+                      <th scope="row">Title</th>
+                      <td>
+                        
+                        <p class="appr-clamp" data-appr-clamp>Sales Manager</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        
+                      </td>
+                      <td class="appr-change-table__after">
+                        
+                        Senior Account Executive
+                        
+                      </td>
+                    </tr>
                     
-                  </div>
-                  <div class="appr-diff__col appr-diff__col--after">
-                    <span class="appr-diff__label">After you approve</span>
-                    <p class="appr-clamp" data-appr-clamp>Senior Account Executive</p>
-                    <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
-                  </div>
-                </div>
+                  </tbody>
+                </table>
               </div>
-              
             </div>
             
           </div>
@@ -844,6 +886,7 @@
         data-noun="opportunity"
         data-noun-plural="opportunities"
       >
+        
         <header class="appr-group__head">
           <button
             type="button"
@@ -868,20 +911,14 @@
 
             <span class="appr-group__title">Opportunity</span>
             <span class="appr-group__count" data-appr-group-waiting>1 waiting</span>
+            <span class="appr-group__scope">For the opportunity below</span>
           </button>
-        </header>
-        
-        <div class="appr-group__body" id="appr-group-upd-opportunity" data-appr-group-body hidden>
-          <div class="appr-group__batch-row">
-            <div class="appr-group__batch">
-              <p class="appr-group__batch-label">For the opportunity below</p>
-              <div class="appr-group__batch-actions">
-                <button type="button" class="appr-btn appr-btn--brand" data-appr-group-decide="always" aria-label="Allow always for the opportunity below">Allow always</button>
-                <button type="button" class="appr-btn appr-btn--outline" data-appr-group-decide="allow" aria-label="Allow once for the opportunity below">Allow once</button>
-                <button type="button" class="appr-btn appr-btn--reject" data-appr-group-decide="reject" aria-label="Reject the opportunity below">Reject</button>
-              </div>
-            </div>
+          <div class="appr-group__actions">
+            <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="group" aria-label="Allow the opportunity below">Allow</button>
+            <button type="button" class="appr-btn appr-btn--reject" data-appr-group-decide="reject" aria-label="Reject the opportunity below">Reject</button>
           </div>
+        </header>
+        <div class="appr-group__body" id="appr-group-upd-opportunity" data-appr-group-body hidden>
           <p class="appr-banner" data-appr-banner hidden></p>
 
         
@@ -928,8 +965,7 @@
             </div>
             <div class="appr-record__actions" data-appr-actions>
               <div class="appr-record__buttons" data-appr-buttons>
-                <button type="button" class="appr-btn appr-btn--brand" data-appr-decide="always" title="Approve this record and turn allow always on for this object">Allow always</button>
-                <button type="button" class="appr-btn appr-btn--outline" data-appr-decide="allow">Allow once</button>
+                <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="record">Allow</button>
                 <button type="button" class="appr-btn appr-btn--reject" data-appr-decide="reject">Reject</button>
               </div>
               <div class="appr-record__status" data-appr-status hidden>
@@ -975,43 +1011,51 @@
             <div class="appr-well appr-well--write">
               <h4 class="appr-well__title">Hunter is changing</h4>
               <p class="appr-why">Brought in line with the account plan, including the next meeting.</p>
-              
-              <div class="appr-diff-block">
-                <h5 class="appr-diff-block__field">Description</h5>
-                <div class="appr-diff">
-                  <div class="appr-diff__col">
-                    <span class="appr-diff__label">Now</span>
+              <div class="appr-table-wrap">
+                <table class="appr-change-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">Before</th>
+                      <th scope="col" class="appr-change-table__after">After</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     
-                    <p class="appr-clamp" data-appr-clamp>Initial deal for 5000 widgets. We expect follow-on business with a potential upside of 40000 additional units. Last touched during the Q3 pricing pass. The description still says widgets because that is the language the buyer used.</p>
-                    <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                    <tr>
+                      <th scope="row">Description</th>
+                      <td>
+                        
+                        <p class="appr-clamp" data-appr-clamp>Initial deal for 5000 widgets. We expect follow-on business with a potential upside of 40000 additional units. Last touched during the Q3 pricing pass. The description still says widgets because that is the language the buyer used.</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        
+                      </td>
+                      <td class="appr-change-table__after">
+                        
+                        <p class="appr-clamp" data-appr-clamp>5,000 widgets, currently in negotiation. Follow-on of about 40,000 units if the Data Cloud evaluation on the CNET account lands. Next conversation is a pricing review with Geoff Minor the week of Nov 3.</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        
+                      </td>
+                    </tr>
                     
-                  </div>
-                  <div class="appr-diff__col appr-diff__col--after">
-                    <span class="appr-diff__label">After you approve</span>
-                    <p class="appr-clamp" data-appr-clamp>5,000 widgets, currently in negotiation. Follow-on of about 40,000 units if the Data Cloud evaluation on the CNET account lands. Next conversation is a pricing review with Geoff Minor the week of Nov 3.</p>
-                    <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
-                  </div>
-                </div>
+                    <tr>
+                      <th scope="row">Next Step</th>
+                      <td>
+                        
+                        <p class="appr-clamp" data-appr-clamp>Send the pricing sheet.</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        
+                      </td>
+                      <td class="appr-change-table__after">
+                        
+                        Pricing review with Geoff Minor, week of Nov 3.
+                        
+                      </td>
+                    </tr>
+                    
+                  </tbody>
+                </table>
               </div>
-              
-              <div class="appr-diff-block">
-                <h5 class="appr-diff-block__field">Next Step</h5>
-                <div class="appr-diff">
-                  <div class="appr-diff__col">
-                    <span class="appr-diff__label">Now</span>
-                    
-                    <p class="appr-clamp" data-appr-clamp>Send the pricing sheet.</p>
-                    <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
-                    
-                  </div>
-                  <div class="appr-diff__col appr-diff__col--after">
-                    <span class="appr-diff__label">After you approve</span>
-                    <p class="appr-clamp" data-appr-clamp>Pricing review with Geoff Minor, week of Nov 3.</p>
-                    <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
-                  </div>
-                </div>
-              </div>
-              
             </div>
             
           </div>
@@ -1023,8 +1067,6 @@
     </section>
     
     <section class="appr-section" data-appr-section>
-      <h2>Not in Salesforce yet</h2>
-      <p class="appr-section__lede">Names are not links, because there is no record to open. A link inside the blue area points at a record that already exists, such as the account these people belong to.</p>
       <p class="appr-section__empty" data-appr-section-empty hidden>Nothing in this set matches the filter.</p>
 
       
@@ -1036,6 +1078,7 @@
         data-noun="contact"
         data-noun-plural="contacts"
       >
+        
         <header class="appr-group__head">
           <button
             type="button"
@@ -1060,20 +1103,14 @@
 
             <span class="appr-group__title">Contact</span>
             <span class="appr-group__count" data-appr-group-waiting>2 waiting</span>
+            <span class="appr-group__scope">For all 2 contacts below</span>
           </button>
-        </header>
-        
-        <div class="appr-group__body" id="appr-group-new-contact" data-appr-group-body hidden>
-          <div class="appr-group__batch-row">
-            <div class="appr-group__batch">
-              <p class="appr-group__batch-label">For all 2 contacts below</p>
-              <div class="appr-group__batch-actions">
-                <button type="button" class="appr-btn appr-btn--brand" data-appr-group-decide="always" aria-label="Allow always for all 2 contacts below">Allow always</button>
-                <button type="button" class="appr-btn appr-btn--outline" data-appr-group-decide="allow" aria-label="Allow once for all 2 contacts below">Allow once</button>
-                <button type="button" class="appr-btn appr-btn--reject" data-appr-group-decide="reject" aria-label="Reject all 2 contacts below">Reject</button>
-              </div>
-            </div>
+          <div class="appr-group__actions">
+            <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="group" aria-label="Allow all 2 contacts below">Allow</button>
+            <button type="button" class="appr-btn appr-btn--reject" data-appr-group-decide="reject" aria-label="Reject all 2 contacts below">Reject</button>
           </div>
+        </header>
+        <div class="appr-group__body" id="appr-group-new-contact" data-appr-group-body hidden>
           <p class="appr-banner" data-appr-banner hidden></p>
 
         
@@ -1120,8 +1157,7 @@
             </div>
             <div class="appr-record__actions" data-appr-actions>
               <div class="appr-record__buttons" data-appr-buttons>
-                <button type="button" class="appr-btn appr-btn--brand" data-appr-decide="always" title="Approve this record and turn allow always on for this object">Allow always</button>
-                <button type="button" class="appr-btn appr-btn--outline" data-appr-decide="allow">Allow once</button>
+                <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="record">Allow</button>
                 <button type="button" class="appr-btn appr-btn--reject" data-appr-decide="reject">Reject</button>
               </div>
               <div class="appr-record__status" data-appr-status hidden>
@@ -1145,45 +1181,65 @@
             <div class="appr-well appr-well--write">
               <h4 class="appr-well__title">Hunter will create</h4>
               <p class="appr-why">Found on the CNET leadership page. She is not a contact yet.</p>
-              <dl class="appr-write-list">
-                
-                <dt>Account</dt>
-                <dd>
-                  
-                  <button type="button" class="appr-link" data-appr-open="acct-cnet">CNET (Ziff Davis)</button>
-                  
-                </dd>
-                
-                <dt>Title</dt>
-                <dd>
-                  
-                  VP, Marketing
-                  
-                </dd>
-                
-                <dt>Email</dt>
-                <dd>
-                  
-                  priya.shah@cnet.com
-                  
-                </dd>
-                
-                <dt>Phone</dt>
-                <dd>
-                  
-                  (212) 555-0162
-                  
-                </dd>
-                
-                <dt>Description</dt>
-                <dd>
-                  
-                  <p class="appr-clamp" data-appr-clamp>Leads brand marketing at CNET. Named on the leadership page. She will not exist in Salesforce until you approve this.</p>
-                  <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
-                  
-                </dd>
-                
-              </dl>
+              <div class="appr-table-wrap">
+                <table class="appr-change-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col" class="appr-change-table__after">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    
+                    <tr>
+                      <th scope="row">Account</th>
+                      <td class="appr-change-table__after">
+                        
+                        <button type="button" class="appr-link" data-appr-open="acct-cnet">CNET (Ziff Davis)</button>
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Title</th>
+                      <td class="appr-change-table__after">
+                        
+                        VP, Marketing
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Email</th>
+                      <td class="appr-change-table__after">
+                        
+                        priya.shah@cnet.com
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Phone</th>
+                      <td class="appr-change-table__after">
+                        
+                        (212) 555-0162
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Description</th>
+                      <td class="appr-change-table__after">
+                        
+                        <p class="appr-clamp" data-appr-clamp>Leads brand marketing at CNET. Named on the leadership page. She will not exist in Salesforce until you approve this.</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        
+                      </td>
+                    </tr>
+                    
+                  </tbody>
+                </table>
+              </div>
             </div>
             
           </div>
@@ -1232,8 +1288,7 @@
             </div>
             <div class="appr-record__actions" data-appr-actions>
               <div class="appr-record__buttons" data-appr-buttons>
-                <button type="button" class="appr-btn appr-btn--brand" data-appr-decide="always" title="Approve this record and turn allow always on for this object">Allow always</button>
-                <button type="button" class="appr-btn appr-btn--outline" data-appr-decide="allow">Allow once</button>
+                <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="record">Allow</button>
                 <button type="button" class="appr-btn appr-btn--reject" data-appr-decide="reject">Reject</button>
               </div>
               <div class="appr-record__status" data-appr-status hidden>
@@ -1257,45 +1312,65 @@
             <div class="appr-well appr-well--write">
               <h4 class="appr-well__title">Hunter will create</h4>
               <p class="appr-why">Found on the CNET leadership page. He is not a contact yet.</p>
-              <dl class="appr-write-list">
-                
-                <dt>Account</dt>
-                <dd>
-                  
-                  <button type="button" class="appr-link" data-appr-open="acct-cnet">CNET (Ziff Davis)</button>
-                  
-                </dd>
-                
-                <dt>Title</dt>
-                <dd>
-                  
-                  Director of IT
-                  
-                </dd>
-                
-                <dt>Email</dt>
-                <dd>
-                  
-                  andre.ruiz@cnet.com
-                  
-                </dd>
-                
-                <dt>Phone</dt>
-                <dd>
-                  
-                  (212) 555-0177
-                  
-                </dd>
-                
-                <dt>Description</dt>
-                <dd>
-                  
-                  <p class="appr-clamp" data-appr-clamp>Owns infrastructure for CNET.com. Hunter added him from the leadership page. No contact exists until you approve this.</p>
-                  <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
-                  
-                </dd>
-                
-              </dl>
+              <div class="appr-table-wrap">
+                <table class="appr-change-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col" class="appr-change-table__after">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    
+                    <tr>
+                      <th scope="row">Account</th>
+                      <td class="appr-change-table__after">
+                        
+                        <button type="button" class="appr-link" data-appr-open="acct-cnet">CNET (Ziff Davis)</button>
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Title</th>
+                      <td class="appr-change-table__after">
+                        
+                        Director of IT
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Email</th>
+                      <td class="appr-change-table__after">
+                        
+                        andre.ruiz@cnet.com
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Phone</th>
+                      <td class="appr-change-table__after">
+                        
+                        (212) 555-0177
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Description</th>
+                      <td class="appr-change-table__after">
+                        
+                        <p class="appr-clamp" data-appr-clamp>Owns infrastructure for CNET.com. Hunter added him from the leadership page. No contact exists until you approve this.</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        
+                      </td>
+                    </tr>
+                    
+                  </tbody>
+                </table>
+              </div>
             </div>
             
           </div>
@@ -1312,6 +1387,7 @@
         data-noun="account"
         data-noun-plural="accounts"
       >
+        
         <header class="appr-group__head">
           <button
             type="button"
@@ -1336,20 +1412,14 @@
 
             <span class="appr-group__title">Account</span>
             <span class="appr-group__count" data-appr-group-waiting>1 waiting</span>
+            <span class="appr-group__scope">For the account below</span>
           </button>
-        </header>
-        
-        <div class="appr-group__body" id="appr-group-new-account" data-appr-group-body hidden>
-          <div class="appr-group__batch-row">
-            <div class="appr-group__batch">
-              <p class="appr-group__batch-label">For the account below</p>
-              <div class="appr-group__batch-actions">
-                <button type="button" class="appr-btn appr-btn--brand" data-appr-group-decide="always" aria-label="Allow always for the account below">Allow always</button>
-                <button type="button" class="appr-btn appr-btn--outline" data-appr-group-decide="allow" aria-label="Allow once for the account below">Allow once</button>
-                <button type="button" class="appr-btn appr-btn--reject" data-appr-group-decide="reject" aria-label="Reject the account below">Reject</button>
-              </div>
-            </div>
+          <div class="appr-group__actions">
+            <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="group" aria-label="Allow the account below">Allow</button>
+            <button type="button" class="appr-btn appr-btn--reject" data-appr-group-decide="reject" aria-label="Reject the account below">Reject</button>
           </div>
+        </header>
+        <div class="appr-group__body" id="appr-group-new-account" data-appr-group-body hidden>
           <p class="appr-banner" data-appr-banner hidden></p>
 
         
@@ -1396,8 +1466,7 @@
             </div>
             <div class="appr-record__actions" data-appr-actions>
               <div class="appr-record__buttons" data-appr-buttons>
-                <button type="button" class="appr-btn appr-btn--brand" data-appr-decide="always" title="Approve this record and turn allow always on for this object">Allow always</button>
-                <button type="button" class="appr-btn appr-btn--outline" data-appr-decide="allow">Allow once</button>
+                <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="record">Allow</button>
                 <button type="button" class="appr-btn appr-btn--reject" data-appr-decide="reject">Reject</button>
               </div>
               <div class="appr-record__status" data-appr-status hidden>
@@ -1421,45 +1490,65 @@
             <div class="appr-well appr-well--write">
               <h4 class="appr-well__title">Hunter will create</h4>
               <p class="appr-why">The account plan mentions a studio group that is not an account yet.</p>
-              <dl class="appr-write-list">
-                
-                <dt>Website</dt>
-                <dd>
-                  
-                  <a class="appr-link" href="https://www.cnet.com/studios" target="_blank" rel="noopener noreferrer">https://www.cnet.com/studios</a>
-                  
-                </dd>
-                
-                <dt>Industry</dt>
-                <dd>
-                  
-                  Media
-                  
-                </dd>
-                
-                <dt>Billing City</dt>
-                <dd>
-                  
-                  New York
-                  
-                </dd>
-                
-                <dt>Parent Account</dt>
-                <dd>
-                  
-                  <button type="button" class="appr-link" data-appr-open="acct-cnet">CNET (Ziff Davis)</button>
-                  
-                </dd>
-                
-                <dt>Description</dt>
-                <dd>
-                  
-                  <p class="appr-clamp" data-appr-clamp>Production group under CNET. Not an account in Salesforce until you approve this.</p>
-                  <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
-                  
-                </dd>
-                
-              </dl>
+              <div class="appr-table-wrap">
+                <table class="appr-change-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col" class="appr-change-table__after">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    
+                    <tr>
+                      <th scope="row">Website</th>
+                      <td class="appr-change-table__after">
+                        
+                        <a class="appr-link" href="https://www.cnet.com/studios" target="_blank" rel="noopener noreferrer">https://www.cnet.com/studios</a>
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Industry</th>
+                      <td class="appr-change-table__after">
+                        
+                        Media
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Billing City</th>
+                      <td class="appr-change-table__after">
+                        
+                        New York
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Parent Account</th>
+                      <td class="appr-change-table__after">
+                        
+                        <button type="button" class="appr-link" data-appr-open="acct-cnet">CNET (Ziff Davis)</button>
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Description</th>
+                      <td class="appr-change-table__after">
+                        
+                        <p class="appr-clamp" data-appr-clamp>Production group under CNET. Not an account in Salesforce until you approve this.</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        
+                      </td>
+                    </tr>
+                    
+                  </tbody>
+                </table>
+              </div>
             </div>
             
           </div>
@@ -1476,6 +1565,7 @@
         data-noun="opportunity"
         data-noun-plural="opportunities"
       >
+        
         <header class="appr-group__head">
           <button
             type="button"
@@ -1500,20 +1590,14 @@
 
             <span class="appr-group__title">Opportunity</span>
             <span class="appr-group__count" data-appr-group-waiting>1 waiting</span>
+            <span class="appr-group__scope">For the opportunity below</span>
           </button>
-        </header>
-        
-        <div class="appr-group__body" id="appr-group-new-opportunity" data-appr-group-body hidden>
-          <div class="appr-group__batch-row">
-            <div class="appr-group__batch">
-              <p class="appr-group__batch-label">For the opportunity below</p>
-              <div class="appr-group__batch-actions">
-                <button type="button" class="appr-btn appr-btn--brand" data-appr-group-decide="always" aria-label="Allow always for the opportunity below">Allow always</button>
-                <button type="button" class="appr-btn appr-btn--outline" data-appr-group-decide="allow" aria-label="Allow once for the opportunity below">Allow once</button>
-                <button type="button" class="appr-btn appr-btn--reject" data-appr-group-decide="reject" aria-label="Reject the opportunity below">Reject</button>
-              </div>
-            </div>
+          <div class="appr-group__actions">
+            <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="group" aria-label="Allow the opportunity below">Allow</button>
+            <button type="button" class="appr-btn appr-btn--reject" data-appr-group-decide="reject" aria-label="Reject the opportunity below">Reject</button>
           </div>
+        </header>
+        <div class="appr-group__body" id="appr-group-new-opportunity" data-appr-group-body hidden>
           <p class="appr-banner" data-appr-banner hidden></p>
 
         
@@ -1560,8 +1644,7 @@
             </div>
             <div class="appr-record__actions" data-appr-actions>
               <div class="appr-record__buttons" data-appr-buttons>
-                <button type="button" class="appr-btn appr-btn--brand" data-appr-decide="always" title="Approve this record and turn allow always on for this object">Allow always</button>
-                <button type="button" class="appr-btn appr-btn--outline" data-appr-decide="allow">Allow once</button>
+                <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="record">Allow</button>
                 <button type="button" class="appr-btn appr-btn--reject" data-appr-decide="reject">Reject</button>
               </div>
               <div class="appr-record__status" data-appr-status hidden>
@@ -1585,52 +1668,74 @@
             <div class="appr-well appr-well--write">
               <h4 class="appr-well__title">Hunter will create</h4>
               <p class="appr-why">Drafted from the Data Cloud evaluation. Separate from the widget opportunity, which Hunter is only updating.</p>
-              <dl class="appr-write-list">
-                
-                <dt>Account</dt>
-                <dd>
-                  
-                  <button type="button" class="appr-link" data-appr-open="acct-cnet">CNET (Ziff Davis)</button>
-                  
-                </dd>
-                
-                <dt>Amount</dt>
-                <dd>
-                  
-                  $420,000
-                  
-                </dd>
-                
-                <dt>Stage</dt>
-                <dd>
-                  
-                  Qualification
-                  
-                </dd>
-                
-                <dt>Close Date</dt>
-                <dd>
-                  
-                  Dec 18, 2026
-                  
-                </dd>
-                
-                <dt>Next Step</dt>
-                <dd>
-                  
-                  Discovery with Dana Okonkwo
-                  
-                </dd>
-                
-                <dt>Description</dt>
-                <dd>
-                  
-                  <p class="appr-clamp" data-appr-clamp>New opportunity from the account plan. Data Cloud evaluation, kept separate from the 5,000 widget deal already in negotiation.</p>
-                  <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
-                  
-                </dd>
-                
-              </dl>
+              <div class="appr-table-wrap">
+                <table class="appr-change-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col" class="appr-change-table__after">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    
+                    <tr>
+                      <th scope="row">Account</th>
+                      <td class="appr-change-table__after">
+                        
+                        <button type="button" class="appr-link" data-appr-open="acct-cnet">CNET (Ziff Davis)</button>
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Amount</th>
+                      <td class="appr-change-table__after">
+                        
+                        $420,000
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Stage</th>
+                      <td class="appr-change-table__after">
+                        
+                        Qualification
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Close Date</th>
+                      <td class="appr-change-table__after">
+                        
+                        Dec 18, 2026
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Next Step</th>
+                      <td class="appr-change-table__after">
+                        
+                        Discovery with Dana Okonkwo
+                        
+                      </td>
+                    </tr>
+                    
+                    <tr>
+                      <th scope="row">Description</th>
+                      <td class="appr-change-table__after">
+                        
+                        <p class="appr-clamp" data-appr-clamp>New opportunity from the account plan. Data Cloud evaluation, kept separate from the 5,000 widget deal already in negotiation.</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        
+                      </td>
+                    </tr>
+                    
+                  </tbody>
+                </table>
+              </div>
             </div>
             
           </div>
@@ -1663,10 +1768,23 @@
     </div>
   </div>
 
+  <div class="appr-modal" data-appr-modal hidden>
+    <button type="button" class="appr-modal__backdrop" data-appr-modal-close tabindex="-1" aria-label="Close"></button>
+    <div class="appr-modal__panel" role="dialog" aria-modal="true" aria-labelledby="appr-modal-title" tabindex="-1">
+      <h2 id="appr-modal-title" data-appr-modal-title>Allow this?</h2>
+      <p data-appr-modal-body></p>
+      <div class="appr-modal__actions">
+        <button type="button" class="appr-btn appr-btn--quiet" data-appr-modal-close>Cancel</button>
+        <button type="button" class="appr-btn appr-btn--outline" data-appr-modal-choice="allow">Allow once</button>
+        <button type="button" class="appr-btn appr-btn--brand" data-appr-modal-choice="always">Allow always</button>
+      </div>
+    </div>
+  </div>
+
   <div class="appr-toast" data-appr-toast role="status" hidden></div>
 </div>
 
-<script id="appr-data" type="application/json">{"run":{"title":"Update CNET in Salesforce","staged":"Staged 36 minutes ago","total":11,"guide":"Gray is the record as it stands. Blue is the only thing Hunter will write.","steps":[{"title":"Read what is already in Salesforce","body":"The CNET account, five contacts, and the widget opportunity."},{"title":"Drafted updates","body":"Descriptions on the account, Geoff Minor, and Mara Ellison. Title and phone for Dana Okonkwo. A newer email for Luis Chen. Title for Chris Patel. Description and next step on the widget opportunity."},{"title":"Drafted new records","body":"Priya Shah and Andre Ruiz from the CNET leadership page. A CNET Studios account. A Data Cloud opportunity, separate from the widget deal."},{"title":"Stopped for you","body":"Nothing is written to Salesforce until you allow it."}]},"sections":[{"id":"updates","title":"Already in Salesforce","lede":"Open a name to see that record. Fields Hunter is changing stay in the blue area, so the gray area is only what stays as it is.","groups":[{"id":"upd-account","action":"update","object":"Account","noun":"account","nounPlural":"accounts","icon":"account","records":[{"id":"acct-cnet","name":"CNET (Ziff Davis)","openable":true,"open":true,"summary":"New York, New York · Media · https://www.cnet.com","deltaSummary":"Description → Ziff Davis owns CNET. Data Cloud evaluation in progress, and the widget deal is in negotiation.","why":"Rewritten from the CNET account plan Hunter just finished.","context":[{"label":"City, State","text":"New York, New York"},{"label":"Industry","text":"Media"},{"label":"Website","text":"https://www.cnet.com","href":"https://www.cnet.com"}],"changes":[{"field":"Description","before":"Ziff Davis, Inc. (NASDAQ: ZD) is a vertically focused digital media and internet company headquartered in New York. The portfolio includes CNET, PCMag, and a set of performance-marketing brands. This description was imported from enrichment and has not been edited by the account team.","after":"Ziff Davis (NASDAQ: ZD) owns CNET and is headquartered in New York. Hunter updated this from the account plan: a Data Cloud evaluation is in progress, and the salesforce.com widget opportunity (5,000 units) is in negotiation with a possible follow-on. Geoff Minor is the executive sponsor."}],"preview":[{"label":"Account Owner","text":"Rohan"},{"label":"City, State","text":"New York, New York"},{"label":"Industry","text":"Media"},{"label":"Website","text":"https://www.cnet.com","href":"https://www.cnet.com"},{"label":"Phone","text":"(212) 555-0100"},{"label":"Description","changing":true,"text":"Ziff Davis, Inc. (NASDAQ: ZD) is a vertically focused digital media and internet company headquartered in New York. The portfolio includes CNET, PCMag, and a set of performance-marketing brands. This description was imported from enrichment and has not been edited by the account team."}]}]},{"id":"upd-contact","action":"update","object":"Contact","noun":"contact","nounPlural":"contacts","icon":"contact","records":[{"id":"con-geoff","name":"Geoff Minor","openable":true,"open":true,"summary":"CNET (Ziff Davis) · President · geoff.minor@cnet.com","deltaSummary":"Description → President at CNET. Asked for a Data Cloud walkthrough with his revenue team in November.","why":"Added from the account plan. Geoff is the executive sponsor on the Data Cloud evaluation.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"President"},{"label":"Email","text":"geoff.minor@cnet.com"}],"changes":[{"field":"Description","before":"","after":"President at CNET. Met during the account plan. Asked for a Data Cloud walkthrough with his revenue team in November."}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"President"},{"label":"Email","text":"geoff.minor@cnet.com"},{"label":"Phone","text":"(212) 555-0114"},{"label":"Description","changing":true,"text":""}]},{"id":"con-dana","name":"Dana Okonkwo","openable":true,"open":false,"summary":"CNET (Ziff Davis) · dana.okonkwo@cnet.com","deltaSummary":"Title → VP, Revenue Operations · Phone → (212) 555-0148","why":"The account plan has Dana as VP, Revenue Operations, with a direct line. Salesforce still says Director of Sales and has no phone.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Email","text":"dana.okonkwo@cnet.com"}],"changes":[{"field":"Title","before":"Director of Sales","after":"VP, Revenue Operations"},{"field":"Phone","before":"","after":"(212) 555-0148"}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"Director of Sales","changing":true},{"label":"Email","text":"dana.okonkwo@cnet.com"},{"label":"Phone","text":"","changing":true}]},{"id":"con-luis","name":"Luis Chen","openable":true,"open":false,"summary":"CNET (Ziff Davis) · Editor in Chief · (212) 555-0190","deltaSummary":"Email → l.chen@cnet.com","why":"The CNET masthead lists a newer email than the one on this contact.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"Editor in Chief"},{"label":"Phone","text":"(212) 555-0190"}],"changes":[{"field":"Email","before":"luis.chen@cnet.com","after":"l.chen@cnet.com"}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"Editor in Chief"},{"label":"Email","text":"luis.chen@cnet.com","changing":true},{"label":"Phone","text":"(212) 555-0190"}]},{"id":"con-mara","name":"Mara Ellison","openable":true,"open":false,"summary":"CNET (Ziff Davis) · VP, Brand · mara.ellison@cnet.com","deltaSummary":"Description → VP, Brand at CNET. Owns the partnership conversation from the account plan.","why":"Drafted from her role on the CNET leadership page.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"VP, Brand"},{"label":"Email","text":"mara.ellison@cnet.com"}],"changes":[{"field":"Description","before":"Leads brand and partnerships for CNET.","after":"VP, Brand at CNET. Owns the partnership conversation Hunter flagged in the account plan. Useful on the Data Cloud evaluation because brand budget sits with her team."}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"VP, Brand"},{"label":"Email","text":"mara.ellison@cnet.com"},{"label":"Phone","text":"(212) 555-0126"},{"label":"Description","changing":true,"text":"Leads brand and partnerships for CNET."}]},{"id":"con-chris","name":"Chris Patel","openable":true,"open":false,"summary":"CNET (Ziff Davis) · chris.patel@cnet.com · (212) 555-0133","deltaSummary":"Title → Senior Account Executive","why":"The account plan lists Chris as a senior account executive after the reorg. Salesforce still says Sales Manager.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Email","text":"chris.patel@cnet.com"},{"label":"Phone","text":"(212) 555-0133"}],"changes":[{"field":"Title","before":"Sales Manager","after":"Senior Account Executive"}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"Sales Manager","changing":true},{"label":"Email","text":"chris.patel@cnet.com"},{"label":"Phone","text":"(212) 555-0133"}]}]},{"id":"upd-opportunity","action":"update","object":"Opportunity","noun":"opportunity","nounPlural":"opportunities","icon":"opportunity","records":[{"id":"opp-widgets","name":"salesforce.com - 5000 Widgets","openable":true,"open":true,"summary":"CNET (Ziff Davis) · Negotiation · $1,200,000 · Close Nov 14, 2026","deltaSummary":"Description → 5,000 widgets in negotiation, with a follow-on if Data Cloud lands. · Next Step → Pricing review with Geoff Minor, week of Nov 3.","why":"Brought in line with the account plan, including the next meeting.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Stage","text":"Negotiation"},{"label":"Amount","text":"$1,200,000"},{"label":"Close Date","text":"Nov 14, 2026"}],"changes":[{"field":"Description","before":"Initial deal for 5000 widgets. We expect follow-on business with a potential upside of 40000 additional units. Last touched during the Q3 pricing pass. The description still says widgets because that is the language the buyer used.","after":"5,000 widgets, currently in negotiation. Follow-on of about 40,000 units if the Data Cloud evaluation on the CNET account lands. Next conversation is a pricing review with Geoff Minor the week of Nov 3."},{"field":"Next Step","before":"Send the pricing sheet.","after":"Pricing review with Geoff Minor, week of Nov 3."}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Owner","text":"Rohan"},{"label":"Stage","text":"Negotiation"},{"label":"Amount","text":"$1,200,000"},{"label":"Close Date","text":"Nov 14, 2026"},{"label":"Description","changing":true,"text":"Initial deal for 5000 widgets. We expect follow-on business with a potential upside of 40000 additional units. Last touched during the Q3 pricing pass. The description still says widgets because that is the language the buyer used."},{"label":"Next Step","changing":true,"text":"Send the pricing sheet."}]}]}]},{"id":"creates","title":"Not in Salesforce yet","lede":"Names are not links, because there is no record to open. A link inside the blue area points at a record that already exists, such as the account these people belong to.","groups":[{"id":"new-contact","action":"create","object":"Contact","noun":"contact","nounPlural":"contacts","icon":"contact","records":[{"id":"con-priya","name":"Priya Shah","openable":false,"open":true,"summary":"","deltaSummary":"VP, Marketing · priya.shah@cnet.com · (212) 555-0162 · CNET (Ziff Davis)","why":"Found on the CNET leadership page. She is not a contact yet.","context":[],"changes":[{"field":"Account","after":"CNET (Ziff Davis)","afterRecordId":"acct-cnet"},{"field":"Title","after":"VP, Marketing"},{"field":"Email","after":"priya.shah@cnet.com"},{"field":"Phone","after":"(212) 555-0162"},{"field":"Description","after":"Leads brand marketing at CNET. Named on the leadership page. She will not exist in Salesforce until you approve this."}]},{"id":"con-andre","name":"Andre Ruiz","openable":false,"open":false,"summary":"","deltaSummary":"Director of IT · andre.ruiz@cnet.com · (212) 555-0177 · CNET (Ziff Davis)","why":"Found on the CNET leadership page. He is not a contact yet.","context":[],"changes":[{"field":"Account","after":"CNET (Ziff Davis)","afterRecordId":"acct-cnet"},{"field":"Title","after":"Director of IT"},{"field":"Email","after":"andre.ruiz@cnet.com"},{"field":"Phone","after":"(212) 555-0177"},{"field":"Description","after":"Owns infrastructure for CNET.com. Hunter added him from the leadership page. No contact exists until you approve this."}]}]},{"id":"new-account","action":"create","object":"Account","noun":"account","nounPlural":"accounts","icon":"account","records":[{"id":"acct-studios","name":"CNET Studios","openable":false,"open":false,"summary":"","deltaSummary":"Media · New York · https://www.cnet.com/studios","why":"The account plan mentions a studio group that is not an account yet.","context":[],"changes":[{"field":"Website","after":"https://www.cnet.com/studios","afterHref":"https://www.cnet.com/studios"},{"field":"Industry","after":"Media"},{"field":"Billing City","after":"New York"},{"field":"Parent Account","after":"CNET (Ziff Davis)","afterRecordId":"acct-cnet"},{"field":"Description","after":"Production group under CNET. Not an account in Salesforce until you approve this."}]}]},{"id":"new-opportunity","action":"create","object":"Opportunity","noun":"opportunity","nounPlural":"opportunities","icon":"opportunity","records":[{"id":"opp-datacloud","name":"CNET - Data Cloud expansion","openable":false,"open":true,"summary":"","deltaSummary":"$420,000 · Qualification · Close Dec 18, 2026 · CNET (Ziff Davis)","why":"Drafted from the Data Cloud evaluation. Separate from the widget opportunity, which Hunter is only updating.","context":[],"changes":[{"field":"Account","after":"CNET (Ziff Davis)","afterRecordId":"acct-cnet"},{"field":"Amount","after":"$420,000"},{"field":"Stage","after":"Qualification"},{"field":"Close Date","after":"Dec 18, 2026"},{"field":"Next Step","after":"Discovery with Dana Okonkwo"},{"field":"Description","after":"New opportunity from the account plan. Data Cloud evaluation, kept separate from the 5,000 widget deal already in negotiation."}]}]}]}]}</script>
+<script id="appr-data" type="application/json">{"run":{"title":"Update CNET in Salesforce","staged":"Staged 36 minutes ago","total":11,"guide":"Gray is the record as it stands. Blue is the only thing Hunter will write.","steps":[{"title":"Read what is already in Salesforce","body":"The CNET account, five contacts, and the widget opportunity."},{"title":"Drafted updates","body":"Descriptions on the account, Geoff Minor, and Mara Ellison. Title and phone for Dana Okonkwo. A newer email for Luis Chen. Title for Chris Patel. Description and next step on the widget opportunity."},{"title":"Drafted new records","body":"Priya Shah and Andre Ruiz from the CNET leadership page. A CNET Studios account. A Data Cloud opportunity, separate from the widget deal."},{"title":"Stopped for you","body":"Nothing is written to Salesforce until you allow it."}]},"sections":[{"id":"updates","groups":[{"id":"upd-account","action":"update","object":"Account","noun":"account","nounPlural":"accounts","icon":"account","records":[{"id":"acct-cnet","name":"CNET (Ziff Davis)","openable":true,"open":true,"summary":"New York, New York · Media · https://www.cnet.com","deltaSummary":"Description → Ziff Davis owns CNET. Data Cloud evaluation in progress, and the widget deal is in negotiation.","why":"Rewritten from the CNET account plan Hunter just finished.","context":[{"label":"City, State","text":"New York, New York"},{"label":"Industry","text":"Media"},{"label":"Website","text":"https://www.cnet.com","href":"https://www.cnet.com"}],"changes":[{"field":"Description","before":"Ziff Davis, Inc. (NASDAQ: ZD) is a vertically focused digital media and internet company headquartered in New York. The portfolio includes CNET, PCMag, and a set of performance-marketing brands. This description was imported from enrichment and has not been edited by the account team.","after":"Ziff Davis (NASDAQ: ZD) owns CNET and is headquartered in New York. Hunter updated this from the account plan: a Data Cloud evaluation is in progress, and the salesforce.com widget opportunity (5,000 units) is in negotiation with a possible follow-on. Geoff Minor is the executive sponsor."}],"preview":[{"label":"Account Owner","text":"Rohan"},{"label":"City, State","text":"New York, New York"},{"label":"Industry","text":"Media"},{"label":"Website","text":"https://www.cnet.com","href":"https://www.cnet.com"},{"label":"Phone","text":"(212) 555-0100"},{"label":"Description","changing":true,"text":"Ziff Davis, Inc. (NASDAQ: ZD) is a vertically focused digital media and internet company headquartered in New York. The portfolio includes CNET, PCMag, and a set of performance-marketing brands. This description was imported from enrichment and has not been edited by the account team."}]}]},{"id":"upd-contact","action":"update","object":"Contact","noun":"contact","nounPlural":"contacts","icon":"contact","records":[{"id":"con-geoff","name":"Geoff Minor","openable":true,"open":true,"summary":"CNET (Ziff Davis) · President · geoff.minor@cnet.com","deltaSummary":"Description → President at CNET. Asked for a Data Cloud walkthrough with his revenue team in November.","why":"Added from the account plan. Geoff is the executive sponsor on the Data Cloud evaluation.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"President"},{"label":"Email","text":"geoff.minor@cnet.com"}],"changes":[{"field":"Description","before":"","after":"President at CNET. Met during the account plan. Asked for a Data Cloud walkthrough with his revenue team in November."}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"President"},{"label":"Email","text":"geoff.minor@cnet.com"},{"label":"Phone","text":"(212) 555-0114"},{"label":"Description","changing":true,"text":""}]},{"id":"con-dana","name":"Dana Okonkwo","openable":true,"open":false,"summary":"CNET (Ziff Davis) · dana.okonkwo@cnet.com","deltaSummary":"Title → VP, Revenue Operations · Phone → (212) 555-0148","why":"The account plan has Dana as VP, Revenue Operations, with a direct line. Salesforce still says Director of Sales and has no phone.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Email","text":"dana.okonkwo@cnet.com"}],"changes":[{"field":"Title","before":"Director of Sales","after":"VP, Revenue Operations"},{"field":"Phone","before":"","after":"(212) 555-0148"}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"Director of Sales","changing":true},{"label":"Email","text":"dana.okonkwo@cnet.com"},{"label":"Phone","text":"","changing":true}]},{"id":"con-luis","name":"Luis Chen","openable":true,"open":false,"summary":"CNET (Ziff Davis) · Editor in Chief · (212) 555-0190","deltaSummary":"Email → l.chen@cnet.com","why":"The CNET masthead lists a newer email than the one on this contact.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"Editor in Chief"},{"label":"Phone","text":"(212) 555-0190"}],"changes":[{"field":"Email","before":"luis.chen@cnet.com","after":"l.chen@cnet.com"}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"Editor in Chief"},{"label":"Email","text":"luis.chen@cnet.com","changing":true},{"label":"Phone","text":"(212) 555-0190"}]},{"id":"con-mara","name":"Mara Ellison","openable":true,"open":false,"summary":"CNET (Ziff Davis) · VP, Brand · mara.ellison@cnet.com","deltaSummary":"Description → VP, Brand at CNET. Owns the partnership conversation from the account plan.","why":"Drafted from her role on the CNET leadership page.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"VP, Brand"},{"label":"Email","text":"mara.ellison@cnet.com"}],"changes":[{"field":"Description","before":"Leads brand and partnerships for CNET.","after":"VP, Brand at CNET. Owns the partnership conversation Hunter flagged in the account plan. Useful on the Data Cloud evaluation because brand budget sits with her team."}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"VP, Brand"},{"label":"Email","text":"mara.ellison@cnet.com"},{"label":"Phone","text":"(212) 555-0126"},{"label":"Description","changing":true,"text":"Leads brand and partnerships for CNET."}]},{"id":"con-chris","name":"Chris Patel","openable":true,"open":false,"summary":"CNET (Ziff Davis) · chris.patel@cnet.com · (212) 555-0133","deltaSummary":"Title → Senior Account Executive","why":"The account plan lists Chris as a senior account executive after the reorg. Salesforce still says Sales Manager.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Email","text":"chris.patel@cnet.com"},{"label":"Phone","text":"(212) 555-0133"}],"changes":[{"field":"Title","before":"Sales Manager","after":"Senior Account Executive"}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Title","text":"Sales Manager","changing":true},{"label":"Email","text":"chris.patel@cnet.com"},{"label":"Phone","text":"(212) 555-0133"}]}]},{"id":"upd-opportunity","action":"update","object":"Opportunity","noun":"opportunity","nounPlural":"opportunities","icon":"opportunity","records":[{"id":"opp-widgets","name":"salesforce.com - 5000 Widgets","openable":true,"open":true,"summary":"CNET (Ziff Davis) · Negotiation · $1,200,000 · Close Nov 14, 2026","deltaSummary":"Description → 5,000 widgets in negotiation, with a follow-on if Data Cloud lands. · Next Step → Pricing review with Geoff Minor, week of Nov 3.","why":"Brought in line with the account plan, including the next meeting.","context":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Stage","text":"Negotiation"},{"label":"Amount","text":"$1,200,000"},{"label":"Close Date","text":"Nov 14, 2026"}],"changes":[{"field":"Description","before":"Initial deal for 5000 widgets. We expect follow-on business with a potential upside of 40000 additional units. Last touched during the Q3 pricing pass. The description still says widgets because that is the language the buyer used.","after":"5,000 widgets, currently in negotiation. Follow-on of about 40,000 units if the Data Cloud evaluation on the CNET account lands. Next conversation is a pricing review with Geoff Minor the week of Nov 3."},{"field":"Next Step","before":"Send the pricing sheet.","after":"Pricing review with Geoff Minor, week of Nov 3."}],"preview":[{"label":"Account","text":"CNET (Ziff Davis)","recordId":"acct-cnet"},{"label":"Owner","text":"Rohan"},{"label":"Stage","text":"Negotiation"},{"label":"Amount","text":"$1,200,000"},{"label":"Close Date","text":"Nov 14, 2026"},{"label":"Description","changing":true,"text":"Initial deal for 5000 widgets. We expect follow-on business with a potential upside of 40000 additional units. Last touched during the Q3 pricing pass. The description still says widgets because that is the language the buyer used."},{"label":"Next Step","changing":true,"text":"Send the pricing sheet."}]}]}]},{"id":"creates","groups":[{"id":"new-contact","action":"create","object":"Contact","noun":"contact","nounPlural":"contacts","icon":"contact","records":[{"id":"con-priya","name":"Priya Shah","openable":false,"open":true,"summary":"","deltaSummary":"VP, Marketing · priya.shah@cnet.com · (212) 555-0162 · CNET (Ziff Davis)","why":"Found on the CNET leadership page. She is not a contact yet.","context":[],"changes":[{"field":"Account","after":"CNET (Ziff Davis)","afterRecordId":"acct-cnet"},{"field":"Title","after":"VP, Marketing"},{"field":"Email","after":"priya.shah@cnet.com"},{"field":"Phone","after":"(212) 555-0162"},{"field":"Description","after":"Leads brand marketing at CNET. Named on the leadership page. She will not exist in Salesforce until you approve this."}]},{"id":"con-andre","name":"Andre Ruiz","openable":false,"open":false,"summary":"","deltaSummary":"Director of IT · andre.ruiz@cnet.com · (212) 555-0177 · CNET (Ziff Davis)","why":"Found on the CNET leadership page. He is not a contact yet.","context":[],"changes":[{"field":"Account","after":"CNET (Ziff Davis)","afterRecordId":"acct-cnet"},{"field":"Title","after":"Director of IT"},{"field":"Email","after":"andre.ruiz@cnet.com"},{"field":"Phone","after":"(212) 555-0177"},{"field":"Description","after":"Owns infrastructure for CNET.com. Hunter added him from the leadership page. No contact exists until you approve this."}]}]},{"id":"new-account","action":"create","object":"Account","noun":"account","nounPlural":"accounts","icon":"account","records":[{"id":"acct-studios","name":"CNET Studios","openable":false,"open":false,"summary":"","deltaSummary":"Media · New York · https://www.cnet.com/studios","why":"The account plan mentions a studio group that is not an account yet.","context":[],"changes":[{"field":"Website","after":"https://www.cnet.com/studios","afterHref":"https://www.cnet.com/studios"},{"field":"Industry","after":"Media"},{"field":"Billing City","after":"New York"},{"field":"Parent Account","after":"CNET (Ziff Davis)","afterRecordId":"acct-cnet"},{"field":"Description","after":"Production group under CNET. Not an account in Salesforce until you approve this."}]}]},{"id":"new-opportunity","action":"create","object":"Opportunity","noun":"opportunity","nounPlural":"opportunities","icon":"opportunity","records":[{"id":"opp-datacloud","name":"CNET - Data Cloud expansion","openable":false,"open":true,"summary":"","deltaSummary":"$420,000 · Qualification · Close Dec 18, 2026 · CNET (Ziff Davis)","why":"Drafted from the Data Cloud evaluation. Separate from the widget opportunity, which Hunter is only updating.","context":[],"changes":[{"field":"Account","after":"CNET (Ziff Davis)","afterRecordId":"acct-cnet"},{"field":"Amount","after":"$420,000"},{"field":"Stage","after":"Qualification"},{"field":"Close Date","after":"Dec 18, 2026"},{"field":"Next Step","after":"Discovery with Dana Okonkwo"},{"field":"Description","after":"New opportunity from the account plan. Data Cloud evaluation, kept separate from the 5,000 widget deal already in negotiation."}]}]}]}]}</script>
 
   </main>
   <script src="/aiq-sales-agent/scripts/user_switcher.js"></script>
@@ -1676,7 +1794,7 @@
   <script src="/aiq-sales-agent/scripts/vendor/svg4everybody.min.js"></script>
   <script>svg4everybody();</script>
   
-<script src="/aiq-sales-agent/scripts/approvals.js?v=6"></script>
+<script src="/aiq-sales-agent/scripts/approvals.js?v=7"></script>
 
 </body>
 </html>
