@@ -18,12 +18,19 @@
 
 {% block body_class %}appr-bare{% endblock %}
 
-{# This queue is the whole page. No global header, no app nav. #}
+{# No Salesforce global header. The Seller Home left rail stays, with Approvals selected. #}
 {% block chrome %}{% endblock %}
 
 {% block styles %}
+<link rel="stylesheet" href="/styles/home.css" />
+<link rel="stylesheet" href="/styles/page.css" />
 <link rel="stylesheet" href="/styles/approvals.css" />
 {% endblock %}
+
+{% set navActive = "approvals" %}
+{% set navPrimary = readData("index").navPrimary %}
+{% set navFooter = readData("index").navFooter %}
+{% set recents = readData("index").recents %}
 
 {% macro valueLink(text, recordId, href) -%}
 {%- if recordId -%}
@@ -45,32 +52,42 @@
 {% endmacro %}
 
 {% block content %}
-<div class="appr" data-appr-root>
+<div class="seller-home page-root seller-home--approvals" data-sh-root data-appr-root>
+  {% include "_home_left_nav.html" %}
+  <div class="page" role="main">
+    <section class="page__body">
+<div class="appr">
   <div class="appr__inner">
 
+    <h1 class="appr-page__title">Approvals</h1>
+    <p class="appr-lede">Approvals that are blocking your chats and workflows.</p>
+    <h2 class="appr-workflows__label">Workflow approvals</h2>
+
+    {% for workflow in workflows %}
+    <section class="appr-workflow" data-appr-workflow="{{ workflow.id }}" data-filter="all">
     <header class="appr-run">
       <div class="appr-run__head">
         <div>
-          <h1>{{ run.title }}</h1>
+          <h3 class="appr-run__title">{{ workflow.title }}</h3>
           <p class="appr-run__meta">
-            <span data-appr-waiting>{{ run.total }}</span> waiting on you
+            <span data-appr-waiting>{{ workflow.total }}</span> waiting on you
             <span class="appr-run__dot" aria-hidden="true">·</span>
-            {{ run.staged }}
+            {{ workflow.staged }}
           </p>
         </div>
-        <button type="button" class="appr-btn appr-btn--outline" data-appr-view-run>View run</button>
+        <button type="button" class="appr-btn appr-btn--outline" data-appr-view-run="{{ workflow.id }}">View run</button>
       </div>
-      <p class="appr-run__guide">{{ run.guide }}</p>
+      <p class="appr-run__guide">{{ workflow.guide }}</p>
       <p class="appr-run__done" data-appr-done hidden>You are caught up. Undo a row if you want to look again.</p>
-      <div class="appr-filters" role="group" aria-label="Filter actions">
-        <button type="button" class="appr-filter" data-appr-filter="all" aria-pressed="true">All <span data-appr-count="all">{{ run.total }}</span></button>
-        <button type="button" class="appr-filter" data-appr-filter="waiting" aria-pressed="false">Waiting <span data-appr-count="waiting">{{ run.total }}</span></button>
+      <div class="appr-filters" role="group" aria-label="Filter {{ workflow.title }}">
+        <button type="button" class="appr-filter" data-appr-filter="all" aria-pressed="true">All <span data-appr-count="all">{{ workflow.total }}</span></button>
+        <button type="button" class="appr-filter" data-appr-filter="waiting" aria-pressed="false">Waiting <span data-appr-count="waiting">{{ workflow.total }}</span></button>
         <button type="button" class="appr-filter" data-appr-filter="allowed" aria-pressed="false">Allowed <span data-appr-count="allowed">0</span></button>
         <button type="button" class="appr-filter" data-appr-filter="rejected" aria-pressed="false">Rejected <span data-appr-count="rejected">0</span></button>
       </div>
     </header>
 
-    {% for section in sections %}
+    {% for section in workflow.sections %}
     <section class="appr-section" data-appr-section>
       <p class="appr-section__empty" data-appr-section-empty hidden>Nothing in this set matches the filter.</p>
 
@@ -264,6 +281,11 @@
       {% endfor %}
     </section>
     {% endfor %}
+    </section>
+    {% endfor %}
+  </div>
+</div>
+    </section>
   </div>
 
   <div class="appr-drawer" data-appr-drawer hidden>
@@ -300,11 +322,12 @@
   </div>
 
   <div class="appr-toast" data-appr-toast role="status" hidden></div>
-</div>
 
-<script id="appr-data" type="application/json">{{ { run: run, sections: sections } | tojson | safe }}</script>
+<script id="appr-data" type="application/json">{{ { workflows: workflows } | tojson | safe }}</script>
+</div>
 {% endblock %}
 
 {% block scripts_extra %}
-<script src="/scripts/approvals.js?v=7"></script>
+<script src="/scripts/home.js"></script>
+<script src="/scripts/approvals.js?v=8"></script>
 {% endblock %}

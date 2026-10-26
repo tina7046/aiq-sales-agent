@@ -110,8 +110,16 @@ $sh-shader-min-height: 50rem;   // 800px
 // Scoped by virtue of home.css loading only on the Seller Home pages,
 // not the plain Sales chrome.
 // ──────────────────────────────────────────────────────────────────────
+// The Salesforce global header and the Sales / Home bar sit above the
+// left rail. Seller Home does not use them. Hiding the bar and pulling
+// the page up lets the rail start at the top of the viewport.
+.sh-chrome {
+  display: none;
+}
+
 main.app-wrapper {
   padding: 0;
+  top: 0;
 }
 
 // ──────────────────────────────────────────────────────────────────────
@@ -808,6 +816,15 @@ main.app-wrapper {
 //      that same column instead of their label.
 // The toggle button flips its `aria-expanded` and `aria-label` in JS.
 // ──────────────────────────────────────────────────────────────────────
+.seller-home__nav-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-left: auto;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--slds-g-color-error-base-40, #ea001e);
+}
+
 .seller-home--nav-collapsed {
   .seller-home__nav {
     flex: 0 0 $sh-nav-width-collapsed;
@@ -885,7 +902,8 @@ main.app-wrapper {
 
   .seller-home__nav-label,
   .seller-home__nav-recent-label,
-  .seller-home__nav-badge {
+  .seller-home__nav-badge,
+  .seller-home__nav-dot {
     display: none;
   }
 
@@ -3486,7 +3504,8 @@ $sh-feed-filter-hidden: (
     }
     .seller-home__nav-label,
     .seller-home__nav-recent-label,
-    .seller-home__nav-badge {
+    .seller-home__nav-badge,
+    .seller-home__nav-dot {
       display: none;
     }
     // Recents keep their rows and swap to the monogram, exactly as they
