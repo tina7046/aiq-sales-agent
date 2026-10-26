@@ -172,7 +172,7 @@
             </div>
             <div class="appr-record__actions" data-appr-actions>
               <div class="appr-record__buttons" data-appr-buttons>
-                <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="record">Allow</button>
+                <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="record">Allow once</button>
                 <button type="button" class="appr-btn appr-btn--reject" data-appr-decide="reject">Reject</button>
               </div>
               <div class="appr-record__status" data-appr-status hidden>
@@ -308,20 +308,25 @@
     </div>
   </div>
 
+  <div class="appr-toast" data-appr-toast role="status" hidden></div>
+
   <div class="appr-modal" data-appr-modal hidden>
     <button type="button" class="appr-modal__backdrop" data-appr-modal-close tabindex="-1" aria-label="Close"></button>
     <div class="appr-modal__panel" role="dialog" aria-modal="true" aria-labelledby="appr-modal-title" tabindex="-1">
       <h2 id="appr-modal-title" data-appr-modal-title>Allow this?</h2>
       <p data-appr-modal-body></p>
+      <div class="appr-modal__warn" data-appr-modal-warn hidden>
+        <p data-appr-modal-warn-lead></p>
+        <p data-appr-modal-warn-detail></p>
+      </div>
       <div class="appr-modal__actions">
         <button type="button" class="appr-btn appr-btn--quiet" data-appr-modal-close>Cancel</button>
         <button type="button" class="appr-btn appr-btn--outline" data-appr-modal-choice="allow">Allow once</button>
         <button type="button" class="appr-btn appr-btn--brand" data-appr-modal-choice="always">Allow always</button>
+        <button type="button" class="appr-btn appr-btn--brand" data-appr-modal-confirm hidden>Allow always</button>
       </div>
     </div>
   </div>
-
-  <div class="appr-toast" data-appr-toast role="status" hidden></div>
 
 <script id="appr-data" type="application/json">{{ { workflows: workflows } | tojson | safe }}</script>
 </div>
@@ -329,5 +334,5 @@
 
 {% block scripts_extra %}
 <script src="/scripts/home.js"></script>
-<script src="/scripts/approvals.js?v=8"></script>
+<script src="/scripts/approvals.js?v=15"></script>
 {% endblock %}
