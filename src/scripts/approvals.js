@@ -151,10 +151,6 @@
     var cards = root.querySelectorAll('[data-appr-workflow]')
     Array.prototype.forEach.call(cards, function (card) {
       var counts = tally(card)
-      Object.keys(counts).forEach(function (key) {
-        var node = card.querySelector('[data-appr-count="' + key + '"]')
-        if (node) node.textContent = String(counts[key])
-      })
       var waitingNode = card.querySelector('[data-appr-waiting]')
       if (waitingNode) waitingNode.textContent = String(counts.waiting)
       var done = card.querySelector('[data-appr-done]')
@@ -165,38 +161,11 @@
   function applyFilter (workflow) {
     var scopes = workflow ? [workflow] : root.querySelectorAll('[data-appr-workflow]')
     Array.prototype.forEach.call(scopes, function (scope) {
-      var filter = scope.getAttribute('data-filter') || 'all'
-      var records = scope.querySelectorAll('[data-appr-record]')
-      Array.prototype.forEach.call(records, function (el) {
-        var decision = el.getAttribute('data-decision') || ''
-        var show = filter === 'all' ||
-          (filter === 'waiting' && decision === '') ||
-          (filter === 'allowed' && (decision === 'allow' || decision === 'always')) ||
-          (filter === 'rejected' && decision === 'reject')
-        el.hidden = !show
-      })
       var groups = scope.querySelectorAll('[data-appr-group]')
       Array.prototype.forEach.call(groups, function (group) {
-        group.hidden = !group.querySelector('[data-appr-record]:not([hidden])')
-      })
-      var sections = scope.querySelectorAll('[data-appr-section]')
-      Array.prototype.forEach.call(sections, function (section) {
-        var anyGroup = section.querySelector('[data-appr-group]')
-        var visible = section.querySelector('[data-appr-group]:not([hidden])')
-        var empty = section.querySelector('[data-appr-section-empty]')
-        if (empty) empty.hidden = !anyGroup || !!visible
+        group.hidden = !group.querySelector('[data-appr-record]')
       })
     })
-  }
-
-  function setFilter (workflow, next) {
-    if (!workflow) return
-    workflow.setAttribute('data-filter', next)
-    var buttons = workflow.querySelectorAll('[data-appr-filter]')
-    Array.prototype.forEach.call(buttons, function (btn) {
-      btn.setAttribute('aria-pressed', btn.getAttribute('data-appr-filter') === next ? 'true' : 'false')
-    })
-    applyFilter(workflow)
   }
 
   function showBanner (group, text) {
@@ -486,12 +455,6 @@
   }
 
   root.addEventListener('click', function (event) {
-    var filterBtn = event.target.closest('[data-appr-filter]')
-    if (filterBtn) {
-      setFilter(filterBtn.closest('[data-appr-workflow]'), filterBtn.getAttribute('data-appr-filter'))
-      return
-    }
-
     if (event.target.closest('[data-appr-modal-confirm]')) {
       confirmAllow('always')
       return
