@@ -45,6 +45,12 @@
   var drawerBody = drawer.querySelector('[data-appr-drawer-body]')
   var drawerFooter = drawer.querySelector('[data-appr-drawer-footer]')
   var drawerBack = drawer.querySelector('[data-appr-drawer-back]')
+  var modal = root.querySelector('[data-appr-modal]')
+  var modalPanel = modal.querySelector('.appr-modal__panel')
+  var modalTitle = modal.querySelector('[data-appr-modal-title]')
+  var modalBody = modal.querySelector('[data-appr-modal-body]')
+  var pendingAllow = null
+  var modalReturn = null
 
   function esc (value) {
     return String(value == null ? '' : value)
@@ -191,8 +197,7 @@
     drawerFooter.hidden = false
     if (!decision) {
       drawerFooter.innerHTML =
-        '<button type="button" class="appr-btn appr-btn--brand" data-appr-drawer-decide="always">Allow always</button>' +
-        '<button type="button" class="appr-btn appr-btn--outline" data-appr-drawer-decide="allow">Allow once</button>' +
+        '<button type="button" class="appr-btn appr-btn--brand" data-appr-allow="drawer">Allow</button>' +
         '<button type="button" class="appr-btn appr-btn--reject" data-appr-drawer-decide="reject">Reject</button>'
       return
     }
@@ -262,6 +267,7 @@
     currentId = null
     history = []
     document.body.classList.remove('appr-lock')
+    if (!modal.hidden) document.body.classList.add('appr-lock')
     if (lastFocus && lastFocus.focus) lastFocus.focus()
   }
 
@@ -337,6 +343,41 @@
     }
   }
 
+  function openAllowModal (kind, group, record) {
+    pendingAllow = { kind: kind, group: group, record: record }
+    modalReturn = document.activeElement
+    var noun = group.getAttribute('data-noun')
+    var plural = group.getAttribute('data-noun-plural')
+    if (kind === 'group') {
+      var count = group.querySelectorAll('[data-appr-record][data-decision=""]').length
+      var scope = count === 1 ? 'the ' + noun + ' below' : 'all ' + count + ' ' + plural + ' below'
+      modalTitle.textContent = 'Allow ' + scope + '?'
+      modalBody.textContent = 'Allow once approves only ' + scope + '. Allow always also turns allow always on for ' + plural + ' in this run.'
+    } else {
+      modalTitle.textContent = 'Allow ' + record.getAttribute('data-name') + '?'
+      modalBody.textContent = 'Allow once approves this ' + noun + ' only. Allow always also turns allow always on for ' + plural + ' in this run.'
+    }
+    modal.hidden = false
+    document.body.classList.add('appr-lock')
+    modalPanel.focus()
+  }
+
+  function closeAllowModal () {
+    modal.hidden = true
+    pendingAllow = null
+    if (drawer.hidden) document.body.classList.remove('appr-lock')
+    if (modalReturn && modalReturn.focus) modalReturn.focus()
+    modalReturn = null
+  }
+
+  function confirmAllow (decision) {
+    var pending = pendingAllow
+    closeAllowModal()
+    if (!pending) return
+    if (pending.kind === 'group') decideGroup(pending.group, decision)
+    else if (pending.record) decide(pending.record, decision)
+  }
+
   root.addEventListener('click', function (event) {
     var filterBtn = event.target.closest('[data-appr-filter]')
     if (filterBtn) {
@@ -344,10 +385,36 @@
       return
     }
 
+    var choice = event.target.closest('[data-appr-modal-choice]')
+    if (choice) {
+      confirmAllow(choice.getAttribute('data-appr-modal-choice'))
+      return
+    }
+
+    if (event.target.closest('[data-appr-modal-close]')) {
+      closeAllowModal()
+      return
+    }
+
     var groupToggle = event.target.closest('[data-appr-group-toggle]')
     if (groupToggle) {
       var toggled = groupToggle.closest('[data-appr-group]')
       setGroupOpen(toggled, groupToggle.getAttribute('aria-expanded') !== 'true')
+      return
+    }
+
+    var allowBtn = event.target.closest('[data-appr-allow]')
+    if (allowBtn) {
+      var allowKind = allowBtn.getAttribute('data-appr-allow')
+      if (allowKind === 'group') {
+        openAllowModal('group', allowBtn.closest('[data-appr-group]'), null)
+      } else if (allowKind === 'drawer') {
+        var drawerRow = root.querySelector('[data-appr-record][data-record-id="' + currentId + '"]')
+        if (drawerRow) openAllowModal('record', drawerRow.closest('[data-appr-group]'), drawerRow)
+      } else {
+        var allowRecord = allowBtn.closest('[data-appr-record]')
+        openAllowModal('record', allowRecord.closest('[data-appr-group]'), allowRecord)
+      }
       return
     }
 
@@ -425,6 +492,10 @@
 
   document.addEventListener('keydown', function (event) {
     if (event.key !== 'Escape') return
+    if (!modal.hidden) {
+      closeAllowModal()
+      return
+    }
     if (!drawer.hidden) closeDrawer()
   })
 

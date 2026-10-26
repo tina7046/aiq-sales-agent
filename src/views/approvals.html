@@ -72,8 +72,6 @@
 
     {% for section in sections %}
     <section class="appr-section" data-appr-section>
-      <h2>{{ section.title }}</h2>
-      <p class="appr-section__lede">{{ section.lede }}</p>
       <p class="appr-section__empty" data-appr-section-empty hidden>Nothing in this set matches the filter.</p>
 
       {% for group in section.groups %}
@@ -85,6 +83,7 @@
         data-noun="{{ group.noun }}"
         data-noun-plural="{{ group.nounPlural }}"
       >
+        {% set batchScope = "the " ~ group.noun ~ " below" if group.records | length == 1 else "all " ~ (group.records | length) ~ " " ~ group.nounPlural ~ " below" %}
         <header class="appr-group__head">
           <button
             type="button"
@@ -102,20 +101,14 @@
             {{ objIcon(group.icon, group.object) }}
             <span class="appr-group__title">{{ group.object }}</span>
             <span class="appr-group__count" data-appr-group-waiting>{{ group.records | length }} waiting</span>
+            <span class="appr-group__scope">For {{ batchScope }}</span>
           </button>
-        </header>
-        {% set batchScope = "the " ~ group.noun ~ " below" if group.records | length == 1 else "all " ~ (group.records | length) ~ " " ~ group.nounPlural ~ " below" %}
-        <div class="appr-group__body" id="appr-group-{{ group.id }}" data-appr-group-body hidden>
-          <div class="appr-group__batch-row">
-            <div class="appr-group__batch">
-              <p class="appr-group__batch-label">For {{ batchScope }}</p>
-              <div class="appr-group__batch-actions">
-                <button type="button" class="appr-btn appr-btn--brand" data-appr-group-decide="always" aria-label="Allow always for {{ batchScope }}">Allow always</button>
-                <button type="button" class="appr-btn appr-btn--outline" data-appr-group-decide="allow" aria-label="Allow once for {{ batchScope }}">Allow once</button>
-                <button type="button" class="appr-btn appr-btn--reject" data-appr-group-decide="reject" aria-label="Reject {{ batchScope }}">Reject</button>
-              </div>
-            </div>
+          <div class="appr-group__actions">
+            <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="group" aria-label="Allow {{ batchScope }}">Allow</button>
+            <button type="button" class="appr-btn appr-btn--reject" data-appr-group-decide="reject" aria-label="Reject {{ batchScope }}">Reject</button>
           </div>
+        </header>
+        <div class="appr-group__body" id="appr-group-{{ group.id }}" data-appr-group-body hidden>
           <p class="appr-banner" data-appr-banner hidden></p>
 
         {% for record in group.records %}
@@ -162,8 +155,7 @@
             </div>
             <div class="appr-record__actions" data-appr-actions>
               <div class="appr-record__buttons" data-appr-buttons>
-                <button type="button" class="appr-btn appr-btn--brand" data-appr-decide="always" title="Approve this record and turn allow always on for this object">Allow always</button>
-                <button type="button" class="appr-btn appr-btn--outline" data-appr-decide="allow">Allow once</button>
+                <button type="button" class="appr-btn appr-btn--brand" data-appr-allow="record">Allow</button>
                 <button type="button" class="appr-btn appr-btn--reject" data-appr-decide="reject">Reject</button>
               </div>
               <div class="appr-record__status" data-appr-status hidden>
@@ -194,27 +186,40 @@
             <div class="appr-well appr-well--write">
               <h4 class="appr-well__title">Hunter is changing</h4>
               <p class="appr-why">{{ record.why }}</p>
-              {% for change in record.changes %}
-              <div class="appr-diff-block">
-                <h5 class="appr-diff-block__field">{{ change.field }}</h5>
-                <div class="appr-diff">
-                  <div class="appr-diff__col">
-                    <span class="appr-diff__label">Now</span>
-                    {% if change.before %}
-                    <p class="appr-clamp" data-appr-clamp>{{ change.before }}</p>
-                    <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
-                    {% else %}
-                    <p class="appr-empty">Empty</p>
-                    {% endif %}
-                  </div>
-                  <div class="appr-diff__col appr-diff__col--after">
-                    <span class="appr-diff__label">After you approve</span>
-                    <p class="appr-clamp" data-appr-clamp>{{ change.after }}</p>
-                    <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
-                  </div>
-                </div>
+              <div class="appr-table-wrap">
+                <table class="appr-change-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">Before</th>
+                      <th scope="col" class="appr-change-table__after">After</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for change in record.changes %}
+                    <tr>
+                      <th scope="row">{{ change.field }}</th>
+                      <td>
+                        {% if change.before %}
+                        <p class="appr-clamp" data-appr-clamp>{{ change.before }}</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        {% else %}
+                        <p class="appr-empty">Empty</p>
+                        {% endif %}
+                      </td>
+                      <td class="appr-change-table__after">
+                        {% if change.field == "Description" %}
+                        <p class="appr-clamp" data-appr-clamp>{{ change.after }}</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        {% else %}
+                        {{ valueLink(change.after, change.afterRecordId, change.afterHref) }}
+                        {% endif %}
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
               </div>
-              {% endfor %}
             </div>
             {% else %}
             <div class="appr-well appr-well--today">
@@ -224,19 +229,31 @@
             <div class="appr-well appr-well--write">
               <h4 class="appr-well__title">Hunter will create</h4>
               <p class="appr-why">{{ record.why }}</p>
-              <dl class="appr-write-list">
-                {% for change in record.changes %}
-                <dt>{{ change.field }}</dt>
-                <dd>
-                  {% if change.field == "Description" %}
-                  <p class="appr-clamp" data-appr-clamp>{{ change.after }}</p>
-                  <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
-                  {% else %}
-                  {{ valueLink(change.after, change.afterRecordId, change.afterHref) }}
-                  {% endif %}
-                </dd>
-                {% endfor %}
-              </dl>
+              <div class="appr-table-wrap">
+                <table class="appr-change-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col" class="appr-change-table__after">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for change in record.changes %}
+                    <tr>
+                      <th scope="row">{{ change.field }}</th>
+                      <td class="appr-change-table__after">
+                        {% if change.field == "Description" %}
+                        <p class="appr-clamp" data-appr-clamp>{{ change.after }}</p>
+                        <button type="button" class="appr-more" data-appr-clamp-toggle hidden>Show more</button>
+                        {% else %}
+                        {{ valueLink(change.after, change.afterRecordId, change.afterHref) }}
+                        {% endif %}
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
             </div>
             {% endif %}
           </div>
@@ -269,6 +286,19 @@
     </div>
   </div>
 
+  <div class="appr-modal" data-appr-modal hidden>
+    <button type="button" class="appr-modal__backdrop" data-appr-modal-close tabindex="-1" aria-label="Close"></button>
+    <div class="appr-modal__panel" role="dialog" aria-modal="true" aria-labelledby="appr-modal-title" tabindex="-1">
+      <h2 id="appr-modal-title" data-appr-modal-title>Allow this?</h2>
+      <p data-appr-modal-body></p>
+      <div class="appr-modal__actions">
+        <button type="button" class="appr-btn appr-btn--quiet" data-appr-modal-close>Cancel</button>
+        <button type="button" class="appr-btn appr-btn--outline" data-appr-modal-choice="allow">Allow once</button>
+        <button type="button" class="appr-btn appr-btn--brand" data-appr-modal-choice="always">Allow always</button>
+      </div>
+    </div>
+  </div>
+
   <div class="appr-toast" data-appr-toast role="status" hidden></div>
 </div>
 
@@ -276,5 +306,5 @@
 {% endblock %}
 
 {% block scripts_extra %}
-<script src="/scripts/approvals.js?v=6"></script>
+<script src="/scripts/approvals.js?v=7"></script>
 {% endblock %}
